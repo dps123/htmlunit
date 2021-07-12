@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>net.sourceforge.htmlunit</groupId>
     <artifactId>htmlunit</artifactId>
-    <version>2.51.0-SNAPSHOT</version>
+    <version>2.52.0-SNAPSHOT</version>
     <name>HtmlUnit</name>
     <organization>
         <name>Gargoyle Software Inc.</name>
@@ -24,20 +24,21 @@
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
 
-        <htmlunitdriver.version>2.50.0</htmlunitdriver.version>
-        <htmlunitcssparser.version>1.7.0</htmlunitcssparser.version>
-        <htmlunitneko.version>2.50.0</htmlunitneko.version>
-        <htmlunitcorejs.version>2.51.0-SNAPSHOT</htmlunitcorejs.version>
+        <htmlunitdriver.version>2.51.0</htmlunitdriver.version>
+        <htmlunitcssparser.version>1.9.0-SNAPSHOT</htmlunitcssparser.version>
+        <htmlunitneko.version>2.51.0</htmlunitneko.version>
+        <htmlunitcorejs.version>2.52.0-SNAPSHOT</htmlunitcorejs.version>
 
         <httpcomponents.version>4.5.13</httpcomponents.version>
-        <jetty.version>9.4.41.v20210516</jetty.version>
+        <jetty.version>9.4.43.v20210629</jetty.version>
         <log4j.version>2.14.1</log4j.version>
         <selenium.version>3.141.59</selenium.version>
 
         <!-- As a property, as it is included in Checkstyle build -->
-        <checkstyle.version>8.42</checkstyle.version>
-        <spotbugs.version>4.2.3</spotbugs.version>
-        <pmd.version>6.34.0</pmd.version>
+        <checkstyle.version>8.44</checkstyle.version>
+        <spotbugs.version>4.3.0</spotbugs.version>
+        <pmd.version>6.36.0</pmd.version>
+        <archunit.version>0.20.0</archunit.version>
     </properties>
 
     <build>
@@ -72,7 +73,7 @@
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
-                <version>4.2.3</version>
+                <version>4.3.0</version>
                 <dependencies>
                     <!-- overwrite dependency on spotbugs if you want to specify the version of spotbugs -->
                     <dependency>
@@ -174,7 +175,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.2.0</version>
+                <version>3.3.0</version>
                 <configuration>
                     <quiet>true</quiet>
                     <additionalparam>--allow-script-in-comments</additionalparam>
@@ -209,7 +210,7 @@
             <plugin>
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
-                <version>6.1.6</version>
+                <version>6.2.2</version>
                 <configuration>
                     <suppressionFiles>owasp-suppressions.xml</suppressionFiles>
                     <failBuildOnCVSS>0</failBuildOnCVSS>
@@ -311,10 +312,10 @@
                     </instructions>
                 </configuration>
             </plugin>
-            <!-- <plugin>
+            <plugin>
                 <groupId>org.simplify4u.plugins</groupId>
                 <artifactId>pgpverify-maven-plugin</artifactId>
-                <version>1.12.0</version>
+                <version>1.14.0</version>
                 <executions>
                     <execution>
                         <goals>
@@ -322,7 +323,7 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin> -->
+            </plugin>
         </plugins>
         <extensions>
             <extension>
@@ -685,7 +686,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.2.0</version>
+                <version>3.3.0</version>
                 <configuration>
                     <quiet>true</quiet>
                     <excludePackageNames>com.gargoylesoftware.htmlunit.javascript:com.gargoylesoftware.htmlunit.protocol:com.gargoylesoftware.htmlunit.ssl:com.gargoylesoftware.htmlunit.html.xpath:com.gargoylesoftware.htmlunit.html.applets:com.gargoylesoftware.htmlunit.html.impl:com.gargoylesoftware.htmlunit.activex</excludePackageNames>
@@ -1160,6 +1161,9 @@
             <name>Sergio Moreno</name>
             <email>sergio.moreno@blueliv.com</email>
         </contributor>
+        <contributor>
+            <name>Antoni Reus</name>
+        </contributor>
     </contributors>
     <dependencies>
         <dependency>
@@ -1217,7 +1221,7 @@
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
-            <version>2.8.0</version>
+            <version>2.10.0</version>
         </dependency>
         <dependency>
             <groupId>commons-logging</groupId>
@@ -1262,7 +1266,7 @@
         <dependency>
             <groupId>com.tngtech.archunit</groupId>
             <artifactId>archunit-junit4</artifactId>
-            <version>0.18.0</version>
+            <version>${archunit.version}</version>
             <exclusions>
                 <exclusion>
                     <groupId>junit</groupId>

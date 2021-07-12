@@ -119,6 +119,7 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import com.gargoylesoftware.css.dom.AbstractCSSRuleImpl;
 import com.gargoylesoftware.css.dom.CSSStyleDeclarationImpl;
 import com.gargoylesoftware.htmlunit.BrowserVersion;
 import com.gargoylesoftware.htmlunit.WebAssert;
@@ -154,6 +155,7 @@ import net.sourceforge.htmlunit.corejs.javascript.Undefined;
  * @author Ronald Brill
  * @author Frank Danek
  * @author Dennis Duysak
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleDeclaration">MDN doc</a>
  */
 @JsxClass
 public class CSSStyleDeclaration extends SimpleScriptable {
@@ -1100,6 +1102,15 @@ public class CSSStyleDeclaration extends SimpleScriptable {
     }
 
     /**
+     * Gets the {@code borderTop} style attribute.
+     * @return the style attribute
+     */
+    @JsxGetter
+    public String getBorderTop() {
+        return getStyleAttribute(BORDER_TOP);
+    }
+
+    /**
      * Sets the {@code borderTop} style attribute.
      * @param borderTop the new attribute
      */
@@ -1259,11 +1270,16 @@ public class CSSStyleDeclaration extends SimpleScriptable {
      */
     @JsxSetter
     public void setCssText(final String value) {
+        String fixedValue = value;
+        if (fixedValue == null || "null".equals(fixedValue)) {
+            fixedValue = "";
+        }
+
         if (styleDeclaration_ != null) {
-            styleDeclaration_.setCssText(value);
+            styleDeclaration_.setCssText(fixedValue);
             return;
         }
-        jsElement_.getDomNodeOrDie().setAttribute("style", value);
+        jsElement_.getDomNodeOrDie().setAttribute("style", fixedValue);
     }
 
     /**
@@ -1437,7 +1453,25 @@ public class CSSStyleDeclaration extends SimpleScriptable {
      */
     @JsxGetter
     public int getLength() {
+        if (null != styleDeclaration_) {
+            return styleDeclaration_.getProperties().size();
+        }
+
         return getStyleMap().size();
+    }
+
+    /**
+     * Returns the item in the given index.
+     * @param index the index
+     * @return the item in the given index
+     */
+    @JsxFunction
+    public Object item(final int index) {
+        if (null != styleDeclaration_) {
+            return styleDeclaration_.getProperties().get(index);
+        }
+
+        return getStyleMap().get(index);
     }
 
     /**
@@ -1753,6 +1787,15 @@ public class CSSStyleDeclaration extends SimpleScriptable {
     }
 
     /**
+     * Gets the {@code borderTop} style attribute.
+     * @return the style attribute
+     */
+    @JsxGetter(IE)
+    public String getMsImeAlign() {
+        return getStyleAttribute(Definition.MS_IME_ALIGN);
+    }
+
+    /**
      * Sets the {@code msImeAlign} style attribute.
      * @param msImeAlign the new attribute
      */
@@ -1950,6 +1993,31 @@ public class CSSStyleDeclaration extends SimpleScriptable {
     @JsxSetter
     public void setPaddingTop(final Object paddingTop) {
         setStyleLengthAttribute(PADDING_TOP.getAttributeName(), paddingTop, "", false, true, false, false);
+    }
+
+    /**
+     * Returns the CSSRule that is the parent of this style block or <code>null</code> if this CSSStyleDeclaration is
+     * not attached to a CSSRule.
+     * @return the CSSRule that is the parent of this style block or <code>null</code> if this CSSStyleDeclaration is
+     *      not attached to a CSSRule
+     */
+    @JsxGetter
+    public CSSRule getParentRule() {
+        if (null != styleDeclaration_ && getParentScope() instanceof CSSStyleSheet) {
+            final AbstractCSSRuleImpl parentRule = styleDeclaration_.getParentRule();
+            if (parentRule != null) {
+                return CSSRule.create((CSSStyleSheet) getParentScope(), parentRule);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Nothing.
+     * @param parentRule ignored
+     */
+    @JsxSetter
+    public void setParentRule(final CSSRule parentRule) {
     }
 
     /**
@@ -2960,14 +3028,6 @@ public class CSSStyleDeclaration extends SimpleScriptable {
             i = i * 24;
         }
         return Math.round(i);
-    }
-
-    @Override
-    protected boolean isReadOnlySettable(final String name, final Object value) {
-        if ("length".equals(name)) {
-            return false; //ignore
-        }
-        return super.isReadOnlySettable(name, value);
     }
 
     /**

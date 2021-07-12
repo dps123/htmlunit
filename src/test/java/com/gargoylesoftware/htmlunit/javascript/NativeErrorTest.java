@@ -20,7 +20,7 @@ import org.openqa.selenium.WebDriver;
 
 import com.gargoylesoftware.htmlunit.BrowserRunner;
 import com.gargoylesoftware.htmlunit.BrowserRunner.Alerts;
-import com.gargoylesoftware.htmlunit.BrowserRunner.NotYetImplemented;
+import com.gargoylesoftware.htmlunit.BrowserRunner.HtmlUnitNYI;
 import com.gargoylesoftware.htmlunit.WebDriverTestCase;
 
 /**
@@ -96,6 +96,7 @@ public class NativeErrorTest extends WebDriverTestCase {
     @Test
     @Alerts(DEFAULT = {"string", "true"},
             IE = "undefined")
+    @HtmlUnitNYI(IE = {"string", "true"})
     public void stackNewErrorWithoutThrow() throws Exception {
         final String html
             = "<html><head><script>\n"
@@ -122,6 +123,7 @@ public class NativeErrorTest extends WebDriverTestCase {
     @Test
     @Alerts(DEFAULT = "true",
             IE = "false")
+    @HtmlUnitNYI(IE = "true")
     public void stackInNewError() throws Exception {
         final String html
             = "<html><head><script>\n"
@@ -143,7 +145,11 @@ public class NativeErrorTest extends WebDriverTestCase {
     @Alerts(DEFAULT = "method (url)",
             FF = "method@url",
             FF78 = "method@url")
-    @NotYetImplemented
+    @HtmlUnitNYI(CHROME = "method()@url",
+            EDGE = "method()@url",
+            FF = "method()@url",
+            FF78 = "method()@url",
+            IE = "method()@url")
     public void stackContent() throws Exception {
         final String html
             = "<html><head><script>\n"
@@ -181,7 +187,11 @@ public class NativeErrorTest extends WebDriverTestCase {
     @Alerts(DEFAULT = "method (url)",
             FF = "method@url",
             FF78 = "method@url")
-    @NotYetImplemented
+    @HtmlUnitNYI(CHROME = "method()@url",
+            EDGE = "method()@url",
+            FF = "method()@url",
+            FF78 = "method()@url",
+            IE = "method()@url")
     public void stackContentNewError() throws Exception {
         final String html
             = "<html><head><script>\n"

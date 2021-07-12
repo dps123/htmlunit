@@ -7,7 +7,164 @@
     </properties>
 
     <body>
-        <release version="2.51.0" date="June xx, 2021" description="Bugfixes">
+        <release version="2.52.0" date="August xx, 2021" description="Bugfixes">
+            <action type="fix" dev="rbri" due-to="Frank Danek" issue="360">
+                CSSImportRule.styleSheet now returns the imported style sheet instead of the importing one.
+            </action>
+            <action type="add" dev="Frank Danek" issue="360">
+                CSS.supports() added - returns always true for now.
+            </action>
+            <action type="update" dev="rbri">
+                Inline styles are now parsed by the htmlunit-cssparser.
+            </action>
+            <action type="update" dev="rbri">
+                Upgrade Jetty to 9.4.43.v20210629.
+            </action>
+            <action type="fix" dev="rbri" due-to="Frank Danek" issue="360">
+                CSSStyleDeclaration.item property added.
+            </action>
+            <action type="fix" dev="rbri" due-to="Frank Danek" issue="360">
+                CSSStyleDeclaration.length is now correct for stylesheets.
+            </action>
+            <action type="fix" dev="rbri" due-to="Frank Danek" issue="360">
+                CSSGroupingRule.insert() now sets the parent rule for the inserted rule.
+            </action>
+            <action type="add" dev="Frank Danek" issue="360">
+                PageRule style and selectorText property added.
+            </action>
+            <action type="fix" dev="Frank Danek" issue="360">
+                Improved PageRule support.
+            </action>
+            <action type="add" dev="Frank Danek" issue="360">
+                CSSStyleDeclaration.parentRule property added.
+            </action>
+            <action type="fix" dev="rbri" due-to="Frank Danek" issue="360">
+                Various CSS formatting fixes.
+            </action>
+            <action type="fix" dev="rbri" issue="365">
+                XMLHttpRequest-abort() triggers an error in Chrome/Edge if the send is aborted.
+            </action>
+        </release>
+
+        <release version="2.51.0" date="July 04, 2021" description="Bugfixes, Firefox 89, Chrome/Edge 91, JS Template support">
+            <action type="fix" dev="rbri" issue="365">
+                XMLHttpRequest-abort() sets the state back to 0 and the webResponse to a network error.
+            </action>
+            <action type="fix" dev="RhinoTeam">
+                core-js: Various fixes for undefined.
+            </action>
+            <action type="fix" dev="RhinoTeam">
+                core-js: Support ES2019 JSON superset.
+            </action>
+            <action type="fix" dev="RhinoTeam">
+                core-js: globalThis implemented.
+            </action>
+            <action type="fix" dev="RhinoTeam">
+                core-js: Fix bug when calling function on custom global object.
+            </action>
+            <action type="add" dev="rbri" due-to="Frank Danek" issue="360">
+                CSSConditionRule.conditionText added (for CSSMediaRule).
+            </action>
+            <action type="add" dev="rbri" due-to="Frank Danek" issue="360">
+                CSSGroupingRule.cssRules, .insertRule() and .deleteRule() added (for CSSMediaRule).
+            </action>
+            <action type="fix" dev="rbri">
+                CssParser: bring formatting closer to the browser.
+            </action>
+            <action type="fix" dev="rbri" due-to="Frank Danek" issue="360">
+                MediaList default toString() now prints the media text.
+            </action>
+            <action type="fix" dev="rbri" due-to="Frank Danek" issue="360">
+                Assigning a value to CSSRule.cssText is a no op.
+            </action>
+            <action type="add" dev="rbri" due-to="Frank Danek">
+                HtmlImage.getSrc() added.
+            </action>
+            <action type="add" dev="rbri" due-to="Frank Danek">
+                HtmlInput.getSrc() and HtmlImageInput.getSrc() added.
+            </action>
+            <action type="fix" dev="rbri" due-to="Frank Danek">
+                INCOMPATIBLE CHANGE: HtmlImageInput.getSrcAttribute() returns the plain value of the source attribute.
+                Use HtmlImageInput.getSrc() if you need the full qualified url.
+                If your code uses HtmlImageInput.getSrcAttribute() you have to
+                replace this with HtmlImageInput.getSrc().
+            </action>
+            <action type="fix" dev="rbri" issue="359">
+                XMLHttpRequest preserves the content type header if sending a file an the header was set from the javascript.
+            </action>
+            <action type="fix" dev="rbri" due-to="Alex Gorbatovsky">
+                Improved ComputedCSSStyleDeclaration regarding height and width for empty span's.
+            </action>
+            <action type="fix" dev="rbri" due-to="Alex Gorbatovsky">
+                Improved ComputedCSSStyleDeclaration regarding image height and width.
+            </action>
+            <action type="fix" dev="rbri" due-to="Alex Gorbatovsky">
+                Improved ComputedCSSStyleDeclaration regarding image height and width.
+            </action>
+            <action type="add" dev="rbri">
+                HtmlImage.getWidthOrDefault() and HtmlImage.getHeightOrDefault() added.
+            </action>
+            <action type="fix" dev="rbri">
+                Frameset/HTMLTableSectionElement/HTMLTableCaptionElement outerHTML property is setable.
+            </action>
+            <action type="fix" dev="rbri" issue="358" due-to="tyuxue">
+                Translate response charset GB2312 to GBK like browsers do.
+            </action>
+            <action type="fix" dev="rbri">
+                Setting window.clientInformation now works correct for Chrome/Edge and IE.
+            </action>
+            <action type="fix" dev="rbri">
+                Setting window.innerHeight was broken because of an typo for a long time.
+            </action>
+            <action type="fix" dev="rbri">
+                Properties without a setter defined are no longer setable - this was a hack introduced for IE6
+                and is no longer valid.
+            </action>
+            <action type="fix" dev="rbri">
+                Document.body is setable.
+            </action>
+            <action type="fix" dev="rbri">
+                AudioParam value property is writable.
+            </action>
+            <action type="add" dev="RhinoTeam">
+                core-js: All "new Error" instances have a "stack" even if they are not thrown.
+            </action>
+            <action type="fix" dev="RhinoTeam">
+                core-js: A number of small spec compliance issues with all the Error classes are fixed.
+            </action>
+            <action type="fix" dev="RhinoTeam">
+                core-js: Make sure that the "name" and "length" properties of BaseFunction can have
+                their attributes be modified and be deleted if so configured.
+            </action>
+            <action type="add" dev="RhinoTeam" issue="296">
+                core-js: Template support added.
+            </action>
+            <action type="fix" dev="RhinoTeam">
+                core-js: Object.seal/freeze/isSealed/isFrozen logic got a few fixes.
+            </action>
+            <action type="fix" dev="RhinoTeam">
+                core-js: Support indexed accessor properties.
+            </action>
+            <action type="add" dev="RhinoTeam">
+                core-js: Object.values / Object.entries / Object.fromEntries added.
+            </action>
+            <action type="update" dev="RhinoTeam">
+                core-js: Refactoring of the slot implementation.
+            </action>
+            <action type="update" dev="rbri">
+                Upgrade Apache commons-io to 2.10.0.
+            </action>
+            <action type="fix" dev="rbri" issue="357" due-to="Antoni Reus">
+                Page type detection was wrong if no content type header was set and some unicode
+                chars are present in the first bytes of an document.
+            </action>
+            <action type="fix" dev="rbri">
+                ComputedCSSStyleDeclaration height property now returns "auto" for
+                invisible elements.
+            </action>
+            <action type="add" dev="rbri">
+                A simple version of getInnerHTML added for Chrome/Edge.
+            </action>
             <action type="fix" dev="rbri" issue="179">
                 Console.trace() now prints the call stack.
             </action>
