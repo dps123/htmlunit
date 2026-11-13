@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,17 @@ package org.htmlunit.javascript;
 
 import java.net.URL;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.htmlunit.WebDriverTestCase;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.BuggyWebDriver;
+import org.htmlunit.junit.annotation.HtmlUnitNYI;
+import org.htmlunit.util.MimeType;
+import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.WebElement;
-
-import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.BuggyWebDriver;
-import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
-import org.htmlunit.util.MimeType;
+import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 
 /**
  * Same scope as {@link JavaScriptEngineTest} but extending {@link WebDriverTestCase}.
@@ -38,7 +36,6 @@ import org.htmlunit.util.MimeType;
  * @author Frank Danek
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class JavaScriptEngine2Test extends WebDriverTestCase {
 
     /**
@@ -47,7 +44,8 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
      */
     @Test
     public void jsRunSingleThreadedBrowserWide() throws Exception {
-        final String html = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + "function test(prefix) {\n"
             + "  parent.document.getElementById('theArea').value += prefix + ' start\\n';\n"
             + "  var end = new Date().valueOf() + 1 * 1000;\n"
@@ -102,7 +100,8 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     @Test
     @Alerts({"true", "false", "false", "true"})
     public void functionCaller() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function myFunc() {\n"
@@ -124,7 +123,8 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     @Test
     @Alerts({"in goo", "in hoo", "in foo"})
     public void functionDeclaredForwardInBlock() throws Exception {
-        final String html = "<html><head></head><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head></head><body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  if (true) {\n"
@@ -133,7 +133,7 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
             + "    try {\n"
             + "      hoo();\n"
             + "      foo();\n"
-            + "    } catch (e) {\n"
+            + "    } catch(e) {\n"
             + "      log('foo error');\n"
             + "    }\n"
             + "    function foo() { log('in foo'); }\n"
@@ -149,28 +149,28 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"undefined", "function foo() {}", "function foo() {}", "function foo() {}"},
-            IE = {"function foo() {}", "function foo() {}", "function foo() {}", "function foo() {}"})
+    @Alerts({"undefined", "function foo() {}", "function foo() {}", "function foo() {}"})
     @HtmlUnitNYI(CHROME = {"function foo() {}", "function foo() {}", "function foo() {}", "function foo() {}"},
             EDGE = {"function foo() {}", "function foo() {}", "function foo() {}", "function foo() {}"},
             FF = {"function foo() {}", "function foo() {}", "function foo() {}", "function foo() {}"},
             FF_ESR = {"function foo() {}", "function foo() {}", "function foo() {}", "function foo() {}"})
     public void variableNotDefined() throws Exception {
-        final String html = "<html><head></head><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head></head><body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "if (true) {\n"
             + "  try {\n"
             + "    log(window.foo);\n"
             + "    log(foo);\n"
-            + "  } catch (e) {\n"
+            + "  } catch(e) {\n"
             + "    log('foo error');\n"
             + "  }\n"
             + "  function foo() {}\n"
             + "  try {\n"
             + "    log(window.foo);\n"
             + "    log(foo);\n"
-            + "  } catch (e) {\n"
+            + "  } catch(e) {\n"
             + "    log('foo error');\n"
             + "  }\n"
             + "}\n"
@@ -186,21 +186,22 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     @Test
     @Alerts({"undefined", "foo error", "undefined", "foo error"})
     public void variableNotDefinedExpression() throws Exception {
-        final String html = "<html><head></head><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head></head><body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "if (true) {\n"
             + "  try {\n"
             + "    log(window.foo);\n"
             + "    log(foo);\n"
-            + "  } catch (e) {\n"
+            + "  } catch(e) {\n"
             + "    log('foo error');\n"
             + "  }\n"
             + "  var fo = function foo() {}\n"
             + "  try {\n"
             + "    log(window.foo);\n"
             + "    log(foo);\n"
-            + "  } catch (e) {\n"
+            + "  } catch(e) {\n"
             + "    log('foo error');\n"
             + "  }\n"
             + "}\n"
@@ -214,28 +215,27 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"function Window() { [native code] }", "function Window() { [native code] }", "true",
-                       "function HTMLDocument() { [native code] }", "function HTMLDocument() { [native code] }",
-                       "true", "function"},
-            IE = {"[object Window]", "[object Window]", "true",
-                  "[object HTMLDocument]", "[object HTMLDocument]", "true", "function"})
+    @Alerts({"function Window() { [native code] }", "function Window() { [native code] }", "true",
+             "function HTMLDocument() { [native code] }", "function HTMLDocument() { [native code] }",
+             "true", "function"})
     public void constructor() throws Exception {
-        final String html = "<html><head></head><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head></head><body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
-            + "  try { log(Window); } catch (e) { log('ex window'); }\n"
+            + "  try { log(Window); } catch(e) { log('ex window'); }\n"
             + "  log(window.constructor);\n"
             + "  try {\n"
             + "    log(window.constructor === Window);\n"
-            + "  } catch (e) {\n"
+            + "  } catch(e) {\n"
             + "    log('ex win const');\n"
             + "  }\n"
 
-            + "  try { log(HTMLDocument); } catch (e) { log('ex doc'); }\n"
+            + "  try { log(HTMLDocument); } catch(e) { log('ex doc'); }\n"
             + "  log(document.constructor);\n"
             + "  try {\n"
             + "    log(document.constructor === HTMLDocument);\n"
-            + "  } catch (e) {\n"
+            + "  } catch(e) {\n"
             + "    log('exception doc const');\n"
             + "  }\n"
             + "  log(typeof new Object().constructor);\n"
@@ -249,7 +249,7 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("exception")
+    @Alerts("ReferenceError")
     public void packages() throws Exception {
         object("Packages");
     }
@@ -258,7 +258,7 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("exception")
+    @Alerts("ReferenceError")
     public void java() throws Exception {
         object("java");
     }
@@ -273,13 +273,14 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     }
 
     private void object(final String object) throws Exception {
-        final String html = "<html><head></head><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head></head><body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "try {\n"
             + "  log(" + object + ");\n"
-            + "} catch (e) {\n"
-            + "  log('exception');\n"
+            + "} catch(e) {\n"
+            + "  logEx(e);\n"
             + "}\n"
             + "</script>\n"
             + "</body></html>";
@@ -293,7 +294,8 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     @Test
     @Alerts({"function", "function"})
     public void inline() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
                 + "log(typeof Array.prototype.filter);\n"
@@ -312,7 +314,8 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     @Test
     @Alerts("found")
     public void enumerateMethods() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -336,7 +339,8 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     @Test
     @Alerts("3")
     public void array_concat() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -359,7 +363,8 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     @Test
     @Alerts("function f() {}")
     public void function_toStringValue() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function f() {}\n"
@@ -379,7 +384,8 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     @Alerts("WebDriverException thrown")
     @BuggyWebDriver("WebDriverException NOT thrown")
     public void function_object_method() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "<script>\n"
                 + "  try {\n"
                 + "    log('1');\n"
@@ -413,7 +419,8 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     @Test
     @Alerts("that's it")
     public void quoteAsUnicodeInString() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "log('that\\x27s it');\n"
@@ -427,16 +434,19 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("error")
+    @Alerts(DEFAULT = "RangeError",
+            FF = "InternalError/InternalError",
+            FF_ESR = "InternalError/InternalError")
+    @HtmlUnitNYI(CHROME = "InternalError/InternalError",
+            EDGE = "InternalError/InternalError")
     public void recursion() throws Exception {
-        final String html = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + "  function recurse(c) {\n"
             + LOG_TITLE_FUNCTION
             + "    try {\n"
             + "      recurse(c++);\n"
-            + "    } catch (e) {\n"
-            + "      log('error');\n"
-            + "    }\n"
+            + "    } catch(e) { logEx(e); }\n"
             + "  }\n"
             + "</script></head>\n"
             + "<body onload='recurse(1)'>\n"
@@ -450,10 +460,10 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"0", "false", "0"},
-            IE = {"1", "true", "1"})
+    @Alerts({"0", "false", "0"})
     public void nativeFunction_toStringValue() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -477,11 +487,10 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     @HtmlUnitNYI(CHROME = "1",
             EDGE = "1",
             FF = "1",
-            FF_ESR = "1",
-            IE = "1")
+            FF_ESR = "1")
     public void onloadJavascriptFunction() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + "function onload() { alert('foo'); }\n"
             + "</script></head>\n"
@@ -498,8 +507,8 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     @Test
     @Alerts("foo")
     public void alert() throws Exception {
-        final String html
-            = "<html><head><title>foo</title><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><title>foo</title><script>\n"
             + "  alert('foo');\n"
             + "</script></head><body>\n"
             + "<p>hello world</p>\n"
@@ -519,8 +528,8 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     @Test
     @Alerts("foo")
     public void scopeOfNewFunction() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "  var f = new Function('log(\"foo\")');\n"
             + "  f();\n"
@@ -536,7 +545,8 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     @Test
     @Alerts("foo")
     public void scopeOfNestedNewFunction() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  var foo = 'foo';\n"
@@ -558,8 +568,8 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     @Test
     @Alerts("1")
     public void setValuesThatAreNotStrings() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
@@ -583,8 +593,8 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     @Test
     @Alerts("foo")
     public void javaScriptWrappedInHtmlComments() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script language='javascript'><!--\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
@@ -602,8 +612,8 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     @Test
     @Alerts("1")
     public void javaScriptWrappedInHtmlComments2() throws Exception {
-        final String html =
-            "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "</script>\n"
@@ -623,8 +633,8 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     @Test
     @Alerts("1")
     public void javaScriptWrappedInHtmlComments_commentOnOpeningLine() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script language='javascript'><!-- Some comment here\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
@@ -642,8 +652,8 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
      */
     @Test
     public void javaScriptWrappedInHtmlComments_commentNotClosed() throws Exception {
-        final String html
-            = "<html><head><title>foo</title>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><title>foo</title>\n"
             + "<script language='javascript'><!-- log(1);</script>\n"
             + "<script language='javascript'><!-- </script>\n"
             + "</head>\n"
@@ -658,8 +668,8 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     @Test
     @Alerts("undefined")
     public void javaScriptWrappedInHtmlComments_allOnOneLine() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <title>test</title>\n"
             + "    <script>var test;</script>\n"
@@ -680,7 +690,7 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     @Test
     @Alerts("test")
     public void eventHandlerWithComment() throws Exception {
-        final String html = "<html><body onLoad='alert(\"test\"); // xxx'></body></html>";
+        final String html = DOCTYPE_HTML + "<html><body onLoad='alert(\"test\"); // xxx'></body></html>";
         loadPageWithAlerts2(html);
     }
 
@@ -690,16 +700,19 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     @Test
     @Alerts({"2", "3"})
     public void comment() throws Exception {
-        final String html =
-            "<html><head>\n"
-            + "<script><!-- alert(1);\n"
-            + " alert(2);\n"
-            + "alert(3)//--></script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "  <script>\n"
+            + LOG_TITLE_FUNCTION
+            + "    </script>\n"
+            + "<script><!-- log(1);\n"
+            + " log(2);\n"
+            + "log(3)//--></script>\n"
             + "</head>\n"
             + "<body>\n"
             + "</body></html>";
 
-        loadPageWithAlerts2(html);
+        loadPageVerifyTitle2(html);
     }
 
     /**
@@ -710,7 +723,8 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
              "rstlna-rstlne-rstlne", "rstlne-rstlne-rstlne",
              "rstlni-rstlni-rstlni", "rstlna-rstlna-rstlna"})
     public void regExpSupport() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script id='a'>\n"
             + LOG_TITLE_FUNCTION
@@ -741,8 +755,8 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     @Test
     @Alerts("123")
     public void ecmaReservedKeywords() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  var o = {float: 123};\n"
@@ -759,7 +773,8 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     @Test
     @Alerts("[object Window]")
     public void boundFunction() throws Exception {
-        final String html = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head><script>\n"
                 + LOG_TITLE_FUNCTION
                 + "  function test() {\n"
                 + "    if (focusMe.bind) {\n"
@@ -788,7 +803,8 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     @Test
     @Alerts({"t=undefined", "inside"})
     public void functionHasNameOfVar() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
                 + "  function test() {\n"
@@ -810,7 +826,8 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     @Test
     @Alerts({"outer abc = 1", "inner abc = function"})
     public void functionHasNameOfVarStrictMode() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "<script>\n"
                 + "  'use strict';\n"
                 + LOG_TITLE_FUNCTION
@@ -832,7 +849,8 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     @Test
     @Alerts({"a", "b"})
     public void innerFunctionWithSameName() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
                 + "  var a = function () {\n"
@@ -861,7 +879,8 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     @Test
     @Alerts("a")
     public void innerFunctionWithSameNameAsOutsideStrict() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "<script>\n"
                 + "  'use strict';\n"
                 + LOG_TITLE_FUNCTION
@@ -887,7 +906,8 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     @Test
     @Alerts({"functionfunc(){log(norm(func));}", "outer"})
     public void secondFunctionWithSameNameStrict() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "<script>\n"
                 + "  'use strict';\n"
                 + LOG_TITLE_FUNCTION
@@ -912,17 +932,9 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
      */
     @Test
     @Alerts({"f1", "f2", "f3", "!f4", "f5", "!f6", "!f7", "!f8", "f10", "f11", "f12", "!f10", "f11", "f12", "f13"})
-    @HtmlUnitNYI(CHROME = {"f1", "f2", "f3", "!f4", "f5", "!f6", "!f7", "!f8",
-                           "f10", "f11", "f12", "f10", "f11", "f12", "f13"},
-            EDGE = {"f1", "f2", "f3", "!f4", "f5", "!f6", "!f7", "!f8",
-                    "f10", "f11", "f12", "f10", "f11", "f12", "f13"},
-            FF = {"f1", "f2", "f3", "!f4", "f5", "!f6", "!f7", "!f8", "f10", "f11", "f12", "f10", "f11", "f12", "f13"},
-            FF_ESR = {"f1", "f2", "f3", "!f4", "f5", "!f6", "!f7", "!f8",
-                      "f10", "f11", "f12", "f10", "f11", "f12", "f13"},
-            IE = {"f1", "f2", "f3", "!f4", "f5", "!f6", "!f7", "!f8",
-                  "f10", "f11", "f12", "f10", "f11", "f12", "f13"})
     public void functioNamesExceptionsStrict() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "<script>\n"
                 + "  'use strict';\n"
                 + LOG_TITLE_FUNCTION
@@ -941,14 +953,14 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
 
                 + "  void function f8() { log('f8'); }\n"
 
-                + "  try { f1() } catch (e) { log('!f1'); }"
-                + "  try { f2() } catch (e) { log('!f2'); }"
-                + "  try { f3() } catch (e) { log('!f3'); }"
-                + "  try { f4() } catch (e) { log('!f4'); }"
-                + "  try { f5() } catch (e) { log('!f5'); }"
-                + "  try { f6() } catch (e) { log('!f6'); }"
-                + "  try { f7() } catch (e) { log('!f7'); }"
-                + "  try { f8() } catch (e) { log('!f8'); }"
+                + "  try { f1() } catch(e) { log('!f1'); }"
+                + "  try { f2() } catch(e) { log('!f2'); }"
+                + "  try { f3() } catch(e) { log('!f3'); }"
+                + "  try { f4() } catch(e) { log('!f4'); }"
+                + "  try { f5() } catch(e) { log('!f5'); }"
+                + "  try { f6() } catch(e) { log('!f6'); }"
+                + "  try { f7() } catch(e) { log('!f7'); }"
+                + "  try { f8() } catch(e) { log('!f8'); }"
 
                 + "  {\n"
                 + "    function f10() { log('f10'); }\n"
@@ -959,12 +971,12 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
                 + "    f12();\n"
                 + "  }\n"
 
-                + "  try { f10() } catch (e) { log('!f10'); }"
-                + "  try { f11() } catch (e) { log('!f11'); }"
-                + "  try { f12() } catch (e) { log('!f12'); }"
+                + "  try { f10() } catch(e) { log('!f10'); }"
+                + "  try { f11() } catch(e) { log('!f11'); }"
+                + "  try { f12() } catch(e) { log('!f12'); }"
 
                 + "  function f13() { log('f13') } + 1;"
-                + "  try { f13() } catch (e) { log('!f13'); }"
+                + "  try { f13() } catch(e) { log('!f13'); }"
 
                 + "</script>\n"
                 + "</head>\n"
@@ -980,7 +992,8 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     @Test
     @Alerts("false")
     public void ctorBooleanDocumentAll() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -997,15 +1010,57 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("exception")
+    @Alerts("false")
+    public void falsyDocumentAll() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  if (document.all) log('true'); else log('false');\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("[object HTMLAllCollection]")
+    public void falsyAndDocumentAll() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var res = document.all && 'Html';\n"
+            + "  log(res);\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("ReferenceError")
     public void javaNotAccessable() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
                 + "function test() {\n"
                 + "  try {\n"
                 + "    log(java.lang.Math.PI);\n"
-                + "  } catch (e) { log('exception'); }\n"
+                + "  } catch(e) { logEx(e); }\n"
                 + "}\n"
                 + "</script>\n"
                 + "</head>\n"
@@ -1021,7 +1076,8 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     @Test
     @Alerts("Received: from worker - exception")
     public void javaNotAccessableFromWorker() throws Exception {
-        final String html = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<script async>\n"
             + LOG_TITLE_FUNCTION
             + "try {\n"
@@ -1029,16 +1085,16 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
             + "  myWorker.onmessage = function(e) {\n"
             + "    log('Received: ' + e.data);\n"
             + "  };\n"
-            + "} catch(e) { log('exception' + e); }\n"
+            + "} catch(e) { logEx(e); }\n"
             + "</script></body></html>\n";
 
         final String workerJs = "var pi = 'from worker';\n"
                 + "try {\n"
                 + "  pi = pi + ' - ' + java.lang.Math.PI\n"
-                + "} catch (e) { pi = pi + ' - ' + 'exception'; }\n"
+                + "} catch(e) { pi = pi + ' - ' + 'exception'; }\n"
                 + "postMessage(pi);\n";
 
-        getMockWebConnection().setResponse(new URL(URL_FIRST, "worker.js"), workerJs, MimeType.APPLICATION_JAVASCRIPT);
+        getMockWebConnection().setResponse(new URL(URL_FIRST, "worker.js"), workerJs, MimeType.TEXT_JAVASCRIPT);
 
         loadPage2(html);
         verifyTitle2(DEFAULT_WAIT_TIME, getWebDriver(), getExpectedAlerts());
@@ -1050,7 +1106,8 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
     @Test
     @Alerts({"#0", "#1", "2"})
     public void constInLoop() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
                 + "function test() {\n"
@@ -1073,11 +1130,10 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "2"},
-            IE = {})
-    @HtmlUnitNYI(IE = {"1", "2"})
+    @Alerts({"1", "2"})
     public void constInOfLoop() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
                 + "function test() {\n"
@@ -1098,10 +1154,39 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
+    @Alerts("seven")
+    public void constInIfElse() throws Exception {
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
+                + "<script>\n"
+                + LOG_TITLE_FUNCTION
+                + "function test() {\n"
+                + "  let abcd = '1234';"
+                + "  if('abcd' === abcd) {\n"
+                + "    const constant = 7;\n"
+                + "    log(constant);\n"
+                + "  } else {\n"
+                + "    const constant = 'seven';\n"
+                + "    log(constant);\n"
+                + "  }\n"
+                + "}\n"
+                + "</script>\n"
+                + "</head>\n"
+                + "<body onload='test()'>\n"
+                + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
     @Alerts({"1 ready", "2 ready", "3 ready", "4 ready",
         "5 ready", "6 ready", "7 ready", "8 ready", "9 ready", "10 ready"})
     public void ensureOrder() throws Exception {
-        final String html = "<html><body>"
+        final String html = DOCTYPE_HTML
+            + "<html><body>"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function timeoutFunction(nr) {\n"
@@ -1116,7 +1201,696 @@ public class JavaScriptEngine2Test extends WebDriverTestCase {
             + "</script></body></html>";
 
         final WebDriver driver = loadPage2(html);
-        Thread.sleep(DEFAULT_WAIT_TIME);
-        verifyTitle2(driver, getExpectedAlerts());
+        verifyTitle2(DEFAULT_WAIT_TIME, driver, getExpectedAlerts());
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "aa", "0", "aabbc", "false", "bb", "2", "aabbc", "true", "undefined"})
+    public void matchAll() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body>"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "const s = 'aabbc';\n"
+            + "const re = /([a-z])\\1/g;\n"
+            + "const matches = s.matchAll(re);\n"
+
+            + "var match = matches.next();\n"
+            + "log(match.done);\n"
+            + "log(match.value[0]);\n"
+            + "log(match.value.index);\n"
+            + "log(match.value.input);\n"
+
+            + "match = matches.next();\n"
+            + "log(match.done);\n"
+            + "log(match.value[0]);\n"
+            + "log(match.value.index);\n"
+            + "log(match.value.input);\n"
+
+            + "match = matches.next();\n"
+            + "log(match.done);\n"
+            + "log(match.value);\n"
+            + "</script></body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Make sure we use the TopScope, otherwise some GeneratorFunction stuff
+     * does not work.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"anonymous", "false", "false", "true"})
+    public void generatorFunction() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body>"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "var GeneratorFunction = Object.getPrototypeOf(function*() {}).constructor;\n"
+
+            + "log(GeneratorFunction().name);\n"
+            + "log(Object.getOwnPropertyDescriptor(GeneratorFunction(), 'name').enumerable);\n"
+            + "log(Object.getOwnPropertyDescriptor(GeneratorFunction(), 'name').writable);\n"
+            + "log(Object.getOwnPropertyDescriptor(GeneratorFunction(), 'name').configurable);\n"
+            + "</script></body></html>";
+
+        try {
+            loadPageVerifyTitle2(html);
+        }
+        catch (final WebDriverException e) {
+            assertTrue(e.getMessage(), e.getMessage().startsWith(getExpectedAlerts()[0]));
+        }
+    }
+
+    /**
+     * Test for https://github.com/HtmlUnit/htmlunit/issues/239.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"pt1 = [object Promise]", "pt2 = [object Object]", "true"})
+    public void symbolSpecies() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body>"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  var emptyFunc=function() {};\n"
+            + "  var p = Promise.resolve(1);\n"
+            + "  p.constructor = {};\n"
+            + "  var pt1 = p.then(emptyFunc);\n"
+            + "  log('pt1 = ' + pt1);\n"
+
+            + "  var t = function(e) { e(emptyFunc, emptyFunc); };\n"
+            + "  p.constructor[Symbol.species] = t;\n"
+            + "  var pt2 = p.then(emptyFunc);\n"
+            + "  log('pt2 = ' + pt2);\n"
+            + "  log(pt2 instanceof t);\n"
+            + "</script></body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Some samples from
+     * <a href="https://stackoverflow.com/questions/10480108/is-there-any-way-to-check-if-strict-mode-is-enforced">
+     * https://stackoverflow.com/questions/10480108/is-there-any-way-to-check-if-strict-mode-is-enforced</a>.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"true", "true"})
+    public void isStrict_GlobalThis() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<body>\n"
+            + "<script>\n"
+            + "  'use strict'\n"
+            + LOG_TITLE_FUNCTION
+
+            + "  var isStrict = (function() { return !this; })();\n"
+            + "  log(isStrict);\n"
+
+            + "  isStrict = (function() { return !!!this; })();\n"
+            + "  log(isStrict);\n"
+            + "</script>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("true")
+    public void isStrict_evalVar() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<body>\n"
+            + "<script>\n"
+            + "  'use strict'\n"
+            + LOG_TITLE_FUNCTION
+
+            + "  function isStrict() {\n"
+            + "    var x = true;\n"
+            + "    eval('var x = false');\n"
+            + "    return x;\n"
+            + "  }\n"
+
+            + "  log(isStrict());\n"
+            + "</script>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("true")
+    public void isStrict_argumentsCallee() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<body>\n"
+            + "<script>\n"
+            + "  'use strict'\n"
+            + LOG_TITLE_FUNCTION
+
+            + "  function isStrict() {\n"
+            + "    try { arguments.callee } catch(e) { return true; };"
+            + "    return false;\n"
+            + "  }\n"
+
+            + "  log(isStrict());\n"
+            + "</script>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"true", "true", "true"})
+    public void isStrict_constructor() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<body>\n"
+            + "<script>\n"
+            + "  'use strict'\n"
+            + LOG_TITLE_FUNCTION
+
+            + "  function Foo () {}\n"
+
+            + "  try {\n"
+            + "    true.constructor = Foo;\n"
+            + "    log('true.constructor');\n"
+            + "  } catch(e) { log(e instanceof TypeError); }\n"
+
+            + "  try {\n"
+            + "    var o = 1;\n"
+            + "    o.constructor = Foo;\n"
+            + "    log('1.constructor');\n"
+            + "  } catch(e) { log(e instanceof TypeError); }\n"
+
+            + "  try {\n"
+            + "    'test'.constructor = Foo;\n"
+            + "    log('test.constructor');\n"
+            + "  } catch(e) { log(e instanceof TypeError); }\n"
+
+            + "</script>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("from script")
+    public void consStringAsSetterFunctionParam() throws Exception {
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
+                + "  <head>\n"
+                + "    <script>\n"
+                + LOG_TITLE_FUNCTION
+                + "      function test() {\n"
+
+                + "        var script = document.createElement('script');\n"
+                + "        script.id = 'b';\n"
+                + "        script.type = 'text/javascript';\n"
+                + "        Object.defineProperty(script, 'source', {\n"
+                + "          get: function() { return this.src },\n"
+                + "          set: function(source) {\n"
+                + "            var srcDesc = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(script), 'src');\n"
+                + "            srcDesc.set.call(this, source);\n"
+                + "          }\n"
+                + "        });\n"
+
+                + "        var part1 = 'sc';\n"
+                + "        script.source = part1 + 'r' + 'ipt.js';\n"
+                + "        document.body.appendChild(script);\n"
+                + "      }\n"
+                + "    </script>\n"
+                + "  </head>\n"
+                + "  <body onload='test()'>\n"
+                + "  </body></html>";
+
+        final String js = "log('from script');";
+        getMockWebConnection().setDefaultResponse(js, MimeType.TEXT_JAVASCRIPT);
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Test for issues #1040.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("4")
+    public void forSwitchLet() throws Exception {
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
+                + "<body>\n"
+                + "<script>\n"
+                + LOG_TITLE_FUNCTION
+
+                + "  var sum = 0;\n"
+                + "  for (let i = 0; i < 1; i++)\n"
+                + "    switch (i) {\n"
+                + "      case 0:\n"
+                + "        let test = 7;\n"
+                + "        sum += 4;\n"
+                + "        break;\n"
+                + "      }"
+
+                + "  log(sum);"
+
+                + "</script>\n"
+                + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Two scripts declaring the same const; the second one fails.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"first one", "onerror", "string", "one"})
+    public void constRedeclarationTwoScripts() throws Exception {
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
+                + "<script>\n"
+                + LOG_TITLE_FUNCTION
+                + "  window.onerror = function() { log('onerror'); return true; };\n"
+                + "</script>\n"
+                + "<script>const ABC = 'one'; log('first ' + ABC);</script>\n"
+                + "<script>const ABC = 'two'; log('second ' + ABC);</script>\n"
+                + "<script>log(typeof ABC); log(ABC);</script>\n"
+                + "</head><body></body></html>";
+
+        if (getWebDriver() instanceof HtmlUnitDriver) {
+            getWebClient().getOptions().setThrowExceptionOnScriptError(false);
+        }
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Two external scripts declaring the same const; the second one fails.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"first one", "onerror", "string", "one"})
+    public void constRedeclarationTwoExternalScripts() throws Exception {
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
+                + "<script>\n"
+                + LOG_TITLE_FUNCTION
+                + "  window.onerror = function() { log('onerror'); return true; };\n"
+                + "</script>\n"
+                + "<script src='script1.js'></script>\n"
+                + "<script src='script2.js'></script>\n"
+                + "<script>log(typeof ABC); log(ABC);</script>\n"
+                + "</head><body></body></html>";
+
+        getMockWebConnection().setResponse(new URL(URL_FIRST, "script1.js"),
+                "const ABC = 'one'; log('first ' + ABC);", MimeType.TEXT_JAVASCRIPT);
+        getMockWebConnection().setResponse(new URL(URL_FIRST, "script2.js"),
+                "const ABC = 'two'; log('second ' + ABC);", MimeType.TEXT_JAVASCRIPT);
+
+        if (getWebDriver() instanceof HtmlUnitDriver) {
+            getWebClient().getOptions().setThrowExceptionOnScriptError(false);
+        }
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Issue #244: a const declared by code evaluated with an indirect eval
+     * (like jQuery 1.x globalEval does) is local to the evaluated code.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"first one", "second two", "undefined"})
+    @HtmlUnitNYI(CHROME = {"first one", "TypeError", "string"},
+            EDGE = {"first one", "TypeError", "string"},
+            FF = {"first one", "TypeError", "string"},
+            FF_ESR = {"first one", "TypeError", "string"})
+    public void constIndirectEvalTwice() throws Exception {
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
+                + "<script>\n"
+                + LOG_TITLE_FUNCTION
+                + "  try {\n"
+                + "    window['eval'].call(window, \"const ABC = 'one'; log('first ' + ABC);\");\n"
+                + "  } catch(e) { log(e.name); }\n"
+                + "  try {\n"
+                + "    window['eval'].call(window, \"const ABC = 'two'; log('second ' + ABC);\");\n"
+                + "  } catch(e) { log(e.name); }\n"
+                + "  log(typeof ABC);\n"
+                + "</script>\n"
+                + "</head><body></body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * A const declared by code evaluated with a direct eval is local to the evaluated code.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"first one", "second two", "undefined"})
+    @HtmlUnitNYI(CHROME = {"first one", "TypeError", "string"},
+            EDGE = {"first one", "TypeError", "string"},
+            FF = {"first one", "TypeError", "string"},
+            FF_ESR = {"first one", "TypeError", "string"})
+    public void constDirectEvalTwice() throws Exception {
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
+                + "<script>\n"
+                + LOG_TITLE_FUNCTION
+                + "  try {\n"
+                + "    eval(\"const ABC = 'one'; log('first ' + ABC);\");\n"
+                + "  } catch(e) { log(e.name); }\n"
+                + "  try {\n"
+                + "    eval(\"const ABC = 'two'; log('second ' + ABC);\");\n"
+                + "  } catch(e) { log(e.name); }\n"
+                + "  log(typeof ABC);\n"
+                + "</script>\n"
+                + "</head><body></body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * A const declared by a script and the same const declared by code evaluated
+     * with an indirect eval.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"first one", "second two", "one"})
+    @HtmlUnitNYI(CHROME = {"first one", "TypeError", "one"},
+            EDGE = {"first one", "TypeError", "one"},
+            FF = {"first one", "TypeError", "one"},
+            FF_ESR = {"first one", "TypeError", "one"})
+    public void constScriptAndIndirectEval() throws Exception {
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
+                + "<script>\n"
+                + LOG_TITLE_FUNCTION
+                + "</script>\n"
+                + "<script>const ABC = 'one'; log('first ' + ABC);</script>\n"
+                + "<script>\n"
+                + "  try {\n"
+                + "    window['eval'].call(window, \"const ABC = 'two'; log('second ' + ABC);\");\n"
+                + "  } catch(e) { log(e.name); }\n"
+                + "  log(ABC);\n"
+                + "</script>\n"
+                + "</head><body></body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * A global const is not a property of the window.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"one", "undefined", "false", "false", "false", "undefined"})
+    public void globalConstNotWindowProperty() throws Exception {
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
+                + "<script>\n"
+                + LOG_TITLE_FUNCTION
+                + "</script>\n"
+                + "<script>const ABC = 'one';</script>\n"
+                + "<script>\n"
+                + "  log(ABC);\n"
+                + "  log(window.ABC);\n"
+                + "  log('ABC' in window);\n"
+                + "  log(window.hasOwnProperty('ABC'));\n"
+                + "  log(Object.getOwnPropertyNames(window).indexOf('ABC') >= 0);\n"
+                + "  log(this.ABC);\n"
+                + "</script>\n"
+                + "</head><body></body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * A global let is not a property of the window.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"one", "undefined", "false", "false"})
+    @HtmlUnitNYI(CHROME = {"one", "one", "true", "true"},
+            EDGE = {"one", "one", "true", "true"},
+            FF = {"one", "one", "true", "true"},
+            FF_ESR = {"one", "one", "true", "true"})
+    public void globalLetNotWindowProperty() throws Exception {
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
+                + "<script>\n"
+                + LOG_TITLE_FUNCTION
+                + "</script>\n"
+                + "<script>let ABC = 'one';</script>\n"
+                + "<script>\n"
+                + "  log(ABC);\n"
+                + "  log(window.ABC);\n"
+                + "  log('ABC' in window);\n"
+                + "  log(window.hasOwnProperty('ABC'));\n"
+                + "</script>\n"
+                + "</head><body></body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * A global class is not a property of the window.
+     * HtmlUnit does not support class declarations at the moment.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"function", "undefined", "false"})
+    @HtmlUnitNYI(CHROME = {"undefined", "undefined", "false"},
+            EDGE = {"undefined", "undefined", "false"},
+            FF = {"undefined", "undefined", "false"},
+            FF_ESR = {"undefined", "undefined", "false"})
+    public void globalClassNotWindowProperty() throws Exception {
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
+                + "<script>\n"
+                + LOG_TITLE_FUNCTION
+                + "</script>\n"
+                + "<script>class ABC { };</script>\n"
+                + "<script>\n"
+                + "  log(typeof ABC);\n"
+                + "  log(typeof window.ABC);\n"
+                + "  log('ABC' in window);\n"
+                + "</script>\n"
+                + "</head><body></body></html>";
+
+        if (getWebDriver() instanceof HtmlUnitDriver) {
+            getWebClient().getOptions().setThrowExceptionOnScriptError(false);
+        }
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * A global var is a property of the window.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"one", "one", "true", "true"})
+    public void globalVarIsWindowProperty() throws Exception {
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
+                + "<script>\n"
+                + LOG_TITLE_FUNCTION
+                + "</script>\n"
+                + "<script>var ABC = 'one';</script>\n"
+                + "<script>\n"
+                + "  log(ABC);\n"
+                + "  log(window.ABC);\n"
+                + "  log('ABC' in window);\n"
+                + "  log(window.hasOwnProperty('ABC'));\n"
+                + "</script>\n"
+                + "</head><body></body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Deleting the window property does not remove a global const.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"true", "one"})
+    public void globalConstDeleteWindowProperty() throws Exception {
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
+                + "<script>\n"
+                + LOG_TITLE_FUNCTION
+                + "</script>\n"
+                + "<script>const ABC = 'one';</script>\n"
+                + "<script>\n"
+                + "  log(delete window.ABC);\n"
+                + "  log(ABC);\n"
+                + "</script>\n"
+                + "</head><body></body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * A global const shadows a configurable window property with the same name.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"lex", "win", "lex", "win"})
+    @HtmlUnitNYI(CHROME = {"onerror", "win", "win"},
+            EDGE = {"onerror", "win", "win"},
+            FF = {"onerror", "win", "win"},
+            FF_ESR = {"onerror", "win", "win"})
+    public void globalConstShadowsWindowProperty() throws Exception {
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
+                + "<script>\n"
+                + LOG_TITLE_FUNCTION
+                + "  window.onerror = function() { log('onerror'); return true; };\n"
+                + "</script>\n"
+                + "<script>window.ABC = 'win';</script>\n"
+                + "<script>const ABC = 'lex'; log(ABC); log(window.ABC);</script>\n"
+                + "<script>log(ABC); log(window.ABC);</script>\n"
+                + "</head><body></body></html>";
+
+        if (getWebDriver() instanceof HtmlUnitDriver) {
+            getWebClient().getOptions().setThrowExceptionOnScriptError(false);
+        }
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Assigning a window property with the name of a global let.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"lex", "win"})
+    @HtmlUnitNYI(CHROME = {"win", "win"},
+            EDGE = {"win", "win"},
+            FF = {"win", "win"},
+            FF_ESR = {"win", "win"})
+    public void globalLetAssignWindowProperty() throws Exception {
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
+                + "<script>\n"
+                + LOG_TITLE_FUNCTION
+                + "</script>\n"
+                + "<script>let ABC = 'lex';</script>\n"
+                + "<script>\n"
+                + "  window.ABC = 'win';\n"
+                + "  log(ABC);\n"
+                + "  log(window.ABC);\n"
+                + "</script>\n"
+                + "</head><body></body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * A global let with the name of a global var declared by another script.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"onerror", "var", "var"})
+    @HtmlUnitNYI(CHROME = {"let let", "let", "let"},
+            EDGE = {"let let", "let", "let"},
+            FF = {"let let", "let", "let"},
+            FF_ESR = {"let let", "let", "let"})
+    public void globalLetAfterVar() throws Exception {
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
+                + "<script>\n"
+                + LOG_TITLE_FUNCTION
+                + "  window.onerror = function() { log('onerror'); return true; };\n"
+                + "</script>\n"
+                + "<script>var ABC = 'var';</script>\n"
+                + "<script>let ABC = 'let'; log('let ' + ABC);</script>\n"
+                + "<script>log(ABC); log(window.ABC);</script>\n"
+                + "</head><body></body></html>";
+
+        if (getWebDriver() instanceof HtmlUnitDriver) {
+            getWebClient().getOptions().setThrowExceptionOnScriptError(false);
+        }
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * A global var with the name of a global let declared by another script.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"onerror", "let", "undefined"})
+    @HtmlUnitNYI(CHROME = {"var var", "var", "var"},
+            EDGE = {"var var", "var", "var"},
+            FF = {"var var", "var", "var"},
+            FF_ESR = {"var var", "var", "var"})
+    public void globalVarAfterLet() throws Exception {
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
+                + "<script>\n"
+                + LOG_TITLE_FUNCTION
+                + "  window.onerror = function() { log('onerror'); return true; };\n"
+                + "</script>\n"
+                + "<script>let ABC = 'let';</script>\n"
+                + "<script>var ABC = 'var'; log('var ' + ABC);</script>\n"
+                + "<script>log(ABC); log(window.ABC);</script>\n"
+                + "</head><body></body></html>";
+
+        if (getWebDriver() instanceof HtmlUnitDriver) {
+            getWebClient().getOptions().setThrowExceptionOnScriptError(false);
+        }
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * A function declared by one script uses a global const declared later by another script.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("one")
+    public void globalConstUsedByFunctionOfOtherScript() throws Exception {
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
+                + "<script>\n"
+                + LOG_TITLE_FUNCTION
+                + "</script>\n"
+                + "<script>function f() { return ABC; }</script>\n"
+                + "<script>const ABC = 'one'; log(f());</script>\n"
+                + "</head><body></body></html>";
+
+        loadPageVerifyTitle2(html);
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,13 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import java.net.URL;
 
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.util.MimeType;
+import org.junit.jupiter.api.Test;
+import org.openqa.selenium.WebDriver;
 
 /**
  * Unit tests for {@link HTMLLinkElement}.
@@ -29,7 +30,6 @@ import org.htmlunit.junit.BrowserRunner.Alerts;
  * @author Ahmed Ashour
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class HTMLLinkElementTest extends WebDriverTestCase {
 
     /**
@@ -38,8 +38,8 @@ public class HTMLLinkElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"", "", "", "", "§§URL§§test.css", "text/css", "stylesheet", "stylesheet1"})
     public void basicLinkAttributes() throws Exception {
-        final String html =
-              "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <body onload='test()'>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION
@@ -72,8 +72,8 @@ public class HTMLLinkElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"", "alternate help", "prefetch", "prefetch", "not supported", "notsupported"})
     public void readWriteRel() throws Exception {
-        final String html
-            = "<html><body><link id='l1'><link id='l2' rel='alternate help'><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body><link id='l1'><link id='l2' rel='alternate help'><script>\n"
             + LOG_TITLE_FUNCTION
             + "var l1 = document.getElementById('l1'), l2 = document.getElementById('l2');\n"
 
@@ -99,11 +99,10 @@ public class HTMLLinkElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"0", "2", "alternate", "help"},
-            IE = "exception")
+    @Alerts({"0", "2", "alternate", "help"})
     public void relList() throws Exception {
-        final String html
-            = "<html><body><link id='l1'><link id='l2' rel='alternate help'><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body><link id='l1'><link id='l2' rel='alternate help'><script>\n"
             + LOG_TITLE_FUNCTION
             + "var l1 = document.getElementById('l1'), l2 = document.getElementById('l2');\n"
 
@@ -114,10 +113,185 @@ public class HTMLLinkElementTest extends WebDriverTestCase {
             + "  for (var i = 0; i < l2.relList.length; i++) {\n"
             + "    log(l2.relList[i]);\n"
             + "  }\n"
-            + "} catch(e) { log('exception'); }\n"
+            + "} catch(e) { logEx(e); }\n"
 
             + "</script></body></html>";
 
         loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"0", "2", "2", "1", "alternate", "help", "abc", "alternate help", "abc"})
+    public void setRelListString() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body><link id='l1'><link id='l2' rel='alternate help'><script>\n"
+            + LOG_TITLE_FUNCTION
+            + "var a1 = document.getElementById('l1'), a2 = document.getElementById('l2');\n"
+
+            + "try {\n"
+            + "  log(a1.relList.length);\n"
+            + "  log(a2.relList.length);\n"
+
+            + "  a1.relList = 'alternate help';\n"
+            + "  a2.relList = 'abc';\n"
+
+            + "  log(a1.relList.length);\n"
+            + "  log(a2.relList.length);\n"
+
+            + "  for (var i = 0; i < a1.relList.length; i++) {\n"
+            + "    log(a1.relList[i]);\n"
+            + "  }\n"
+
+            + "  for (var i = 0; i < a2.relList.length; i++) {\n"
+            + "    log(a2.relList[i]);\n"
+            + "  }\n"
+
+            + "  log(a1.rel);\n"
+            + "  log(a2.rel);\n"
+            + "} catch(e) { logEx(e); }\n"
+
+            + "</script></body></html>";
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"0", "2", "0", "0", "", "\\s\\s\\t"})
+    public void setRelListStringBlank() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body><link id='l1'><link id='l2' rel='alternate help'><script>\n"
+            + LOG_TITLE_FUNCTION_NORMALIZE
+            + "var a1 = document.getElementById('l1'), a2 = document.getElementById('l2');\n"
+
+            + "try {\n"
+            + "  log(a1.relList.length);\n"
+            + "  log(a2.relList.length);\n"
+
+            + "  a1.relList = '';\n"
+            + "  a2.relList = '  \t';\n"
+
+            + "  log(a1.relList.length);\n"
+            + "  log(a2.relList.length);\n"
+
+            + "  log(a1.rel);\n"
+            + "  log(a2.rel);\n"
+            + "} catch(e) { logEx(e); }\n"
+
+            + "</script></body></html>";
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"0", "2", "1", "1", "null", "null", "null", "null"})
+    public void setRelListNull() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body><link id='l1'><link id='l2' rel='alternate help'><script>\n"
+            + LOG_TITLE_FUNCTION_NORMALIZE
+            + "var a1 = document.getElementById('l1'), a2 = document.getElementById('l2');\n"
+
+            + "try {\n"
+            + "  log(a1.relList.length);\n"
+            + "  log(a2.relList.length);\n"
+
+            + "  a1.relList = null;\n"
+            + "  a2.relList = null;\n"
+
+            + "  log(a1.relList.length);\n"
+            + "  log(a2.relList.length);\n"
+
+            + "  for (var i = 0; i < a1.relList.length; i++) {\n"
+            + "    log(a1.relList[i]);\n"
+            + "  }\n"
+
+            + "  for (var i = 0; i < a2.relList.length; i++) {\n"
+            + "    log(a2.relList[i]);\n"
+            + "  }\n"
+
+            + "  log(a1.rel);\n"
+            + "  log(a2.rel);\n"
+            + "} catch(e) { logEx(e); }\n"
+
+            + "</script></body></html>";
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"0", "2", "1", "1", "undefined", "undefined", "undefined", "undefined"})
+    public void setRelListUndefined() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body><link id='l1'><link id='l2' rel='alternate help'><script>\n"
+            + LOG_TITLE_FUNCTION_NORMALIZE
+            + "var a1 = document.getElementById('l1'), a2 = document.getElementById('l2');\n"
+
+            + "try {\n"
+            + "  log(a1.relList.length);\n"
+            + "  log(a2.relList.length);\n"
+
+            + "  a1.relList = undefined;\n"
+            + "  a2.relList = undefined;\n"
+
+            + "  log(a1.relList.length);\n"
+            + "  log(a2.relList.length);\n"
+
+            + "  for (var i = 0; i < a1.relList.length; i++) {\n"
+            + "    log(a1.relList[i]);\n"
+            + "  }\n"
+
+            + "  for (var i = 0; i < a2.relList.length; i++) {\n"
+            + "    log(a2.relList[i]);\n"
+            + "  }\n"
+
+            + "  log(a1.rel);\n"
+            + "  log(a2.rel);\n"
+            + "} catch(e) { logEx(e); }\n"
+
+            + "</script></body></html>";
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * The stylesheet is available in the load event handler.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"load", "rgb(255, 0, 0)"})
+    public void onloadGetComputedStyle() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var link = document.createElement('link');\n"
+            + "    link.rel = 'stylesheet';\n"
+            + "    link.onload = function() {\n"
+            + "      log('load');\n"
+            + "      log(getComputedStyle(document.getElementById('d')).color);\n"
+            + "    };\n"
+            + "    link.onerror = function() { log('error'); };\n"
+            + "    link.href = 'style.css';\n"
+            + "    document.head.appendChild(link);\n"
+            + "  }\n"
+            + "</script>\n"
+            + "</head>\n"
+            + "<body onload='test()'>\n"
+            + "  <div id='d'>text</div>\n"
+            + "</body></html>";
+
+        getMockWebConnection().setResponse(new URL(URL_FIRST, "style.css"),
+                "#d { color: rgb(255, 0, 0); }", MimeType.TEXT_CSS);
+        final WebDriver driver = loadPage2(html);
+        verifyTitle2(DEFAULT_WAIT_TIME, driver, getExpectedAlerts());
     }
 }

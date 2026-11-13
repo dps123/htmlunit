@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,9 @@
  */
 package org.htmlunit.javascript.host.css;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
-import org.htmlunit.cssparser.dom.MediaListImpl;
-import org.htmlunit.cssparser.parser.CSSErrorHandler;
-
 import org.htmlunit.WebWindow;
 import org.htmlunit.css.CssStyleSheet;
+import org.htmlunit.cssparser.dom.MediaListImpl;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
@@ -35,6 +28,8 @@ import org.htmlunit.javascript.host.event.EventTarget;
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/MediaQueryList">MDN Documentation</a>
  */
 @JsxClass
 public class MediaQueryList extends EventTarget {
@@ -44,8 +39,17 @@ public class MediaQueryList extends EventTarget {
     /**
      * Default constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
     public MediaQueryList() {
+        super();
+    }
+
+    /**
+     * JavaScript constructor.
+     */
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
@@ -54,6 +58,7 @@ public class MediaQueryList extends EventTarget {
      * @param mediaQueryString the media query string
      */
     public MediaQueryList(final String mediaQueryString) {
+        super();
         media_ = mediaQueryString;
     }
 
@@ -73,8 +78,7 @@ public class MediaQueryList extends EventTarget {
     @JsxGetter
     public boolean isMatches() {
         final WebWindow webWindow = getWindow().getWebWindow();
-        final CSSErrorHandler errorHandler = webWindow.getWebClient().getCssErrorHandler();
-        final MediaListImpl mediaList = CssStyleSheet.parseMedia(errorHandler, media_);
+        final MediaListImpl mediaList = CssStyleSheet.parseMedia(media_, webWindow.getWebClient());
         return CssStyleSheet.isActive(mediaList, webWindow);
     }
 

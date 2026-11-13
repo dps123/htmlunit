@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,36 +14,27 @@
  */
 package org.htmlunit.javascript.host.svg;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.svg.SvgSet;
 
 /**
- * A JavaScript object for {@code SVGSetElement}.
+ * JavaScript host object for {@code SVGSetElement}.
  *
  * @author Ahmed Ashour
  * @author Frank Danek
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/SVGSetElement">MDN Documentation</a>
  */
-@JsxClass(domClass = SvgSet.class, value = {CHROME, EDGE, FF, FF_ESR})
+@JsxClass(domClass = SvgSet.class)
 public class SVGSetElement extends SVGAnimationElement {
 
     /**
-     * Creates an instance.
+     * Creates an instance of this object.
      */
-    public SVGSetElement() {
-    }
-
-    /**
-     * Creates an instance.
-     */
-    @JsxConstructor
     @Override
+    @JsxConstructor
     public void jsConstructor() {
         super.jsConstructor();
     }

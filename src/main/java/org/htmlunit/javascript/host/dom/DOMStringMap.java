@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,36 +15,40 @@
 package org.htmlunit.javascript.host.dom;
 
 import static org.htmlunit.html.DomElement.ATTRIBUTE_NOT_DEFINED;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
 
+import org.htmlunit.corejs.javascript.Scriptable;
 import org.htmlunit.html.HtmlElement;
 import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
-import org.htmlunit.javascript.host.Window;
-import org.htmlunit.util.StringUtils;
-
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.Scriptable;
-import org.htmlunit.corejs.javascript.ScriptableObject;
 
 /**
  * A JavaScript object for {@code DOMStringMap}.
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/DOMStringMap">MDN Documentation</a>
  */
 @JsxClass
 public final class DOMStringMap extends HtmlUnitScriptable {
 
+    private static final String DATA_PREFIX = "data-";
+
     /**
      * Creates an instance.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
     public DOMStringMap() {
+        super();
+    }
+
+    /**
+     * JavaScript constructor.
+     */
+    @JsxConstructor
+    public void jsConstructor() {
+        // nothing to do
     }
 
     /**
@@ -52,6 +56,7 @@ public final class DOMStringMap extends HtmlUnitScriptable {
      * @param node the node which contains the underlying string
      */
     public DOMStringMap(final Node node) {
+        super();
         setDomNode(node.getDomNodeOrDie(), false);
         setParentScope(node.getParentScope());
         setPrototype(getPrototype(getClass()));
@@ -64,12 +69,12 @@ public final class DOMStringMap extends HtmlUnitScriptable {
     public Object get(final String name, final Scriptable start) {
         final HtmlElement e = (HtmlElement) getDomNodeOrNull();
         if (e != null) {
-            final String value = e.getAttribute("data-" + StringUtils.cssDeCamelize(name));
+            final String value = e.getAttribute(DATA_PREFIX + deCamelize(name));
             if (ATTRIBUTE_NOT_DEFINED != value) {
                 return value;
             }
         }
-        return NOT_FOUND;
+        return super.get(name, start);
     }
 
     /**
@@ -77,14 +82,53 @@ public final class DOMStringMap extends HtmlUnitScriptable {
      */
     @Override
     public void put(final String name, final Scriptable start, final Object value) {
-        if (!(ScriptableObject.getTopLevelScope(this) instanceof Window) || getWindow().getWebWindow() == null) {
+        final HtmlElement e = (HtmlElement) getDomNodeOrNull();
+        if (e == null) {
             super.put(name, start, value);
         }
         else {
-            final HtmlElement e = (HtmlElement) getDomNodeOrNull();
-            if (e != null) {
-                e.setAttribute("data-" + StringUtils.cssDeCamelize(name), Context.toString(value));
-            }
+            e.setAttribute("data-" + deCamelize(name), JavaScriptEngine.toString(value));
         }
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void delete(final String name) {
+        final HtmlElement e = (HtmlElement) getDomNodeOrNull();
+        if (e == null) {
+            super.delete(name);
+        }
+        else {
+            e.removeAttribute("data-" + deCamelize(name));
+        }
+    }
+
+    /**
+     * Transforms the specified string from camel-cased to dash separated.
+     *
+     * @param string the string to decamelize
+     * @return the transformed string
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/dataset#name_conversion">
+     *      MDN - HTMLElement.dataset - Name conversion</a>
+     */
+    private static String deCamelize(final String string) {
+        if (string == null || string.isEmpty()) {
+            return string;
+        }
+
+        final StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < string.length(); i++) {
+            final char ch = string.charAt(i);
+            if (Character.isUpperCase(ch)) {
+                builder.append('-').append(Character.toLowerCase(ch));
+            }
+            else {
+                builder.append(ch);
+            }
+        }
+        return builder.toString();
+    }
+
 }

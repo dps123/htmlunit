@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,11 @@
  */
 package org.htmlunit.javascript;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.openqa.selenium.WebDriver;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.HtmlUnitNYI;
+import org.junit.jupiter.api.Test;
+import org.openqa.selenium.WebDriver;
 
 /**
  * Tests for NativeError.
@@ -31,7 +28,6 @@ import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
  * @author Frank Danek
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class NativeErrorTest extends WebDriverTestCase {
 
     /**
@@ -40,13 +36,13 @@ public class NativeErrorTest extends WebDriverTestCase {
     @Test
     @Alerts({"string", "true"})
     public void stack() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  try {\n"
             + "    null.method();\n"
-            + "  } catch (e) {\n"
+            + "  } catch(e) {\n"
             + "    if (e.stack) {\n"
             + "      var s = e.stack;\n"
             + "      log(typeof s);\n"
@@ -68,13 +64,13 @@ public class NativeErrorTest extends WebDriverTestCase {
     @Test
     @Alerts({"string", "true"})
     public void stackNewError() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  try {\n"
             + "    throw new Error();\n"
-            + "  } catch (e) {\n"
+            + "  } catch(e) {\n"
             + "    if (e.stack) {\n"
             + "      var s = e.stack;\n"
             + "      log(typeof s);\n"
@@ -94,12 +90,10 @@ public class NativeErrorTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"string", "true"},
-            IE = "undefined")
-    @HtmlUnitNYI(IE = {"string", "true"})
+    @Alerts({"string", "true"})
     public void stackNewErrorWithoutThrow() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  var e = new Error();\n"
@@ -121,12 +115,10 @@ public class NativeErrorTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "true",
-            IE = "false")
-    @HtmlUnitNYI(IE = "true")
+    @Alerts("true")
     public void stackInNewError() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  var e = new Error();\n"
@@ -148,16 +140,15 @@ public class NativeErrorTest extends WebDriverTestCase {
     @HtmlUnitNYI(CHROME = "method()@url",
             EDGE = "method()@url",
             FF = "method()@url",
-            FF_ESR = "method()@url",
-            IE = "method()@url")
+            FF_ESR = "method()@url")
     public void stackContent() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  try {\n"
             + "    null.method();\n"
-            + "  } catch (e) {\n"
+            + "  } catch(e) {\n"
             + "    if (e.stack) {\n"
             + "      var s = e.stack;\n"
             + "      if (s.indexOf('test()@') != -1) {\n"
@@ -190,16 +181,15 @@ public class NativeErrorTest extends WebDriverTestCase {
     @HtmlUnitNYI(CHROME = "method()@url",
             EDGE = "method()@url",
             FF = "method()@url",
-            FF_ESR = "method()@url",
-            IE = "method()@url")
+            FF_ESR = "method()@url")
     public void stackContentNewError() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  try {\n"
             + "    throw new Error();\n"
-            + "  } catch (e) {\n"
+            + "  } catch(e) {\n"
             + "    if (e.stack) {\n"
             + "      var s = e.stack;\n"
             + "      if (s.indexOf('test()@') != -1) {\n"
@@ -228,13 +218,13 @@ public class NativeErrorTest extends WebDriverTestCase {
     @Test
     @Alerts({"true", "kcats"})
     public void stackOverwrite() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  try {\n"
             + "    null.method();\n"
-            + "  } catch (e) {\n"
+            + "  } catch(e) {\n"
             + "    if (e.stack) {\n"
             + "      var s = e.stack;\n"
             + "      log(s.length > 10);\n"
@@ -258,11 +248,11 @@ public class NativeErrorTest extends WebDriverTestCase {
      */
     @Test
     @Alerts(DEFAULT = "10",
-            FF = "undefined",
-            FF_ESR = "undefined")
+            FF = "128",
+            FF_ESR = "128")
     public void stackTraceLimit() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  log(Error.stackTraceLimit);\n"
@@ -277,12 +267,10 @@ public class NativeErrorTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            CHROME = "function captureStackTrace() { [native code] }",
-            EDGE = "function captureStackTrace() { [native code] }")
+    @Alerts("function captureStackTrace() { [native code] }")
     public void captureStackTrace() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  log(Error.captureStackTrace);\n"
@@ -302,13 +290,13 @@ public class NativeErrorTest extends WebDriverTestCase {
         try {
             System.setProperty("line.separator", "\r\n");
 
-            final String html
-                = "<html><head><script>\n"
+            final String html = DOCTYPE_HTML
+                + "<html><head><script>\n"
                 + LOG_TITLE_FUNCTION
                 + "function test() {\n"
                 + "  try {\n"
                 + "    throw new Error();\n"
-                + "  } catch (e) {\n"
+                + "  } catch(e) {\n"
                 + "    log(e.stack.replace('\\r', '\\\\r').replace('\\n', '\\\\n'));\n"
                 + "  }"
                 + "}\n"

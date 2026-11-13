@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,6 @@
  */
 package org.htmlunit.javascript.host.media;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
 import org.htmlunit.javascript.HtmlUnitScriptable;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
@@ -30,17 +25,13 @@ import org.htmlunit.javascript.configuration.JsxSetter;
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/AudioParam">MDN Documentation</a>
  */
-@JsxClass({CHROME, EDGE, FF, FF_ESR})
+@JsxClass
 public class AudioParam extends HtmlUnitScriptable {
 
     private double value_;
-
-    /**
-     * Creates a new instance.
-     */
-    public AudioParam() {
-    }
 
     /**
      * Creates a new instance.
@@ -51,6 +42,7 @@ public class AudioParam extends HtmlUnitScriptable {
     }
 
     /**
+     * Returns the {@code value} property.
      * @return the value
      */
     @JsxGetter
@@ -59,6 +51,7 @@ public class AudioParam extends HtmlUnitScriptable {
     }
 
     /**
+     * Sets the {@code value} property.
      * @param value the value
      */
     @JsxSetter
@@ -67,6 +60,7 @@ public class AudioParam extends HtmlUnitScriptable {
     }
 
     /**
+     * Returns the {@code defaultValue} property.
      * @return the defaultValue
      */
     @JsxGetter
@@ -75,17 +69,21 @@ public class AudioParam extends HtmlUnitScriptable {
     }
 
     /**
+     * Returns the {@code maxValue} property.
      * @return the maxValue
      */
     @JsxGetter
+    @SuppressWarnings("PMD.UseUnderscoresInNumericLiterals")
     public double getMaxValue() {
         return 3.4028234663852886e+38;
     }
 
     /**
+     * Returns the {@code minValue} property.
      * @return the minValue
      */
     @JsxGetter
+    @SuppressWarnings("PMD.UseUnderscoresInNumericLiterals")
     public double getMinValue() {
         return -3.4028234663852886e+38;
     }

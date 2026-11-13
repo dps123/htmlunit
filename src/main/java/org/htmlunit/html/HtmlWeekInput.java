@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,15 +15,16 @@
 package org.htmlunit.html;
 
 import static org.htmlunit.BrowserVersionFeatures.HTMLINPUT_TYPE_WEEK_SUPPORTED;
+import static org.htmlunit.BrowserVersionFeatures.JS_INPUT_CHANGE_TYPE_DROPS_VALUE_WEEK_MONTH;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Map;
 
-import org.apache.commons.lang3.StringUtils;
-
+import org.htmlunit.BrowserVersion;
 import org.htmlunit.SgmlPage;
+import org.htmlunit.util.StringUtils;
 
 /**
  * Wrapper for the HTML element "input" where type is "week".
@@ -31,6 +32,7 @@ import org.htmlunit.SgmlPage;
  * @author Ahmed Ashour
  * @author Frank Danek
  * @author Anton Demydenko
+ * @author Ronald Brill
  */
 public class HtmlWeekInput extends HtmlInput implements LabelableElement {
 
@@ -62,7 +64,7 @@ public class HtmlWeekInput extends HtmlInput implements LabelableElement {
     @Override
     public void setValue(final String newValue) {
         if (!hasFeature(HTMLINPUT_TYPE_WEEK_SUPPORTED)
-                || StringUtils.isEmpty(newValue)) {
+                || StringUtils.isEmptyOrNull(newValue)) {
             super.setValue(newValue);
             return;
         }
@@ -71,7 +73,7 @@ public class HtmlWeekInput extends HtmlInput implements LabelableElement {
             FORMATTER_.parse(newValue);
             super.setValue(newValue);
         }
-        catch (final DateTimeParseException e) {
+        catch (final DateTimeParseException ignored) {
             // ignore
         }
     }
@@ -99,7 +101,7 @@ public class HtmlWeekInput extends HtmlInput implements LabelableElement {
                 final LocalDate minDate = LocalDate.parse(getMin() + "-1", DateTimeFormatter.ISO_WEEK_DATE);
                 return minDate.isEqual(dateValue) || minDate.isBefore(dateValue);
             }
-            catch (final DateTimeParseException e) {
+            catch (final DateTimeParseException ignored) {
                 // ignore
             }
         }
@@ -121,10 +123,19 @@ public class HtmlWeekInput extends HtmlInput implements LabelableElement {
                 final LocalDate maxDate = LocalDate.parse(getMax() + "-1", DateTimeFormatter.ISO_WEEK_DATE);
                 return maxDate.isEqual(dateValue) || maxDate.isAfter(dateValue);
             }
-            catch (final DateTimeParseException e) {
+            catch (final DateTimeParseException ignored) {
                 // ignore
             }
         }
         return true;
+    }
+
+    @Override
+    protected void adjustValueAfterTypeChange(final HtmlInput oldInput, final BrowserVersion browserVersion) {
+        if (browserVersion.hasFeature(JS_INPUT_CHANGE_TYPE_DROPS_VALUE_WEEK_MONTH)) {
+            setValue("");
+            return;
+        }
+        super.adjustValueAfterTypeChange(oldInput, browserVersion);
     }
 }

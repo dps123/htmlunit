@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,35 +14,28 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.IE;
-
 import java.io.InputStream;
 import java.net.URL;
+import java.time.Duration;
 import java.util.Collections;
-import java.util.List;
 
 import org.apache.commons.io.IOUtils;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.htmlunit.WebDriverTestCase;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.HtmlUnitNYI;
+import org.htmlunit.util.MimeType;
+import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.interactions.Actions;
 
-import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.html.HtmlPageTest;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
-import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
-import org.htmlunit.util.MimeType;
-import org.htmlunit.util.NameValuePair;
-
 /**
  * Tests for {@link HTMLInputElement} and buttons.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author Marc Guillemot
  * @author Chris Erskine
  * @author Ahmed Ashour
@@ -50,7 +43,6 @@ import org.htmlunit.util.NameValuePair;
  * @author Frank Danek
  * @author Anton Demydenko
  */
-@RunWith(BrowserRunner.class)
 public class HTMLInputElementTest extends WebDriverTestCase {
 
     /**
@@ -59,8 +51,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"foo", "text", "textfield1", "form1", "cat"})
     public void standardProperties_Text() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
@@ -92,10 +83,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
                   "abc", "", "50", "abc", "abc", "abc", "abc"},
             FF_ESR = {"error.fileupload1", "abc", "abc", "abc", "", "abc", "", "", "abc", "abc",
                       "abc", "abc", "abc", "abc", "abc", "abc", "#000000", "", "abc", "", "", "abc",
-                      "abc", "", "50", "abc", "abc", "abc", "abc"},
-            IE = {"abc", "abc", "abc", "", "abc", "", "", "abc", "abc",
-                  "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc",
-                  "abc", "", "50", "abc", "abc", "abc", "abc"})
+                      "abc", "", "50", "abc", "abc", "abc", "abc"})
     @Test
     public void setValueString() throws Exception {
         testValue("'abc'");
@@ -104,12 +92,9 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     /**
      * @throws Exception if the test fails
      */
-    @Alerts(DEFAULT = {"", "", "", "", "", "", "", "", "",
-                       "", "", "", "", "", "", "#000000", "", "", "", "", "",
-                       "", "", "50", "", "", "", ""},
-            IE = {"", "", "", "", "", "", "", "", "",
-                  "", "", "", "", "", "", "", "", "", "", "", "",
-                  "", "", "50", "", "", "", ""})
+    @Alerts({"", "", "", "", "", "", "", "", "",
+             "", "", "", "", "", "", "#000000", "", "", "", "", "",
+             "", "", "50", "", "", "", ""})
     @Test
     public void setValueEmptyString() throws Exception {
         testValue("''");
@@ -129,10 +114,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
                   ". ", "", "50", ". ", "", ". ", ""},
             FF_ESR = {"error.fileupload1", ". ", ". ", ". ", "", ". ", "", "", ". ", ". ",
                       ". ", ". ", ". ", ". ", ". ", ". ", "#000000", "", ". ", "", "", ". ",
-                      ". ", "", "50", ". ", "", ". ", ""},
-            IE = {". ", ". ", ". ", "", ". ", "", "", ". ", ". ",
-                  ". ", ". ", ". ", ". ", ". ", ". ", ". ", ". ", ". ", ". ", ". ", ". ",
-                  ". ", "", "50", ". ", ". ", ". ", ". "})
+                      ". ", "", "50", ". ", "", ". ", ""})
     @Test
     public void setValueBlankString() throws Exception {
         testValue("'  '");
@@ -149,10 +131,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
                   "12", "12", "12", "12", "12", "12", "12"},
             FF_ESR = {"error.fileupload1", "12", "12", "12", "", "12", "", "", "12", "12",
                       "12", "12", "12", "12", "12", "12", "#000000", "", "12", "", "", "12",
-                      "12", "12", "12", "12", "12", "12", "12"},
-            IE = {"12", "12", "12", "", "12", "", "", "12", "12",
-                  "12", "12", "12", "12", "12", "12", "12", "12", "12", "12", "12", "12",
-                  "12", "12", "12", "12", "12", "12", "12"})
+                      "12", "12", "12", "12", "12", "12", "12"})
     @Test
     public void setValueNumber() throws Exception {
         testValue("12");
@@ -161,19 +140,16 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     /**
      * @throws Exception if the test fails
      */
-    @Alerts(DEFAULT = {"", "null", "", "", "", "", "", "", "",
-                       "", "null", "", "null", "", "", "#000000", "", "", "", "", "",
-                       "", "", "50", "", "", "", ""},
-            IE = {"", "null", "", "", "", "", "", "", "",
-                  "", "null", "", "null", "", "null", "", "", "", "", "", "",
-                  "", "", "50", "", "", "", ""})
+    @Alerts({"", "null", "", "", "", "", "", "", "",
+             "", "null", "", "null", "", "", "#000000", "", "", "", "", "",
+             "", "", "50", "", "", "", ""})
     @Test
     public void setValueNull() throws Exception {
         testValue("null");
     }
 
     private void testValue(final String value) throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + "function log(msg) { window.document.title += msg.replace(' ', '.') + '§';}\n"
             + "function doTest() {\n"
@@ -295,13 +271,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
                       "password", "radio", "reset", "reset",
                       "submit", "submit", "text", "textarea", "color", "date", "text",
                       "datetime-local", "time", "text", "text", "number", "range",
-                      "search", "email", "tel", "url"},
-            IE = {"button", "button", "checkbox", "file", "hidden", "select-one", "select-multiple",
-                  "password", "radio", "reset", "reset",
-                  "submit", "submit", "text", "textarea", "text", "text", "text",
-                  "text", "text", "text", "text", "number", "range",
-                  "search", "email", "tel", "url"}
-            )
+                      "search", "email", "tel", "url"})
     public void type() throws Exception {
         testAttribute("type", "", null);
     }
@@ -309,13 +279,9 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     /**
      * @throws Exception if the test fails
      */
-    @Alerts(DEFAULT = {"null", "undefined", "null", "[object FileList]", "null", "undefined", "undefined", "null",
-                       "null", "null", "undefined", "null", "undefined", "null", "undefined", "null", "null", "null",
-                       "null", "null", "null", "null", "null", "null", "null", "null", "null", "null"},
-            IE = {"undefined", "undefined", "undefined", "[object FileList]", "undefined", "undefined", "undefined",
-                  "undefined", "undefined", "undefined", "undefined", "undefined", "undefined", "undefined",
-                  "undefined", "undefined", "undefined", "undefined", "undefined", "undefined", "undefined",
-                  "undefined", "undefined", "undefined", "undefined", "undefined", "undefined", "undefined"})
+    @Alerts({"null", "undefined", "null", "[object FileList]", "null", "undefined", "undefined", "null",
+             "null", "null", "undefined", "null", "undefined", "null", "undefined", "null", "null", "null",
+             "null", "null", "null", "null", "null", "null", "null", "null", "null", "null"})
     @Test
     public void files() throws Exception {
         testAttribute("files", "", null);
@@ -336,16 +302,11 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     /**
      * @throws Exception if the test fails
      */
-    @Alerts(DEFAULT = {"true", "undefined", "true", "true", "true", "undefined", "undefined",
-                       "true", "true", "true", "undefined", "true", "undefined", "true",
-                       "undefined", "true", "true", "true", "true", "true", "true",
-                       "true", "true", "true", "true", "true", "true", "true"},
-            IE = {"false", "undefined", "true", "false", "false", "undefined", "undefined",
-                  "false", "true", "false", "undefined", "false", "undefined", "false",
-                  "undefined", "false", "false", "false", "false", "false", "false",
-                  "false", "false", "false", "false", "false", "false", "false"})
+    @Alerts({"true", "undefined", "true", "true", "true", "undefined", "undefined",
+             "true", "true", "true", "undefined", "true", "undefined", "true",
+             "undefined", "true", "true", "true", "true", "true", "true",
+             "true", "true", "true", "true", "true", "true", "true"})
     @Test
-    @NotYetImplemented(IE)
     public void checkedWithAttribute() throws Exception {
         testAttribute("checked", "checked", null);
     }
@@ -374,41 +335,8 @@ public class HTMLInputElementTest extends WebDriverTestCase {
         testAttribute("checked", "", "");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Alerts(DEFAULT = {"abc", "abc", "abc", "", "abc", "foo", "", "abc", "abc",
-                       "abc", "abc", "abc", "abc", "abc", "foo", "#000000", "", "abc",
-                       "", "", "", "", "", "50", "abc", "abc", "abc", "abc"},
-            FF = {"abc", "abc", "abc", "", "abc", "foo", "", "abc", "abc",
-                  "abc", "abc", "abc", "abc", "abc", "foo", "#000000", "", "abc",
-                  "", "", "abc", "abc", "", "50", "abc", "abc", "abc", "abc"},
-            FF_ESR = {"abc", "abc", "abc", "", "abc", "foo", "", "abc", "abc",
-                      "abc", "abc", "abc", "abc", "abc", "foo", "#000000", "", "abc",
-                      "", "", "abc", "abc", "", "50", "abc", "abc", "abc", "abc"},
-            IE = {"abc", "abc", "abc", "", "abc", "foo", "", "abc", "abc",
-                  "abc", "abc", "abc", "abc", "abc", "foo", "abc", "abc", "abc",
-                  "abc", "abc", "abc", "abc", "", "50", "abc", "abc", "abc", "abc"})
-    @HtmlUnitNYI(CHROME = {"abc", "abc", "abc", "", "abc", "foo", "", "abc", "abc",
-                           "abc", "abc", "abc", "abc", "abc", "foo", "#000000", "abc", "abc",
-                           "abc", "", "abc", "abc", "", "50", "abc", "abc", "abc", "abc"},
-            EDGE = {"abc", "abc", "abc", "", "abc", "foo", "", "abc", "abc",
-                    "abc", "abc", "abc", "abc", "abc", "foo", "#000000", "abc", "abc",
-                    "abc", "", "abc", "abc", "", "50", "abc", "abc", "abc", "abc"},
-            FF = {"abc", "abc", "abc", "", "abc", "foo", "", "abc", "abc",
-                  "abc", "abc", "abc", "abc", "abc", "foo", "#000000", "abc", "abc",
-                  "abc", "", "abc", "abc", "", "50", "abc", "abc", "abc", "abc"},
-            FF_ESR = {"abc", "abc", "abc", "", "abc", "foo", "", "abc", "abc",
-                      "abc", "abc", "abc", "abc", "abc", "foo", "#000000", "abc", "abc",
-                      "abc", "", "abc", "abc", "", "50", "abc", "abc", "abc", "abc"})
-    @Test
-    public void setValueAttribute() throws Exception {
-        testAttribute("value", "", "abc");
-    }
-
     private void testAttribute(final String property, final String attrib, final String value) throws Exception {
-        String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n";
@@ -519,11 +447,398 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     /**
      * @throws Exception if the test fails
      */
+    @Alerts("abc")
+    @Test
+    public void setValueAttributeInputButton() throws Exception {
+        testAttribute("button1", "value", "", "abc");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Alerts("abc")
+    @Test
+    public void setValueAttributeButton() throws Exception {
+        testAttribute("button2", "value", "", "abc");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Alerts("abc")
+    @Test
+    public void setValueAttributeCheckbox() throws Exception {
+        testAttribute("checkbox1", "value", "", "abc");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Alerts("")
+    @Test
+    public void setValueAttributeFile() throws Exception {
+        testAttribute("fileupload1", "value", "", "abc");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Alerts("abc")
+    @Test
+    public void setValueAttributeHidden() throws Exception {
+        testAttribute("hidden1", "value", "", "abc");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Alerts("foo")
+    @Test
+    public void setValueAttributeSelect() throws Exception {
+        testAttribute("select1", "value", "", "abc");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Alerts("")
+    @Test
+    public void setValueAttributeSelectMultiple() throws Exception {
+        testAttribute("select2", "value", "", "abc");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Alerts("abc")
+    @Test
+    public void setValueAttributePassword() throws Exception {
+        testAttribute("password1", "value", "", "abc");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Alerts("abc")
+    @Test
+    public void setValueAttributeRadio() throws Exception {
+        testAttribute("radio1", "value", "", "abc");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Alerts("abc")
+    @Test
+    public void setValueAttributeReset() throws Exception {
+        testAttribute("reset1", "value", "", "abc");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Alerts("abc")
+    @Test
+    public void setValueAttributeResetButton() throws Exception {
+        testAttribute("reset2", "value", "", "abc");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Alerts("abc")
+    @Test
+    public void setValueAttributeSubmit() throws Exception {
+        testAttribute("submit1", "value", "", "abc");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Alerts("abc")
+    @Test
+    public void setValueAttributeSubmitButton() throws Exception {
+        testAttribute("submit2", "value", "", "abc");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Alerts("abc")
+    @Test
+    public void setValueAttributeText() throws Exception {
+        testAttribute("textInput1", "value", "", "abc");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Alerts("foo")
+    @Test
+    public void setValueAttributeTextArea() throws Exception {
+        testAttribute("textarea1", "value", "", "abc");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Alerts("#000000")
+    @Test
+    public void setValueAttributeColor() throws Exception {
+        testAttribute("color1", "value", "", "abc");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Alerts("")
+    @HtmlUnitNYI(CHROME = "abc",
+            EDGE = "abc",
+            FF = "abc",
+            FF_ESR = "abc")
+    @Test
+    public void setValueAttributeDate() throws Exception {
+        testAttribute("date1", "value", "", "abc");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Alerts("abc")
+    @Test
+    public void setValueAttributeDateTime() throws Exception {
+        testAttribute("datetime1", "value", "", "abc");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Alerts("")
+    @HtmlUnitNYI(CHROME = "abc",
+            EDGE = "abc",
+            FF = "abc",
+            FF_ESR = "abc")
+    @Test
+    public void setValueAttributeDateTimeLocal() throws Exception {
+        testAttribute("datetimeLocal1", "value", "", "abc");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Alerts("")
+    @Test
+    public void setValueAttributeTime() throws Exception {
+        testAttribute("time1", "value", "", "abc");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Alerts(DEFAULT = "",
+            FF = "abc",
+            FF_ESR = "abc")
+    @HtmlUnitNYI(CHROME = "abc",
+            EDGE = "abc")
+    @Test
+    public void setValueAttributeWeek() throws Exception {
+        testAttribute("week1", "value", "", "abc");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Alerts(DEFAULT = "",
+            FF = "abc",
+            FF_ESR = "abc")
+    @HtmlUnitNYI(CHROME = "abc",
+            EDGE = "abc")
+    @Test
+    public void setValueAttributeMonth() throws Exception {
+        testAttribute("month1", "value", "", "abc");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Alerts("")
+    @Test
+    public void setValueAttributeNumber() throws Exception {
+        testAttribute("number1", "value", "", "abc");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Alerts("50")
+    @Test
+    public void setValueAttributeRange() throws Exception {
+        testAttribute("range1", "value", "", "abc");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Alerts("abc")
+    @Test
+    public void setValueAttributeSearch() throws Exception {
+        testAttribute("search1", "value", "", "abc");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Alerts("abc")
+    @Test
+    public void setValueAttributeEmail() throws Exception {
+        testAttribute("email1", "value", "", "abc");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Alerts("abc")
+    @Test
+    public void setValueAttributeTel() throws Exception {
+        testAttribute("tel1", "value", "", "abc");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Alerts("abc")
+    @Test
+    public void setValueAttributeUrl() throws Exception {
+        testAttribute("url1", "value", "", "abc");
+    }
+
+    private void testAttribute(final String itemId, final String property,
+                    final String attrib, final String value) throws Exception {
+        String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function doTest() {\n";
+
+        if (value != null) {
+            html = html
+                + "  document.form1." + itemId + ".setAttribute('" + property + "', '" + value + "');\n";
+        }
+
+        html = html
+            + "  log(document.form1." + itemId + "." + property + ");\n"
+            + "}\n"
+            + "</script></head><body onload='doTest()'>\n"
+            + "<p>hello world</p>\n"
+            + "<form name='form1'>\n"
+            + "  <input type='button' name='button1' " + attrib + "></button>\n"
+            + "  <button type='button' name='button2' " + attrib + "></button>\n"
+            + "  <input type='checkbox' name='checkbox1' " + attrib + "/>\n"
+            + "  <input type='file' name='fileupload1' " + attrib + "/>\n"
+            + "  <input type='hidden' name='hidden1' " + attrib + "/>\n"
+            + "  <select name='select1' " + attrib + ">\n"
+            + "    <option>foo</option>\n"
+            + "  </select>\n"
+            + "  <select multiple='multiple' name='select2' " + attrib + ">\n"
+            + "    <option>foo</option>\n"
+            + "  </select>\n"
+            + "  <input type='password' name='password1' " + attrib + "/>\n"
+            + "  <input type='radio' name='radio1' " + attrib + "/>\n"
+            + "  <input type='reset' name='reset1' " + attrib + "/>\n"
+            + "  <button type='reset' name='reset2' " + attrib + "></button>\n"
+            + "  <input type='submit' name='submit1' " + attrib + "/>\n"
+            + "  <button type='submit' name='submit2' " + attrib + "></button>\n"
+            + "  <input type='text' name='textInput1' " + attrib + "/>\n"
+            + "  <textarea name='textarea1' " + attrib + ">foo</textarea>\n"
+            + "  <input type='color' name='color1' " + attrib + "/>\n"
+            + "  <input type='date' name='date1' " + attrib + "/>\n"
+            + "  <input type='datetime' name='datetime1' " + attrib + "/>\n"
+            + "  <input type='datetime-local' name='datetimeLocal1' " + attrib + "/>\n"
+            + "  <input type='time' name='time1' " + attrib + "/>\n"
+            + "  <input type='week' name='week1' " + attrib + "/>\n"
+            + "  <input type='month' name='month1' " + attrib + "/>\n"
+            + "  <input type='number' name='number1' " + attrib + "/>\n"
+            + "  <input type='range' name='range1' " + attrib + "/>\n"
+            + "  <input type='search' name='search1' " + attrib + "/>\n"
+            + "  <input type='email' name='email1' " + attrib + "/>\n"
+            + "  <input type='tel' name='tel1' " + attrib + "/>\n"
+            + "  <input type='url' name='url1' " + attrib + "/>\n"
+            + "</form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Alerts({"abc-abc", "abc-abc", "jkl-abc"})
+    @Test
+    public void typeChangeNotDirty() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function doTest() {\n"
+            + "  var inpt = document.form1.textInput1;\n"
+            + "  log(inpt.value + '-' + inpt.defaultValue);\n"
+
+            + "  inpt.type = 'password';\n"
+            + "  log(inpt.value + '-' + inpt.defaultValue);\n"
+
+            + "  inpt.value = 'jkl';\n"
+            + "  log(inpt.value + '-' + inpt.defaultValue);\n"
+            + "}\n"
+            + "</script></head><body onload='doTest()'>\n"
+            + "<p>hello world</p>\n"
+            + "<form name='form1'>\n"
+            + "  <input type='text' name='textInput1' value='abc'/>\n"
+            + "</form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Alerts({"abc-abc", "def-abc", "ghi-abc", "ghi-abc", "jkl-abc"})
+    @Test
+    public void typeChangeDirty() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function doTest() {\n"
+            + "  var inpt = document.form1.textInput1;\n"
+            + "  log(inpt.value + '-' + inpt.defaultValue);\n"
+
+            + "  inpt.value = 'def';\n"
+            + "  log(inpt.value + '-' + inpt.defaultValue);\n"
+
+            + "  inpt.value = 'ghi';\n"
+            + "  log(inpt.value + '-' + inpt.defaultValue);\n"
+
+            + "  inpt.type = 'password';\n"
+            + "  log(inpt.value + '-' + inpt.defaultValue);\n"
+
+            + "  inpt.value = 'jkl';\n"
+            + "  log(inpt.value + '-' + inpt.defaultValue);\n"
+            + "}\n"
+            + "</script></head><body onload='doTest()'>\n"
+            + "<p>hello world</p>\n"
+            + "<form name='form1'>\n"
+            + "  <input type='text' name='textInput1' value='abc'/>\n"
+            + "</form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
     @Test
     @Alerts({"false", "true"})
     public void checkedAttribute_Checkbox() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -554,8 +869,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"true", "false", "false", "false", "true", "false"})
     public void checkedAttribute_Radio() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -598,8 +912,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"false", "true", "false", "true", "false", "true"})
     public void disabledAttribute() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -644,8 +957,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
      */
     @Test
     public void inputValue() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><title>foo</title><script>\n"
             + "function doTest() {\n"
             + "  document.form1.textfield1.value = 'blue';\n"
@@ -662,6 +974,9 @@ public class HTMLInputElementTest extends WebDriverTestCase {
         getMockWebConnection().setDefaultResponse("");
         final WebDriver driver = loadPage2(html);
         driver.findElement(By.id("clickMe")).click();
+        sleepRealBrowser(200);
+
+        assertEquals(2, getMockWebConnection().getRequestCount());
         assertEquals(URL_FIRST + "?textfield1=blue", driver.getCurrentUrl());
     }
 
@@ -670,8 +985,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
      */
     @Test
     public void inputSelect_NotDefinedAsPropertyAndFunction() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><title>foo</title><script>\n"
             + "function doTest() {\n"
             + "  document.form1.textfield1.select();\n"
@@ -688,6 +1002,8 @@ public class HTMLInputElementTest extends WebDriverTestCase {
         getMockWebConnection().setDefaultResponse("");
         final WebDriver driver = loadPage2(html);
         driver.findElement(By.id("clickMe")).click();
+        sleepRealBrowser(100);
+
         assertEquals(URL_FIRST + "?textfield1=foo", driver.getCurrentUrl());
     }
 
@@ -697,8 +1013,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts("true")
     public void thisDotFormInOnClick() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html>\n"
             + "<body>\n"
             + "<form name='form1'>\n"
@@ -711,13 +1026,9 @@ public class HTMLInputElementTest extends WebDriverTestCase {
             + "</body></html>";
 
         final WebDriver driver = loadPageVerifyTitle2(html);
-
-        // HtmlUnitDriver is buggy, it returns null here
-        // assertEquals("", driver.findElement(By.name("form1")).getAttribute("target"));
-
         driver.findElement(By.id("clickMe")).click();
 
-        assertEquals("_blank", driver.findElement(By.name("form1")).getAttribute("target"));
+        assertEquals("_blank", driver.findElement(By.name("form1")).getDomProperty("target"));
     }
 
     /**
@@ -726,8 +1037,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"true", "true", "true", "true", "true"})
     public void fieldDotForm() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html>\n"
             + "<head><script>\n"
             + LOG_TITLE_FUNCTION
@@ -760,8 +1070,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
      */
     @Test
     public void inputNameChange() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><title>foo</title><script>\n"
             + "function doTest() {\n"
             + "  document.form1.textfield1.name = 'changed';\n"
@@ -777,6 +1086,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
         getMockWebConnection().setDefaultResponse("");
         final WebDriver driver = loadPage2(html);
         driver.findElement(By.id("clickMe")).click();
+        sleepRealBrowser(100);
 
         assertEquals(URL_FIRST + "?changed=foo&button1=pushme", driver.getCurrentUrl());
     }
@@ -787,8 +1097,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"foo", "from button"})
     public void onChange() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><title></title>\n"
             + "</head><body>\n"
             + "<p>hello world</p>\n"
@@ -804,9 +1113,9 @@ public class HTMLInputElementTest extends WebDriverTestCase {
         textinput.sendKeys("foo");
         final WebElement button = driver.findElement(By.name("myButton"));
         button.click();
+
         assertTitle(driver, getExpectedAlerts()[0]);
-        Thread.sleep(100);
-        assertEquals(getExpectedAlerts()[1], textinput.getAttribute("value"));
+        assertEquals(getExpectedAlerts()[1], () -> textinput.getDomProperty("value"), Duration.ofMillis(100));
     }
 
     /**
@@ -815,8 +1124,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"foo", "from button"})
     public void onChangeSetByJavaScript() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "</head><body>\n"
             + "<p>hello world</p>\n"
@@ -835,10 +1143,9 @@ public class HTMLInputElementTest extends WebDriverTestCase {
         textinput.sendKeys("foo");
         final WebElement button = driver.findElement(By.name("myButton"));
         button.click();
-        assertTitle(driver, getExpectedAlerts()[0]);
 
-        Thread.sleep(100);
-        assertEquals(getExpectedAlerts()[1], textinput.getAttribute("value"));
+        assertTitle(driver, getExpectedAlerts()[0]);
+        assertEquals(getExpectedAlerts()[1], () -> textinput.getDomProperty("value"), Duration.ofMillis(100));
     }
 
     /**
@@ -848,8 +1155,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"on", "on"})
     public void defautValue() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
@@ -885,14 +1191,9 @@ public class HTMLInputElementTest extends WebDriverTestCase {
                     + "password, image, reset, button, file, number, range, search, tel, url, text, text",
                       "text, checkbox, date, datetime-local, text, time, text, color, "
                     + "email, text, submit, radio, hidden, password, "
-                    + "image, reset, button, file, number, range, search, tel, url, text, text"},
-            IE = {"text, checkbox, error, error, error, error, error, error, email, text, submit, radio, hidden, "
-                    + "password, image, reset, button, file, number, range, search, tel, url, error, text",
-                "text, checkbox, text, text, text, text, text, text, email, text, submit, radio, hidden, password, "
-                    + "image, reset, button, file, number, range, search, tel, url, text, text" })
+                    + "image, reset, button, file, number, range, search, tel, url, text, text"})
     public void changeType() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
@@ -940,8 +1241,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
              "text: false, false, function, function, , ",
              "password: false, false, function, function, , "})
     public void defaultValues() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head></head><body>\n"
             + "<form name='myForm'>\n"
             + "<input type='button' name='myButton'/>\n"
@@ -984,8 +1284,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"text", "null", "hidden", "hidden"})
     public void createInputAndChangeType() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
@@ -1009,8 +1308,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"text", "null", "text", "text"})
     public void createInputAndChangeTypeToText() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
@@ -1034,8 +1332,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts("123")
     public void buttonOutsideForm() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head></head><body>\n"
             + "<button id='clickme' onclick='alert(123)'>click me</button>\n"
             + "</body></html>";
@@ -1056,12 +1353,10 @@ public class HTMLInputElementTest extends WebDriverTestCase {
         try (InputStream is = getClass().getClassLoader().getResourceAsStream("testfiles/tiny-jpg.img")) {
             final byte[] directBytes = IOUtils.toByteArray(is);
 
-            final List<NameValuePair> emptyList = Collections.emptyList();
-            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "image/jpg", emptyList);
+            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "image/jpg", Collections.emptyList());
         }
 
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "</head>\n"
             + "<body>\n"
@@ -1071,7 +1366,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
             + "  </form>\n"
             + "</body></html>";
 
-        getMockWebConnection().setDefaultResponse("<html><title>page 2</title><body></body></html>");
+        getMockWebConnection().setDefaultResponse(DOCTYPE_HTML + "<html><title>page 2</title><body></body></html>");
 
         final WebDriver driver = loadPage2(html);
         driver.findElement(By.name("field1")).sendKeys("bla");
@@ -1085,8 +1380,8 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"undefined", "30", "undefined", "30", "30", "30", "40", "50", "string", "number"})
     public void maxLength() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
             + "  var input = document.getElementById('text1');\n"
@@ -1115,12 +1410,10 @@ public class HTMLInputElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"undefined", "30", "undefined", "30", "30", "30", "40", "50", "string", "number"},
-            IE = {"undefined", "undefined", "undefined", "30", "30", "30",
-                  "undefined", "40", "string", "number"})
+    @Alerts({"undefined", "30", "undefined", "30", "30", "30", "40", "50", "string", "number"})
     public void minLength() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
             + "  var input = document.getElementById('text1');\n"
@@ -1150,8 +1443,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
      */
     @Test
     public void typeMaxLength() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><body>\n"
             + "<form>\n"
             + "<input type='text' id='text1' maxlength='5'/>\n"
@@ -1161,17 +1453,17 @@ public class HTMLInputElementTest extends WebDriverTestCase {
         final WebDriver webDriver = loadPage2(html);
         final WebElement textField = webDriver.findElement(By.id("text1"));
         textField.sendKeys("123456789");
-        assertEquals("12345", textField.getAttribute("value"));
+        assertEquals("12345", textField.getDomProperty("value"));
         textField.sendKeys(Keys.BACK_SPACE);
         textField.sendKeys("7");
-        assertEquals("12347", textField.getAttribute("value"));
+        assertEquals("12347", textField.getDomProperty("value"));
 
         final WebElement passwordField = webDriver.findElement(By.id("password1"));
         passwordField.sendKeys("123456789");
-        assertEquals("123456", passwordField.getAttribute("value"));
+        assertEquals("123456", passwordField.getDomProperty("value"));
         passwordField.sendKeys(Keys.BACK_SPACE);
         passwordField.sendKeys("7");
-        assertEquals("123457", passwordField.getAttribute("value"));
+        assertEquals("123457", passwordField.getDomProperty("value"));
     }
 
     /**
@@ -1179,8 +1471,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
      */
     @Test
     public void typeMaxLengthZero() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><body>\n"
             + "<form>\n"
             + "<input type='text' id='text1' maxlength='0'/>\n"
@@ -1190,15 +1481,15 @@ public class HTMLInputElementTest extends WebDriverTestCase {
         final WebDriver webDriver = loadPage2(html);
         final WebElement textField = webDriver.findElement(By.id("text1"));
         textField.sendKeys("123456789");
-        assertEquals("", textField.getAttribute("value"));
+        assertEquals("", textField.getDomProperty("value"));
         textField.sendKeys("\b7");
-        assertEquals("", textField.getAttribute("value"));
+        assertEquals("", textField.getDomProperty("value"));
 
         final WebElement passwordField = webDriver.findElement(By.id("password1"));
         passwordField.sendKeys("123456789");
-        assertEquals("", passwordField.getAttribute("value"));
+        assertEquals("", passwordField.getDomProperty("value"));
         passwordField.sendKeys("\b7");
-        assertEquals("", passwordField.getAttribute("value"));
+        assertEquals("", passwordField.getDomProperty("value"));
     }
 
     /**
@@ -1206,8 +1497,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
      */
     @Test
     public void typeMaxLengthAndBlanks() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><body>\n"
             + "<form>\n"
             + "<input type='text' id='text1' maxlength=' 2 '/>\n"
@@ -1217,30 +1507,27 @@ public class HTMLInputElementTest extends WebDriverTestCase {
         final WebDriver webDriver = loadPage2(html);
         final WebElement textField = webDriver.findElement(By.id("text1"));
         textField.sendKeys("123456789");
-        assertEquals("12", textField.getAttribute("value"));
+        assertEquals("12", textField.getDomProperty("value"));
         textField.sendKeys(Keys.BACK_SPACE);
         textField.sendKeys("7");
-        assertEquals("17", textField.getAttribute("value"));
+        assertEquals("17", textField.getDomProperty("value"));
 
         final WebElement passwordField = webDriver.findElement(By.id("password1"));
         passwordField.sendKeys("123456789");
-        assertEquals("1234", passwordField.getAttribute("value"));
+        assertEquals("1234", passwordField.getDomProperty("value"));
         passwordField.sendKeys(Keys.BACK_SPACE);
         passwordField.sendKeys("7");
-        assertEquals("1237", passwordField.getAttribute("value"));
+        assertEquals("1237", passwordField.getDomProperty("value"));
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"text TeXt", "password PassWord", "hidden Hidden",
-                       "checkbox CheckBox", "radio rAdiO", "file FILE", "checkbox CHECKBOX"},
-            IE = {"text TeXt", "password PassWord", "hidden Hidden",
-                  "checkbox CheckBox", "radio rAdiO", "file FILE", "checkbox checkbox"})
+    @Alerts({"text TeXt", "password PassWord", "hidden Hidden",
+             "checkbox CheckBox", "radio rAdiO", "file FILE", "checkbox CHECKBOX"})
     public void typeCase() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -1260,7 +1547,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
             + "  try {\n"
             + "    f.type = 'CHECKBOX';\n"
             + "    log(f.type + ' ' + f.getAttribute('type'));\n"
-            + "  } catch(e) { log('error');}\n"
+            + "  } catch(e) { logEx(e); }\n"
             + "}\n"
             + "</script></head>\n"
             + "<body onload='test()'>\n"
@@ -1283,8 +1570,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"text-text", "text- password", "text-hidden ", "text-checkbox ", "text-\\tradio"})
     public void typeTrim() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + "function log(msg) { window.document.title += msg.replace('\t', '\\\\t') + '§';}\n"
@@ -1321,8 +1607,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts("true")
     public void readOnly() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html>\n"
             + "<head>\n"
             + "<script>\n"
@@ -1346,8 +1631,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"false", "true"})
     public void readOnlyInputFile() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html>\n"
             + "<head>\n"
             + "<script>\n"
@@ -1372,11 +1656,9 @@ public class HTMLInputElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"left", "right", "bottom", "middle", "top", "wrong", ""},
-            IE = {"", "", "", "", "", "", ""})
+    @Alerts({"left", "right", "bottom", "middle", "top", "wrong", ""})
     public void getAlign() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><body>\n"
             + "  <form>\n"
             + "    <input id='i1' align='left' />\n"
@@ -1402,11 +1684,9 @@ public class HTMLInputElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"CenTer", "8", "foo", "left", "right", "bottom", "middle", "top"},
-            IE = {"", "error", "", "error", "", "", "", "", "", ""})
+    @Alerts({"CenTer", "8", "foo", "left", "right", "bottom", "middle", "top"})
     public void setAlign() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><body>\n"
             + "  <form>\n"
             + "    <input id='i1' type='text' align='left' value=''/>\n"
@@ -1417,7 +1697,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
             + "  function setAlign(elem, value) {\n"
             + "    try {\n"
             + "      elem.align = value;\n"
-            + "    } catch (e) { log('error'); }\n"
+            + "    } catch(e) { logEx(e); }\n"
             + "    log(elem.align);\n"
             + "  }\n"
 
@@ -1443,8 +1723,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"", "A", "a", "A", "a8", "8Afoo", "8", "@"})
     public void accessKey() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><body>\n"
             + "  <input id='a1'>\n"
             + "  <input id='a2' accesskey='A'>\n"
@@ -1482,8 +1761,8 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"test", "4", "42", "2", "[object HTMLInputElement]", "25"})
     public void getAttributeAndSetValue() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION
@@ -1520,8 +1799,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"null", "4", "", "0"})
     public void getAttributeAndSetValueNull() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
@@ -1554,8 +1832,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"0", "0", "2", "7"})
     public void selectionRange() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -1581,8 +1858,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts("onsubmit")
     public void submitNonRequired() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + "function submitMe() {\n"
             + "  alert('onsubmit');\n"
@@ -1598,7 +1874,8 @@ public class HTMLInputElementTest extends WebDriverTestCase {
         final WebDriver driver = loadPage2(html);
         driver.findElement(By.id("mySubmit")).click();
         verifyAlerts(driver, getExpectedAlerts());
-        Thread.sleep(DEFAULT_WAIT_TIME / 10);
+
+        Thread.sleep(DEFAULT_WAIT_TIME.toMillis() / 10);
         assertTrue("Url '" + driver.getCurrentUrl() + "' does not contain 'myName'",
                 driver.getCurrentUrl().contains("myName"));
 
@@ -1612,8 +1889,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"1", "§§URL§§"})
     public void submitRequired() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + "function submitMe() {\n"
             + "  alert('onsubmit');\n"
@@ -1641,8 +1917,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"false", "true"})
     public void checkValidity() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + "function checkStatus() {\n"
             + "  var elem = document.getElementById('myInput');\n"
@@ -1670,12 +1945,9 @@ public class HTMLInputElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "§§URL§§?myName=abcdefg",
-            IE = "§§URL§§")
-    @NotYetImplemented(IE)
+    @Alerts("§§URL§§?myName=abcdefg")
     public void maxLengthJavaScript() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + "function updateValue() {\n"
             + "  document.getElementById('myInput').value = 'abcdefg';\n"
@@ -1691,8 +1963,10 @@ public class HTMLInputElementTest extends WebDriverTestCase {
 
         final WebDriver driver = loadPage2(html);
         driver.findElement(By.id("myButton")).click();
-        assertEquals("abcdefg", driver.findElement(By.id("myInput")).getAttribute("value"));
+        assertEquals("abcdefg", driver.findElement(By.id("myInput")).getDomProperty("value"));
+
         driver.findElement(By.id("mySubmit")).click();
+        sleepRealBrowser(100);
 
         expandExpectedAlertsVariables(URL_FIRST);
         assertEquals(getExpectedAlerts()[0], driver.getCurrentUrl());
@@ -1704,8 +1978,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts("§§URL§§?myName=ab")
     public void maxLength2() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + "</script></head>\n"
             + "<body>\n"
@@ -1717,9 +1990,10 @@ public class HTMLInputElementTest extends WebDriverTestCase {
 
         final WebDriver driver = loadPage2(html);
         driver.findElement(By.id("myInput")).sendKeys("abcdefg");
-        assertEquals("ab", driver.findElement(By.id("myInput")).getAttribute("value"));
+        assertEquals("ab", driver.findElement(By.id("myInput")).getDomProperty("value"));
 
         driver.findElement(By.id("mySubmit")).click();
+        sleepRealBrowser(100);
 
         expandExpectedAlertsVariables(URL_FIRST);
         assertEquals(getExpectedAlerts()[0], driver.getCurrentUrl());
@@ -1731,8 +2005,8 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"30", "undefined", "30", "30", "40", "50", "string", "string"})
     public void min() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
             + "  var input = document.getElementById('text1');\n"
@@ -1761,8 +2035,8 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"30", "undefined", "30", "30", "40", "50", "string", "string"})
     public void max() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
             + "  var input = document.getElementById('text1');\n"
@@ -1789,11 +2063,10 @@ public class HTMLInputElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"0", "2", "1", "2", "1", "1"},
-            IE = {"undefined", "undefined", "undefined", "undefined", "undefined", "undefined"})
+    @Alerts({"0", "2", "1", "2", "1", "1"})
     public void labels() throws Exception {
-        final String html =
-            "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION
             + "    function test() {\n"
@@ -1827,13 +2100,12 @@ public class HTMLInputElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"173", "17", "173", "17", "13", "13", "13", "13"},
-            FF = {"145", "18", "145", "18", "10", "10", "10", "10"},
-            FF_ESR = {"145", "18", "145", "18", "10", "10", "10", "10"},
-            IE = {"143", "19", "145", "20", "13", "13", "13", "13"})
-    @NotYetImplemented(IE)
+    @Alerts(DEFAULT = {"169", "17", "169", "17", "13", "13", "13", "13"},
+            FF = {"157", "18", "157", "18", "14", "14", "14", "14"},
+            FF_ESR = {"157", "18", "157", "18", "14", "14", "14", "14"})
     public void defaultClientWidthHeight() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
                 + "  function test() {\n"
@@ -1868,8 +2140,8 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts("[object HTMLFormElement]")
     public void form() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <form>\n"
             + "    <input type='text' id='a'>\n"
@@ -1896,9 +2168,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "",
-            FF = "mouse over [tester]",
-            FF_ESR = "mouse over [tester]")
+    @Alerts("mouse over [tester]")
     public void mouseOverButtonDisabled() throws Exception {
         mouseOver("<input id='tester' type='button' onmouseover='dumpEvent(event);' value='HtmlUnit' disabled >");
     }
@@ -1916,9 +2186,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "",
-            FF = "mouse over [tester]",
-            FF_ESR = "mouse over [tester]")
+    @Alerts("mouse over [tester]")
     public void mouseOverSubmitDisabled() throws Exception {
         mouseOver("<input id='tester' type='submit' onmouseover='dumpEvent(event);' disabled >");
     }
@@ -1936,9 +2204,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "",
-            FF = "mouse over [tester]",
-            FF_ESR = "mouse over [tester]")
+    @Alerts("mouse over [tester]")
     public void mouseOverResetDisabled() throws Exception {
         mouseOver("<input id='tester' type='reset' onmouseover='dumpEvent(event);' disabled >");
     }
@@ -1956,9 +2222,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "",
-            FF = "mouse over [tester]",
-            FF_ESR = "mouse over [tester]")
+    @Alerts("mouse over [tester]")
     public void mouseOverTextDisabled() throws Exception {
         mouseOver("<input id='tester' type='text' onmouseover='dumpEvent(event);' value='HtmlUnit' disabled >");
     }
@@ -1976,9 +2240,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "",
-            FF = "mouse over [tester]",
-            FF_ESR = "mouse over [tester]")
+    @Alerts("mouse over [tester]")
     public void mouseOverPasswordDisabled() throws Exception {
         mouseOver("<input id='tester' type='password' onmouseover='dumpEvent(event);' value='HtmlUnit' disabled >");
     }
@@ -1996,9 +2258,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "",
-            FF = "mouse over [tester]",
-            FF_ESR = "mouse over [tester]")
+    @Alerts("mouse over [tester]")
     public void mouseOverFileDisabled() throws Exception {
         mouseOver("<input id='tester' type='file' onmouseover='dumpEvent(event);' disabled >");
     }
@@ -2016,9 +2276,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "",
-            FF = "mouse over [tester]",
-            FF_ESR = "mouse over [tester]")
+    @Alerts("mouse over [tester]")
     public void mouseOverCheckboxDisabled() throws Exception {
         mouseOver("<input id='tester' type='checkbox' onmouseover='dumpEvent(event);' value='HtmlUnit' disabled >");
     }
@@ -2036,16 +2294,13 @@ public class HTMLInputElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "",
-            FF = "mouse over [tester]",
-            FF_ESR = "mouse over [tester]")
+    @Alerts("mouse over [tester]")
     public void mouseOverRadioDisabled() throws Exception {
         mouseOver("<input id='tester' type='radio' onmouseover='dumpEvent(event);' value='HtmlUnit' disabled >");
     }
 
     private void mouseOver(final String element) throws Exception {
-        final String html =
-            HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
@@ -2092,8 +2347,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"Test-Test-Test", "text1-text1-text1"})
     public void getAttribute() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -2116,8 +2370,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"Test-Test-Test", "text1-text1-text1"})
     public void getAttributeCase() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -2140,8 +2393,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"Test-Test-Test", "Test-Test-Test"})
     public void setAttribute() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -2164,8 +2416,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts("finish")
     public void setAttributeFromJavaScript() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -2186,8 +2437,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
      */
     @Test
     public void sendKeys() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head></head>\n"
             + "<body>\n"
             + "  <input id='myInput' value='Test' onchange=\"alert('changed')\">\n"
@@ -2204,8 +2454,7 @@ public class HTMLInputElementTest extends WebDriverTestCase {
      */
     @Test
     public void clear() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "</script></head>\n"
@@ -2225,8 +2474,221 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"true", "false", "true", "false", "true"})
     public void willValidate() throws Exception {
-        final String html =
-                "<html><head>\n"
+        willValidate("");
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"false", "false", "false", "false", "false"})
+    public void willValidateButton() throws Exception {
+        willValidate("type='button'");
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "false", "true", "false", "true"})
+    public void willValidateCheckbox() throws Exception {
+        willValidate("type='checkbox'");
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "false", "true", "false", "true"})
+    public void willValidateColor() throws Exception {
+        willValidate("type='color'");
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "false", "true", "false", "true"})
+    public void willValidateDate() throws Exception {
+        willValidate("type='date'");
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "false", "true", "false", "true"})
+    public void willValidateDatetime() throws Exception {
+        willValidate("type='datetime'");
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "false", "true", "false", "true"})
+    public void willValidateDatetimelocal() throws Exception {
+        willValidate("type='datetime-local'");
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "false", "true", "false", "true"})
+    public void willValidateEmail() throws Exception {
+        willValidate("type='email'");
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "false", "true", "false", "true"})
+    public void willValidateFile() throws Exception {
+        willValidate("type='file'");
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"false", "false", "false", "false", "false"})
+    public void willValidateHidden() throws Exception {
+        willValidate("type='hidden'");
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts(DEFAULT = {"false", "false", "false", "false", "false"},
+            FF = {"true", "false", "true", "false", "true"},
+            FF_ESR = {"true", "false", "true", "false", "true"})
+    public void willValidateImage() throws Exception {
+        willValidate("type='image'");
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "false", "true", "false", "true"})
+    public void willValidateMonth() throws Exception {
+        willValidate("type='month'");
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "false", "true", "false", "true"})
+    public void willValidateNumber() throws Exception {
+        willValidate("type='number'");
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "false", "true", "false", "true"})
+    public void willValidatePassword() throws Exception {
+        willValidate("type='password'");
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "false", "true", "false", "true"})
+    public void willValidateRadio() throws Exception {
+        willValidate("type='radio'");
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "false", "true", "false", "true"})
+    public void willValidateRange() throws Exception {
+        willValidate("type='range'");
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"false", "false", "false", "false", "false"})
+    public void willValidateReset() throws Exception {
+        willValidate("type='reset'");
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "false", "true", "false", "true"})
+    public void willValidateSearch() throws Exception {
+        willValidate("type='search'");
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "false", "true", "false", "true"})
+    public void willValidateSubmit() throws Exception {
+        willValidate("type='submit'");
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "false", "true", "false", "true"})
+    public void willValidateTel() throws Exception {
+        willValidate("type='tel'");
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "false", "true", "false", "true"})
+    public void willValidateText() throws Exception {
+        willValidate("type='text'");
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "false", "true", "false", "true"})
+    public void willValidateTime() throws Exception {
+        willValidate("type='time'");
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "false", "true", "false", "true"})
+    public void willValidateUrl() throws Exception {
+        willValidate("type='url'");
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "false", "true", "false", "true"})
+    public void willValidateWeek() throws Exception {
+        willValidate("type='week'");
+    }
+
+    private void willValidate(final String type) throws Exception {
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "  <script>\n"
                 + LOG_TITLE_FUNCTION
                 + "    function test() {\n"
@@ -2240,11 +2702,11 @@ public class HTMLInputElementTest extends WebDriverTestCase {
                 + "</head>\n"
                 + "<body onload='test()'>\n"
                 + "  <form>\n"
-                + "    <input id='i1'>\n"
-                + "    <input id='i2' disabled>>\n"
-                + "    <input id='i3' hidden>\n"
-                + "    <input id='i4' readonly>\n"
-                + "    <input id='i5' style='display: none'>\n"
+                + "    <input id='i1' " + type + ">\n"
+                + "    <input id='i2' " + type + "disabled>\n"
+                + "    <input id='i3' " + type + "hidden>\n"
+                + "    <input id='i4' " + type + "readonly>\n"
+                + "    <input id='i5' " + type + "style='display: none'>\n"
                 + "  </form>\n"
                 + "</body></html>";
 
@@ -2257,8 +2719,8 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts("true")
     public void willValidateFormNoValidate() throws Exception {
-        final String html =
-                "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "  <script>\n"
                 + LOG_TITLE_FUNCTION
                 + "    function test() {\n"
@@ -2281,7 +2743,8 @@ public class HTMLInputElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"false", "false", "true", "false"})
     public void formNoValidate() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -2298,6 +2761,1431 @@ public class HTMLInputElementTest extends WebDriverTestCase {
             + "    log(i.formNoValidate);\n"
             + "  }\n"
             + "</script></head><body onload='test()'>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"original", "from js", "original", "changed"})
+    public void reset() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    let inpt = document.getElementById('theInput');\n"
+            + "    let frm = document.getElementById('theForm');\n"
+
+            + "    log(inpt.value);\n"
+
+            + "    inpt.value = 'from js';\n"
+            + "    log(inpt.value);\n"
+
+            + "    frm.reset();\n"
+            + "    log(inpt.value);\n"
+
+            // Since the dirty flag should now be false, changing the content attribute
+            // should update the live value again.
+            + "    inpt.setAttribute('value', 'changed');\n"
+            + "    log(inpt.value);\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "<form id=\"theForm\">\n"
+            + "  <input id='theInput' type='text' value='original'>\r\n"
+            + "</form>\r\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Setting .value to the value it already holds must not move the selection
+     * (per spec, comparing against oldAPIValue before the assignment).
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"1", "2"})
+    public void settingValueToSameValue_selectionUnchanged() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var input = document.getElementById('myInput');\n"
+            + "  input.selectionStart = 1;\n"
+            + "  input.selectionEnd = 2;\n"
+            + "  input.value = 'hello';\n"
+            + "  log(input.selectionStart);\n"
+            + "  log(input.selectionEnd);\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <input id='myInput' value='hello'>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Even though a same-value assignment leaves the selection
+     * untouched, the dirty flag must still flip to true. Proven indirectly: if
+     * the flag were still false, a later change to the 'value' content attribute
+     * would still be reflected in .value; if the flag correctly flipped true,
+     * that later attribute change must be ignored.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("hello")
+    public void settingValueToSameValue_stillSetsDirtyFlag() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var input = document.getElementById('myInput');\n"
+            + "  input.value = 'hello';\n"
+            + "  input.setAttribute('value', 'changed');\n"
+            + "  log(input.value);\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <input id='myInput' value='hello'>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Selection must be preserved across MULTIPLE consecutive same-value
+     * assignments, not just the first one.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"1", "2"})
+    public void settingValueToSameValueTwice_selectionPreservedBothTimes() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var input = document.getElementById('myInput');\n"
+            + "  input.value = 'hello';\n"
+            + "  input.selectionStart = 1;\n"
+            + "  input.selectionEnd = 2;\n"
+            + "  input.value = 'hello';\n"
+            + "  log(input.selectionStart);\n"
+            + "  log(input.selectionEnd);\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <input id='myInput' value='hello'>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * The "old value" comparison must be against the CURRENT raw value, not the
+     * page's originally-parsed value attribute. After dirtying to 'X', setting
+     * .value back to the ORIGINAL text ('hello') is a change relative to the
+     * current raw value ('X'), so the cursor MUST move -- even though 'hello'
+     * matches the original value attribute.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"5", "5"})
+    public void settingValueBackToOriginalText_cursorMovesBecauseCurrentValueDiffers() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var input = document.getElementById('myInput');\n"
+            + "  input.value = 'X';\n"
+            + "  input.selectionStart = 0;\n"
+            + "  input.selectionEnd = 0;\n"
+            + "  input.value = 'hello';\n"
+            + "  log(input.selectionStart);\n"
+            + "  log(input.selectionEnd);\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <input id='myInput' value='hello'>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Assigning the empty string to an already-empty value should
+     * also be treated as "no change" -- no cursor move, but still dirties the
+     * flag.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("")
+    public void settingEmptyValueToAlreadyEmptyValue_selectionUnchangedButDirty() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var input = document.getElementById('myInput');\n"
+            + "  input.value = '';\n"
+            + "  input.setAttribute('value', 'late');\n"
+            + "  log(input.value);\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <input id='myInput' value=''>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * The ordinary changing-value path must still
+     * move the cursor to the end -- guards against the same-value fix
+     * accidentally suppressing the cursor move for genuine changes too.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"7", "7"})
+    public void settingValueToDifferentValue_cursorMovesToEnd() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var input = document.getElementById('myInput');\n"
+            + "  input.selectionStart = 0;\n"
+            + "  input.selectionEnd = 0;\n"
+            + "  input.value = 'goodbye';\n"
+            + "  log(input.selectionStart);\n"
+            + "  log(input.selectionEnd);\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <input id='myInput' value='hello'>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * After reset(), selectionStart and selectionEnd must be
+     * consistent with each other (start <= end), not left in an inverted state.
+     * Targets the current HtmlSelectableTextInput.reset() implementation, which
+     * only calls setSelectionEnd(0) without also resetting selectionStart --
+     * after the preceding setValue() call moved selectionStart to the END of
+     * the default value, this leaves start > end unless something else clamps
+     * it.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts(DEFAULT = {"8", "8"},
+            FF = {"1", "2"},
+            FF_ESR = {"1", "2"})
+    @HtmlUnitNYI(FF = {"8", "8"},
+            FF_ESR = {"8", "8"})
+    public void resetSetsSelectionStartAndEndConsistently() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var input = document.getElementById('theInput');\n"
+            + "  var frm = document.getElementById('theForm');\n"
+            + "  input.value = 'dirtied';\n"
+            + "  input.selectionStart = 1;\n"
+            + "  input.selectionEnd = 2;\n"
+            + "  frm.reset();\n"
+            + "  log(input.selectionStart);\n"
+            + "  log(input.selectionEnd);\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "<form id='theForm'>\n"
+            + "  <input id='theInput' type='text' value='original'>\n"
+            + "</form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * If the 'value' content
+     * attribute is changed by script WHILE .value is dirty (so the
+     * dirty-flag guard suppresses the sync), a subsequent reset() must pick up
+     * whatever the attribute CURRENTLY holds -- not the page's originally-parsed
+     * value.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("updated")
+    public void resetReflectsCurrentAttributeNotOriginalParsedValue() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var input = document.getElementById('theInput');\n"
+            + "  var frm = document.getElementById('theForm');\n"
+            + "  input.value = 'X';\n"
+            + "  input.setAttribute('value', 'updated');\n"
+            + "  frm.reset();\n"
+            + "  log(input.value);\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "<form id='theForm'>\n"
+            + "  <input id='theInput' type='text' value='original'>\n"
+            + "</form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Reset triggered via a real click on a &lt;input type=reset&gt; button
+     * should behave identically to a scripted form.reset() call -- the existing
+     * reset() test only exercises the scripted path.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("original")
+    public void resetViaResetButtonClick_matchesScriptedReset() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head></head>\n"
+            + "<body>\n"
+            + "<form id='theForm'>\n"
+            + "  <input id='theInput' type='text' value='original'>\n"
+            + "  <input id='resetBtn' type='reset'>\n"
+            + "</form>\n"
+            + "</body></html>";
+
+        final WebDriver driver = loadPage2(html);
+        final WebElement input = driver.findElement(By.id("theInput"));
+        input.click();
+        input.sendKeys(Keys.chord(Keys.CONTROL, Keys.END));
+        input.sendKeys("-typed");
+
+        driver.findElement(By.id("resetBtn")).click();
+
+        final String value = input.getDomProperty("value");
+        assertEquals(getExpectedAlerts()[0], value);
+    }
+
+    /**
+     * The reset() called on a field whose value was NEVER
+     * changed (dirty flag never set) -- with the setValue() fix applied, the
+     * cursor-move there is conditional on old-value != new-value, so when
+     * reset() restores the SAME value that was already showing, that condition
+     * is false and the cursor-move is skipped entirely. This checks what
+     * selectionStart/selectionEnd end up being in that case: whatever they were
+     * BEFORE reset() (since nothing moves them), which may or may not match what
+     * real browsers do -- real browsers might unconditionally reposition the
+     * cursor as part of the reset algorithm itself, independent of the value
+     * setter's own conditional logic.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"5", "5", "original", "5", "5"})
+    public void resetOnNeverDirtiedInput_selectionPosition() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head></head>\n"
+            + "<body>\n"
+            + "<form id='theForm'>\n"
+            + "  <input id='theInput' type='text' value='original'>\n"
+            + "  <input id='resetBtn' type='reset'>\n"
+            + "</form>\n"
+            + "</body></html>";
+
+        final WebDriver driver = loadPage2(html);
+        final WebElement input = driver.findElement(By.id("theInput"));
+
+        // click into the field and move the caret somewhere in the middle,
+        // WITHOUT ever changing its value (no sendKeys/typing, no .value set)
+        input.click();
+        input.sendKeys(Keys.ARROW_LEFT, Keys.ARROW_LEFT, Keys.ARROW_LEFT);
+
+        final JavascriptExecutor js = (JavascriptExecutor) driver;
+        final Long selStartBeforeReset = (Long) js.executeScript(
+                "return arguments[0].selectionStart;", input);
+        final Long selEndBeforeReset = (Long) js.executeScript(
+                "return arguments[0].selectionEnd;", input);
+
+        driver.findElement(By.id("resetBtn")).click();
+
+        final Long selStartAfterReset = (Long) js.executeScript(
+                "return arguments[0].selectionStart;", input);
+        final Long selEndAfterReset = (Long) js.executeScript(
+                "return arguments[0].selectionEnd;", input);
+        final String valueAfterReset = input.getDomProperty("value");
+
+        assertEquals(getExpectedAlerts()[0], String.valueOf(selStartBeforeReset));
+        assertEquals(getExpectedAlerts()[1], String.valueOf(selEndBeforeReset));
+        assertEquals(getExpectedAlerts()[2], valueAfterReset);
+        assertEquals(getExpectedAlerts()[3], String.valueOf(selStartAfterReset));
+        assertEquals(getExpectedAlerts()[4], String.valueOf(selEndAfterReset));
+    }
+
+    /**
+     * Same "never touched" scenario, but with an explicit
+     * mid-field selection RANGE (not just a collapsed caret) set beforehand via
+     * script, to check whether reset() collapses/repositions a real selection
+     * range too, or only affects a collapsed caret position.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"original", "2", "5"})
+    public void resetOnNeverDirtiedInputWithExplicitSelectionRange_selectionPosition() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head></head>\n"
+            + "<body>\n"
+            + "<form id='theForm'>\n"
+            + "  <input id='theInput' type='text' value='original'>\n"
+            + "  <input id='resetBtn' type='reset'>\n"
+            + "</form>\n"
+            + "</body></html>";
+
+        final WebDriver driver = loadPage2(html);
+        final WebElement input = driver.findElement(By.id("theInput"));
+
+        final JavascriptExecutor js = (JavascriptExecutor) driver;
+        js.executeScript("arguments[0].setSelectionRange(2, 5);", input);
+
+        driver.findElement(By.id("resetBtn")).click();
+
+        final Long selStartAfterReset = (Long) js.executeScript(
+                "return arguments[0].selectionStart;", input);
+        final Long selEndAfterReset = (Long) js.executeScript(
+                "return arguments[0].selectionEnd;", input);
+        final String valueAfterReset = input.getDomProperty("value");
+
+        assertEquals(getExpectedAlerts()[0], valueAfterReset);
+        assertEquals(getExpectedAlerts()[1], String.valueOf(selStartAfterReset));
+        assertEquals(getExpectedAlerts()[2], String.valueOf(selEndAfterReset));
+    }
+
+    /**
+     * Confirms that typing into a text input (real keyboard simulation via
+     * sendKeys, not a scripted .value assignment) updates .value but leaves the
+     * 'value' content attribute untouched.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"seed-typed", "seed"})
+    public void typingUpdatesValueButNotAttribute() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head></head>\n"
+            + "<body>\n"
+            + "  <input id='foo' value='seed'>\n"
+            + "</body>\n"
+            + "</html>";
+
+        final WebDriver driver = loadPage2(html);
+        final WebElement input = driver.findElement(By.id("foo"));
+        input.click();
+        input.sendKeys(Keys.chord(Keys.CONTROL, Keys.END));
+        input.sendKeys("-typed");
+
+        final String value = input.getDomProperty("value");
+        final String attribute = input.getDomAttribute("value");
+
+        assertEquals(getExpectedAlerts()[0], value);
+        assertEquals(getExpectedAlerts()[1], attribute);
+    }
+
+    /**
+     * After dirtying .value via real typing, a clone must preserve the
+     * dirtied value rather than reverting to the (cloned) 'value' attribute.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"seed-typed", "seed"})
+    public void cloneNodeAfterTyping_cloneRetainsDirtiedValue() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head></head>\n"
+            + "<body>\n"
+            + "  <input id='foo' value='seed'>\n"
+            + "</body>\n"
+            + "</html>";
+
+        final WebDriver driver = loadPage2(html);
+        final WebElement input = driver.findElement(By.id("foo"));
+        input.click();
+        input.sendKeys(Keys.chord(Keys.CONTROL, Keys.END));
+        input.sendKeys("-typed");
+
+        final JavascriptExecutor js = (JavascriptExecutor) driver;
+        final String cloneValue = (String) js.executeScript(
+                "return arguments[0].cloneNode(true).value;", input);
+        final String cloneAttribute = (String) js.executeScript(
+                "return arguments[0].cloneNode(true).getAttribute('value');", input);
+
+        assertEquals(getExpectedAlerts()[0], cloneValue);
+        assertEquals(getExpectedAlerts()[1], cloneAttribute);
+    }
+
+    /**
+     * After cloning a still-CLEAN input and attaching the clone to the document,
+     * typing independently into the original and the clone must not
+     * cross-contaminate either one's value.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"original-text", "clone-text"})
+    public void cloneNodeThenIndependentTyping_noCrossContamination() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head></head>\n"
+            + "<body>\n"
+            + "  <input id='foo' value=''>\n"
+            + "  <script>\n"
+            + "    var c = document.getElementById('foo').cloneNode(true);\n"
+            + "    c.id = 'clone';\n"
+            + "    document.body.appendChild(c);\n"
+            + "  </script>\n"
+            + "</body>\n"
+            + "</html>";
+
+        final WebDriver driver = loadPage2(html);
+        final WebElement original = driver.findElement(By.id("foo"));
+        final WebElement clone = driver.findElement(By.id("clone"));
+
+        original.click();
+        original.sendKeys("original-text");
+        clone.click();
+        clone.sendKeys("clone-text");
+
+        final String originalValue = original.getDomProperty("value");
+        final String cloneValue = clone.getDomProperty("value");
+
+        assertEquals(getExpectedAlerts()[0], originalValue);
+        assertEquals(getExpectedAlerts()[1], cloneValue);
+    }
+
+    /**
+     * Resetting a clone (via a real click on its OWN form's reset button) must
+     * only affect the clone -- the original, sitting in a separate form, must be
+     * untouched.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"seed-original-dirtied", "seed"})
+    public void cloneNodeThenResetOnCloneOnly_doesNotAffectOriginal() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head></head>\n"
+            + "<body>\n"
+            + "  <form id='form1'>\n"
+            + "    <input id='foo' value='seed'>\n"
+            + "    <input id='resetBtn1' type='reset'>\n"
+            + "  </form>\n"
+            + "  <form id='form2'>\n"
+            + "    <input id='resetBtn2' type='reset'>\n"
+            + "  </form>\n"
+            + "  <script>\n"
+            + "    var c = document.getElementById('foo').cloneNode(true);\n"
+            + "    c.id = 'clone';\n"
+            + "    document.getElementById('form2').appendChild(c);\n"
+            + "  </script>\n"
+            + "</body>\n"
+            + "</html>";
+
+        final WebDriver driver = loadPage2(html);
+        final WebElement original = driver.findElement(By.id("foo"));
+        final WebElement clone = driver.findElement(By.id("clone"));
+
+        original.click();
+        original.sendKeys(Keys.chord(Keys.CONTROL, Keys.END));
+        original.sendKeys("-original-dirtied");
+
+        clone.click();
+        clone.sendKeys(Keys.chord(Keys.CONTROL, Keys.END));
+        clone.sendKeys("-clone-dirtied");
+
+        // reset only form2, which contains the clone
+        driver.findElement(By.id("resetBtn2")).click();
+
+        final String originalValue = original.getDomProperty("value");
+        final String cloneValue = clone.getDomProperty("value");
+
+        assertEquals(getExpectedAlerts()[0], originalValue);
+        assertEquals(getExpectedAlerts()[1], cloneValue);
+    }
+
+    /**
+     * An editable text input with a custom validity message must
+     * report checkValidity() false.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"true", "true", "false", "false"})
+    public void setCustomValidityOnEditableInput_isInvalid() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var i = document.getElementById('i');\n"
+            + "    i.setCustomValidity('some error');\n"
+            + "    log(i.willValidate);\n"
+            + "    log(i.validity.customError);\n"
+            + "    log(i.validity.valid);\n"
+            + "    log(i.checkValidity());\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input id='i' type='text'>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * A DISABLED input with a custom validity message must still
+     * report checkValidity() true -- disabled bars it from constraint
+     * validation entirely, so the custom error must not surface through
+     * checkValidity(), even though willValidate is already known to be false
+     * for this case.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "true", "false", "true"})
+    public void setCustomValidityOnDisabledInput_notInvalid() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var i = document.getElementById('i');\n"
+            + "    i.setCustomValidity('some error');\n"
+            + "    log(i.willValidate);\n"
+            + "    log(i.validity.customError);\n"
+            + "    log(i.validity.valid);\n"
+            + "    log(i.checkValidity());\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input id='i' type='text' disabled>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Same as above but for READONLY instead of disabled -- readonly
+     * also bars a text-type input from constraint validation per spec.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "true", "false", "true"})
+    public void setCustomValidityOnReadonlyInput_notInvalid() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var i = document.getElementById('i');\n"
+            + "    i.setCustomValidity('some error');\n"
+            + "    log(i.willValidate);\n"
+            + "    log(i.validity.customError);\n"
+            + "    log(i.validity.valid);\n"
+            + "    log(i.checkValidity());\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input id='i' type='text' readonly>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Same as above but for type='hidden' -- a hidden-type input is
+     * barred from constraint validation via a THIRD, distinct mechanism (its
+     * own type state), not disabled or readonly. willValidateHidden() already
+     * confirms willValidate is false for this type; this confirms
+     * checkValidity() is consistent with that, given the routing bug found
+     * elsewhere was specifically about checkValidity() not always consulting
+     * willValidate() even when willValidate() itself was correct.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "true", "false", "true"})
+    public void setCustomValidityOnHiddenInput_notInvalid() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var i = document.getElementById('i');\n"
+            + "    i.setCustomValidity('some error');\n"
+            + "    log(i.willValidate);\n"
+            + "    log(i.validity.customError);\n"
+            + "    log(i.validity.valid);\n"
+            + "    log(i.checkValidity());\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input id='i' type='hidden'>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * A required, empty text input is genuinely invalid (valueMissing)
+     * when editable, but must report checkValidity() true if ALSO disabled --
+     * confirms the disabled-barring check takes priority over an actual
+     * constraint violation, not just over a custom validity message.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "true"})
+    public void requiredEmptyDisabledInput_checkValidityTrue() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var editable = document.getElementById('editable');\n"
+            + "    var disabled = document.getElementById('disabled');\n"
+            + "    log(editable.checkValidity());\n"
+            + "    log(disabled.checkValidity());\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input id='editable' type='text' required>\n"
+            + "    <input id='disabled' type='text' required disabled>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Same as above, but for readonly instead of disabled.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "true"})
+    public void requiredEmptyReadonlyInput_checkValidityTrue() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var editable = document.getElementById('editable');\n"
+            + "    var readonly = document.getElementById('readonly');\n"
+            + "    log(editable.checkValidity());\n"
+            + "    log(readonly.checkValidity());\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input id='editable' type='text' required>\n"
+            + "    <input id='readonly' type='text' required readonly>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Clearing a previously-set custom validity message (empty string) must
+     * restore validity for an editable input -- confirms setCustomValidity is
+     * reversible, not just settable.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "false", "true"})
+    public void clearCustomValidity_restoresValid() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var i = document.getElementById('i');\n"
+            + "    i.setCustomValidity('some error');\n"
+            + "    log(i.validity.valid);\n"
+            + "    i.setCustomValidity('');\n"
+            + "    log(i.validity.customError);\n"
+            + "    log(i.validity.valid);\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input id='i' type='text'>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * The validationMessage should reflect the custom validity message for a
+     * validation-participating (editable) input, and should be empty for a
+     * barred-from-validation (disabled) one, regardless of a custom message
+     * being set.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"editable error", ""})
+    public void validationMessageReflectsCustomValidityWhereApplicable() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var editable = document.getElementById('editable');\n"
+            + "    var disabled = document.getElementById('disabled');\n"
+            + "    editable.setCustomValidity('editable error');\n"
+            + "    disabled.setCustomValidity('disabled error');\n"
+            + "    log(editable.validationMessage);\n"
+            + "    log(disabled.validationMessage);\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input id='editable' type='text'>\n"
+            + "    <input id='disabled' type='text' disabled>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * The reportValidity() is untested anywhere in this file -- basic coverage that
+     * it returns the same boolean as checkValidity() for an input with a custom
+     * validity message set.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "false"})
+    public void reportValidityMatchesCheckValidity() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var i = document.getElementById('i');\n"
+            + "    i.setCustomValidity('some error');\n"
+            + "    log(i.checkValidity());\n"
+            + "    log(i.reportValidity());\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input id='i' type='text'>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Basic .validity object coverage independent of setCustomValidity() --
+     * only the bare checkValidity() boolean is tested anywhere currently; this
+     * confirms .validity.valueMissing and .validity.valid reflect a genuine
+     * (non-custom) constraint violation correctly.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"true", "false", "false", "true"})
+    public void validityValueMissingForRequiredEmptyInput() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var i = document.getElementById('i');\n"
+            + "    log(i.validity.valueMissing);\n"
+            + "    log(i.validity.valid);\n"
+            + "    i.value = 'something';\n"
+            + "    log(i.validity.valueMissing);\n"
+            + "    log(i.validity.valid);\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input id='i' type='text' required>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"invalid fired", "false"})
+    public void elementCheckValidityFiresInvalidEventDirectly() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var i1 = document.getElementById('i1');\n"
+            + "    i1.addEventListener('invalid', function() {\n"
+            + "      log('invalid fired');\n"
+            + "    });\n"
+            + "    log(i1.checkValidity());\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input id='i1' value='' required>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts("true")
+    public void checkValidityDoesNotFireInvalidWhenActuallyValid() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var i = document.getElementById('i');\n"
+            + "    i.addEventListener('invalid', function() { log('unexpected invalid fired'); });\n"
+            + "    log(i.checkValidity());\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input id='i' type='text' value='filled' required>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Companion negative check for a BARRED (disabled) control: even though a
+     * disabled+required+empty input has an underlying constraint violation,
+     * 'invalid' must not fire since it's excluded from validation entirely.
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts("true")
+    public void checkValidityDoesNotFireInvalidOnDisabledControl() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var i = document.getElementById('i');\n"
+            + "    i.addEventListener('invalid', function() { log('unexpected invalid fired'); });\n"
+            + "    log(i.checkValidity());\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input id='i' type='text' value='' required disabled>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"invalid fired", "false"})
+    public void inputReportValidityFiresInvalidEvent() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var i = document.getElementById('i');\n"
+            + "    i.addEventListener('invalid', function() { log('invalid fired'); });\n"
+            + "    log(i.reportValidity());\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input id='i' type='text' value='' required>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "Please fill out this field."})
+    public void validationMessage_valueMissing_input() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var i = document.getElementById('i');\n"
+            + "    log(i.validity.valueMissing);\n"
+            + "    log(i.validationMessage);\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input id='i' type='text' value='' required>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "Please select an item in the list."})
+    public void validationMessage_valueMissing_select() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var s = document.getElementById('s');\n"
+            + "    log(s.validity.valueMissing);\n"
+            + "    log(s.validationMessage);\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <select id='s' required>"
+            + "      <option value=''></option>"
+            + "      <option value='a'>a</option>"
+            + "    </select>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "Please fill out this field."})
+    public void validationMessage_valueMissing_textarea() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var t = document.getElementById('t');\n"
+            + "    log(t.validity.valueMissing);\n"
+            + "    log(t.validationMessage);\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <textarea id='t' required></textarea>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "Please match the requested format."})
+    public void validationMessage_patternMismatch() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var i = document.getElementById('i');\n"
+            + "    log(i.validity.patternMismatch);\n"
+            + "    log(i.validationMessage);\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input id='i' type='text' value='abc' pattern='[0-9]+'>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts(
+            DEFAULT = "Please match the requested format.",
+            FF = "Please match the requested format: digits only.",
+            FF_ESR = "Please match the requested format: digits only.")
+    @HtmlUnitNYI(FF = "Please match the requested format.",
+            FF_ESR = "Please match the requested format.")
+    public void validationMessage_patternMismatch_withTitle() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var i = document.getElementById('i');\n"
+            + "    log(i.validationMessage);\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input id='i' type='text' value='abc' pattern='[0-9]+' title='digits only'>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"false", ""})
+    public void validationMessage_tooLong_input() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var i = document.getElementById('i');\n"
+            + "    i.value = '12345';\n"
+            + "    log(i.validity.tooLong);\n"
+            + "    log(i.validationMessage);\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input id='i' type='text' maxlength='3'>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"false", ""})
+    public void validationMessage_tooShort_input() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var i = document.getElementById('i');\n"
+            + "    i.value = 'ab';\n"
+            + "    log(i.validity.tooShort);\n"
+            + "    log(i.validationMessage);\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input id='i' type='text' minlength='5'>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts(
+            DEFAULT = {"true", "Value must be less than or equal to 10."},
+            FF = {"true", "Please select a value that is no more than 10."},
+            FF_ESR = {"true", "Please select a value that is no more than 10."})
+    @HtmlUnitNYI(
+            CHROME = {"true", "Value must be less than or equal to the maximum."},
+            EDGE = {"true", "Value must be less than or equal to the maximum."},
+            FF = {"true", "Value must be less than or equal to the maximum."},
+            FF_ESR = {"true", "Value must be less than or equal to the maximum."})
+    public void validationMessage_rangeOverflow() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var i = document.getElementById('i');\n"
+            + "    log(i.validity.rangeOverflow);\n"
+            + "    log(i.validationMessage);\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input id='i' type='number' value='50' max='10'>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts(
+            DEFAULT = {"true", "Value must be greater than or equal to 10."},
+            FF = {"true", "Please select a value that is no less than 10."},
+            FF_ESR = {"true", "Please select a value that is no less than 10."})
+    @HtmlUnitNYI(
+            CHROME = {"true", "Value must be greater than or equal to the minimum."},
+            EDGE = {"true", "Value must be greater than or equal to the minimum."},
+            FF = {"true", "Value must be greater than or equal to the minimum."},
+            FF_ESR = {"true", "Value must be greater than or equal to the minimum."})
+    public void validationMessage_rangeUnderflow() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var i = document.getElementById('i');\n"
+            + "    log(i.validity.rangeUnderflow);\n"
+            + "    log(i.validationMessage);\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input id='i' type='number' value='1' min='10'>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts(
+            DEFAULT = {"true", "Please enter a valid value. The two nearest valid values are 2 and 4."},
+            FF = {"true", "Please select a valid value. The two nearest valid values are 2 and 4."},
+            FF_ESR = {"true", "Please select a valid value. The two nearest valid values are 2 and 4."})
+    @HtmlUnitNYI(
+            CHROME = {"true", "Please enter a valid value."},
+            EDGE = {"true", "Please enter a valid value."},
+            FF = {"true", "Please enter a valid value."},
+            FF_ESR = {"true", "Please enter a valid value."})
+    public void validationMessage_stepMismatch() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var i = document.getElementById('i');\n"
+            + "    log(i.validity.stepMismatch);\n"
+            + "    log(i.validationMessage);\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input id='i' type='number' value='3' step='2' min='0'>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts(
+            DEFAULT = {"true", "Please include an '@' in the email address. 'not-an-email' is missing an '@'."},
+            FF = {"true", "Please enter an email address."},
+            FF_ESR = {"true", "Please enter an email address."})
+    @HtmlUnitNYI(CHROME = {"true", "Please enter an email address."},
+            EDGE = {"true", "Please enter an email address."})
+    public void validationMessage_typeMismatch_email() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var i = document.getElementById('i');\n"
+            + "    log(i.validity.typeMismatch);\n"
+            + "    log(i.validationMessage);\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input id='i' type='email' value='not-an-email'>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "Please enter a URL."})
+    public void validationMessage_typeMismatch_url() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var i = document.getElementById('i');\n"
+            + "    log(i.validity.typeMismatch);\n"
+            + "    log(i.validationMessage);\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input id='i' type='url' value='not a url'>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "Please enter a valid value, thanks!"})
+    public void validationMessage_customError_exactStringEchoedBack() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var i = document.getElementById('i');\n"
+            + "    i.setCustomValidity('Please enter a valid value, thanks!');\n"
+            + "    log(i.validity.customError);\n"
+            + "    log(i.validationMessage);\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input id='i' type='text' value='anything'>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"false", "true", "Please match the requested format."})
+    public void validationMessage_priority_patternMismatchAlone() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var i = document.getElementById('i');\n"
+            + "    log(i.validity.valueMissing);\n"
+            + "    log(i.validity.patternMismatch);\n"
+            + "    log(i.validationMessage);\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input id='i' type='text' value='abc' pattern='[0-9]+' required>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true","true", "custom message wins"})
+    public void validationMessage_priority_customErrorBeatsValueMissing() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var i = document.getElementById('i');\n"
+            + "    i.setCustomValidity('custom message wins');\n"
+            + "    log(i.validity.valueMissing);\n"
+            + "    log(i.validity.customError);\n"
+            + "    log(i.validationMessage);\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input id='i' type='text' value='' required>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts("")
+    public void validationMessage_emptyWhenValid() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    log(document.getElementById('i').validationMessage);\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input id='i' type='text' value='fine'>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts("")
+    public void validationMessage_emptyWhenBarredViaDisabled() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    log(document.getElementById('i').validationMessage);\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input id='i' type='text' value='' required disabled>\n"
+            + "  </form>\n"
             + "</body></html>";
 
         loadPageVerifyTitle2(html);

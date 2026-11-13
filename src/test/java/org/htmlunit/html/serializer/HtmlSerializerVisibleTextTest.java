@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,15 @@
  */
 package org.htmlunit.html.serializer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Arrays;
 
 import org.apache.commons.lang3.StringUtils;
-import org.junit.Test;
-
 import org.htmlunit.html.serializer.HtmlSerializerVisibleText.HtmlSerializerTextBuilder;
-import org.htmlunit.html.serializer.HtmlSerializerVisibleText.Mode;
+import org.htmlunit.html.serializer.HtmlSerializerVisibleText.HtmlSerializerTextBuilder.Mode;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link HtmlSerializerVisibleText}.
@@ -236,7 +235,7 @@ public class HtmlSerializerVisibleTextTest {
         serializer.getText();
 
         final long runTime = System.currentTimeMillis() - time;
-        assertTrue("cleanUp() took too much time", runTime < 200);
+        Assertions.assertTrue(runTime < 200, "cleanUp() took too much time");
     }
 
     /**
@@ -258,7 +257,7 @@ public class HtmlSerializerVisibleTextTest {
         assertEquals(expected, serializer.getText());
 
         final long runTime = System.currentTimeMillis() - time;
-        assertTrue("cleanUp() took too much time", runTime < 200);
+        Assertions.assertTrue(runTime < 200, "cleanUp() took too much time");
     }
 
     /**
@@ -270,7 +269,6 @@ public class HtmlSerializerVisibleTextTest {
         serializer.append("\u3000", Mode.WHITE_SPACE_NORMAL);
         assertEquals("\u3000", serializer.getText());
 
-        // real IE treats this as space, will not consider this for performance reasons
         serializer = new HtmlSerializerVisibleText.HtmlSerializerTextBuilder();
         serializer.append("\uFEFF", Mode.WHITE_SPACE_NORMAL);
         assertEquals("\uFEFF", serializer.getText());

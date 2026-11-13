@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,10 @@
  */
 package org.htmlunit.javascript.host.css;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.HtmlUnitNYI;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link CSSPageRule}.
@@ -28,8 +25,27 @@ import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
  * @author Frank Danek
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class CSSPageRuleTest extends WebDriverTestCase {
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts("TypeError")
+    public void ctor() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
+            + LOG_TEXTAREA
+            + "<script>\n"
+            + LOG_TEXTAREA_FUNCTION
+            + "try {\n"
+            + "  var rule = new CSSPageRule();\n"
+            + "  log(rule);\n"
+            + "} catch(e) { logEx(e); }\n"
+            + "</script></body></html>";
+
+        loadPageVerifyTextArea2(html);
+    }
 
     /**
      * @throws Exception if an error occurs
@@ -37,8 +53,8 @@ public class CSSPageRuleTest extends WebDriverTestCase {
     @Test
     @Alerts({"[object CSSPageRule]", "[object CSSPageRule]"})
     public void scriptableToString() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
 
             + "<style>\n"
             + "  @page { margin: 1cm; };\n"
@@ -61,11 +77,10 @@ public class CSSPageRuleTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "@page { margin: 1cm; }",
-            IE = "@page  {\n\tmargin: 1cm;\n}")
+    @Alerts("@page { margin: 1cm; }")
     public void cssText() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
 
             + LOG_TEXTAREA
 
@@ -89,11 +104,10 @@ public class CSSPageRuleTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "@page { }",
-            IE = "@page  {\n\t\n}")
+    @Alerts("@page { }")
     public void cssTextEmpty() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
 
             + LOG_TEXTAREA
 
@@ -117,12 +131,10 @@ public class CSSPageRuleTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "@page { margin-left: 4cm; margin-right: 3cm; }",
-            IE = "@page  {\n\tmargin-right: 3cm; margin-left: 4cm;\n}")
-    @HtmlUnitNYI(IE = "@page  {\n\tmargin-left: 4cm; margin-right: 3cm;\n}")
+    @Alerts("@page { margin-left: 4cm; margin-right: 3cm; }")
     public void cssTextMultipleRules() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
 
             + LOG_TEXTAREA
 
@@ -146,11 +158,10 @@ public class CSSPageRuleTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "@page { margin: 1cm; }",
-            IE = "@page  {\n\tmargin: 1cm;\n}")
+    @Alerts("@page { margin: 1cm; }")
     public void cssTextSet() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
 
             + LOG_TEXTAREA
 
@@ -166,7 +177,7 @@ public class CSSPageRuleTest extends WebDriverTestCase {
             + "    rule.cssText = '@page { margin: 2cm; }';\n"
             + "    log(rule.cssText);\n"
             + "  } catch(e) {\n"
-            + "    log('exception');\n"
+            + "    logEx(e);\n"
             + "  }\n"
             + "</script>\n"
 
@@ -181,8 +192,8 @@ public class CSSPageRuleTest extends WebDriverTestCase {
     @Test
     @Alerts("null")
     public void parentRule() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
 
             + "<style>\n"
             + "  @page { margin: 1cm; }\n"
@@ -206,8 +217,8 @@ public class CSSPageRuleTest extends WebDriverTestCase {
     @Test
     @Alerts("null")
     public void parentRuleSet() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
 
             + "<style>\n"
             + "  @page { margin: 1cm; }\n"
@@ -221,7 +232,7 @@ public class CSSPageRuleTest extends WebDriverTestCase {
             + "    rule.parentRule = rule;\n"
             + "    log(rule.parentRule);\n"
             + "  } catch(e) {\n"
-            + "    log('exception');\n"
+            + "    logEx(e);\n"
             + "  }\n"
             + "</script>\n"
 
@@ -236,8 +247,8 @@ public class CSSPageRuleTest extends WebDriverTestCase {
     @Test
     @Alerts("[object CSSStyleSheet]")
     public void parentStyleSheet() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
 
             + "<style>\n"
             + "  @page { margin: 1cm; }\n"
@@ -261,8 +272,8 @@ public class CSSPageRuleTest extends WebDriverTestCase {
     @Test
     @Alerts("[object CSSStyleSheet]")
     public void parentStyleSheetSet() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
 
             + "<style>\n"
             + "  @page { margin: 1cm; }\n"
@@ -276,7 +287,7 @@ public class CSSPageRuleTest extends WebDriverTestCase {
             + "    rule.parentStyleSheet = null;\n"
             + "    log(rule.parentStyleSheet);\n"
             + "  } catch(e) {\n"
-            + "    log('exception');\n"
+            + "    logEx(e);\n"
             + "  }\n"
             + "</script>\n"
 
@@ -289,12 +300,10 @@ public class CSSPageRuleTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "",
-            FF_ESR = "undefined")
-    @HtmlUnitNYI(FF = "undefined")
+    @Alerts("")
     public void selectorTextEmpty() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
 
             + "<style>\n"
             + "  @page { margin: 1cm; }\n"
@@ -307,7 +316,7 @@ public class CSSPageRuleTest extends WebDriverTestCase {
             + "  try {"
             + "    log(rule.selectorText);\n"
             + "  } catch(e) {\n"
-            + "    log('exception');\n"
+            + "    logEx(e);\n"
             + "  }\n"
             + "</script>\n"
 
@@ -320,16 +329,10 @@ public class CSSPageRuleTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = ":first",
-            IE = "",
-            FF = "exception",
-            FF_ESR = "exception")
-    @HtmlUnitNYI(FF = "undefined",
-            FF_ESR = "undefined")
-    // FIXME FFs do not understand selectors for page rules at all and thus ignore the complete rule during parsing
+    @Alerts(":first")
     public void selectorText() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
 
             + "<style>\n"
             + "  @page :first { margin: 1cm; }\n"
@@ -342,7 +345,7 @@ public class CSSPageRuleTest extends WebDriverTestCase {
             + "  try {"
             + "    log(rule.selectorText);\n"
             + "  } catch(e) {\n"
-            + "    log('exception');\n"
+            + "    logEx(e);\n"
             + "  }\n"
             + "</script>\n"
 
@@ -355,16 +358,10 @@ public class CSSPageRuleTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = ":first",
-            IE = "",
-            FF = "exception",
-            FF_ESR = "exception")
-    @HtmlUnitNYI(FF = "undefined",
-            FF_ESR = "undefined")
-    // FIXME FFs do not understand selectors for page rules at all and thus ignore the complete rule during parsing
+    @Alerts(":first")
     public void selectorTextCaseInsensitive() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
 
             + "<style>\n"
             + "  @page :FiRsT { margin: 1cm; }\n"
@@ -377,7 +374,7 @@ public class CSSPageRuleTest extends WebDriverTestCase {
             + "  try {"
             + "    log(rule.selectorText);\n"
             + "  } catch(e) {\n"
-            + "    log('exception');\n"
+            + "    logEx(e);\n"
             + "  }\n"
             + "</script>\n"
 
@@ -390,17 +387,10 @@ public class CSSPageRuleTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {":first", ":left"},
-            IE = {"", "exception"},
-            FF = "exception",
-            FF_ESR = "exception")
-    @HtmlUnitNYI(IE = {"", ""},
-            FF = {"undefined", ":left"},
-            FF_ESR = {"undefined", ":left"})
-    // FIXME FFs do not understand selectors for page rules at all and thus ignore the complete rule during parsing
+    @Alerts({":first", ":left"})
     public void selectorTextSet() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
 
             + "<style>\n"
             + "  @page :first { margin: 1cm; }\n"
@@ -415,7 +405,7 @@ public class CSSPageRuleTest extends WebDriverTestCase {
             + "    rule.selectorText = ':left';\n"
             + "    log(rule.selectorText);\n"
             + "  } catch(e) {\n"
-            + "    log('exception');\n"
+            + "    logEx(e);\n"
             + "  }\n"
             + "</script>\n"
 
@@ -428,17 +418,10 @@ public class CSSPageRuleTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {":first", "null"},
-            IE = {"", "exception"},
-            FF = "exception",
-            FF_ESR = "exception")
-    @HtmlUnitNYI(IE = {"", ""},
-            FF = {"undefined", "null"},
-            FF_ESR = {"undefined", "null"})
-    // FIXME FFs do not understand selectors for page rules at all and thus ignore the complete rule during parsing
+    @Alerts({":first", "null"})
     public void selectorTextSetNull() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
 
             + "<style>\n"
             + "  @page :first { margin: 1cm; }\n"
@@ -453,7 +436,7 @@ public class CSSPageRuleTest extends WebDriverTestCase {
             + "    rule.selectorText = null;\n"
             + "    log(rule.selectorText);\n"
             + "  } catch(e) {\n"
-            + "    log('exception');\n"
+            + "    logEx(e);\n"
             + "  }\n"
             + "</script>\n"
 
@@ -466,17 +449,10 @@ public class CSSPageRuleTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {":first", ""},
-            IE = {"", "exception"},
-            FF = "exception",
-            FF_ESR = "exception")
-    @HtmlUnitNYI(IE = {"", ""},
-            FF = {"undefined", ""},
-            FF_ESR = {"undefined", ""})
-    // FIXME FFs do not understand selectors for page rules at all and thus ignore the complete rule during parsing
+    @Alerts({":first", ""})
     public void selectorTextSetEmpty() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
 
             + "<style>\n"
             + "  @page :first { margin: 1cm; }\n"
@@ -491,7 +467,7 @@ public class CSSPageRuleTest extends WebDriverTestCase {
             + "    rule.selectorText = '';\n"
             + "    log(rule.selectorText);\n"
             + "  } catch(e) {\n"
-            + "    log('exception');\n"
+            + "    logEx(e);\n"
             + "  }\n"
             + "</script>\n"
 
@@ -504,17 +480,10 @@ public class CSSPageRuleTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {":first", ":first"},
-            IE = {"", "exception"},
-            FF = "exception",
-            FF_ESR = "exception")
-    @HtmlUnitNYI(IE = {"", ""},
-            FF = {"undefined", ":grey"},
-            FF_ESR = {"undefined", ":grey"})
-    // FIXME FFs do not understand selectors for page rules at all and thus ignore the complete rule during parsing
+    @Alerts({":first", ":first"})
     public void selectorTextSetInvalid() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
 
             + "<style>\n"
             + "  @page :first { margin: 1cm; }\n"
@@ -529,7 +498,7 @@ public class CSSPageRuleTest extends WebDriverTestCase {
             + "    rule.selectorText = ':grey';\n"
             + "    log(rule.selectorText);\n"
             + "  } catch(e) {\n"
-            + "    log('exception');\n"
+            + "    logEx(e);\n"
             + "  }\n"
             + "</script>\n"
 
@@ -542,17 +511,10 @@ public class CSSPageRuleTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {":first", ":left"},
-            IE = {"", "exception"},
-            FF = "exception",
-            FF_ESR = "exception")
-    @HtmlUnitNYI(IE = {"", ""},
-            FF = {"undefined", ":LeFt"},
-            FF_ESR = {"undefined", ":LeFt"})
-    // FIXME FFs do not understand selectors for page rules at all and thus ignore the complete rule during parsing
+    @Alerts({":first", ":left"})
     public void selectorTextSetCaseInsensitive() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
 
             + "<style>\n"
             + "  @page :first { margin: 1cm; }\n"
@@ -567,7 +529,7 @@ public class CSSPageRuleTest extends WebDriverTestCase {
             + "    rule.selectorText = ':LeFt';\n"
             + "    log(rule.selectorText);\n"
             + "  } catch(e) {\n"
-            + "    log('exception');\n"
+            + "    logEx(e);\n"
             + "  }\n"
             + "</script>\n"
 
@@ -581,25 +543,35 @@ public class CSSPageRuleTest extends WebDriverTestCase {
      */
     @Test
     @Alerts(DEFAULT = {"[object CSSStyleDeclaration]", "[object CSSStyleDeclaration]", "4", "[object CSSPageRule]",
-                       "margin: 1cm;", "margin-top", "margin-right", "margin-bottom", "margin-left"},
-            FF = {"[object CSS2Properties]", "[object CSS2Properties]", "4", "[object CSSPageRule]",
-                  "margin: 1cm;", "margin-top", "margin-right", "margin-bottom", "margin-left"},
-            FF_ESR = {"[object CSS2Properties]", "[object CSS2Properties]", "4", "[object CSSPageRule]",
-                      "margin: 1cm;", "margin-top", "margin-right", "margin-bottom", "margin-left"})
+                       "margin: 1cm;",
+                       "string margin-top",
+                       "string margin-right",
+                       "string margin-bottom",
+                       "string margin-left"},
+            FF = {"[object CSSPageDescriptors]", "[object CSSPageDescriptors]", "4", "[object CSSPageRule]",
+                  "margin: 1cm;",
+                  "string margin-top",
+                  "string margin-right",
+                  "string margin-bottom",
+                  "string margin-left"},
+            FF_ESR = {"[object CSSPageDescriptors]", "[object CSSPageDescriptors]", "4", "[object CSSPageRule]",
+                      "margin: 1cm;",
+                      "string margin-top",
+                      "string margin-right",
+                      "string margin-bottom",
+                      "string margin-left"})
     @HtmlUnitNYI(CHROME = {"[object CSSStyleDeclaration]", "[object CSSStyleDeclaration]",
-                           "1", "[object CSSPageRule]", "margin: 1cm;", "margin: 1cm"},
+                           "1", "[object CSSPageRule]", "margin: 1cm;", "string margin: 1cm"},
             EDGE = {"[object CSSStyleDeclaration]", "[object CSSStyleDeclaration]",
-                    "1", "[object CSSPageRule]", "margin: 1cm;", "margin: 1cm"},
+                    "1", "[object CSSPageRule]", "margin: 1cm;", "string margin: 1cm"},
             FF = {"[object CSSStyleDeclaration]", "[object CSSStyleDeclaration]",
-                  "1", "[object CSSPageRule]", "margin: 1cm;", "margin: 1cm"},
+                  "1", "[object CSSPageRule]", "margin: 1cm;", "string margin: 1cm"},
             FF_ESR = {"[object CSSStyleDeclaration]", "[object CSSStyleDeclaration]",
-                      "1", "[object CSSPageRule]", "margin: 1cm;", "margin: 1cm"},
-            IE = {"[object CSSStyleDeclaration]", "[object CSSStyleDeclaration]",
-                  "1", "[object CSSPageRule]", "margin: 1cm;", "margin: 1cm"})
-    // FIXME FF returns CSS2Properties vs. default returns CSSStyleDeclaration :(
+                      "1", "[object CSSPageRule]", "margin: 1cm;", "string margin: 1cm"})
+    // FIXME FF returns CSSStyleProperties vs. default returns CSSStyleDeclaration :(
     public void style() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
 
             + "<style>\n"
             + "  @page { margin: 1cm; }\n"
@@ -616,7 +588,7 @@ public class CSSPageRuleTest extends WebDriverTestCase {
             + "  log(style.parentRule);\n"
             + "  log(style.cssText);\n"
             + "  for (var i = 0; i < style.length; i++) {\n"
-            + "    log(style.item(i));\n"
+            + "    log(typeof style.item(i) + ' ' + style.item(i));\n"
             + "  }\n"
             + "</script>\n"
 
@@ -630,14 +602,13 @@ public class CSSPageRuleTest extends WebDriverTestCase {
      */
     @Test
     @Alerts(DEFAULT = {"[object CSSStyleDeclaration]", "[object CSSStyleDeclaration]", "0", "[object CSSPageRule]", ""},
-            FF = {"[object CSS2Properties]", "[object CSS2Properties]", "0", "[object CSSPageRule]", ""},
-            FF_ESR = {"[object CSS2Properties]", "[object CSS2Properties]", "0", "[object CSSPageRule]", ""})
+            FF = {"[object CSSPageDescriptors]", "[object CSSPageDescriptors]", "0", "[object CSSPageRule]", ""},
+            FF_ESR = {"[object CSSPageDescriptors]", "[object CSSPageDescriptors]", "0", "[object CSSPageRule]", ""})
     @HtmlUnitNYI(FF = {"[object CSSStyleDeclaration]", "[object CSSStyleDeclaration]", "0", "[object CSSPageRule]", ""},
             FF_ESR = {"[object CSSStyleDeclaration]", "[object CSSStyleDeclaration]", "0", "[object CSSPageRule]", ""})
-    // FIXME FF returns CSS2Properties vs. default returns CSSStyleDeclaration :(
     public void styleEmpty() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
 
             + "<style>\n"
             + "  @page { }\n"

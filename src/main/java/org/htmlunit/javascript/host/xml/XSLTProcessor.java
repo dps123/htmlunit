@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,13 +15,10 @@
 package org.htmlunit.javascript.host.xml;
 
 import static org.htmlunit.BrowserVersionFeatures.JS_XSLT_TRANSFORM_INDENT;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
 
 import java.io.ByteArrayOutputStream;
-import java.io.StringWriter;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -29,7 +26,6 @@ import java.util.Map;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Result;
 import javax.xml.transform.Source;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
@@ -37,52 +33,56 @@ import javax.xml.transform.dom.DOMResult;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import org.w3c.dom.NodeList;
-
 import org.htmlunit.SgmlPage;
 import org.htmlunit.WebResponse;
 import org.htmlunit.WebResponseData;
 import org.htmlunit.html.DomDocumentFragment;
 import org.htmlunit.html.DomNode;
 import org.htmlunit.html.DomText;
+import org.htmlunit.http.HttpStatus;
 import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.host.dom.Document;
 import org.htmlunit.javascript.host.dom.DocumentFragment;
 import org.htmlunit.javascript.host.dom.Node;
+import org.htmlunit.util.EncodingSniffer;
 import org.htmlunit.util.XmlUtils;
 import org.htmlunit.xml.XmlPage;
-
-import org.htmlunit.corejs.javascript.Context;
+import org.w3c.dom.NodeList;
 
 /**
- * A JavaScript object for {@code XSLTProcessor}.
+ * JavaScript host object for {@code XSLTProcessor}.
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ * @author MatrixNeoKozak (matrixneo2026@tutamail.com)
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/XSLTProcessor">MDN Documentation</a>
  */
-@JsxClass({CHROME, EDGE, FF, FF_ESR})
+@JsxClass
 public class XSLTProcessor extends HtmlUnitScriptable {
 
     private Node style_;
     private final Map<String, Object> parameters_ = new HashMap<>();
 
     /**
-     * Default constructor.
+     * Creates an instance of this object.
      */
     @JsxConstructor
-    public XSLTProcessor() {
+    public void jsConstructor() {
+        // nothing to do
     }
 
     /**
-     * Imports the specified stylesheet into this XSLTProcessor for transformations. The specified node
-     * may be either a document node or an element node. If it is a document node, then the document can
-     * contain either a XSLT stylesheet or a LRE stylesheet. If it is an element node, it must be the
-     * xsl:stylesheet (or xsl:transform) element of an XSLT stylesheet.
+     * Imports the specified stylesheet into this {@code XSLTProcessor} for transformations.
+     * The specified node may be either a document node or an element node. If it is a document node,
+     * then the document can contain either an XSLT stylesheet or an LRE stylesheet. If it is an element
+     * node, it must be the {@code xsl:stylesheet} (or {@code xsl:transform}) element of an XSLT stylesheet.
      *
-     * @param style the root-node of an XSLT stylesheet (may be a document node or an element node)
+     * @param style the root node of an XSLT stylesheet (may be a document node or an element node)
      */
     @JsxFunction
     public void importStylesheet(final Node style) {
@@ -90,11 +90,11 @@ public class XSLTProcessor extends HtmlUnitScriptable {
     }
 
     /**
-     * Transforms the node source applying the stylesheet given by the importStylesheet() function.
-     * The owner document of the output node owns the returned document fragment.
+     * Transforms the given source node by applying the stylesheet imported via {@link #importStylesheet}.
+     * The owner document of the output node owns the returned document.
      *
      * @param source the node to be transformed
-     * @return the result of the transformation
+     * @return the transformation result as an {@link XMLDocument}
      */
     @JsxFunction
     public XMLDocument transformToDocument(final Node source) {
@@ -104,8 +104,7 @@ public class XSLTProcessor extends HtmlUnitScriptable {
 
         final Object transformResult = transform(source);
         final org.w3c.dom.Node node;
-        if (transformResult instanceof org.w3c.dom.Node) {
-            final org.w3c.dom.Node transformedDoc = (org.w3c.dom.Node) transformResult;
+        if (transformResult instanceof org.w3c.dom.Node transformedDoc) {
             node = transformedDoc.getFirstChild();
         }
         else {
@@ -117,7 +116,10 @@ public class XSLTProcessor extends HtmlUnitScriptable {
     }
 
     /**
-     * @return {@link Node} or {@link String}
+     * Performs the XSLT transformation and returns either a {@link Node} or a {@link String}.
+     *
+     * @param source the node to transform
+     * @return the transformation result
      */
     private Object transform(final Node source) {
         try {
@@ -133,6 +135,18 @@ public class XSLTProcessor extends HtmlUnitScriptable {
             // which sets a number of processing limits on the processors. Conversely, by default,
             // the JDK turns off FSP for transformers and XPath, which enables extension functions for XSLT and XPath.
             transformerFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+            try {
+                transformerFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+            }
+            catch (final IllegalArgumentException ignored) {
+                // ignore
+            }
+            try {
+                transformerFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
+            }
+            catch (final IllegalArgumentException ignored) {
+                // ignore
+            }
 
             final SgmlPage page = sourceDomNode.getPage();
             if (page != null && page.getWebClient().getBrowserVersion()
@@ -144,7 +158,7 @@ public class XSLTProcessor extends HtmlUnitScriptable {
                         try {
                             transformerFactory.setAttribute("indent-number", Integer.valueOf(2));
                         }
-                        catch (final IllegalArgumentException e) {
+                        catch (final IllegalArgumentException ignored) {
                             // ignore
                         }
                         final Transformer transformer = transformerFactory.newTransformer(xsltSource);
@@ -152,7 +166,7 @@ public class XSLTProcessor extends HtmlUnitScriptable {
                         try {
                             transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
                         }
-                        catch (final IllegalArgumentException e) {
+                        catch (final IllegalArgumentException ignored) {
                             // ignore
                         }
 
@@ -165,9 +179,22 @@ public class XSLTProcessor extends HtmlUnitScriptable {
                         // the StreamResult is used
                         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
                             transformer.transform(xmlSource, new StreamResult(out));
-                            final WebResponseData data =
-                                    new WebResponseData(out.toByteArray(), 200, null, Collections.emptyList());
-                            final WebResponse response = new WebResponse(data, null, 0);
+                            final WebResponseData data = new WebResponseData(out.toByteArray(),
+                                    HttpStatus.OK_200, HttpStatus.OK_200_MSG, Collections.emptyList());
+                            final WebResponse response = new WebResponse(data, null, 0) {
+
+                                // XmlUtils.buildDocument reads the out stream using the contentCharset
+                                // we have to provide the correct one
+                                @Override
+                                public Charset getContentCharset() {
+                                    final Charset cs = EncodingSniffer.toCharset(
+                                            transformer.getOutputProperty(OutputKeys.ENCODING));
+                                    if (cs == null) {
+                                        return StandardCharsets.UTF_8;
+                                    }
+                                    return cs;
+                                }
+                            };
                             return XmlUtils.buildDocument(response);
                         }
                     }
@@ -175,11 +202,19 @@ public class XSLTProcessor extends HtmlUnitScriptable {
             }
 
             final Transformer transformer = transformerFactory.newTransformer(xsltSource);
+            transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+
             for (final Map.Entry<String, Object> entry : parameters_.entrySet()) {
                 transformer.setParameter(entry.getKey(), entry.getValue());
             }
 
             final DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            try {
+                factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+            }
+            catch (final javax.xml.parsers.ParserConfigurationException ignored) {
+                // ignore
+            }
             final org.w3c.dom.Document containerDocument = factory.newDocumentBuilder().newDocument();
             final org.w3c.dom.Element containerElement = containerDocument.createElement("container");
             containerDocument.appendChild(containerElement);
@@ -195,25 +230,31 @@ public class XSLTProcessor extends HtmlUnitScriptable {
 
             // output is not DOM (text)
             xmlSource = new DOMSource(source.getDomNodeOrDie());
-            final StringWriter writer = new StringWriter();
-            final Result streamResult = new StreamResult(writer);
-            transformer.transform(xmlSource, streamResult);
-            return writer.toString();
+            try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+                transformer.transform(xmlSource, new StreamResult(out));
+
+                final Charset cs = EncodingSniffer.toCharset(transformer.getOutputProperty(OutputKeys.ENCODING));
+                if (cs == null) {
+                    return new String(out.toByteArray(), StandardCharsets.UTF_8);
+                }
+                return new String(out.toByteArray(), cs);
+            }
         }
-        catch (final RuntimeException re) {
-            throw re;
+        catch (final RuntimeException e) {
+            throw e;
         }
         catch (final Exception e) {
-            throw Context.reportRuntimeError("Exception: " + e);
+            throw JavaScriptEngine.reportRuntimeError("Exception: " + e);
         }
     }
 
     /**
-     * Transforms the node source applying the stylesheet given by the importStylesheet() function.
-     * The owner document of the output node owns the returned document fragment.
+     * Transforms the given source node by applying the imported stylesheet and appends
+     * the result as children of the given output document fragment.
+     *
      * @param source the node to be transformed
-     * @param output This document is used to generate the output
-     * @return the result of the transformation
+     * @param output the {@link Document} whose owner document is used to generate the output
+     * @return the transformation result as a {@link DocumentFragment}
      */
     @JsxFunction
     public DocumentFragment transformToFragment(final Node source, final Object output) {
@@ -225,29 +266,28 @@ public class XSLTProcessor extends HtmlUnitScriptable {
         rv.setParentScope(getParentScope());
         rv.setDomNode(fragment);
 
-        transform(source, fragment);
-        return rv;
-    }
-
-    private void transform(final Node source, final DomNode parent) {
         final Object result = transform(source);
-        if (result instanceof org.w3c.dom.Node) {
-            final SgmlPage parentPage = parent.getPage();
-            final NodeList children = ((org.w3c.dom.Node) result).getChildNodes();
-            for (int i = 0; i < children.getLength(); i++) {
-                XmlUtils.appendChild(parentPage, parent, children.item(i), true);
+        if (result instanceof org.w3c.dom.Node node) {
+            final SgmlPage parentPage = fragment.getPage();
+            final NodeList children = node.getChildNodes();
+            final int length = children.getLength();
+            for (int i = 0; i < length; i++) {
+                XmlUtils.appendChild(parentPage, fragment, children.item(i), true);
             }
         }
         else {
-            final DomText text = new DomText(parent.getPage(), (String) result);
-            parent.appendChild(text);
+            final DomText text = new DomText(fragment.getPage(), (String) result);
+            fragment.appendChild(text);
         }
+
+        return rv;
     }
 
     /**
-     * Sets a parameter to be used in subsequent transformations with this nsIXSLTProcessor.
-     * If the parameter doesn't exist in the stylesheet the parameter will be ignored.
-     * @param namespaceURI the namespaceURI of the XSLT parameter
+     * Sets a parameter to be used in subsequent transformations with this {@code XSLTProcessor}.
+     * If the parameter does not exist in the stylesheet it will be ignored.
+     *
+     * @param namespaceURI the namespace URI of the XSLT parameter
      * @param localName the local name of the XSLT parameter
      * @param value the new value of the XSLT parameter
      */
@@ -257,10 +297,11 @@ public class XSLTProcessor extends HtmlUnitScriptable {
     }
 
     /**
-     * Gets a parameter if previously set by setParameter. Returns null otherwise.
-     * @param namespaceURI the namespaceURI of the XSLT parameter
+     * Returns a parameter previously set by {@link #setParameter}, or {@code null} if not set.
+     *
+     * @param namespaceURI the namespace URI of the XSLT parameter
      * @param localName the local name of the XSLT parameter
-     * @return the value of the XSLT parameter
+     * @return the value of the XSLT parameter, or {@code null} if not found
      */
     @JsxFunction
     public Object getParameter(final String namespaceURI, final String localName) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,81 +16,102 @@ package org.htmlunit.javascript.host;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-
-import org.apache.commons.codec.binary.Base64;
+import java.util.Base64;
 
 import org.htmlunit.Page;
 import org.htmlunit.WebWindow;
-import org.htmlunit.javascript.background.BackgroundJavaScriptFactory;
-import org.htmlunit.javascript.background.JavaScriptJob;
-
 import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.EvaluatorException;
 import org.htmlunit.corejs.javascript.Function;
 import org.htmlunit.corejs.javascript.FunctionObject;
-import org.htmlunit.corejs.javascript.ScriptRuntime;
 import org.htmlunit.corejs.javascript.Scriptable;
-import org.htmlunit.corejs.javascript.Undefined;
+import org.htmlunit.corejs.javascript.ScriptableObject;
+import org.htmlunit.corejs.javascript.VarScope;
+import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
+import org.htmlunit.javascript.background.BackgroundJavaScriptFactory;
+import org.htmlunit.javascript.background.JavaScriptJob;
+import org.htmlunit.util.StringUtils;
 
 /**
- * The implementation of {@code WindowOrWorkerGlobalScope}
+ * The implementation of {@link WindowOrWorkerGlobalScope}
  * to be used by the implementers of the mixin.
  *
  * @author Ronald Brill
  * @author Rural Hunter
+ * @author Lai Quang Duong
  */
 public final class WindowOrWorkerGlobalScopeMixin {
 
     /**
-     * The minimum delay that can be used with setInterval() or setTimeout(). Browser minimums are
-     * usually in the 10ms to 15ms range, but there's really no reason for us to waste that much time.
-     * <a href="http://jsninja.com/Timers#Minimum_Timer_Delay_and_Reliability">
-     * http://jsninja.com/Timers#Minimum_Timer_Delay_and_Reliability</a>
+     * The minimum delay that can be used with {@code setInterval()} or {@code setTimeout()}.
+     * Browser minimums are usually in the 10–15 ms range, but there is no reason to waste that much time.
+     *
+     * @see <a href="http://jsninja.com/Timers#Minimum_Timer_Delay_and_Reliability">
+     *     Minimum Timer Delay and Reliability</a>
      */
     private static final int MIN_TIMER_DELAY = 1;
 
     private WindowOrWorkerGlobalScopeMixin() {
+        super();
     }
 
     /**
-     * Decodes a string of data which has been encoded using base-64 encoding.
-     * @param encodedData the encoded string
+     * Decodes a string of data that has been encoded using Base64 encoding.
+     *
+     * @param encodedData the Base64-encoded string to decode
+     * @param scriptable the calling {@link HtmlUnitScriptable}
      * @return the decoded value
      */
-    public static String atob(final String encodedData) {
-        final int l = encodedData.length();
-        for (int i = 0; i < l; i++) {
-            if (encodedData.charAt(i) > 255) {
-                throw new EvaluatorException("Function atob supports only latin1 characters");
-            }
+    public static String atob(final String encodedData, final HtmlUnitScriptable scriptable) {
+        final String withoutWhitespace = StringUtils.replaceChars(encodedData, " \t\r\n\u000c", "");
+        final byte[] bytes = withoutWhitespace.getBytes(StandardCharsets.ISO_8859_1);
+        try {
+            return new String(Base64.getDecoder().decode(bytes), StandardCharsets.ISO_8859_1);
         }
-        final byte[] bytes = encodedData.getBytes(StandardCharsets.ISO_8859_1);
-        return new String(Base64.decodeBase64(bytes), StandardCharsets.ISO_8859_1);
+        catch (final IllegalArgumentException e) {
+            throw JavaScriptEngine.asJavaScriptException(
+                    scriptable,
+                    "Failed to execute atob(): " + e.getMessage(),
+                    org.htmlunit.javascript.host.dom.DOMException.INVALID_CHARACTER_ERR);
+        }
     }
 
     /**
-     * Creates a base-64 encoded ASCII string from a string of binary data.
-     * @param stringToEncode string to encode
-     * @return the encoded string
+     * Creates a Base64-encoded ASCII string from a string of binary data.
+     *
+     * @param stringToEncode the Latin-1 string to encode
+     * @param scriptable the calling {@link HtmlUnitScriptable}
+     * @return the Base64-encoded string
      */
-    public static String btoa(final String stringToEncode) {
+    public static String btoa(final String stringToEncode, final HtmlUnitScriptable scriptable) {
         final int l = stringToEncode.length();
         for (int i = 0; i < l; i++) {
             if (stringToEncode.charAt(i) > 255) {
-                throw new EvaluatorException("Function btoa supports only latin1 characters");
+                throw JavaScriptEngine.asJavaScriptException(
+                        scriptable,
+                        "Function btoa supports only latin1 characters",
+                        org.htmlunit.javascript.host.dom.DOMException.INVALID_CHARACTER_ERR);
             }
         }
+
         final byte[] bytes = stringToEncode.getBytes(StandardCharsets.ISO_8859_1);
-        return new String(Base64.encodeBase64(bytes), StandardCharsets.UTF_8);
+        try {
+            return new String(Base64.getEncoder().encode(bytes), StandardCharsets.UTF_8);
+        }
+        catch (final IllegalArgumentException e) {
+            throw JavaScriptEngine.asJavaScriptException(
+                    scriptable,
+                    "Failed to execute btoa(): " + e.getMessage(),
+                    org.htmlunit.javascript.host.dom.DOMException.INVALID_CHARACTER_ERR);
+        }
     }
 
     /**
-     * Sets a chunk of JavaScript to be invoked at some specified time later.
-     * The invocation occurs only if the window is opened after the delay
-     * and does not contain an other page than the one that originated the setTimeout.
+     * Sets a chunk of JavaScript to be invoked after the specified delay.
+     * The invocation occurs only if the window is still open after the delay
+     * and has not been replaced by another page.
      *
-     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/setTimeout">
-     * MDN web docs</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope/setTimeout">MDN Documentation</a>
      *
      * @param context the JavaScript context
      * @param thisObj the scriptable
@@ -101,21 +122,21 @@ public final class WindowOrWorkerGlobalScopeMixin {
     public static Object setTimeout(final Context context, final Scriptable thisObj,
             final Object[] args, final Function function) {
         if (args.length < 1) {
-            throw ScriptRuntime.typeError("Function not provided");
+            throw JavaScriptEngine.typeError("Function not provided");
         }
 
-        final int timeout = ScriptRuntime.toInt32((args.length > 1) ? args[1] : Undefined.instance);
+        final int timeout = JavaScriptEngine.toInt32((args.length > 1) ? args[1] : JavaScriptEngine.UNDEFINED);
         final Object[] params = (args.length > 2)
                 ? Arrays.copyOfRange(args, 2, args.length)
-                : ScriptRuntime.emptyArgs;
+                : JavaScriptEngine.EMPTY_ARGS;
         return setTimeoutIntervalImpl((Window) thisObj, args[0], timeout, true, params);
     }
 
     /**
-     * Sets a chunk of JavaScript to be invoked each time a specified number of milliseconds has elapsed.
+     * Sets a chunk of JavaScript to be invoked repeatedly at the specified interval.
      *
-     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/setInterval">
-     * MDN web docs</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope/setInterval">MDN Documentation</a>
+     *
      * @param context the JavaScript context
      * @param thisObj the scriptable
      * @param args the arguments passed into the method
@@ -125,44 +146,72 @@ public final class WindowOrWorkerGlobalScopeMixin {
     public static Object setInterval(final Context context, final Scriptable thisObj,
             final Object[] args, final Function function) {
         if (args.length < 1) {
-            throw ScriptRuntime.typeError("Function not provided");
+            throw JavaScriptEngine.typeError("Function not provided");
         }
 
-        final int timeout = ScriptRuntime.toInt32((args.length > 1) ? args[1] : Undefined.instance);
+        final int timeout = JavaScriptEngine.toInt32((args.length > 1) ? args[1] : JavaScriptEngine.UNDEFINED);
         final Object[] params = (args.length > 2)
                 ? Arrays.copyOfRange(args, 2, args.length)
-                : ScriptRuntime.emptyArgs;
+                : JavaScriptEngine.EMPTY_ARGS;
         return setTimeoutIntervalImpl((Window) thisObj, args[0], timeout, false, params);
     }
 
-    private static int setTimeoutIntervalImpl(final Window window, final Object code,
-            int timeout, final boolean isTimeout, final Object[] params) {
-        if (timeout < MIN_TIMER_DELAY) {
-            timeout = MIN_TIMER_DELAY;
+    /**
+     * Queues a microtask to be executed.
+     *
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/queueMicrotask">MDN Documentation</a>
+     *
+     * @param thisObj the scriptable
+     * @param args the arguments passed into the method
+     * @return {@code undefined}
+     */
+    public static Object queueMicrotask(final Scriptable thisObj, final Object[] args) {
+        if (args.length < 1) {
+            throw JavaScriptEngine.typeError("At least 1 argument required");
         }
+        if (!(args[0] instanceof Function)) {
+            throw JavaScriptEngine.typeError("Argument 1 is not callable");
+        }
+
+        final Function callback = (Function) args[0];
+        final VarScope scope = ScriptableObject.getTopLevelScope(thisObj.getParentScope());
+        final Context cx = Context.getCurrentContext();
+        cx.enqueueMicrotask(() -> {
+            try {
+                callback.call(cx, scope, thisObj, JavaScriptEngine.EMPTY_ARGS);
+            }
+            catch (final Exception e) {
+                // uncaught exception in a microtask must not prevent remaining microtasks from running.
+            }
+        });
+
+        return JavaScriptEngine.UNDEFINED;
+    }
+
+    private static int setTimeoutIntervalImpl(final Window window, final Object code,
+            final int timeout, final boolean isTimeout, final Object[] params) {
+        final int delay = Math.max(timeout, MIN_TIMER_DELAY);
 
         final WebWindow webWindow = window.getWebWindow();
         final Page page = (Page) window.getDomNodeOrNull();
         Integer period = null;
         if (!isTimeout) {
-            period = timeout;
+            period = delay;
         }
 
-        if (code instanceof String) {
-            final String s = (String) code;
+        if (code instanceof String s) {
             final String description = "window.set"
                                         + (isTimeout ? "Timeout" : "Interval")
-                                        + "(" + s + ", " + timeout + ")";
+                                        + "(" + s + ", " + delay + ")";
             final JavaScriptJob job = BackgroundJavaScriptFactory.theFactory().
-                    createJavaScriptJob(timeout, period, description, webWindow, s);
+                    createJavaScriptJob(delay, period, description, webWindow, s);
             return webWindow.getJobManager().addJob(job, page);
         }
 
-        if (code instanceof Function) {
-            final Function f = (Function) code;
+        if (code instanceof Function f) {
             final String functionName;
-            if (f instanceof FunctionObject) {
-                functionName = ((FunctionObject) f).getFunctionName();
+            if (f instanceof FunctionObject object) {
+                functionName = object.getFunctionName();
             }
             else {
                 functionName = String.valueOf(f); // can this happen?
@@ -170,12 +219,12 @@ public final class WindowOrWorkerGlobalScopeMixin {
 
             final String description = "window.set"
                                         + (isTimeout ? "Timeout" : "Interval")
-                                        + "(" + functionName + ", " + timeout + ")";
+                                        + "(" + functionName + ", " + delay + ")";
             final JavaScriptJob job = BackgroundJavaScriptFactory.theFactory().
-                    createJavaScriptJob(timeout, period, description, webWindow, f, params);
+                    createJavaScriptJob(delay, period, description, webWindow, f, params);
             return webWindow.getJobManager().addJob(job, page);
         }
 
-        throw Context.reportRuntimeError("Unknown type for function.");
+        throw JavaScriptEngine.reportRuntimeError("Unknown type for function.");
     }
 }

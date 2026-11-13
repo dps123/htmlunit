@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.htmlunit.html;
  * An element which can handle scripts.
  *
  * @author Ahmed Ashour
+ * @author Ronald Brill
  */
 public interface ScriptElement {
 
@@ -34,30 +35,30 @@ public interface ScriptElement {
     boolean isDeferred();
 
     /**
+     * Returns {@code true} if this crossorigin attribute is available.
+     * @return {@code true} if this crossorigin attribute is available.
+     */
+    boolean isCrossorigin();
+
+    /**
      * Sets if executed.
      * @param executed if executed
      */
     void setExecuted(boolean executed);
 
     /**
-     * Returns the value of the attribute {@code src}. Refer to the
-     * <a href="http://www.w3.org/TR/html401/">HTML 4.01</a>
-     * documentation for details on the use of this attribute.
+     * Returns the script source url.
      *
-     * @return the value of the attribute {@code src}
-     * or an empty string if that attribute isn't defined.
+     * @return the script source url
      */
-    String getSrcAttribute();
+    String getScriptSource();
 
     /**
-     * Returns the value of the attribute {@code charset}. Refer to the
-     * <a href="http://www.w3.org/TR/html401/">HTML 4.01</a>
-     * documentation for details on the use of this attribute.
+     * Returns the charset used for the script encoding.
      *
-     * @return the value of the attribute {@code charset}
-     * or an empty string if that attribute isn't defined.
+     * @return the charset used for the script encoding
      */
-    String getCharsetAttribute();
+    String getScriptCharset();
 
     /**
      * <span style="color:red">INTERNAL API - SUBJECT TO CHANGE AT ANY TIME - USE AT YOUR OWN RISK.</span><br>
@@ -73,9 +74,24 @@ public interface ScriptElement {
     /**
      * <span style="color:red">INTERNAL API - SUBJECT TO CHANGE AT ANY TIME - USE AT YOUR OWN RISK.</span><br>
      *
-     * Returns true if this frame was created by javascript. This is needed to handle
-     * some special IE behavior.
+     * Returns true if this frame was created by javascript.
      * @return true or false
      */
     boolean wasCreatedByDomParser();
+
+    /**
+     * <span style="color:red">INTERNAL API - SUBJECT TO CHANGE AT ANY TIME - USE AT YOUR OWN RISK.</span><br>
+     *
+     * Marks this script as parser-inserted (inserted by the parser of the document, including document.write()).
+     * Spec: the defer attribute has only an effect for parser-inserted scripts.
+     */
+    void markAsParserInserted();
+
+    /**
+     * <span style="color:red">INTERNAL API - SUBJECT TO CHANGE AT ANY TIME - USE AT YOUR OWN RISK.</span><br>
+     *
+     * Returns true if this script was inserted by the parser of the document.
+     * @return true or false
+     */
+    boolean wasParserInserted();
 }

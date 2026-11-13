@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,12 @@
  */
 package org.htmlunit.javascript.host;
 
-import java.util.List;
-
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.htmlunit.WebDriverTestCase;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.HtmlUnitNYI;
+import org.junit.jupiter.api.Test;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.htmlunit.HtmlUnitDriver;
-
-import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.BuggyWebDriver;
-import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
-import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
 
 /**
  * Tests for {@link Storage}.
@@ -37,20 +30,18 @@ import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
  * @author Jake Cobb
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class StorageTest extends WebDriverTestCase {
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts({"undefined", "[object Storage]", "[object Storage]"})
+    @Alerts({"[object Storage]", "[object Storage]"})
     public void storage() throws Exception {
-        final String html
-            = "<html><head></head><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head></head><body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
-            + "  log(window.globalStorage);\n"
             + "  log(window.localStorage);\n"
             + "  log(window.sessionStorage);\n"
             + "</script>\n"
@@ -62,17 +53,16 @@ public class StorageTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts({"global: true", "local: true", "session: true"})
+    @Alerts({"local: true", "session: true"})
     public void storageEquals() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
-            + "  log('global: ' + (window.globalStorage === window.globalStorage));\n"
             + "  try { log('local: ' + (window.localStorage === window.localStorage)); }"
-                        + " catch(e) { log('exception'); }\n"
+                        + " catch(e) { logEx(e); }\n"
             + "  try { log('session: ' + (window.sessionStorage === window.sessionStorage)); }"
-                        + " catch(e) { log('exception'); }\n"
+                        + " catch(e) { logEx(e); }\n"
             + "</script></body></html>";
         loadPageVerifyTitle2(html);
     }
@@ -83,16 +73,16 @@ public class StorageTest extends WebDriverTestCase {
     @Test
     @Alerts({"string", "1"})
     public void localStorage() throws Exception {
-        final String firstHtml
-            = "<html><head></head><body>\n"
+        final String firstHtml = DOCTYPE_HTML
+            + "<html><head></head><body>\n"
             + "<script>\n"
             + "  if (window.localStorage) {\n"
             + "    localStorage.hello = 1;\n"
             + "  }\n"
             + "</script>\n"
             + "</body></html>";
-        final String secondHtml
-            = "<html><head></head><body>\n"
+        final String secondHtml = DOCTYPE_HTML
+            + "<html><head></head><body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  if (window.localStorage) {\n"
@@ -115,8 +105,8 @@ public class StorageTest extends WebDriverTestCase {
     @Test
     @Alerts({"works 5200000", "fails 5290000"})
     public void localStorageSizeOneEntry() throws Exception {
-        final String firstHtml
-            = "<html>\n"
+        final String firstHtml = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -157,10 +147,10 @@ public class StorageTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts({"works 52", "fails"})
+    @Alerts({"works 52", "fails", "overwrite works 52"})
     public void localStorageSizeManyEntries() throws Exception {
-        final String firstHtml
-            = "<html>\n"
+        final String firstHtml = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -187,6 +177,18 @@ public class StorageTest extends WebDriverTestCase {
             + "    } catch(e) {\n"
             + "      log('fails');\n"
             + "    }\n"
+
+            // but replacing the existing entries should work
+            + "    for (var i = 0; i < 52; i++) {\n"
+            + "      try {"
+            + "        localStorage.setItem('HtmlUnit-' + i, bigContent);\n"
+            + "      } catch(e) {\n"
+            + "        log('fails ' + i);\n"
+            + "        break;\n"
+            + "      }\n"
+            + "    }"
+            + "    log('overwrite works ' + i);\n"
+
             + "  }\n"
             + "</script>\n"
             + "</body></html>";
@@ -197,10 +199,38 @@ public class StorageTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
+    @Alerts({"true", "true", "null", "null"})
+    public void localStorageKey() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<body>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  if (window.localStorage) {\n"
+            + "    localStorage.clear();\n"
+
+            + "    localStorage.setItem('HtmlUnit', '0');\n"
+            + "    localStorage.setItem('HtmlUnit 1', '1');\n"
+            + "    localStorage.setItem('HtmlUnit 2', '2');\n"
+
+            + "    log(localStorage.key(0).startsWith('HtmlUnit'));\n"
+            + "    log(localStorage.key(1).startsWith('HtmlUnit'));\n"
+            + "    log(localStorage.key(3));\n"
+            + "    log(localStorage.key(-1));\n"
+            + "  }\n"
+            + "</script>\n"
+            + "</body></html>";
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
     @Alerts({"0", "2", "there", "world", "1", "0"})
     public void sessionStorage() throws Exception {
-        final String html
-            = "<html><head></head><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head></head><body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  if (window.sessionStorage) {\n"
@@ -223,73 +253,46 @@ public class StorageTest extends WebDriverTestCase {
     }
 
     /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    public void globalStorage() throws Exception {
-        final String html
-            = "<html><head></head><body>\n"
-            + "<script>\n"
-            + LOG_TITLE_FUNCTION
-            + "  if (window.globalStorage) {\n"
-            + "    try {\n"
-            + "      log(globalStorage['" + URL_FIRST.getHost() + "']);\n"
-            + "      log(globalStorage['otherHost']);\n"
-            + "    }\n"
-            + "    catch(e) {log('error')}"
-            + "  }\n"
-            + "</script>\n"
-            + "</body></html>";
-        loadPageVerifyTitle2(html);
-    }
-
-    /**
      * Note that this test will work only with WebDriver instances that support starting 2 instances in parallel.
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("I was here")
-    @BuggyWebDriver(CHROME = "",
-                    EDGE = "",
-                    FF = "",
-                    FF_ESR = "")
-    // The way ChromeDriver and FFDriver start the real browsers clears the LocalStorage somehow.
-    // But when executed manually the LocalStorage is shared.
-    @NotYetImplemented
+    @Alerts({"", "I was here§"})
+    @HtmlUnitNYI(CHROME = {"", "null§"},
+            EDGE = {"", "null§"},
+            FF = {"", "null§"},
+            FF_ESR = {"", "null§"})
     // TODO somehow persist the LocalStorage
     public void localStorageShouldBeShared() throws Exception {
-        final String html1 = "<html><body>\n"
+        final String html1 = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "try {\n"
             + "  localStorage.clear();\n"
             + "  localStorage.setItem('hello', 'I was here');\n"
-            + "} catch(e) { log('exception'); }\n"
+            + "} catch(e) { logEx(e); }\n"
             + "</script></body></html>";
-        final WebDriver driver = loadPage2(html1);
-        final List<String> alerts = getCollectedAlerts(driver);
 
-        final String html2 = "<html><body><script>\n"
+        WebDriver driver = loadPage2(html1);
+        assertEquals(getExpectedAlerts()[0], driver.getTitle());
+        releaseResources();
+
+        final String html2 = DOCTYPE_HTML
+            + "<html><body><script>\n"
+            + LOG_TITLE_FUNCTION
             + "try {\n"
             + "  log(localStorage.getItem('hello'));\n"
-            + "} catch(e) { log('exception'); }\n"
+            + "} catch(e) { logEx(e); }\n"
             + "</script></body></html>";
         getMockWebConnection().setResponse(URL_FIRST, html2);
 
-        releaseResources();
         // we have to control 2nd driver by ourself
-        WebDriver driver2 = null;
-        try {
-            driver2 = buildWebDriver();
-            driver2.get(URL_FIRST.toString());
-            final List<String> newAlerts = getCollectedAlerts(driver2);
-            alerts.addAll(newAlerts);
-            assertEquals(getExpectedAlerts(), alerts);
-        }
-        finally {
-            if (!(driver2 instanceof HtmlUnitDriver)) {
-                shutDownAll();
-            }
+        driver = loadPage2(html2);
+        assertEquals(getExpectedAlerts()[1], driver.getTitle());
+
+        if (!(driver instanceof HtmlUnitDriver)) {
+            shutDownAll();
         }
     }
 
@@ -299,7 +302,8 @@ public class StorageTest extends WebDriverTestCase {
     @Test
     @Alerts({"undefined", "null", "extraMethod called", "null"})
     public void prototypeIsExtensible() throws Exception {
-        final String html = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "try {\n"
@@ -315,7 +319,7 @@ public class StorageTest extends WebDriverTestCase {
             + "    log('localStorage.extraMethod not callable');\n"
             + "  }\n"
             + "  log(localStorage.getItem('extraMethod'));\n"
-            + "} catch (e) { log('exception'); }\n"
+            + "} catch(e) { logEx(e); }\n"
             + "</script></body></html>";
         loadPageVerifyTitle2(html);
     }
@@ -324,10 +328,10 @@ public class StorageTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"function", "null", "function", "value", "1"},
-            IE = {"function", "null", "string", "value", "1"})
+    @Alerts({"function", "null", "function", "value", "1"})
     public void prototypePropertiesAreVisible() throws Exception {
-        final String html = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "try {\n"
@@ -337,7 +341,7 @@ public class StorageTest extends WebDriverTestCase {
             + "  localStorage.setItem('hasOwnProperty', 'value');\n"
             + "  log(typeof localStorage.hasOwnProperty);\n"
             + "  log(localStorage.getItem('hasOwnProperty'));\n"
-            + "} catch (e) { log('exception'); }\n"
+            + "} catch(e) { logEx(e); }\n"
             + "  log(localStorage.length);\n"
             + "</script></body></html>";
         loadPageVerifyTitle2(html);
@@ -349,12 +353,12 @@ public class StorageTest extends WebDriverTestCase {
     @Test
     @Alerts(DEFAULT = {"function", "null", "string", "null", "0"},
             FF = {"function", "null", "function", "value", "1"},
-            FF_ESR = {"function", "null", "function", "value", "1"},
-            IE = {"function", "null", "string", "value", "1"})
+            FF_ESR = {"function", "null", "function", "value", "1"})
     @HtmlUnitNYI(FF = {"function", "null", "string", "value", "1"},
             FF_ESR = {"function", "null", "string", "value", "1"})
     public void writeToPrototypeProperty() throws Exception {
-        final String html = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "try {\n"
@@ -365,7 +369,7 @@ public class StorageTest extends WebDriverTestCase {
             + "  log(typeof localStorage.hasOwnProperty);\n"
             + "  log(localStorage.getItem('hasOwnProperty'));\n"
             + "  log(localStorage.length);\n"
-            + "} catch (e) { log('exception'); }\n"
+            + "} catch(e) { logEx(e); }\n"
             + "</script></body></html>";
         loadPageVerifyTitle2(html);
     }

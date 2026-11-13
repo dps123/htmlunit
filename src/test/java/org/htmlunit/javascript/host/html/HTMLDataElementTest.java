@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,28 +14,24 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link HTMLDataElement}.
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class HTMLDataElementTest extends WebDriverTestCase {
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "[object HTMLDataElement]",
-            IE = "[object HTMLUnknownElement]")
+    @Alerts("[object HTMLDataElement]")
     public void tag() throws Exception {
-        final String html = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "  <data id='it' value='1234'>onetwothreefour</data>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -49,10 +45,10 @@ public class HTMLDataElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"1234", "#12o", "", "#12o"},
-            IE = {"undefined", "#12o", "undefined", "#12o"})
+    @Alerts({"1234", "#12o", "", "#12o"})
     public void value() throws Exception {
-        final String html = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "  <data id='d1' value='1234'>onetwothreefour</data>\n"
             + "  <data id='d2' >onetwothreefour</data>\n"
             + "<script>\n"

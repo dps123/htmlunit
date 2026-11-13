@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,9 @@ package org.htmlunit.javascript.host;
 
 import javax.swing.Popup;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link Popup}.
@@ -29,7 +26,6 @@ import org.htmlunit.junit.BrowserRunner.Alerts;
  * @author Marc Guillemot
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class Popup2Test extends WebDriverTestCase {
 
     /**
@@ -37,9 +33,10 @@ public class Popup2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("exception")
+    @Alerts("TypeError")
     public void popup() throws Exception {
-        final String html = "<html><head></title><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head></title><body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  try {\n"
@@ -48,7 +45,7 @@ public class Popup2Test extends WebDriverTestCase {
             + "    oPopupBody.innerHTML = 'bla bla';\n"
             + "    oPopup.show(100, 100, 200, 50, document.body);\n"
             + "    log('done');\n"
-            + "  } catch(e) { log('exception'); }\n"
+            + "  } catch(e) { logEx(e); }\n"
             + "</script>\n"
             + "</body></html>";
 
@@ -61,9 +58,10 @@ public class Popup2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("exception")
+    @Alerts("TypeError")
     public void popupBodyStyle() throws Exception {
-        final String html = "<html><head><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><body>\n"
             + "<script language='javascript'>\n"
             + LOG_TITLE_FUNCTION
             + "  try {\n"
@@ -71,7 +69,7 @@ public class Popup2Test extends WebDriverTestCase {
             + "    popupBody = popup.document.body;\n"
             + "    popupBody.style.backgroundColor = '#7f7fff';\n"
             + "    log('done');\n"
-            + "  } catch(e) { log('exception'); }\n"
+            + "  } catch(e) { logEx(e); }\n"
             + "</script>\n"
             + "</body></html>";
 

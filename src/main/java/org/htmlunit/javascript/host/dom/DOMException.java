@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,135 +14,268 @@
  */
 package org.htmlunit.javascript.host.dom;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
 import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
 import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
+
+import java.util.Arrays;
+import java.util.List;
 
 import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstant;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxGetter;
 
-import org.htmlunit.corejs.javascript.Undefined;
-
 /**
  * Exception for DOM manipulations.
  *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/DOMException">MDN Documentation</a>
  * @see <a href="http://www.w3.org/TR/2000/REC-DOM-Level-2-Core-20001113/core.html#ID-17189187">
- * DOM-Level-2-Core</a>
+ *     DOM-Level-2-Core</a>
  * @author Marc Guillemot
  * @author Frank Danek
  * @author Ahmed Ashour
+ * @author Ronald Brill
  */
 @JsxClass
 public class DOMException extends HtmlUnitScriptable {
+
     /** If the specified range of text does not fit into a DOMString. */
     @JsxConstant
-    public static final short DOMSTRING_SIZE_ERR = org.w3c.dom.DOMException.DOMSTRING_SIZE_ERR;
+    public static final int DOMSTRING_SIZE_ERR = org.w3c.dom.DOMException.DOMSTRING_SIZE_ERR;
+
     /** If any node is inserted somewhere it doesn't belong. */
     @JsxConstant
-    public static final short HIERARCHY_REQUEST_ERR = org.w3c.dom.DOMException.HIERARCHY_REQUEST_ERR;
+    public static final int HIERARCHY_REQUEST_ERR = org.w3c.dom.DOMException.HIERARCHY_REQUEST_ERR;
+
     /** If index or size is negative, or greater than the allowed value. */
     @JsxConstant
-    public static final short INDEX_SIZE_ERR = org.w3c.dom.DOMException.INDEX_SIZE_ERR;
+    public static final int INDEX_SIZE_ERR = org.w3c.dom.DOMException.INDEX_SIZE_ERR;
+
     /** If an attempt is made to add an attribute that is already in use elsewhere. */
     @JsxConstant
-    public static final short INUSE_ATTRIBUTE_ERR = org.w3c.dom.DOMException.INUSE_ATTRIBUTE_ERR;
+    public static final int INUSE_ATTRIBUTE_ERR = org.w3c.dom.DOMException.INUSE_ATTRIBUTE_ERR;
+
     /** If a parameter or an operation is not supported by the underlying object. */
     @JsxConstant
-    public static final short INVALID_ACCESS_ERR = org.w3c.dom.DOMException.INVALID_ACCESS_ERR;
+    public static final int INVALID_ACCESS_ERR = org.w3c.dom.DOMException.INVALID_ACCESS_ERR;
+
     /** If an invalid or illegal character is specified, such as in a name. */
     @JsxConstant
-    public static final short INVALID_CHARACTER_ERR = org.w3c.dom.DOMException.INVALID_CHARACTER_ERR;
+    public static final int INVALID_CHARACTER_ERR = org.w3c.dom.DOMException.INVALID_CHARACTER_ERR;
+
     /** If an attempt is made to modify the type of the underlying object. */
     @JsxConstant
-    public static final short INVALID_MODIFICATION_ERR = org.w3c.dom.DOMException.INVALID_MODIFICATION_ERR;
+    public static final int INVALID_MODIFICATION_ERR = org.w3c.dom.DOMException.INVALID_MODIFICATION_ERR;
+
     /** If an attempt is made to use an object that is not, or is no longer, usable. */
     @JsxConstant
-    public static final short INVALID_STATE_ERR = org.w3c.dom.DOMException.INVALID_STATE_ERR;
+    public static final int INVALID_STATE_ERR = org.w3c.dom.DOMException.INVALID_STATE_ERR;
+
     /** If an attempt is made to create or change an object in a way which is incorrect with regard to namespaces. */
     @JsxConstant
-    public static final short NAMESPACE_ERR = org.w3c.dom.DOMException.NAMESPACE_ERR;
+    public static final int NAMESPACE_ERR = org.w3c.dom.DOMException.NAMESPACE_ERR;
+
     /** If data is specified for a node which does not support data. */
     @JsxConstant
-    public static final short NO_DATA_ALLOWED_ERR = org.w3c.dom.DOMException.NO_DATA_ALLOWED_ERR;
+    public static final int NO_DATA_ALLOWED_ERR = org.w3c.dom.DOMException.NO_DATA_ALLOWED_ERR;
+
     /** If an attempt is made to modify an object where modifications are not allowed. */
     @JsxConstant
-    public static final short NO_MODIFICATION_ALLOWED_ERR = org.w3c.dom.DOMException.NO_MODIFICATION_ALLOWED_ERR;
+    public static final int NO_MODIFICATION_ALLOWED_ERR = org.w3c.dom.DOMException.NO_MODIFICATION_ALLOWED_ERR;
+
     /** If an attempt is made to reference a node in a context where it does not exist. */
     @JsxConstant
-    public static final short NOT_FOUND_ERR = org.w3c.dom.DOMException.NOT_FOUND_ERR;
+    public static final int NOT_FOUND_ERR = org.w3c.dom.DOMException.NOT_FOUND_ERR;
+
     /** If the implementation does not support the requested type of object or operation. */
     @JsxConstant
-    public static final short NOT_SUPPORTED_ERR = org.w3c.dom.DOMException.NOT_SUPPORTED_ERR;
+    public static final int NOT_SUPPORTED_ERR = org.w3c.dom.DOMException.NOT_SUPPORTED_ERR;
+
     /** If an invalid or illegal string is specified. */
     @JsxConstant
-    public static final short SYNTAX_ERR = org.w3c.dom.DOMException.SYNTAX_ERR;
+    public static final int SYNTAX_ERR = org.w3c.dom.DOMException.SYNTAX_ERR;
+
     /** If a node is used in a different document than the one that created it (that doesn't support it). */
     @JsxConstant
-    public static final short WRONG_DOCUMENT_ERR = org.w3c.dom.DOMException.WRONG_DOCUMENT_ERR;
+    public static final int WRONG_DOCUMENT_ERR = org.w3c.dom.DOMException.WRONG_DOCUMENT_ERR;
+
     /** If a call to a method would make the {@code Node} invalid with respect to "partial validity". */
     @JsxConstant
-    public static final short VALIDATION_ERR = org.w3c.dom.DOMException.VALIDATION_ERR;
-    /** If the type of an object is incompatible with the expected type of the parameter. */
+    public static final int VALIDATION_ERR = org.w3c.dom.DOMException.VALIDATION_ERR;
+
+    /** If the type of object is incompatible with the expected type of the parameter. */
     @JsxConstant
-    public static final short TYPE_MISMATCH_ERR = org.w3c.dom.DOMException.TYPE_MISMATCH_ERR;
+    public static final int TYPE_MISMATCH_ERR = org.w3c.dom.DOMException.TYPE_MISMATCH_ERR;
+
     /** Security error. */
     @JsxConstant
-    public static final short SECURITY_ERR = 18;
+    public static final int SECURITY_ERR = 18;
+
     /** Network error. */
     @JsxConstant
-    public static final short NETWORK_ERR = 19;
+    public static final int NETWORK_ERR = 19;
+
     /** Abort error. */
     @JsxConstant
-    public static final short ABORT_ERR = 20;
+    public static final int ABORT_ERR = 20;
+
     /** URL mismatch error. */
     @JsxConstant
-    public static final short URL_MISMATCH_ERR = 21;
+    public static final int URL_MISMATCH_ERR = 21;
+
     /** Quota exceeded error. */
     @JsxConstant
-    public static final short QUOTA_EXCEEDED_ERR = 22;
+    public static final int QUOTA_EXCEEDED_ERR = 22;
+
     /** Timeout error. */
     @JsxConstant
-    public static final short TIMEOUT_ERR = 23;
+    public static final int TIMEOUT_ERR = 23;
+
     /** Invalid node type error. */
     @JsxConstant
-    public static final short INVALID_NODE_TYPE_ERR = 24;
+    public static final int INVALID_NODE_TYPE_ERR = 24;
+
     /** Data clone error. */
     @JsxConstant
-    public static final short DATA_CLONE_ERR = 25;
-    /** Parse error. */
-    @JsxConstant(IE)
-    public static final short PARSE_ERR = 81;
-    /** Serialize error. */
-    @JsxConstant(IE)
-    public static final short SERIALIZE_ERR = 82;
+    public static final int DATA_CLONE_ERR = 25;
 
-    private final short code_;
-    private final String message_;
+    // The following ids are HtmlUnit internal. The names have no legacy code,
+    // so they are not exposed to JavaScript and the code property returns 0.
+
+    /** Encoding error. */
+    public static final int ENCODING_ERR = 26;
+
+    /** Not readable error. */
+    public static final int NOT_READABLE_ERR = 27;
+
+    /** Unknown error. */
+    public static final int UNKNOWN_ERR = 28;
+
+    /** Constraint error. */
+    public static final int CONSTRAINT_ERR = 29;
+
+    /** Data error. */
+    public static final int DATA_ERR = 30;
+
+    /** Transaction inactive error. */
+    public static final int TRANSACTION_INACTIVE_ERR = 31;
+
+    /** Read only error. */
+    public static final int READ_ONLY_ERR = 32;
+
+    /** Version error. */
+    public static final int VERSION_ERR = 33;
+
+    /** Operation error. */
+    public static final int OPERATION_ERR = 34;
+
+    /** Not allowed error. */
+    public static final int NOT_ALLOWED_ERR = 35;
+
+    /** Opt out error. */
+    public static final int OPT_OUT_ERR = 36;
+
+    private static final List<String> COMMON_ERROR_NAMES = Arrays.asList(
+        "IndexSizeError",
+        "DOMStringSizeError",
+        "HierarchyRequestError",
+        "WrongDocumentError",
+        "InvalidCharacterError",
+        "NoDataAllowedError",
+        "NoModificationAllowedError",
+        "NotFoundError",
+        "NotSupportedError",
+        "InUseAttributeError",
+        "InvalidStateError",
+        "SyntaxError",
+        "InvalidModificationError",
+        "NamespaceError",
+        "InvalidAccessError",
+        "ValidationError",
+        "TypeMismatchError",
+        "SecurityError",
+        "NetworkError",
+        "AbortError",
+        "URLMismatchError",
+        "QuotaExceededError",
+        "TimeoutError",
+        "InvalidNodeTypeError",
+        "DataCloneError",
+        "EncodingError",
+        "NotReadableError",
+        "UnknownError",
+        "ConstraintError",
+        "DataError",
+        "TransactionInactiveError",
+        "ReadOnlyError",
+        "VersionError",
+        "OperationError",
+        "NotAllowedError",
+        "OptOutError");
+
+    private int code_;
+    private String name_;
+    private String message_;
     private int lineNumber_;
     private String fileName_;
 
     /**
      * Default constructor used to build the prototype.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
     public DOMException() {
-        code_ = -1;
-        message_ = null;
+        super();
     }
 
     /**
      * Constructor.
      * @param message the exception message
-     * @param errorCode the error code
+     * @param error the error code (one of the constants from the class)
      */
-    public DOMException(final String message, final short errorCode) {
-        code_ = errorCode;
+    public DOMException(final String message, final int error) {
         message_ = message;
+        code_ = toLegacyCode(error);
+        name_ = COMMON_ERROR_NAMES.get(error - 1);
+    }
+
+    /**
+     * JavaScript constructor.
+     * @param message a description of the exception. If not present, the empty string '' is used
+     * @param error If the specified name is a standard error name,
+     *        then getting the code property of the DOMException object will return the
+     *        code number corresponding to the specified name.
+     *        If not present, the string 'Error' is used.
+     */
+    @JsxConstructor
+    public void jsConstructor(final String message, final Object error) {
+        message_ = message;
+
+        if (error == null) {
+            code_ = 0;
+            name_ = null;
+            return;
+        }
+
+        if (JavaScriptEngine.isUndefined(error)) {
+            code_ = 0;
+            name_ = "Error";
+            return;
+        }
+
+        name_ = JavaScriptEngine.toString(error);
+
+        final int idx = COMMON_ERROR_NAMES.indexOf(name_);
+        if (idx != -1) {
+            code_ = toLegacyCode(idx + 1);
+            return;
+        }
+
+        code_ = 0;
+    }
+
+    private static int toLegacyCode(final int error) {
+        return error > DATA_CLONE_ERR ? 0 : error;
     }
 
     /**
@@ -152,9 +285,18 @@ public class DOMException extends HtmlUnitScriptable {
     @JsxGetter
     public Object getCode() {
         if (code_ == -1) {
-            return Undefined.instance;
+            return JavaScriptEngine.UNDEFINED;
         }
         return code_;
+    }
+
+    /**
+     * Gets the exception name.
+     * @return the exception name
+     */
+    @JsxGetter
+    public String getName() {
+        return name_;
     }
 
     /**
@@ -164,7 +306,7 @@ public class DOMException extends HtmlUnitScriptable {
     @JsxGetter
     public Object getMessage() {
         if (message_ == null) {
-            return Undefined.instance;
+            return JavaScriptEngine.UNDEFINED;
         }
         return message_;
     }
@@ -176,19 +318,19 @@ public class DOMException extends HtmlUnitScriptable {
     @JsxGetter({FF, FF_ESR})
     public Object getLineNumber() {
         if (lineNumber_ == -1) {
-            return Undefined.instance;
+            return JavaScriptEngine.UNDEFINED;
         }
         return lineNumber_;
     }
 
     /**
-     * Gets the name of the in which the exception occurred.
+     * Gets the name of the file in which the exception occurred.
      * @return the name of the source file
      */
     @JsxGetter({FF, FF_ESR})
     public Object getFilename() {
         if (fileName_ == null) {
-            return Undefined.instance;
+            return JavaScriptEngine.UNDEFINED;
         }
         return fileName_;
     }

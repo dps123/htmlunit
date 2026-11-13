@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,12 @@
  */
 package org.htmlunit.html;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.htmlunit.WebDriverTestCase;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.htmlunit.HtmlUnitDriver;
-
-import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
 
 /**
  * Tests for {@link HtmlStyle}.
@@ -31,7 +28,6 @@ import org.htmlunit.junit.BrowserRunner.Alerts;
  * @author Ahmed Ashour
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class HtmlStyle2Test extends WebDriverTestCase {
 
     /**
@@ -40,7 +36,8 @@ public class HtmlStyle2Test extends WebDriverTestCase {
     @Test
     @Alerts("[object HTMLStyleElement]")
     public void simpleScriptable() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<style type='text/css' id='myId'>\n"
             + "img { border: 0px }\n"
             + "</style>\n"
@@ -56,7 +53,7 @@ public class HtmlStyle2Test extends WebDriverTestCase {
         final WebDriver driver = loadPageVerifyTitle2(html);
         if (driver instanceof HtmlUnitDriver) {
             final HtmlPage page = (HtmlPage) getEnclosedPage();
-            assertTrue(HtmlStyle.class.isInstance(page.getHtmlElementById("myId")));
+            assertTrue(page.getHtmlElementById("myId") instanceof HtmlStyle);
         }
     }
 
@@ -65,8 +62,8 @@ public class HtmlStyle2Test extends WebDriverTestCase {
      */
     @Test
     public void getText() throws Exception {
-        final String html
-                = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "  <title>foo</title>\n"
                 + "  <style type='text/css' id='s'>\n"
@@ -87,8 +84,8 @@ public class HtmlStyle2Test extends WebDriverTestCase {
      */
     @Test
     public void isDisplayed() throws Exception {
-        final String html
-                = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "  <title>foo</title>\n"
                 + "  <style type='text/css' id='s'>\n"

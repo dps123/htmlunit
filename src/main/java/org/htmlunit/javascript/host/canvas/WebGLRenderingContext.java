@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,22 +16,20 @@ package org.htmlunit.javascript.host.canvas;
 
 import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
 import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
 
 import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstant;
 import org.htmlunit.javascript.configuration.JsxConstructor;
-
-import org.htmlunit.corejs.javascript.Context;
 
 /**
  * A JavaScript object for {@code WebGLRenderingContext}.
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext">MDN Documentation</a>
  */
 @JsxClass
 public class WebGLRenderingContext extends HtmlUnitScriptable {
@@ -341,9 +339,6 @@ public class WebGLRenderingContext extends HtmlUnitScriptable {
     /** The constant {@code TEXTURE}. */
     @JsxConstant
     public static final int TEXTURE = 0x1702;
-    /** The constant {@code STENCIL_INDEX}. */
-    @JsxConstant(IE)
-    public static final int STENCIL_INDEX = 0x1901;
     /** The constant {@code DEPTH_COMPONENT}. */
     @JsxConstant
     public static final int DEPTH_COMPONENT = 0x1902;
@@ -440,9 +435,15 @@ public class WebGLRenderingContext extends HtmlUnitScriptable {
     /** The constant {@code RGBA4}. */
     @JsxConstant
     public static final int RGBA4 = 0x8056;
+    /** The constant {@code RGB8}. */
+    @JsxConstant({CHROME, EDGE})
+    public static final int RGB8 = 0x8051;
     /** The constant {@code RGB5_A1}. */
     @JsxConstant
     public static final int RGB5_A1 = 0x8057;
+    /** The constant {@code RGBA8}. */
+    @JsxConstant({CHROME, EDGE})
+    public static final int RGBA8 = 0x8058;
     /** The constant {@code TEXTURE_BINDING_2D}. */
     @JsxConstant
     public static final int TEXTURE_BINDING_2D = 0x8069;
@@ -934,16 +935,10 @@ public class WebGLRenderingContext extends HtmlUnitScriptable {
     public static final int BROWSER_DEFAULT_WEBGL = 0x9244;
 
     /**
-     * Default constructor.
-     */
-    public WebGLRenderingContext() {
-    }
-
-    /**
      * Creates an instance.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
+    @JsxConstructor
     public void jsConstructor() {
-        throw Context.reportRuntimeError("Illegal constructor.");
+        throw JavaScriptEngine.typeErrorIllegalConstructor();
     }
 }

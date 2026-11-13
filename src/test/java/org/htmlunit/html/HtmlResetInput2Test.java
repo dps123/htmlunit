@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,12 @@
  */
 package org.htmlunit.html;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.htmlunit.WebDriverTestCase;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
-
-import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
 
 /**
  * Tests for {@link HtmlResetInput}.
@@ -30,17 +27,16 @@ import org.htmlunit.junit.BrowserRunner.Alerts;
  * @author Ronald Brill
  * @author Frank Danek
  */
-@RunWith(BrowserRunner.class)
 public class HtmlResetInput2Test extends WebDriverTestCase {
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"-", "-", "-"},
-            IE = {"Reset-Reset", "Reset-Reset", "Reset-Reset"})
+    @Alerts({"-", "-", "-"})
     public void defaultValues() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -70,10 +66,10 @@ public class HtmlResetInput2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"-", "-", "-"},
-            IE = {"Reset-Reset", "Reset-Reset", "Reset-Reset"})
+    @Alerts({"-", "-", "-"})
     public void defaultValuesAfterClone() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -109,7 +105,8 @@ public class HtmlResetInput2Test extends WebDriverTestCase {
     @Alerts({"initial-initial", "initial-initial", "newValue-newValue", "newValue-newValue",
                 "newDefault-newDefault", "newDefault-newDefault"})
     public void resetByClick() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -149,7 +146,8 @@ public class HtmlResetInput2Test extends WebDriverTestCase {
     @Alerts({"initial-initial", "initial-initial", "newValue-newValue", "newValue-newValue",
                 "newDefault-newDefault", "newDefault-newDefault"})
     public void resetByJS() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -187,7 +185,8 @@ public class HtmlResetInput2Test extends WebDriverTestCase {
     @Test
     @Alerts({"initial-initial", "default-default", "newValue-newValue", "newdefault-newdefault"})
     public void defaultValue() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -218,7 +217,8 @@ public class HtmlResetInput2Test extends WebDriverTestCase {
     @Test
     @Alerts("--")
     public void minMaxStep() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -244,7 +244,8 @@ public class HtmlResetInput2Test extends WebDriverTestCase {
     @Test
     @Alerts({"foo", "foonewValue", "foo"})
     public void reset() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "  <script type='text/javascript'>\n"
             + "    function submitForm() {\n"
             + "    }\n"
@@ -261,13 +262,19 @@ public class HtmlResetInput2Test extends WebDriverTestCase {
         final WebDriver webDriver = loadPage2(html);
 
         final WebElement textfield = webDriver.findElement(By.id("textfield"));
-        assertEquals(getExpectedAlerts()[0], textfield.getAttribute("value"));
+
+        assertEquals(getExpectedAlerts()[0], textfield.getDomAttribute("value"));
+        assertEquals(getExpectedAlerts()[0], textfield.getDomProperty("value"));
+
         textfield.sendKeys("newValue");
-        assertEquals(getExpectedAlerts()[1], textfield.getAttribute("value"));
+        assertEquals(getExpectedAlerts()[0], textfield.getDomAttribute("value"));
+        assertEquals(getExpectedAlerts()[1], textfield.getDomProperty("value"));
 
         final WebElement reset = webDriver.findElement(By.name("resetBtn"));
         reset.click();
-        assertEquals(getExpectedAlerts()[2], textfield.getAttribute("value"));
+
+        assertEquals(getExpectedAlerts()[0], textfield.getDomAttribute("value"));
+        assertEquals(getExpectedAlerts()[2], textfield.getDomProperty("value"));
     }
 
     /**
@@ -276,7 +283,8 @@ public class HtmlResetInput2Test extends WebDriverTestCase {
     @Test
     @Alerts({"foo", "foonewValue", "foonewValue"})
     public void onclickDisables() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "  <script type='text/javascript'>\n"
             + "    function submitForm() {\n"
             + "      document.deliveryChannelForm.resetBtn.disabled = true;\n"
@@ -294,13 +302,17 @@ public class HtmlResetInput2Test extends WebDriverTestCase {
         final WebDriver webDriver = loadPage2(html);
 
         final WebElement textfield = webDriver.findElement(By.id("textfield"));
-        assertEquals(getExpectedAlerts()[0], textfield.getAttribute("value"));
+        assertEquals(getExpectedAlerts()[0], textfield.getDomAttribute("value"));
+        assertEquals(getExpectedAlerts()[0], textfield.getDomProperty("value"));
+
         textfield.sendKeys("newValue");
-        assertEquals(getExpectedAlerts()[1], textfield.getAttribute("value"));
+        assertEquals(getExpectedAlerts()[0], textfield.getDomAttribute("value"));
+        assertEquals(getExpectedAlerts()[1], textfield.getDomProperty("value"));
 
         final WebElement reset = webDriver.findElement(By.name("resetBtn"));
         reset.click();
-        assertEquals(getExpectedAlerts()[2], textfield.getAttribute("value"));
+        assertEquals(getExpectedAlerts()[0], textfield.getDomAttribute("value"));
+        assertEquals(getExpectedAlerts()[2], textfield.getDomProperty("value"));
     }
 
     /**
@@ -309,8 +321,8 @@ public class HtmlResetInput2Test extends WebDriverTestCase {
     @Test
     @Alerts({"false", "false", "false", "false", "false"})
     public void willValidate() throws Exception {
-        final String html =
-                "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "  <script>\n"
                 + LOG_TITLE_FUNCTION
                 + "    function test() {\n"
@@ -339,12 +351,9 @@ public class HtmlResetInput2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"true",
-                       "false-false-false-false-false-false-false-false-false-true-false",
-                       "false"},
-            IE = {"true",
-                  "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                  "false"})
+    @Alerts({"true",
+             "false-false-false-false-false-false-false-false-false-true-false",
+             "false"})
     public void validationEmpty() throws Exception {
         validation("<input type='reset' id='e1'>\n", "");
     }
@@ -353,12 +362,9 @@ public class HtmlResetInput2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"true",
-                       "false-true-false-false-false-false-false-false-false-false-false",
-                       "false"},
-            IE = {"true",
-                  "undefined-true-false-false-false-false-false-undefined-false-false-false",
-                  "false"})
+    @Alerts({"true",
+             "false-true-false-false-false-false-false-false-false-false-false",
+             "false"})
     public void validationCustomValidity() throws Exception {
         validation("<input type='reset' id='e1'>\n", "elem.setCustomValidity('Invalid');");
     }
@@ -367,12 +373,9 @@ public class HtmlResetInput2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"true",
-                       "false-true-false-false-false-false-false-false-false-false-false",
-                       "false"},
-            IE = {"true",
-                  "undefined-true-false-false-false-false-false-undefined-false-false-false",
-                  "false"})
+    @Alerts({"true",
+             "false-true-false-false-false-false-false-false-false-false-false",
+             "false"})
     public void validationBlankCustomValidity() throws Exception {
         validation("<input type='reset' id='e1'>\n", "elem.setCustomValidity(' ');\n");
     }
@@ -381,12 +384,9 @@ public class HtmlResetInput2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"true",
-                       "false-false-false-false-false-false-false-false-false-true-false",
-                       "false"},
-            IE = {"true",
-                  "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                  "false"})
+    @Alerts({"true",
+             "false-false-false-false-false-false-false-false-false-true-false",
+             "false"})
     public void validationResetCustomValidity() throws Exception {
         validation("<input type='reset' id='e1'>\n",
                 "elem.setCustomValidity('Invalid');elem.setCustomValidity('');");
@@ -396,19 +396,16 @@ public class HtmlResetInput2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"true",
-                       "false-false-false-false-false-false-false-false-false-true-false",
-                       "false"},
-            IE = {"true",
-                  "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                  "false"})
+    @Alerts({"true",
+             "false-false-false-false-false-false-false-false-false-true-false",
+             "false"})
     public void validationRequired() throws Exception {
         validation("<input type='reset' id='e1' required>\n", "");
     }
 
     private void validation(final String htmlPart, final String jsPart) throws Exception {
-        final String html =
-                "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "  <script>\n"
                 + LOG_TITLE_FUNCTION
                 + "    function logValidityState(s) {\n"

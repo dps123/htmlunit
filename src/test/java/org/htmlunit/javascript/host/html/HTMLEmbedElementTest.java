@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,43 +14,28 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.FF;
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.FF_ESR;
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.IE;
-
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link HTMLEmbedElement}.
  *
  * @author Ronald Brill
  * @author Frank Danek
+ * @author Lai Quang Duong
  */
-@RunWith(BrowserRunner.class)
 public class HTMLEmbedElementTest extends WebDriverTestCase {
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"left", "right", "bottom", "middle", "top",
-                       "absbottom", "absmiddle", "baseline", "texttop", "wrong", ""},
-            FF = {"left", "right", "bottom", "middle", "top",
-                  "absbottom", "absmiddle", "bottom", "texttop", "wrong", ""},
-            FF_ESR = {"left", "right", "bottom", "middle", "top",
-                      "absbottom", "absmiddle", "bottom", "texttop", "wrong", ""},
-            IE = {"undefined", "undefined", "undefined", "undefined", "undefined", "undefined",
-                  "undefined", "undefined", "undefined", "undefined", "undefined"})
-    @NotYetImplemented({FF, FF_ESR})
+    @Alerts({"left", "right", "bottom", "middle", "top",
+             "absbottom", "absmiddle", "baseline", "texttop", "wrong", ""})
     public void getAlign() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "  <embed id='e1' align='left' ></embed>\n"
             + "  <embed id='e2' align='right' ></embed>\n"
             + "  <embed id='e3' align='bottom' ></embed>\n"
@@ -78,16 +63,11 @@ public class HTMLEmbedElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"CenTer", "8", "foo", "left", "right", "bottom", "middle", "top",
-                       "absbottom", "absmiddle", "baseline", "texttop"},
-            FF = {"CenTer", "8", "foo", "left", "right", "bottom", "middle", "top",
-                  "absbottom", "absmiddle", "bottom", "texttop"},
-            FF_ESR = {"CenTer", "8", "foo", "left", "right", "bottom", "middle", "top",
-                      "absbottom", "absmiddle", "bottom", "texttop"})
-    @NotYetImplemented({FF, FF_ESR})
+    @Alerts({"CenTer", "8", "foo", "left", "right", "bottom", "middle", "top",
+             "absbottom", "absmiddle", "baseline", "texttop"})
     public void setAlign() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "  <embed id='e1' align='left' ></embed>\n"
 
             + "<script>\n"
@@ -95,7 +75,7 @@ public class HTMLEmbedElementTest extends WebDriverTestCase {
             + "  function setAlign(elem, value) {\n"
             + "    try {\n"
             + "      elem.align = value;\n"
-            + "    } catch (e) { log('error'); }\n"
+            + "    } catch(e) { logEx(e); }\n"
             + "    log(elem.align);\n"
             + "  }\n"
 
@@ -124,12 +104,10 @@ public class HTMLEmbedElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"10px", "20em", "80%", "40", "wrong", ""},
-            IE = {"10", "20", "80%", "40", "", ""})
-    @NotYetImplemented(IE)
+    @Alerts({"10px", "20em", "80%", "40", "wrong", ""})
     public void getHeight() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "  <embed id='e1' height='10px' ></embed>\n"
             + "  <embed id='e2' height='20em' ></embed>\n"
             + "  <embed id='e3' height='80%' ></embed>\n"
@@ -152,12 +130,10 @@ public class HTMLEmbedElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"20px", "8", "foo"},
-            IE = {"20", "8", "error", "8"})
-    @NotYetImplemented(IE)
+    @Alerts({"20px", "8", "foo"})
     public void setHeight() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "  <embed id='e1' height='10px' ></embed>\n"
 
             + "<script>\n"
@@ -165,7 +141,7 @@ public class HTMLEmbedElementTest extends WebDriverTestCase {
             + "  function setHeight(elem, value) {\n"
             + "    try {\n"
             + "      elem.height = value;\n"
-            + "    } catch (e) { log('error'); }\n"
+            + "    } catch(e) { logEx(e); }\n"
             + "    log(elem.height);\n"
             + "  }\n"
 
@@ -185,12 +161,10 @@ public class HTMLEmbedElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"10px", "20em", "80%", "40", "wrong", ""},
-            IE = {"10", "20", "80%", "40", "", ""})
-    @NotYetImplemented(IE)
+    @Alerts({"10px", "20em", "80%", "40", "wrong", ""})
     public void getWidth() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "  <embed id='e1' width='10px' ></embed>\n"
             + "  <embed id='e2' width='20em' ></embed>\n"
             + "  <embed id='e3' width='80%' ></embed>\n"
@@ -213,12 +187,10 @@ public class HTMLEmbedElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"20px", "8", "foo"},
-            IE = {"20", "8", "error", "8"})
-    @NotYetImplemented(IE)
+    @Alerts({"20px", "8", "foo"})
     public void setWidth() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "  <embed id='e1' width='10px' ></embed>\n"
 
             + "<script>\n"
@@ -226,7 +198,7 @@ public class HTMLEmbedElementTest extends WebDriverTestCase {
             + "  function setWidth(elem, value) {\n"
             + "    try {\n"
             + "      elem.width = value;\n"
-            + "    } catch (e) { log('error'); }\n"
+            + "    } catch(e) { logEx(e); }\n"
             + "    log(elem.width);\n"
             + "  }\n"
 
@@ -236,6 +208,96 @@ public class HTMLEmbedElementTest extends WebDriverTestCase {
             + "  setWidth(elem, '8');\n"
             + "  setWidth(elem, 'foo');\n"
 
+            + "</script>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"§§URL§§foo.pdf", ""})
+    public void getSrc() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
+            + "  <embed id='e1' src='foo.pdf' ></embed>\n"
+            + "  <embed id='e2' ></embed>\n"
+
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  for (var i = 1; i <= 2; i++) {\n"
+            + "    log(document.getElementById('e' + i).src);\n"
+            + "  }\n"
+            + "</script>\n"
+            + "</body></html>";
+
+        expandExpectedAlertsVariables(URL_FIRST);
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"§§URL§§foo.pdf", "§§URL§§bar.pdf"})
+    public void setSrc() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
+            + "  <embed id='e1' src='foo.pdf' ></embed>\n"
+
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  var elem = document.getElementById('e1');\n"
+            + "  log(elem.src);\n"
+            + "  elem.src = 'bar.pdf';\n"
+            + "  log(elem.src);\n"
+            + "</script>\n"
+            + "</body></html>";
+
+        expandExpectedAlertsVariables(URL_FIRST);
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"application/pdf", ""})
+    public void getType() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
+            + "  <embed id='e1' type='application/pdf' ></embed>\n"
+            + "  <embed id='e2' ></embed>\n"
+
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  for (var i = 1; i <= 2; i++) {\n"
+            + "    log(document.getElementById('e' + i).type);\n"
+            + "  }\n"
+            + "</script>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"application/pdf", "text/plain"})
+    public void setType() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
+            + "  <embed id='e1' type='application/pdf' ></embed>\n"
+
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  var elem = document.getElementById('e1');\n"
+            + "  log(elem.type);\n"
+            + "  elem.type = 'text/plain';\n"
+            + "  log(elem.type);\n"
             + "</script>\n"
             + "</body></html>";
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,14 +28,13 @@ import java.util.zip.InflaterInputStream;
 import org.apache.commons.io.ByteOrderMark;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.BOMInputStream;
-import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.brotli.dec.BrotliInputStream;
-
+import org.htmlunit.util.ArrayUtils;
 import org.htmlunit.util.MimeType;
 import org.htmlunit.util.NameValuePair;
+import org.htmlunit.util.StringUtils;
+import org.htmlunit.util.brotli.BrotliInputStream;
 
 /**
  * Simple data object to simplify WebResponse creation.
@@ -44,9 +43,20 @@ import org.htmlunit.util.NameValuePair;
  * @author Daniel Gredler
  * @author Ahmed Ashour
  * @author Ronald Brill
+ * @author Sven Strickroth
  */
 public class WebResponseData implements Serializable {
     private static final Log LOG = LogFactory.getLog(WebResponseData.class);
+
+    private static final String CONTENT_ENCODING_ERROR_HTML = """
+            <!DOCTYPE html><html>
+            <head><title>Problem loading page</title></head>
+            <body>
+            <h1>Content Encoding Error</h1>
+            <p>The page you are trying to view cannot be shown because\
+             it uses an invalid or unsupported form of compression.</p>
+            </body>
+            </html>""";
 
     private final int statusCode_;
     private final String statusMessage_;
@@ -93,83 +103,59 @@ public class WebResponseData implements Serializable {
         downloadedContent_ = downloadedContent;
     }
 
-    private InputStream getStream(final DownloadedContent downloadedContent,
-                final List<NameValuePair> headers, final ByteOrderMark... bomHeaders) throws IOException {
+    private InputStream getStream(final ByteOrderMark... bomHeaders) throws IOException {
         InputStream stream = downloadedContent_.getInputStream();
-        if (downloadedContent.isEmpty()) {
+        if (downloadedContent_.isEmpty()) {
             return stream;
         }
 
+        final List<NameValuePair> headers = getResponseHeaders();
         final String encoding = getHeader(headers, "content-encoding");
         if (encoding != null) {
-            boolean isGzip = StringUtils.contains(encoding, "gzip") && !"no-gzip".equals(encoding);
+            boolean isGzip = StringUtils.containsIgnoreCase(encoding, "gzip") && !"no-gzip".equals(encoding);
             if ("gzip-only-text/html".equals(encoding)) {
                 isGzip = MimeType.TEXT_HTML.equals(getHeader(headers, "content-type"));
             }
+
             if (isGzip) {
                 try {
                     stream = new GZIPInputStream(stream);
                 }
                 catch (final IOException e) {
-                    LOG.error("Reading gzip encodec content failed.", e);
+                    LOG.error("Reading gzip encoded content failed.", e);
                     stream.close();
-                    stream = IOUtils.toInputStream(
-                                "<html>\n"
-                                 + "<head><title>Problem loading page</title></head>\n"
-                                 + "<body>\n"
-                                 + "<h1>Content Encoding Error</h1>\n"
-                                 + "<p>The page you are trying to view cannot be shown because"
-                                 + " it uses an invalid or unsupported form of compression.</p>\n"
-                                 + "</body>\n"
-                                 + "</html>", ISO_8859_1);
+                    stream = IOUtils.toInputStream(CONTENT_ENCODING_ERROR_HTML, ISO_8859_1);
                 }
-                if (stream != null && bomHeaders != null) {
-                    stream = new BOMInputStream(stream, bomHeaders);
-                }
-                return stream;
             }
-
-            if ("br".equals(encoding)) {
+            else if ("br".equals(encoding)) {
                 try {
                     stream = new BrotliInputStream(stream);
                 }
                 catch (final IOException e) {
-                    LOG.error("Reading Brotli encodec content failed.", e);
+                    LOG.error("Reading Brotli encoded content failed.", e);
                     stream.close();
-                    stream = IOUtils.toInputStream(
-                                "<html>\n"
-                                 + "<head><title>Problem loading page</title></head>\n"
-                                 + "<body>\n"
-                                 + "<h1>Content Encoding Error</h1>\n"
-                                 + "<p>The page you are trying to view cannot be shown because"
-                                 + " it uses an invalid or unsupported form of compression.</p>\n"
-                                 + "</body>\n"
-                                 + "</html>", ISO_8859_1);
+                    stream = IOUtils.toInputStream(CONTENT_ENCODING_ERROR_HTML, ISO_8859_1);
                 }
-                return stream;
             }
-
-            if (StringUtils.contains(encoding, "deflate")) {
+            else if (StringUtils.containsIgnoreCase(encoding, "deflate")) {
                 boolean zlibHeader = false;
-                if (stream.markSupported()) { // should be always the case as the content is in a byte[] or in a file
+                if (stream.markSupported()) {
                     stream.mark(2);
                     final byte[] buffer = new byte[2];
-                    final int byteCount = stream.read(buffer, 0, 2);
-                    zlibHeader = byteCount == 2 && (((buffer[0] & 0xff) << 8) | (buffer[1] & 0xff)) == 0x789c;
+                    final int byteCount = IOUtils.read(stream, buffer, 0, 2);
+                    if (byteCount == 2) {
+                        final int header = ((buffer[0] & 0xff) << 8) | (buffer[1] & 0xff);
+                        zlibHeader = (header & 0x7800) == 0x7800 && (header % 31 == 0);
+                    }
                     stream.reset();
                 }
-                if (zlibHeader) {
-                    stream = new InflaterInputStream(stream);
-                }
-                else {
-                    stream = new InflaterInputStream(stream, new Inflater(true));
-                }
-                return stream;
+                stream = zlibHeader ? new InflaterInputStream(stream)
+                                    : new InflaterInputStream(stream, new Inflater(true));
             }
         }
 
-        if (stream != null && bomHeaders != null) {
-            stream = new BOMInputStream(stream, bomHeaders);
+        if (stream != null && bomHeaders != null && bomHeaders.length > 0) {
+            stream = BOMInputStream.builder().setInputStream(stream).setByteOrderMarks(bomHeaders).get();
         }
         return stream;
     }
@@ -205,7 +191,7 @@ public class WebResponseData implements Serializable {
      * @throws IOException in case of IO problems
      */
     public InputStream getInputStream() throws IOException {
-        return getStream(downloadedContent_, getResponseHeaders(), (ByteOrderMark[]) null);
+        return getStream((ByteOrderMark[]) null);
     }
 
     /**
@@ -216,25 +202,31 @@ public class WebResponseData implements Serializable {
      * @throws IOException in case of IO problems
      */
     public InputStream getInputStreamWithBomIfApplicable(final ByteOrderMark... bomHeaders) throws IOException {
-        return getStream(downloadedContent_, getResponseHeaders(), bomHeaders);
+        return getStream(bomHeaders);
     }
 
     /**
-     * @return response headers
+     * Returns the response headers.
+     *
+     * @return the response headers
      */
     public List<NameValuePair> getResponseHeaders() {
         return responseHeaders_;
     }
 
     /**
-     * @return response status code
+     * Returns the HTTP status code.
+     *
+     * @return the HTTP status code
      */
     public int getStatusCode() {
         return statusCode_;
     }
 
     /**
-     * @return response status message
+     * Returns the HTTP status message.
+     *
+     * @return the HTTP status message
      */
     public String getStatusMessage() {
         return statusMessage_;

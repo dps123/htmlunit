@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,18 @@ package org.htmlunit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.htmlunit.html.HtmlPage;
 import org.htmlunit.util.UrlUtils;
 
 /**
  * A window representing a top level browser window.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author David K. Taylor
  * @author David D. Kilzer
  * @author Ahmed Ashour
  * @author Ronald Brill
+ * @author Sven Strickroth
  */
 public class TopLevelWindow extends WebWindowImpl {
 
@@ -115,28 +115,47 @@ public class TopLevelWindow extends WebWindowImpl {
      *
      * Closes this window.
      * @param ignoreOnbeforeunloadAccepted if true the result of triggering the OnbeforeunloadAccepted event
-     * will be ignored
+     *        will be ignored
      */
     public void close(final boolean ignoreOnbeforeunloadAccepted) {
         final Page page = getEnclosedPage();
-        if (page != null && page.isHtmlPage()) {
-            final HtmlPage htmlPage = (HtmlPage) page;
-            final boolean accepted = htmlPage.isOnbeforeunloadAccepted();
-            if (!ignoreOnbeforeunloadAccepted && !accepted) {
-                if (LOG.isDebugEnabled()) {
+
+        // a bit strange code but we like to make sure that all steps are processed
+        // also if one throws
+        boolean rejected = false;
+        try {
+            if (page != null && page.isHtmlPage()) {
+                final HtmlPage htmlPage = (HtmlPage) page;
+                final boolean accepted = ignoreOnbeforeunloadAccepted || htmlPage.isOnbeforeunloadAccepted();
+                if (!accepted) {
                     LOG.debug("The registered OnbeforeunloadHandler rejected the window close event.");
+                    rejected = true;
                 }
-                return;
             }
         }
+        finally {
+            if (!rejected) {
+                try {
+                    setClosed();
+                }
+                finally {
+                    if (page != null) {
+                        page.cleanUp();
+                    }
 
-        setClosed();
-        if (page != null) {
-            page.cleanUp();
+                    try {
+                        getJobManager().shutdown();
+                    }
+                    finally {
+                        try {
+                            destroyChildren();
+                        }
+                        finally {
+                            getWebClient().deregisterWebWindow(this);
+                        }
+                    }
+                }
+            }
         }
-
-        getJobManager().shutdown();
-        destroyChildren();
-        getWebClient().deregisterWebWindow(this);
     }
 }

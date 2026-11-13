@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,7 @@ package org.htmlunit;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
-import org.htmlunit.junit.BrowserRunner;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link IncorrectnessListener}.
@@ -28,7 +25,6 @@ import org.htmlunit.junit.BrowserRunner;
  * @author Marc Guillemot
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public final class IncorrectnessListenerTest extends SimpleWebTestCase {
 
     /**
@@ -36,7 +32,8 @@ public final class IncorrectnessListenerTest extends SimpleWebTestCase {
      */
     @Test
     public void notification() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "  <script src='script.js'></script>\n"
                 + "</head>\n"
                 + "<body>\n"
@@ -46,12 +43,7 @@ public final class IncorrectnessListenerTest extends SimpleWebTestCase {
         final WebClient webClient = getWebClient();
 
         final List<String> collectedIncorrectness = new ArrayList<>();
-        final IncorrectnessListener listener = new IncorrectnessListener() {
-            @Override
-            public void notify(final String message, final Object origin) {
-                collectedIncorrectness.add(message);
-            }
-        };
+        final IncorrectnessListener listener = (message, origin) -> collectedIncorrectness.add(message);
         webClient.setIncorrectnessListener(listener);
 
         final MockWebConnection webConnection = new MockWebConnection();
@@ -61,7 +53,8 @@ public final class IncorrectnessListenerTest extends SimpleWebTestCase {
         webClient.getPage(URL_FIRST);
 
         final String[] expectedIncorrectness = {
-            "Obsolete content type encountered: 'application/x-javascript'."
+            "Obsolete content type encountered: 'application/x-javascript' for "
+                    + "remotely loaded JavaScript element at 'http://localhost:" + PORT + "/script.js'."
         };
         assertEquals(expectedIncorrectness, collectedIncorrectness);
     }

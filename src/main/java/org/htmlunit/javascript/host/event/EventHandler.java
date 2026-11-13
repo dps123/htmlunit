@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +14,20 @@
  */
 package org.htmlunit.javascript.host.event;
 
-import org.htmlunit.html.DomNode;
-
 import org.htmlunit.corejs.javascript.BaseFunction;
 import org.htmlunit.corejs.javascript.Context;
 import org.htmlunit.corejs.javascript.Function;
 import org.htmlunit.corejs.javascript.JavaScriptException;
 import org.htmlunit.corejs.javascript.Scriptable;
-import org.htmlunit.corejs.javascript.ScriptableObject;
+import org.htmlunit.corejs.javascript.VarScope;
+import org.htmlunit.html.DomElement;
+import org.htmlunit.html.DomNode;
+import org.htmlunit.html.HtmlPage;
+import org.htmlunit.html.csp.ContentSecurityPolicy;
+import org.htmlunit.javascript.JavaScriptEngine;
 
 /**
- * Allows to wrap event handler code as Function object.
+ * Wraps event handler code as a {@link Function} object.
  *
  * @author Marc Guillemot
  * @author Ronald Brill
@@ -32,52 +35,66 @@ import org.htmlunit.corejs.javascript.ScriptableObject;
 public class EventHandler extends BaseFunction {
     private final DomNode node_;
     private final String eventName_;
-    private String jsSnippet_;
+    private final String jsSnippet_;
     private Function realFunction_;
+    private boolean blockedByContentSecurityPolicy_;
 
     /**
-     * Builds a function that will execute the JavaScript code provided.
-     * @param node the element for which the event is build
-     * @param eventName the event for which this handler is created
-     * @param jsSnippet the JavaScript code
+     * Builds a function that will execute the given JavaScript code.
+     *
+     * @param scope the scope
+     * @param node the element for which the event is built
+     * @param eventName the event name for which this handler is created
+     * @param jsSnippet the JavaScript code snippet to execute
      */
-    public EventHandler(final DomNode node, final String eventName, final String jsSnippet) {
+    public EventHandler(final VarScope scope, final DomNode node, final String eventName, final String jsSnippet) {
+        super(scope);
         node_ = node;
         eventName_ = eventName;
         jsSnippet_ = jsSnippet;
-
-        setPrototype(ScriptableObject.getClassPrototype(node.getScriptableObject(), "Function"));
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public Object call(final Context cx, final Scriptable scope,
-        final Scriptable thisObj, final Object[] args)
+    public Object call(final Context cx, final Object nt, final VarScope scope,
+        final Object thisObj, final Object[] args)
         throws JavaScriptException {
 
         // the js object to which this event is attached has to be the scope
         // final HtmlUnitScriptable jsObj = node_.getScriptableObject();
         // have changed this - the scope is now thisObj to fix
         // https://github.com/HtmlUnit/htmlunit/issues/347
-        // but i still have not found any description about the right scope
+        // but still have not found any description about the right scope
 
         // compile "just in time"
         if (realFunction_ == null) {
+            if (blockedByContentSecurityPolicy_) {
+                return JavaScriptEngine.UNDEFINED;
+            }
+            if (node_ instanceof DomElement element
+                    && element.getPage() instanceof HtmlPage page
+                    && !ContentSecurityPolicy.allowsScriptAsAttribute(page, element, jsSnippet_)) {
+                blockedByContentSecurityPolicy_ = true;
+                return JavaScriptEngine.UNDEFINED;
+            }
+
             final String js = "function on" + eventName_ + "(event) { " + jsSnippet_ + " \n}";
-            realFunction_ = cx.compileFunction(thisObj, js, eventName_ + " event for " + node_
-                + " in " + node_.getPage().getUrl(), 0, null);
-            realFunction_.setParentScope(thisObj);
+            realFunction_ = cx.compileFunction(scope, js, eventName_ + " event for " + node_
+                                    + " in " + node_.getPage().getUrl(), 0, null);
+            realFunction_.setParentScope(scope);
         }
 
         return realFunction_.call(cx, scope, thisObj, args);
     }
 
     /**
-     * @see org.htmlunit.corejs.javascript.ScriptableObject#getDefaultValue(java.lang.Class)
+     * Returns the JavaScript source representation of this function declaration.
+     *
      * @param typeHint the type hint
-     * @return the js code of the function declaration
+     * @return the JavaScript source of the function declaration
+     * @see org.htmlunit.corejs.javascript.ScriptableObject#getDefaultValue(java.lang.Class)
      */
     @Override
     public Object getDefaultValue(final Class<?> typeHint) {
@@ -91,10 +108,10 @@ public class EventHandler extends BaseFunction {
     public Object get(final String name, final Scriptable start) {
         // quick and dirty
         if ("toString".equals(name)) {
-            return new BaseFunction() {
+            return new BaseFunction(getParentScope()) {
                 @Override
-                public Object call(final Context cx, final Scriptable scope,
-                        final Scriptable thisObj, final Object[] args) {
+                public Object call(final Context cx, final Object nt, final VarScope scope,
+                        final Object thisObj, final Object[] args) {
                     return "function on" + eventName_ + "(event) { " + jsSnippet_ + " }";
                 }
             };

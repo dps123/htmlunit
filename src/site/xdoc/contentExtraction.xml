@@ -1,0 +1,590 @@
+<?xml version="1.0"?>
+<document xmlns="http://maven.apache.org/XDOC/2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="https://maven.apache.org/XDOC/2.0 https://maven.apache.org/xsd/xdoc-2.0.xsd">
+
+    <properties>
+        <title>Content Extraction with HtmlUnit</title>
+        <author>RBRi</author>
+    </properties>
+
+    <body>
+        <macro name="toc"/>
+
+        <section name="Overview">
+            <p>
+                Extracting data from web pages is one of the primary use cases for HtmlUnit.
+                Because HtmlUnit models a real web browser (including DOM tree generation, CSS evaluation, and JavaScript execution),
+                it offers powerful capabilities for extracting structured data, raw text, HTML fragments, and element attributes.
+            </p>
+        </section>
+
+        <section name="Extracting Rendered Text with asNormalizedText()">
+            <p>
+                The primary method for extracting human-readable content from any DOM node or page is <code>asNormalizedText()</code>.
+            </p>
+            <p>
+                Unlike standard raw text getters, <code>asNormalizedText()</code> simulates how text is actually rendered on screen:
+            </p>
+            <ul>
+                <li>Collapses consecutive whitespace sequences into single spaces.</li>
+                <li>Appends line breaks (<code>\n</code>) between block-level CSS elements (such as <code>&lt;p&gt;</code>, <code>&lt;div&gt;</code>, or <code>&lt;tr&gt;</code>).</li>
+                <li>Ignores invisible DOM elements like <code>&lt;script&gt;</code> and <code>&lt;style&gt;</code> tags.</li>
+                <li>Respects CSS visibility settings, excluding content hidden via rules such as <code>display: none</code> or <code>visibility: hidden</code>.</li>
+            </ul>
+
+            <subsection name="Extracting Text from a Targeted Element">
+                <p>
+                    For targeted extraction, combine CSS or XPath selectors with <code>asNormalizedText()</code>:
+                </p>
+                <source>
+<![CDATA[try (final WebClient webClient = new WebClient()) {
+    final HtmlPage page = webClient.getPage("https://www.htmlunit.org/");
+
+    // Locate element via CSS Selector
+    final DomNode article = page.querySelector("article.main-content");
+    if (article != null) {
+        String text = article.asNormalizedText();
+        System.out.println(text);
+    }
+}]]></source>
+            </subsection>
+
+            <subsection name="Extracting Text from the Entire Page">
+                <p>
+                    Calling <code>asNormalizedText()</code> directly on the <code>HtmlPage</code> or <code>HtmlBody</code> retrieves all visible text across the document.
+                </p>
+                <source>
+<![CDATA[final String fullPageText = page.asNormalizedText();]]></source>
+            </subsection>
+        </section>
+
+        <section name="Extracting HTML / XML Source">
+            <p>
+                If you need the underlying markup rather than plain text, HtmlUnit provides <code>asXml()</code> on all DOM nodes.
+            </p>
+
+            <subsection name="Serializing the DOM with asXml()">
+                <p>
+                    Calling <code>asXml()</code> serializes the current state of a node (and its child subtree) into valid XML/HTML markup. 
+                    Because it reads from the active DOM tree, it includes any dynamic changes made by JavaScript after page load.
+                </p>
+                <ul>
+                    <li>
+                        Calling <code>page.asXml()</code> returns the entire rendered document markup.
+                    </li>
+                    <li>
+                        Calling <code>element.asXml()</code> returns the HTML/XML representation of that specific element and its descendants.
+                    </li>
+                </ul>
+                <source>
+<![CDATA[// Get full serialized XML/HTML representation of the page DOM
+final String pageXml = page.asXml();
+
+// Get the HTML/XML code of a specific element and its children
+final HtmlDivision div = page.getHtmlElementById("content");
+final String divXml = div.asXml();]]></source>
+            </subsection>
+        </section>
+        <section name="Extracting Attributes and Links">
+            <p>
+                When scraping web sites, extracting element attributes (such as <code>href</code>, <code>src</code>, or <code>data-*</code> attributes) is common.
+            </p>
+            <source>
+<![CDATA[// Extract all links with their target URLs
+final List<HtmlAnchor> anchors = page.getAnchors();
+for (final HtmlAnchor anchor : anchors) {
+    String text = anchor.asNormalizedText();
+    String href = anchor.getHrefAttribute();
+    System.out.println(text + " -> " + href);
+}
+
+// Extract specific image sources
+final DomNodeList<DomElement> images = page.getElementsByTagName("img");
+for (final DomElement img : images) {
+    String src = img.getAttribute("src");
+    String alt = img.getAttribute("alt");
+}]]></source>
+
+            <subsection name="Navigating Links: Prefer .click() over Extracting href">
+                <p>
+                    With traditional raw scrapers, navigating to a new page typically requires extracting the <code>href</code> attribute string and manually issuing a new GET request.
+                </p>
+                <p>
+                    Because HtmlUnit simulates a real browser, <strong>in most cases you do not need to extract the <code>href</code> attribute</strong>. Instead, simply call <code>click()</code> directly on the anchor element:
+                </p>
+                <source>
+<![CDATA[// Find an anchor by its text or selector
+final HtmlAnchor link = page.getAnchorByText("Documentation");
+
+// Simulate a real user click - handles JavaScript onclick handlers, relative URLs, and redirects automatically
+final HtmlPage targetPage = link.click();]]></source>
+                <p>
+                    Using <code>click()</code> is strongly recommended over extracting <code>href</code> manually because it:
+                </p>
+                <ul>
+                    <li>Triggers any attached JavaScript <code>onclick</code> event handlers.</li>
+                    <li>Handles single-page application (SPA) client-side routing.</li>
+                    <li>Resolves relative paths, base tags, and redirects automatically.</li>
+                    <li>Maintains browser session state, cookies, and window history.</li>
+                </ul>
+            </subsection>
+        </section>
+
+        <section name="Extracting Lists (&lt;ol&gt; and &lt;ul&gt;)">
+            <p>
+                When calling <code>asNormalizedText()</code> on list elements, HtmlUnit automatically formats the text to mirror how browsers visually present list contents.
+            </p>
+
+            <subsection name="Ordered Lists (&lt;ol&gt;)">
+                <p>
+                    For ordered lists, <code>asNormalizedText()</code> automatically inserts sequential numbers (e.g., <code>1. </code>, <code>2. </code>) before each list item (<code>&lt;li&gt;</code>) 
+                    and places each item on its own line.
+                    HtmlUnit also respects the <code>start</code> attribute on <code>&lt;ol&gt;</code> tags, starting the sequence from the specified initial number. 
+                    Any direct text nodes inside the list that are not wrapped in an <code>&lt;li&gt;</code> tag are preserved on separate lines without numbers.
+                </p>
+                <source>
+<![CDATA[@Test
+public void extractOrderedList() throws Exception {
+    try (final WebClient webClient = new WebClient()) {
+        final HtmlPage page = webClient.getPage("https://www.example.com/ordered-list.html");
+
+        // Example: <ol id="orderedList" start="5">
+        final HtmlOrderedList list = page.getHtmlElementById("orderedList");
+
+        // Yields:
+        // 5. First item
+        // 6. Second item
+        // Non-item text content
+        // 7. Third item
+        final String listText = list.asNormalizedText();
+    }
+}]]></source>
+            </subsection>
+            
+            <subsection name="Unordered Lists (&lt;ul&gt;)">
+                <p>
+                    For unordered lists, <code>asNormalizedText()</code> outputs each item on its own line without bullet symbols or numerical prefixes.
+                </p>
+                <source>
+<![CDATA[@Test
+public void extractUnorderedList() throws Exception {
+    try (final WebClient webClient = new WebClient()) {
+        final HtmlPage page = webClient.getPage("https://www.example.com/unordered-list.html");
+
+        final HtmlUnorderedList list = page.getHtmlElementById("unorderedList");
+
+        // Yields:
+        // First item
+        // Second item
+        // Non-item text content
+        // Third item
+        final String listText = list.asNormalizedText();
+    }
+}]]></source>
+            </subsection>
+
+            <subsection name="Iterating Individual List Items">
+                <p>
+                    If you need to process individual <code>&lt;li&gt;</code> elements programmatically rather than obtaining a pre-formatted string, you can iterate over child nodes or query them by tag name:
+                </p>
+                <source>
+<![CDATA[final HtmlOrderedList list = page.getHtmlElementById("orderedList");
+
+for (final DomElement item : list.getElementsByTagName("li")) {
+    String itemText = item.asNormalizedText();
+    System.out.println("Item: " + itemText);
+}]]></source>
+            </subsection>
+        </section>
+        
+        <section name="Extracting Data from Form Controls">
+            <p>
+                Interactive form elements like text boxes, drop-down select lists, radio buttons, and checkboxes store their primary data in specific DOM properties rather than plain text nodes.
+                HtmlUnit provides specialized node types to easily query their current values and states.
+            </p>
+            <p>
+                In addition to inspecting property values directly, <code>asNormalizedText()</code> also handles form controls seamlessly—returning the visible text or
+                user-entered value (such as selected drop-down options or input box text) exactly as rendered by the browser.
+            </p>
+
+            <subsection name="Text Input Controls (&lt;input type='text'&gt;)">
+                <p>
+                    When calling <code>asNormalizedText()</code> on a text input element (or an enclosing parent like <code>&lt;body&gt;</code> or <code>&lt;form&gt;</code>), HtmlUnit extracts the <strong>currently displayed user value</strong>—including any text typed dynamically or modified by user interactions—rather than the initial static HTML attribute string.
+                </p>
+                
+                <p>
+                    <strong>1. Extracting Text with asNormalizedText()</strong>
+                </p>
+                <p>
+                    Calling <code>asNormalizedText()</code> reflects the active state of the input field as a user sees it in the browser window:
+                </p>
+                <source>
+<![CDATA[@Test
+public void extractInputText() throws Exception {
+    try (final WebClient webClient = new WebClient()) {
+        final HtmlPage page = webClient.getPage("https://www.example.com/login.html");
+
+        // Input field initially defined as: <input type="text" id="username" value="john_doe">
+        final HtmlTextInput usernameInput = page.getHtmlElementById("username");
+
+        // Returns the initial visible value: "john_doe"
+        final String visibleValue = usernameInput.asNormalizedText();
+
+        // Simulate a user replacing the text in the field
+        usernameInput.select();
+        usernameInput.type("jane_doe");
+
+        // asNormalizedText() dynamically updates to reflect typed input: "jane_doe"
+        final String updatedVisibleValue = usernameInput.asNormalizedText();
+        
+        // Enclosing parent elements also reflect the input's updated text
+        final String bodyText = page.getBody().asNormalizedText();
+    }
+}]]></source>
+
+                <p>
+                    <strong>2. Direct Value Extraction: getValue() vs. getValueAttribute()</strong>
+                </p>
+                <p>
+                    When reading input values programmatically, it is important to distinguish between the current dynamic state and the original HTML markup:
+                </p>
+                <ul>
+                    <li>
+                        <code>getValue()</code>: Returns the <strong>current dynamic value</strong> of the input (equivalent to what <code>asNormalizedText()</code> retrieves and what JavaScript reads via <code>element.value</code>).
+                    </li>
+                    <li>
+                        <code>getValueAttribute()</code>: Returns the <strong>original HTML attribute value</strong> as defined in the markup (e.g., <code>&lt;input value="..."&gt;</code>), which remains unchanged when a user types into the field.
+                    </li>
+                </ul>
+                <source>
+<![CDATA[final HtmlTextInput usernameInput = page.getHtmlElementById("username");
+
+// After typing "jane_doe" into a field with initial attribute value="john_doe":
+final String currentVal = usernameInput.getValue();           // "jane_doe"
+final String originalAttr = usernameInput.getValueAttribute(); // "john_doe"
+]]></source>
+            </subsection>
+
+            <subsection name="Text Area Controls (&lt;textarea&gt;)">
+                <p>
+                    For multiline text areas (<code>&lt;textarea&gt;</code>), <code>asNormalizedText()</code> returns the raw text content preserved across lines, including line breaks,
+                    while treating any child HTML tags inside the textarea strictly as literal text rather than rendered markup.
+                </p>
+
+                <p>
+                    <strong>1. Extracting Text with asNormalizedText()</strong>
+                </p>
+                <p>
+                    Calling <code>asNormalizedText()</code> on an <code>HtmlTextArea</code> (or an enclosing parent element like <code>&lt;body&gt;</code>) extracts the current
+                    multiline text as displayed in the control. Like text inputs, if a user updates or types new text into the area, <code>asNormalizedText()</code> dynamically reflects the updated content.
+                </p>
+                <source>
+<![CDATA[@Test
+public void extractTextAreaContent() throws Exception {
+    try (final WebClient webClient = new WebClient()) {
+        final HtmlPage page = webClient.getPage("https://www.example.com/feedback.html");
+
+        // <textarea id="comments">
+        //   First line
+        //   Second line
+        //   a <p>html snippet</p>
+        // </textarea>
+        final HtmlTextArea textArea = page.getHtmlElementById("comments");
+
+        // Returns multiline content with literal HTML tags:
+        // "First line\nSecond line\na <p>html snippet</p>\n"
+        final String visibleText = textArea.asNormalizedText();
+
+        // Simulate typing new feedback
+        textArea.select();
+        textArea.type("HtmlUnit makes web automation easy.");
+
+        // Returns the updated user input: "HtmlUnit makes web automation easy."
+        final String updatedText = textArea.asNormalizedText();
+
+        // Enclosing page/body text also includes the updated textarea contents
+        final String pageText = page.getBody().asNormalizedText();
+    }
+}]]></source>
+
+                <p>
+                    <strong>2. Programmatic Text Retrieval: getText()</strong>
+                </p>
+                <p>
+                    To retrieve the current text value programmatically from an <code>HtmlTextArea</code> instance, use <code>getText()</code>:
+                </p>
+                <source>
+<![CDATA[final HtmlTextArea textArea = page.getHtmlElementById("comments");
+
+// Returns the active text content of the textarea
+final String content = textArea.getText();
+]]></source>
+            </subsection>
+        
+            <subsection name="Buttons (&lt;input type='submit|reset'&gt; and &lt;button&gt;)">
+                <p>
+                    When extracting text from button controls, <code>asNormalizedText()</code> returns the label visible to the user in the browser window, taking default browser labels and whitespace normalization into account.
+                </p>
+
+                <p>
+                    <strong>1. Form Action Inputs (&lt;input type="submit"&gt; and &lt;input type="reset"&gt;)</strong>
+                </p>
+                <p>
+                    For input buttons, <code>asNormalizedText()</code> resolves the visible label based on the <code>value</code> attribute:
+                </p>
+                <ul>
+                    <li>
+                        <strong>Default Labels:</strong> If no <code>value</code> attribute is provided (e.g., <code>&lt;input type="submit"&gt;</code>), <code>asNormalizedText()</code> returns the fixed default label (<code>"Submit Query"</code> for submit buttons or <code>"Reset"</code> for reset buttons), even though the <code>value</code> attribute itself remains empty. Note that HtmlUnit's default labels are static constants and are <strong>never localized</strong>.
+                    </li>
+                    <li>
+                        <strong>Custom Labels:</strong> If a custom <code>value</code> is declared (e.g., <code>value="Submit Request"</code>), <code>asNormalizedText()</code> returns that custom label.
+                    </li>
+                    <li>
+                        <strong>Explicitly Empty Labels:</strong> If <code>value=""</code> is set, <code>asNormalizedText()</code> returns an empty string.
+                    </li>
+                </ul>
+                <source>
+<![CDATA[@Test
+public void extractInputButtonLabels() throws Exception {
+    try (final WebClient webClient = new WebClient()) {
+        final HtmlPage page = webClient.getPage("https://www.example.com/form.html");
+
+        // <input type="submit" id="defaultSubmit"> -> no value attribute
+        final HtmlSubmitInput defaultSubmit = page.getHtmlElementById("defaultSubmit");
+        final String submitText = defaultSubmit.asNormalizedText(); // Returns "Submit Query"
+
+        // <input type="reset" id="defaultReset"> -> no value attribute
+        final HtmlResetInput defaultReset = page.getHtmlElementById("defaultReset");
+        final String resetText = defaultReset.asNormalizedText();   // Returns "Reset"
+
+        // <input type="submit" id="customSubmit" value="Press Me">
+        final HtmlSubmitInput customSubmit = page.getHtmlElementById("customSubmit");
+        final String customText = customSubmit.asNormalizedText(); // Returns "Press Me"
+    }
+}]]></source>
+
+                <p>
+                    <strong>2. Button Elements (&lt;button&gt;)</strong>
+                </p>
+                <p>
+                    For standard <code>&lt;button&gt;</code> elements, <code>asNormalizedText()</code> extracts the inner text content, automatically collapsing extra spaces, tabs, and newlines into single spaces just as a web browser renders them.
+                </p>
+                <source>
+<![CDATA[@Test
+public void extractButtonText() throws Exception {
+    try (final WebClient webClient = new WebClient()) {
+        final HtmlPage page = webClient.getPage("https://www.example.com/form.html");
+
+        // <button id="actionBtn">  Submit   \n Now </button>
+        final HtmlButton button = page.getHtmlElementById("actionBtn");
+
+        // Whitespace is normalized: returns "Submit Now"
+        final String buttonLabel = button.asNormalizedText();
+    }
+}]]></source>
+            </subsection>
+            
+            <subsection name="Radio Buttons &amp; Checkboxes (&lt;input type='radio|checkbox'&gt;)">
+                <p>
+                    For toggle controls like radio buttons and checkboxes, <code>asNormalizedText()</code> explicitly prepends the control's current state (<code>"checked"</code> or <code>"unchecked"</code>) to represent its visual checked status in plain text.
+                </p>
+
+                <p>
+                    <strong>1. Extracting State with asNormalizedText()</strong>
+                </p>
+                <p>
+                    Calling <code>asNormalizedText()</code> directly on an <code>HtmlRadioButtonInput</code> or <code>HtmlCheckBoxInput</code> returns either <code>"checked"</code> or <code>"unchecked"</code>. When called on a parent container (such as <code>&lt;form&gt;</code> or <code>&lt;body&gt;</code>), the checked state text is automatically combined with adjacent labels.
+                </p>
+                <source>
+<![CDATA[@Test
+public void extractToggleControlState() throws Exception {
+    try (final WebClient webClient = new WebClient()) {
+        final HtmlPage page = webClient.getPage("https://www.example.com/form.html");
+
+        // <input type="checkbox" id="acceptTerms"> Accept terms and conditions
+        final HtmlCheckBoxInput checkbox = page.getHtmlElementById("acceptTerms");
+
+        // Returns "unchecked"
+        final String initialState = checkbox.asNormalizedText();
+        
+        // Enclosing page/form text combines state with adjacent label text:
+        // Returns "unchecked Accept terms and conditions"
+        final String initialFormText = page.getBody().asNormalizedText();
+
+        // Toggle state programmatically
+        checkbox.setChecked(true);
+
+        // asNormalizedText() updates dynamically to "checked"
+        final String updatedState = checkbox.asNormalizedText();
+        
+        // Enclosing page text now returns: "checked Accept terms and conditions"
+        final String updatedFormText = page.getBody().asNormalizedText();
+    }
+}]]></source>
+
+                <p>
+                    <strong>2. Programmatic Inspection: isChecked()</strong>
+                </p>
+                <p>
+                    To check the state of radio buttons and checkboxes programmatically in code, use the boolean <code>isChecked()</code> method:
+                </p>
+                <source>
+<![CDATA[final HtmlCheckBoxInput checkbox = page.getHtmlElementById("acceptTerms");
+boolean isChecked = checkbox.isChecked(); // returns true or false
+
+final HtmlRadioButtonInput radio = page.getHtmlElementById("optionOne");
+boolean isRadioSelected = radio.isChecked();
+]]></source>
+            </subsection>
+            
+            <subsection name="Select Elements (&lt;select&gt;) &amp; Drop-Down Lists">
+                <p>
+                    For drop-down and list controls (<code>&lt;select&gt;</code>), <code>asNormalizedText()</code> returns the text of the <strong>currently selected option(s)</strong>, formatted on separate lines.
+                </p>
+
+                <p>
+                    <strong>1. Extracting Text with asNormalizedText()</strong>
+                </p>
+                <p>
+                    The output of <code>asNormalizedText()</code> directly mirrors what is visually selected by the user in the control:
+                </p>
+                <ul>
+                    <li>
+                        <strong>Single / Default Select:</strong> For standard drop-downs (or multi-selects with active selections), <code>asNormalizedText()</code> returns the visible labels of all selected <code>&lt;option&gt;</code> elements separated by newline characters (<code>\n</code>).
+                    </li>
+                    <li>
+                        <strong>Empty or Unselected Selects:</strong> If a <code>&lt;select&gt;</code> contains no options (or no selected option), <code>asNormalizedText()</code> returns an empty string.
+                    </li>
+                </ul>
+                <source>
+<![CDATA[@Test
+public void extractSelectText() throws Exception {
+    try (final WebClient webClient = new WebClient()) {
+        final HtmlPage page = webClient.getPage("https://www.example.com/form.html");
+
+        // <select name="options" multiple>
+        //   <option value="1" selected>foo</option>
+        //   <option value="2">bar</option>
+        //   <option value="3" selected>baz</option>
+        // </select>
+        final HtmlSelect select = page.getHtmlElementById("options");
+
+        // Returns only the selected options on separate lines:
+        // "foo\nbaz"
+        final String selectedText = select.asNormalizedText();
+        
+        // Empty <select id="emptySelect"></select> returns ""
+        final HtmlSelect emptySelect = page.getHtmlElementById("emptySelect");
+        final String emptyText = emptySelect.asNormalizedText(); // Returns ""
+    }
+}]]></source>
+
+                <p>
+                    <strong>2. Programmatic Inspection &amp; Option Iteration</strong>
+                </p>
+                <p>
+                    When you need to inspect options programmatically (including non-selected items or option values vs. labels), use <code>getSelectedOptions()</code> or <code>getOptions()</code>:
+                </p>
+                <source>
+<![CDATA[final HtmlSelect select = page.getHtmlElementById("countrySelect");
+
+// 1. Retrieve all currently selected option elements
+for (final HtmlOption option : select.getSelectedOptions()) {
+    String value = option.getValueAttribute(); // e.g., "DE"
+    String label = option.asNormalizedText();   // e.g., "Germany"
+}
+
+// 2. Iterate through ALL available choices in the drop-down list
+for (final HtmlOption option : select.getOptions()) {
+    System.out.println("Value: " + option.getValueAttribute() + " | Label: " + option.asNormalizedText());
+}]]></source>
+            </subsection>
+        </section>
+
+        <section name="Tables, Formatting, and Advanced Element Handling">
+            <p>
+                In addition to standard block and inline elements, <code>asNormalizedText()</code> applies specialized formatting rules to complex DOM structures such as tables, preformatted text, inline frames, and structural tags.
+            </p>
+
+            <subsection name="Extracting Tables (&lt;table&gt;, &lt;tr&gt;, &lt;td&gt;)">
+                <p>
+                    When serializing tables, <code>asNormalizedText()</code> formats rows and cells to preserve structural alignment in plain text:
+                </p>
+                <ul>
+                    <li>
+                        <strong>Cell Delimiters:</strong> Cells (<code>&lt;td&gt;</code>, <code>&lt;th&gt;</code>) within the same row are separated by a tab character (<code>\t</code>).
+                    </li>
+                    <li>
+                        <strong>Row Separation:</strong> Each table row (<code>&lt;tr&gt;</code>) is placed on a new line.
+                    </li>
+                    <li>
+                        <strong>Section Ordering:</strong> Table headers (<code>&lt;thead&gt;</code>) are serialized first, body rows (<code>&lt;tbody&gt;</code>) second, and footers (<code>&lt;tfoot&gt;</code>) last, ensuring consistent logical output regardless of element order in the underlying HTML markup.
+                    </li>
+                    <li>
+                        <strong>Captions:</strong> Table captions (<code>&lt;caption&gt;</code>) are extracted at the top of the table on their own block line.
+                    </li>
+                </ul>
+                <source>
+<![CDATA[@Test
+public void extractTableText() throws Exception {
+    try (final WebClient webClient = new WebClient()) {
+        final HtmlPage page = webClient.getPage("https://www.example.com/data-table.html");
+
+        final HtmlTable table = page.getHtmlElementById("resultsTable");
+
+        // Returns tab-separated cells and newline-separated rows:
+        // "Name\tAge\nJohn\t30\nJane\t25"
+        final String tableText = table.asNormalizedText();
+    }
+}]]></source>
+            <p>
+                For deeper table manipulation details, see the dedicated <a href="tables.html">Tables guide</a>.
+            </p>
+            </subsection>
+
+            <subsection name="Preformatted Text (&lt;pre&gt;)">
+                <p>
+                    Unlike standard HTML elements where consecutive spaces, tabs, and newlines are collapsed into single spaces, <code>asNormalizedText()</code> preserves all whitespace, tabs, and newlines inside <code>&lt;pre&gt;</code> tags.
+                </p>
+                <source>
+<![CDATA[final HtmlPreformattedText pre = page.getHtmlElementById("codeBlock");
+
+// Preserves original spacing, tab indents, and newlines exactly as declared
+final String rawFormattedText = pre.asNormalizedText();]]></source>
+            </subsection>
+
+            <subsection name="Inline Frames (&lt;iframe&gt;)">
+                <p>
+                    If an <code>&lt;iframe&gt;</code> is visible, <code>asNormalizedText()</code> recursively serializes the entire text content of the enclosed frame's document inline within the parent page text.
+                </p>
+            </subsection>
+
+            <subsection name="Ignored Tags &amp; Special Handling">
+                <p>
+                    Certain HTML elements are treated specially during text normalization:
+                </p>
+                <ul>
+                    <li>
+                        <strong>Ignored Elements:</strong> <code>&lt;script&gt;</code>, <code>&lt;style&gt;</code>, <code>&lt;noframes&gt;</code> tags, and HTML comments are completely excluded from text extraction.
+                    </li>
+                    <li>
+                        <strong>&lt;noscript&gt; Tags:</strong> If JavaScript is enabled in the <code>WebClient</code> (default), <code>&lt;noscript&gt;</code> contents are ignored. If JavaScript is disabled, their contents are included as standard text.
+                    </li>
+                    <li>
+                        <strong>Non-Breaking Spaces (&amp;nbsp;):</strong> Non-breaking space characters (<code>&amp;nbsp;</code> / <code>\u00A0</code>) are automatically converted into regular space characters (<code>' '</code>).
+                    </li>
+                    <li>
+                        <strong>Document Title (&lt;title&gt;):</strong> Calling <code>asNormalizedText()</code> directly on an <code>HtmlTitle</code> element extracts the title string without evaluating external CSS stylesheets, optimizing performance.
+                    </li>
+                </ul>
+            </subsection>
+        </section>
+        <section name="Combining HtmlUnit with Jsoup">
+            <p>
+                If you prefer Jsoup's fluent CSS selector and DOM manipulation API for content extraction, you can use the official 
+                <a href="https://github.com/HtmlUnit/htmlunit-jsoup">htmlunit-jsoup</a> bridge. This allows HtmlUnit to handle JavaScript execution and browser navigation, while providing a Jsoup <code>Document</code> interface for extraction.
+            </p>
+        </section>
+
+    </body>
+</document>

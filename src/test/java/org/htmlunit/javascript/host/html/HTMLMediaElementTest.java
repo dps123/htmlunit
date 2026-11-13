@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,9 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link HTMLMediaElement}.
@@ -29,141 +25,7 @@ import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
  * @author Frank Danek
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class HTMLMediaElementTest extends WebDriverTestCase {
-
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts("")
-    public void canPlayTypeBlank() throws Exception {
-        canPlayType("");
-    }
-
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "maybe",
-            IE = "")
-    @HtmlUnitNYI(IE = "maybe")
-    public void canPlayTypeVideoOgg() throws Exception {
-        canPlayType("video/ogg");
-    }
-
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts("maybe")
-    public void canPlayTypeVideoMp4() throws Exception {
-        canPlayType("video/mp4");
-    }
-
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "maybe",
-            IE = "")
-    @HtmlUnitNYI(IE = "maybe")
-    public void canPlayTypeVideoWebm() throws Exception {
-        canPlayType("video/webm");
-    }
-
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "maybe",
-            CHROME = "probably",
-            EDGE = "probably")
-    @HtmlUnitNYI(CHROME = "maybe",
-            EDGE = "maybe")
-    public void canPlayTypeAudioMpeg() throws Exception {
-        canPlayType("audio/mpeg");
-    }
-
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts("maybe")
-    public void canPlayTypeAudioMp4() throws Exception {
-        canPlayType("audio/mp4");
-    }
-
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "probably",
-            IE = "")
-    @HtmlUnitNYI(IE = "probably")
-    public void canPlayTypeVideoOggCodecs() throws Exception {
-        canPlayType("video/ogg; codecs=\"theora, vorbis\"");
-    }
-
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts("probably")
-    public void canPlayTypeVideoMp4Codecs() throws Exception {
-        canPlayType("video/mp4; codecs=\"avc1.4D401E, mp4a.40.2\"");
-    }
-
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "probably",
-            IE = "")
-    @HtmlUnitNYI(IE = "probably")
-    public void canPlayTypeAudioWebmCodecs() throws Exception {
-        canPlayType("video/webm; codecs=\"vp8.0, vorbis\"");
-    }
-
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "probably",
-            IE = "")
-    @HtmlUnitNYI(IE = "probably")
-    public void canPlayTypeAudioOggCodecs() throws Exception {
-        canPlayType("audio/ogg; codecs=\"vorbis\"");
-    }
-
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts("probably")
-    public void canPlayTypeAudioMp4Codecs() throws Exception {
-        canPlayType("audio/mp4; codecs=\"mp4a.40.5\"");
-    }
-
-    private void canPlayType(final String type) throws Exception {
-        final String html
-            = "<html>\n"
-            + "<head>\n"
-            + "  <script>\n"
-            + LOG_TITLE_FUNCTION
-            + "  </script>\n"
-            + "</head>\n"
-            + "<body>\n"
-            + "<script>\n"
-            + "try {\n"
-            + "  var video = document.createElement('video');"
-            + "  log(video.canPlayType('" + type + "'));\n"
-            + "} catch (e) { log('exception'); }\n"
-            + "</script>\n"
-            + "</body></html>";
-
-        loadPageVerifyTitle2(html);
-    }
 
     /**
      * @throws Exception if the test fails
@@ -171,7 +33,7 @@ public class HTMLMediaElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"[object HTMLAudioElement]", "done"})
     public void pause() throws Exception {
-        final String html = ""
+        final String html = DOCTYPE_HTML
                 + "<html><head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,37 +14,126 @@
  */
 package org.htmlunit.javascript.host.xml;
 
-import static org.htmlunit.BrowserVersionFeatures.JS_XML_SERIALIZER_BLANK_BEFORE_SELF_CLOSING;
-import static org.htmlunit.BrowserVersionFeatures.JS_XML_SERIALIZER_HTML_DOCUMENT_FRAGMENT_ALWAYS_EMPTY;
-import static org.htmlunit.BrowserVersionFeatures.JS_XML_SERIALIZER_ROOT_CDATA_AS_ESCAPED_TEXT;
-
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.w3c.dom.NamedNodeMap;
-
 import org.htmlunit.SgmlPage;
-import org.htmlunit.html.*;
+import org.htmlunit.html.DomAttr;
+import org.htmlunit.html.DomElement;
+import org.htmlunit.html.DomNode;
+import org.htmlunit.html.HtmlAbbreviated;
+import org.htmlunit.html.HtmlAcronym;
+import org.htmlunit.html.HtmlAddress;
+import org.htmlunit.html.HtmlAnchor;
+import org.htmlunit.html.HtmlAudio;
+import org.htmlunit.html.HtmlBidirectionalOverride;
+import org.htmlunit.html.HtmlBig;
+import org.htmlunit.html.HtmlBlockQuote;
+import org.htmlunit.html.HtmlBody;
+import org.htmlunit.html.HtmlBold;
+import org.htmlunit.html.HtmlButton;
+import org.htmlunit.html.HtmlCanvas;
+import org.htmlunit.html.HtmlCaption;
+import org.htmlunit.html.HtmlCenter;
+import org.htmlunit.html.HtmlCitation;
+import org.htmlunit.html.HtmlCode;
+import org.htmlunit.html.HtmlDefinition;
+import org.htmlunit.html.HtmlDefinitionDescription;
+import org.htmlunit.html.HtmlDefinitionList;
+import org.htmlunit.html.HtmlDefinitionTerm;
+import org.htmlunit.html.HtmlDeletedText;
+import org.htmlunit.html.HtmlDirectory;
+import org.htmlunit.html.HtmlDivision;
+import org.htmlunit.html.HtmlEmbed;
+import org.htmlunit.html.HtmlEmphasis;
+import org.htmlunit.html.HtmlExample;
+import org.htmlunit.html.HtmlFieldSet;
+import org.htmlunit.html.HtmlFont;
+import org.htmlunit.html.HtmlForm;
+import org.htmlunit.html.HtmlFrame;
+import org.htmlunit.html.HtmlFrameSet;
+import org.htmlunit.html.HtmlHead;
+import org.htmlunit.html.HtmlHeading1;
+import org.htmlunit.html.HtmlHeading2;
+import org.htmlunit.html.HtmlHeading3;
+import org.htmlunit.html.HtmlHeading4;
+import org.htmlunit.html.HtmlHeading5;
+import org.htmlunit.html.HtmlHeading6;
+import org.htmlunit.html.HtmlHeadingGroup;
+import org.htmlunit.html.HtmlHtml;
+import org.htmlunit.html.HtmlInlineFrame;
+import org.htmlunit.html.HtmlInlineQuotation;
+import org.htmlunit.html.HtmlInsertedText;
+import org.htmlunit.html.HtmlItalic;
+import org.htmlunit.html.HtmlKeyboard;
+import org.htmlunit.html.HtmlLabel;
+import org.htmlunit.html.HtmlLegend;
+import org.htmlunit.html.HtmlListItem;
+import org.htmlunit.html.HtmlListing;
+import org.htmlunit.html.HtmlMap;
+import org.htmlunit.html.HtmlMarquee;
+import org.htmlunit.html.HtmlMenu;
+import org.htmlunit.html.HtmlNoBreak;
+import org.htmlunit.html.HtmlNoEmbed;
+import org.htmlunit.html.HtmlNoFrames;
+import org.htmlunit.html.HtmlNoScript;
+import org.htmlunit.html.HtmlObject;
+import org.htmlunit.html.HtmlOption;
+import org.htmlunit.html.HtmlOptionGroup;
+import org.htmlunit.html.HtmlOrderedList;
+import org.htmlunit.html.HtmlParagraph;
+import org.htmlunit.html.HtmlPlainText;
+import org.htmlunit.html.HtmlPreformattedText;
+import org.htmlunit.html.HtmlS;
+import org.htmlunit.html.HtmlSample;
+import org.htmlunit.html.HtmlScript;
+import org.htmlunit.html.HtmlSelect;
+import org.htmlunit.html.HtmlSmall;
+import org.htmlunit.html.HtmlSource;
+import org.htmlunit.html.HtmlSpan;
+import org.htmlunit.html.HtmlStrike;
+import org.htmlunit.html.HtmlStrong;
+import org.htmlunit.html.HtmlStyle;
+import org.htmlunit.html.HtmlSubscript;
+import org.htmlunit.html.HtmlSuperscript;
+import org.htmlunit.html.HtmlTable;
+import org.htmlunit.html.HtmlTableBody;
+import org.htmlunit.html.HtmlTableColumn;
+import org.htmlunit.html.HtmlTableColumnGroup;
+import org.htmlunit.html.HtmlTableDataCell;
+import org.htmlunit.html.HtmlTableFooter;
+import org.htmlunit.html.HtmlTableHeader;
+import org.htmlunit.html.HtmlTableHeaderCell;
+import org.htmlunit.html.HtmlTableRow;
+import org.htmlunit.html.HtmlTeletype;
+import org.htmlunit.html.HtmlTextArea;
+import org.htmlunit.html.HtmlTitle;
+import org.htmlunit.html.HtmlUnderlined;
+import org.htmlunit.html.HtmlUnorderedList;
+import org.htmlunit.html.HtmlVariable;
+import org.htmlunit.html.HtmlVideo;
+import org.htmlunit.html.HtmlWordBreak;
 import org.htmlunit.javascript.HtmlUnitScriptable;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.host.Element;
-import org.htmlunit.javascript.host.dom.CDATASection;
 import org.htmlunit.javascript.host.dom.Document;
 import org.htmlunit.javascript.host.dom.DocumentFragment;
 import org.htmlunit.javascript.host.dom.Node;
-import org.htmlunit.javascript.host.html.HTMLDocument;
 import org.htmlunit.util.StringUtils;
+import org.w3c.dom.NamedNodeMap;
 
 /**
- * A JavaScript object for {@code XMLSerializer}.
+ * JavaScript host object for {@code XMLSerializer}.
  *
  * @author Ahmed Ashour
  * @author Darrell DeBoer
  * @author Ronald Brill
  * @author Frank Danek
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/XMLSerializer">MDN Documentation</a>
  */
 @JsxClass
 public class XMLSerializer extends HtmlUnitScriptable {
@@ -53,9 +142,8 @@ public class XMLSerializer extends HtmlUnitScriptable {
     // output of empty tags are not allowed for these HTML tags
     private static final Set<String> NON_EMPTY_TAGS = new HashSet<>(Arrays.asList(
             HtmlAbbreviated.TAG_NAME, HtmlAcronym.TAG_NAME,
-            HtmlAnchor.TAG_NAME, HtmlApplet.TAG_NAME, HtmlAddress.TAG_NAME, HtmlAudio.TAG_NAME,
-            HtmlBackgroundSound.TAG_NAME,
-            HtmlBidirectionalOverride.TAG_NAME, HtmlBig.TAG_NAME, HtmlBlink.TAG_NAME,
+            HtmlAnchor.TAG_NAME, HtmlAddress.TAG_NAME, HtmlAudio.TAG_NAME,
+            HtmlBidirectionalOverride.TAG_NAME, HtmlBig.TAG_NAME,
             HtmlBlockQuote.TAG_NAME, HtmlBody.TAG_NAME, HtmlBold.TAG_NAME,
             HtmlButton.TAG_NAME, HtmlCanvas.TAG_NAME, HtmlCaption.TAG_NAME,
             HtmlCenter.TAG_NAME, HtmlCitation.TAG_NAME, HtmlCode.TAG_NAME,
@@ -69,13 +157,13 @@ public class XMLSerializer extends HtmlUnitScriptable {
             HtmlFrame.TAG_NAME, HtmlFrameSet.TAG_NAME, HtmlHeading1.TAG_NAME,
             HtmlHeading2.TAG_NAME, HtmlHeading3.TAG_NAME,
             HtmlHeading4.TAG_NAME, HtmlHeading5.TAG_NAME,
-            HtmlHeading6.TAG_NAME, HtmlHead.TAG_NAME,
+            HtmlHeading6.TAG_NAME, HtmlHead.TAG_NAME, HtmlHeadingGroup.TAG_NAME,
             HtmlHtml.TAG_NAME, HtmlInlineFrame.TAG_NAME,
-            HtmlInsertedText.TAG_NAME, HtmlIsIndex.TAG_NAME,
+            HtmlInsertedText.TAG_NAME,
             HtmlItalic.TAG_NAME, HtmlKeyboard.TAG_NAME, HtmlLabel.TAG_NAME,
             HtmlLegend.TAG_NAME, HtmlListing.TAG_NAME, HtmlListItem.TAG_NAME,
             HtmlMap.TAG_NAME, HtmlMarquee.TAG_NAME,
-            HtmlMenu.TAG_NAME, HtmlMultiColumn.TAG_NAME,
+            HtmlMenu.TAG_NAME,
             HtmlNoBreak.TAG_NAME, HtmlNoEmbed.TAG_NAME, HtmlNoFrames.TAG_NAME,
             HtmlNoScript.TAG_NAME, HtmlObject.TAG_NAME, HtmlOrderedList.TAG_NAME,
             HtmlOptionGroup.TAG_NAME, HtmlOption.TAG_NAME, HtmlParagraph.TAG_NAME,
@@ -94,30 +182,26 @@ public class XMLSerializer extends HtmlUnitScriptable {
     ));
 
     /**
-     * Default constructor.
+     * Creates an instance of this object.
      */
     @JsxConstructor
-    public XMLSerializer() {
-        // Empty.
+    public void jsConstructor() {
+        // nothing to do
     }
 
     /**
-     * The subtree rooted by the specified element is serialized to a string.
-     * @param root the root of the subtree to be serialized (this may be any node, even a document)
-     * @return the serialized string
+     * Serializes the subtree rooted at the specified node to a string.
+     *
+     * @param root the root of the subtree to serialize (may be any node, including a document)
+     * @return the serialized XML string
      */
     @JsxFunction
-    public String serializeToString(Node root) {
+    public String serializeToString(final Node root) {
         if (root == null) {
             return "";
         }
 
         if (root instanceof DocumentFragment) {
-            if (root.getOwnerDocument() instanceof HTMLDocument
-                && getBrowserVersion().hasFeature(JS_XML_SERIALIZER_HTML_DOCUMENT_FRAGMENT_ALWAYS_EMPTY)) {
-                return "";
-            }
-
             Node node = root.getFirstChild();
             if (node == null) {
                 return "";
@@ -128,21 +212,20 @@ public class XMLSerializer extends HtmlUnitScriptable {
                 builder.append(serializeToString(node));
                 node = node.getNextSibling();
             }
-            return builder.toString();
+            return builder.toString().trim();
         }
 
-        if (root instanceof Document) {
-            root = ((Document) root).getDocumentElement();
-        }
+        final boolean rootIsDocument = root instanceof Document;
+        final Node serializedRoot = rootIsDocument ? ((Document) root).getDocumentElement() : root;
 
-        if (root instanceof Element) {
+        if (serializedRoot instanceof Element) {
             final StringBuilder builder = new StringBuilder();
-            final DomNode node = root.getDomNodeOrDie();
+            final DomNode node = serializedRoot.getDomNodeOrDie();
             final SgmlPage page = node.getPage();
             final boolean isHtmlPage = page != null && page.isHtmlPage();
 
             String forcedNamespace = null;
-            if (isHtmlPage) {
+            if (!rootIsDocument && isHtmlPage) {
                 forcedNamespace = "http://www.w3.org/1999/xhtml";
             }
             toXml(1, node, builder, forcedNamespace);
@@ -150,15 +233,7 @@ public class XMLSerializer extends HtmlUnitScriptable {
             return builder.toString();
         }
 
-        if (root instanceof CDATASection
-            && getBrowserVersion().hasFeature(JS_XML_SERIALIZER_ROOT_CDATA_AS_ESCAPED_TEXT)) {
-            final DomCDataSection domCData = (DomCDataSection) root.getDomNodeOrDie();
-            final String data = domCData.getData();
-            if (org.apache.commons.lang3.StringUtils.isNotBlank(data)) {
-                return StringUtils.escapeXmlChars(data);
-            }
-        }
-        return root.getDomNodeOrDie().asXml();
+        return serializedRoot.getDomNodeOrDie().asXml();
     }
 
     private void toXml(final int indent,
@@ -188,10 +263,11 @@ public class XMLSerializer extends HtmlUnitScriptable {
         }
 
         final NamedNodeMap attributesMap = node.getAttributes();
-        for (int i = 0; i < attributesMap.getLength(); i++) {
+        final int length = attributesMap.getLength();
+        for (int i = 0; i < length; i++) {
             final DomAttr attrib = (DomAttr) attributesMap.item(i);
-            builder.append(' ').append(attrib.getQualifiedName()).append('=')
-                .append('"').append(attrib.getValue()).append('"');
+            builder.append(' ').append(attrib.getQualifiedName())
+                   .append("=\"").append(attrib.getValue()).append('"');
         }
         boolean startTagClosed = false;
         for (final DomNode child : node.getChildren()) {
@@ -219,23 +295,18 @@ public class XMLSerializer extends HtmlUnitScriptable {
                     break;
             }
         }
-        if (!startTagClosed) {
-            final String tagName = StringUtils.toRootLowerCaseWithCache(nodeName);
+
+        if (startTagClosed) {
+            builder.append("</").append(nodeName).append('>');
+        }
+        else {
+            final String tagName = StringUtils.toRootLowerCase(nodeName);
             if (NON_EMPTY_TAGS.contains(tagName)) {
                 builder.append("></").append(nodeName).append('>');
             }
             else {
-                builder.append(optionalPrefix);
-                if (builder.charAt(builder.length() - 1) != ' '
-                    && getBrowserVersion().hasFeature(JS_XML_SERIALIZER_BLANK_BEFORE_SELF_CLOSING)) {
-                    builder.append(' ');
-                }
-                builder.append("/>");
+                builder.append(optionalPrefix).append("/>");
             }
         }
-        else {
-            builder.append("</").append(nodeName).append('>');
-        }
     }
-
 }

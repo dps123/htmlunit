@@ -7,7 +7,6 @@ MozAnimationIterationCount
 MozAnimationName
 MozAnimationPlayState
 MozAnimationTimingFunction
-MozAppearance
 MozBackfaceVisibility
 MozBorderEnd
 MozBorderEndColor
@@ -30,7 +29,6 @@ MozFontFeatureSettings
 MozFontLanguageOverride
 MozForceBrokenImageIcon
 MozHyphens
-MozImageRegion
 MozMarginEnd
 MozMarginStart
 MozOrient
@@ -48,11 +46,7 @@ MozTransitionDelay
 MozTransitionDuration
 MozTransitionProperty
 MozTransitionTimingFunction
-MozUserFocus
-MozUserInput
-MozUserModify
 MozUserSelect
-MozWindowDragging
 WebkitAlignContent
 WebkitAlignItems
 WebkitAlignSelf
@@ -84,6 +78,7 @@ WebkitBoxOrient
 WebkitBoxPack
 WebkitBoxShadow
 WebkitBoxSizing
+WebkitClipPath
 WebkitFilter
 WebkitFlex
 WebkitFlexBasis
@@ -92,6 +87,7 @@ WebkitFlexFlow
 WebkitFlexGrow
 WebkitFlexShrink
 WebkitFlexWrap
+WebkitFontFeatureSettings
 WebkitJustifyContent
 WebkitLineClamp
 WebkitMask
@@ -108,6 +104,7 @@ WebkitOrder
 WebkitPerspective
 WebkitPerspectiveOrigin
 WebkitTextFillColor
+WebkitTextSecurity
 WebkitTextSizeAdjust
 WebkitTextStroke
 WebkitTextStrokeColor
@@ -125,9 +122,13 @@ accentColor
 alignContent
 alignItems
 alignSelf
+alignmentBaseline
 all
+anchorName
+anchorScope
 animation
 animation-name
+animationComposition
 animationDelay
 animationDirection
 animationDuration
@@ -138,6 +139,7 @@ animationPlayState
 animationTimingFunction
 appearance
 aspectRatio
+backdropFilter
 backfaceVisibility
 background
 backgroundAttachment
@@ -151,6 +153,8 @@ backgroundPositionX
 backgroundPositionY
 backgroundRepeat
 backgroundSize
+baselineShift
+baselineSource
 blockSize
 border
 borderBlock
@@ -242,7 +246,17 @@ columnSpan
 columnWidth
 columns
 contain
+containIntrinsicBlockSize
+containIntrinsicHeight
+containIntrinsicInlineSize
+containIntrinsicSize
+containIntrinsicWidth
+container
+container-name
+containerName
+containerType
 content
+contentVisibility
 counterIncrement
 counterReset
 counterSet
@@ -256,6 +270,7 @@ direction
 display
 dominantBaseline
 emptyCells
+fieldSizing
 fill
 fillOpacity
 fillRule
@@ -276,20 +291,27 @@ fontFeatureSettings
 fontKerning
 fontLanguageOverride
 fontOpticalSizing
+fontPalette
 fontSize
 fontSizeAdjust
 fontStretch
 fontStyle
 fontSynthesis
+fontSynthesisPosition
+fontSynthesisSmallCaps
+fontSynthesisStyle
+fontSynthesisWeight
 fontVariant
 fontVariantAlternates
 fontVariantCaps
 fontVariantEastAsian
+fontVariantEmoji
 fontVariantLigatures
 fontVariantNumeric
 fontVariantPosition
 fontVariationSettings
 fontWeight
+forcedColorAdjust
 gap
 grid
 gridArea
@@ -311,6 +333,7 @@ gridTemplateColumns
 gridTemplateRows
 height
 hyphenateCharacter
+hyphenateLimitChars
 hyphens
 imageOrientation
 imageRendering
@@ -364,6 +387,9 @@ maskPositionY
 maskRepeat
 maskSize
 maskType
+mathDepth
+mathShift
+mathStyle
 maxBlockSize
 maxHeight
 maxInlineSize
@@ -379,6 +405,7 @@ offset
 offsetAnchor
 offsetDistance
 offsetPath
+offsetPosition
 offsetRotate
 opacity
 order
@@ -411,6 +438,7 @@ paddingInlineStart
 paddingLeft
 paddingRight
 paddingTop
+page
 pageBreakAfter
 pageBreakBefore
 pageBreakInside
@@ -422,6 +450,12 @@ placeItems
 placeSelf
 pointerEvents
 position
+positionAnchor
+positionArea
+positionTry
+positionTryFallbacks
+positionTryOrder
+positionVisibility
 printColorAdjust
 quotes
 r
@@ -458,6 +492,7 @@ scrollPaddingLeft
 scrollPaddingRight
 scrollPaddingTop
 scrollSnapAlign
+scrollSnapStop
 scrollSnapType
 scrollbarColor
 scrollbarGutter
@@ -481,9 +516,11 @@ tableLayout
 textAlign
 textAlignLast
 textAnchor
+textAutospace
 textCombineUpright
 textDecoration
 textDecorationColor
+textDecorationInset
 textDecorationLine
 textDecorationSkipInk
 textDecorationStyle
@@ -501,6 +538,9 @@ textShadow
 textTransform
 textUnderlineOffset
 textUnderlinePosition
+textWrap
+textWrapMode
+textWrapStyle
 top
 touchAction
 transform
@@ -508,6 +548,7 @@ transformBox
 transformOrigin
 transformStyle
 transition
+transitionBehavior
 transitionDelay
 transitionDuration
 transitionProperty
@@ -517,6 +558,8 @@ unicodeBidi
 userSelect
 vectorEffect
 verticalAlign
+viewTransitionClass
+viewTransitionName
 visibility
 webkitAlignContent
 webkitAlignItems
@@ -549,6 +592,7 @@ webkitBoxOrient
 webkitBoxPack
 webkitBoxShadow
 webkitBoxSizing
+webkitClipPath
 webkitFilter
 webkitFlex
 webkitFlexBasis
@@ -557,6 +601,7 @@ webkitFlexFlow
 webkitFlexGrow
 webkitFlexShrink
 webkitFlexWrap
+webkitFontFeatureSettings
 webkitJustifyContent
 webkitLineClamp
 webkitMask
@@ -573,6 +618,7 @@ webkitOrder
 webkitPerspective
 webkitPerspectiveOrigin
 webkitTextFillColor
+webkitTextSecurity
 webkitTextSizeAdjust
 webkitTextStroke
 webkitTextStrokeColor
@@ -587,6 +633,7 @@ webkitTransitionProperty
 webkitTransitionTimingFunction
 webkitUserSelect
 whiteSpace
+whiteSpaceCollapse
 width
 willChange
 wordBreak
@@ -596,3 +643,4 @@ writingMode
 x
 y
 zIndex
+zoom

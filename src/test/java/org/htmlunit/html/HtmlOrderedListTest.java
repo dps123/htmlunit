@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,8 @@
  */
 package org.htmlunit.html;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.SimpleWebTestCase;
-import org.htmlunit.junit.BrowserRunner;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link HtmlOrderedList}.
@@ -26,8 +23,8 @@ import org.htmlunit.junit.BrowserRunner;
  * @author Ahmed Ashour
  * @author Marc Guillemot
  * @author Ronald Brill
+ * @author Ronny Shapiro
  */
-@RunWith(BrowserRunner.class)
 public class HtmlOrderedListTest extends SimpleWebTestCase {
 
     /**
@@ -35,7 +32,8 @@ public class HtmlOrderedListTest extends SimpleWebTestCase {
      */
     @Test
     public void asNormalizedText() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "</head><body>\n"
             + "  <ol id='foo'>\n"
             + "    <li>first item</li>\n"
@@ -63,15 +61,23 @@ public class HtmlOrderedListTest extends SimpleWebTestCase {
      */
     @Test
     public void asXml() throws Exception {
-        final String content
-            = "<html><head></head><body>\n"
+        final String content = DOCTYPE_HTML
+            + "<html><head></head><body>\n"
             + "<ol id='myNode'></ol>\n"
             + "foo\n"
             + "</form></body></html>";
         final HtmlPage page = loadPage(content);
         final HtmlElement element = page.getHtmlElementById("myNode");
 
-        assertEquals("<ol id=\"myNode\">\r\n</ol>\r\n", element.asXml());
-        assertTrue(page.asXml().contains("</ol>"));
+        assertEquals("<ol id=\"myNode\"></ol>", element.asXml());
+
+        assertEquals("<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\r\n"
+                + "<html>\r\n"
+                + "  <head/>\r\n"
+                + "  <body>\r\n"
+                + "    <ol id=\"myNode\"></ol>\n"
+                + "foo\n"
+                + "</body>\r\n"
+                + "</html>", page.asXml());
     }
 }

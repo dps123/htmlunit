@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,17 +20,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-import org.w3c.dom.CDATASection;
-import org.w3c.dom.Comment;
-import org.w3c.dom.DOMException;
-import org.w3c.dom.Document;
-import org.w3c.dom.DocumentType;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.Text;
-import org.w3c.dom.traversal.DocumentTraversal;
-import org.w3c.dom.traversal.NodeFilter;
-
 import org.htmlunit.html.AbstractDomNodeList;
 import org.htmlunit.html.DomAttr;
 import org.htmlunit.html.DomCDataSection;
@@ -41,8 +30,17 @@ import org.htmlunit.html.DomNode;
 import org.htmlunit.html.DomNodeIterator;
 import org.htmlunit.html.DomNodeList;
 import org.htmlunit.html.DomText;
-import org.htmlunit.html.DomTreeWalker;
+import org.htmlunit.util.StringUtils;
 import org.htmlunit.util.UrlUtils;
+import org.w3c.dom.CDATASection;
+import org.w3c.dom.Comment;
+import org.w3c.dom.DOMException;
+import org.w3c.dom.Document;
+import org.w3c.dom.DocumentType;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.Text;
+import org.w3c.dom.traversal.NodeFilter;
 
 /**
  * A basic class of Standard Generalized Markup Language (SGML), e.g. HTML and XML.
@@ -50,13 +48,15 @@ import org.htmlunit.util.UrlUtils;
  * @author Ahmed Ashour
  * @author Ronald Brill
  */
-public abstract class SgmlPage extends DomNode implements Page, Document, DocumentTraversal {
+public abstract class SgmlPage extends DomNode implements Page, Document {
 
     private DocumentType documentType_;
     private final WebResponse webResponse_;
     private WebWindow enclosingWindow_;
     private final WebClient webClient_;
     private boolean printing_;
+    private boolean domChangeListenerInUse_;
+    private boolean characterDataChangeListenerInUse_;
 
     /**
      * Creates an instance of SgmlPage.
@@ -198,7 +198,7 @@ public abstract class SgmlPage extends DomNode implements Page, Document, Docume
             return (SgmlPage) super.clone();
         }
         catch (final CloneNotSupportedException e) {
-            throw new IllegalStateException("Clone not supported");
+            throw new IllegalStateException("Clone not supported", e);
         }
     }
 
@@ -253,7 +253,7 @@ public abstract class SgmlPage extends DomNode implements Page, Document, Docume
     @Override
     public URL getUrl() {
         final WebResponse wr = getWebResponse();
-        if (null == wr) {
+        if (wr == null) {
             return UrlUtils.URL_ABOUT_BLANK;
         }
         return getWebResponse().getWebRequest().getUrl();
@@ -269,14 +269,14 @@ public abstract class SgmlPage extends DomNode implements Page, Document, Docume
      */
     @Override
     public DomNodeList<DomElement> getElementsByTagName(final String tagName) {
-        return new AbstractDomNodeList<DomElement>(this) {
+        return new AbstractDomNodeList<>(this) {
             @Override
             protected List<DomElement> provideElements() {
                 final List<DomElement> res = new ArrayList<>();
                 final boolean caseSensitive = hasCaseSensitiveTagNames();
                 for (final DomElement elem : getDomElementDescendants()) {
                     final String localName = elem.getLocalName();
-                    if ("*".equals(tagName) || localName.equals(tagName)
+                    if (StringUtils.equalsChar('*', tagName) || localName.equals(tagName)
                             || (!caseSensitive && localName.equalsIgnoreCase(tagName))) {
                         res.add(elem);
                     }
@@ -291,7 +291,7 @@ public abstract class SgmlPage extends DomNode implements Page, Document, Docume
      */
     @Override
     public DomNodeList<DomElement> getElementsByTagNameNS(final String namespaceURI, final String localName) {
-        return new AbstractDomNodeList<DomElement>(this) {
+        return new AbstractDomNodeList<>(this) {
             @Override
             protected List<DomElement> provideElements() {
                 final List<DomElement> res = new ArrayList<>();
@@ -307,8 +307,10 @@ public abstract class SgmlPage extends DomNode implements Page, Document, Docume
                 for (final DomElement elem : getDomElementDescendants()) {
                     final String locName = elem.getLocalName();
 
-                    if (("*".equals(namespaceURI) || comparator.compare(namespaceURI, elem.getNamespaceURI()) == 0)
-                            && ("*".equals(locName) || comparator.compare(locName, elem.getLocalName()) == 0)) {
+                    if ((StringUtils.equalsChar('*', namespaceURI)
+                            || comparator.compare(namespaceURI, elem.getNamespaceURI()) == 0)
+                            && (StringUtils.equalsChar('*', locName)
+                            || comparator.compare(locName, elem.getLocalName()) == 0)) {
                         res.add(elem);
                     }
                 }
@@ -342,23 +344,27 @@ public abstract class SgmlPage extends DomNode implements Page, Document, Docume
     }
 
     /**
-     * {@inheritDoc}
-     * @deprecated as of version 2.70.0; use
-     * {@link org.htmlunit.platform.dom.traversal.DomTreeWalker
-     *      #DomTreeWalker(DomNode, int, NodeFilter, boolean)}
-     * instead
+     * Create a new <code>NodeIterator</code> over the subtree rooted at the
+     * specified node.
+     * @param root The node which will be iterated together with its
+     *        children. The <code>NodeIterator</code> is initially positioned
+     *        just before this node. The <code>whatToShow</code> flags and the
+     *        filter, if any, are not considered when setting this position. The
+     *        root must not be <code>null</code>.
+     * @param whatToShow This flag specifies which node types may appear in
+     *        the logical view of the tree presented by the
+     *        <code>NodeIterator</code>. See the description of
+     *        <code>NodeFilter</code> for the set of possible <code>SHOW_</code>
+     *        values.These flags can be combined using <code>OR</code>.
+     * @param filter The <code>NodeFilter</code> to be used with this
+     *        <code>NodeIterator</code>, or <code>null</code> to indicate no
+     *        filter.
+     * @param entityReferenceExpansion The value of this flag determines
+     *        whether entity reference nodes are expanded.
+     * @return The newly created <code>NodeIterator</code>.
+     * @throws DOMException
+     *            NOT_SUPPORTED_ERR: Raised if the specified <code>root</code> is <code>null</code>.
      */
-    @Deprecated
-    @Override
-    public DomTreeWalker createTreeWalker(final Node root, final int whatToShow, final NodeFilter filter,
-            final boolean entityReferenceExpansion) throws DOMException {
-        return new DomTreeWalker((DomNode) root, whatToShow, filter, entityReferenceExpansion);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public DomNodeIterator createNodeIterator(final Node root, final int whatToShow, final NodeFilter filter,
             final boolean entityReferenceExpansion) throws DOMException {
         return new DomNodeIterator((DomNode) root, whatToShow, filter, entityReferenceExpansion);
@@ -401,17 +407,80 @@ public abstract class SgmlPage extends DomNode implements Page, Document, Docume
     }
 
     /**
-     * @return whether or not this is currently printing
+     * Returns whether this page is currently being printed.
+     *
+     * @return {@code true} if this page is currently being printed
      */
     public boolean isPrinting() {
         return printing_;
     }
 
     /**
-     * @param printing the printing state to set
+     * Sets whether this page is currently being printed.
+     *
+     * @param printing {@code true} if this page is currently being printed
      */
     public void setPrinting(final boolean printing) {
         printing_ = printing;
         clearComputedStyles();
+    }
+
+    /**
+     * Informs about the use of a domChangeListener.
+     */
+    public void domChangeListenerAdded() {
+        domChangeListenerInUse_ = true;
+    }
+
+    /**
+     * Returns whether any DOM change listeners have been registered.
+     *
+     * @return {@code true} if at least one DOM change listener has been registered
+     */
+    public boolean isDomChangeListenerInUse() {
+        return domChangeListenerInUse_;
+    }
+
+    /**
+     * Marks that a character data change listener has been registered.
+     */
+    public void characterDataChangeListenerAdded() {
+        characterDataChangeListenerInUse_ = true;
+    }
+
+    /**
+     * Returns whether any character data change listeners have been registered.
+     *
+     * @return {@code true} if at least one character data change listener has
+     *         been registered
+     */
+    public boolean isCharacterDataChangeListenerInUse() {
+        return characterDataChangeListenerInUse_;
+    }
+
+    /**
+     * Returns the first element within the document that matches the specified group of selectors.
+     * Like {@code document.querySelector()} in the browsers, the document element is the scope
+     * ({@code :scope}).
+     * @param selectors one or more CSS selectors separated by commas
+     * @param <N> the node type
+     * @return null if no matches are found; otherwise, it returns the first matching element
+     */
+    @Override
+    public <N extends DomNode> N querySelector(final String selectors) {
+        return querySelector(selectors, null);
+    }
+
+    /**
+     * Retrieves all element nodes from descendants of the starting element node that match any selector
+     * within the supplied selector strings.
+     * Like {@code document.querySelectorAll()} in the browsers, the document element is the scope
+     * ({@code :scope}).
+     * @param selectors one or more CSS selectors separated by commas
+     * @return list of all found nodes
+     */
+    @Override
+    public DomNodeList<DomNode> querySelectorAll(final String selectors) {
+        return querySelectorAll(selectors, null);
     }
 }

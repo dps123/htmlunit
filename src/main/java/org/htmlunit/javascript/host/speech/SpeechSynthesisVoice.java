@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,25 +14,25 @@
  */
 package org.htmlunit.javascript.host.speech;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
 import org.htmlunit.javascript.HtmlUnitScriptable;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 
 /**
- * A JavaScript object for {@code SpeechSynthesisVoice}.
+ * JavaScript host object for {@code SpeechSynthesisVoice}.
  *
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesisVoice">MDN Documentation</a>
  */
-@JsxClass({FF, FF_ESR})
+@JsxClass
 public class SpeechSynthesisVoice extends HtmlUnitScriptable {
 
     /**
-     * Creates a new instance.
+     * Creates an instance of this object.
      */
     @JsxConstructor
-    public SpeechSynthesisVoice() {
+    public void jsConstructor() {
+        // nothing to do
     }
 }

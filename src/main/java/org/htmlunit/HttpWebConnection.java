@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,8 @@
  */
 package org.htmlunit;
 
-import static org.htmlunit.BrowserVersionFeatures.CONNECTION_KEEP_ALIVE_IE;
-import static org.htmlunit.BrowserVersionFeatures.URL_AUTH_CREDENTIALS;
+import static org.htmlunit.BrowserVersionFeatures.HTTP_HEADER_CH_UA;
+import static org.htmlunit.BrowserVersionFeatures.HTTP_HEADER_PRIORITY;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -56,16 +56,14 @@ import org.apache.http.HttpHost;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpRequestInterceptor;
 import org.apache.http.HttpResponse;
-import org.apache.http.auth.AuthScheme;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.Credentials;
 import org.apache.http.client.AuthCache;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.HttpDelete;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpHead;
-import org.apache.http.client.methods.HttpOptions;
 import org.apache.http.client.methods.HttpPatch;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
@@ -107,6 +105,7 @@ import org.apache.http.protocol.RequestTargetHost;
 import org.apache.http.ssl.SSLContexts;
 import org.apache.http.util.TextUtils;
 import org.htmlunit.WebRequest.HttpHint;
+import org.htmlunit.http.HttpUtils;
 import org.htmlunit.httpclient.HtmlUnitCookieSpecProvider;
 import org.htmlunit.httpclient.HtmlUnitCookieStore;
 import org.htmlunit.httpclient.HtmlUnitRedirectStrategie;
@@ -121,7 +120,7 @@ import org.htmlunit.util.UrlUtils;
 /**
  * Default implementation of {@link WebConnection}, using the HttpClient library to perform HTTP requests.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author Noboru Sinohara
  * @author David D. Kilzer
  * @author Marc Guillemot
@@ -141,17 +140,18 @@ public class HttpWebConnection implements WebConnection {
     private static final String HACKED_COOKIE_POLICY = "mine";
 
     // have one per thread because this is (re)configured for every call (see configureHttpProcessorBuilder)
-    // do not use a ThreadLocal because this in only accessed form this class
+    // do not use a ThreadLocal because this in only accessed form this class, but we still need it synchronized
     private final Map<Thread, HttpClientBuilder> httpClientBuilder_ = new WeakHashMap<>();
     private final WebClient webClient_;
 
     private String virtualHost_;
-    private final CookieSpecProvider htmlUnitCookieSpecProvider_;
+    private final HtmlUnitCookieSpecProvider htmlUnitCookieSpecProvider_;
     private final WebClientOptions usedOptions_;
     private PoolingHttpClientConnectionManager connectionManager_;
 
     /** Authentication cache shared among all threads of a web client. */
-    private final AuthCache sharedAuthCache_ = new SynchronizedAuthCache();
+    // BasicAuthCache is thread-safe (ConcurrentHashMap based)
+    private final AuthCache sharedAuthCache_ = new BasicAuthCache();
 
     /** Maintains a separate {@link HttpClientContext} object per HttpWebConnection and thread. */
     private final Map<Thread, HttpClientContext> httpClientContextByThread_ = new WeakHashMap<>();
@@ -161,6 +161,7 @@ public class HttpWebConnection implements WebConnection {
      * @param webClient the WebClient that is using this connection
      */
     public HttpWebConnection(final WebClient webClient) {
+        super();
         webClient_ = webClient;
         htmlUnitCookieSpecProvider_ = new HtmlUnitCookieSpecProvider(webClient.getBrowserVersion());
         usedOptions_ = new WebClientOptions();
@@ -188,36 +189,37 @@ public class HttpWebConnection implements WebConnection {
             final long startTime = System.currentTimeMillis();
 
             final HttpContext httpContext = getHttpContext();
-            HttpResponse httpResponse;
             try {
                 try (CloseableHttpClient closeableHttpClient = builder.build()) {
-                    httpResponse = closeableHttpClient.execute(httpHost, httpMethod, httpContext);
+                    try (CloseableHttpResponse httpResponse =
+                            closeableHttpClient.execute(httpHost, httpMethod, httpContext)) {
+                        return downloadResponse(httpMethod, webRequest, httpResponse, startTime);
+                    }
                 }
             }
-            catch (final SSLPeerUnverifiedException s) {
+            catch (final SSLPeerUnverifiedException ex) {
                 // Try to use only SSLv3 instead
                 if (webClient_.getOptions().isUseInsecureSSL()) {
                     HtmlUnitSSLConnectionSocketFactory.setUseSSL3Only(httpContext, true);
                     try (CloseableHttpClient closeableHttpClient = builder.build()) {
-                        httpResponse = closeableHttpClient.execute(httpHost, httpMethod, httpContext);
+                        try (CloseableHttpResponse httpResponse =
+                                closeableHttpClient.execute(httpHost, httpMethod, httpContext)) {
+                            return downloadResponse(httpMethod, webRequest, httpResponse, startTime);
+                        }
                     }
                 }
-                else {
-                    throw s;
-                }
+                throw ex;
             }
             catch (final Error e) {
                 // in case a StackOverflowError occurs while the connection is leased, it won't get released.
                 // Calling code may catch the StackOverflowError, but due to the leak, the httpClient_ may
                 // come out of connections and throw a ConnectionPoolTimeoutException.
                 // => best solution, discard the HttpClient instance.
-                httpClientBuilder_.remove(Thread.currentThread());
+                synchronized (httpClientBuilder_) {
+                    httpClientBuilder_.remove(Thread.currentThread());
+                }
                 throw e;
             }
-
-            final DownloadedContent downloadedBody = downloadResponseBody(httpResponse);
-            final long endTime = System.currentTimeMillis();
-            return makeWebResponse(httpResponse, webRequest, downloadedBody, endTime - startTime);
         }
         finally {
             if (httpMethod != null) {
@@ -232,22 +234,25 @@ public class HttpWebConnection implements WebConnection {
      * @param httpMethod the httpMethod used (can be null)
      */
     protected void onResponseGenerated(final HttpUriRequest httpMethod) {
+        // nothing to do
     }
 
     /**
      * Returns the {@link HttpClientContext} for the current thread. Creates a new one if necessary.
      */
-    private synchronized HttpContext getHttpContext() {
-        HttpClientContext httpClientContext = httpClientContextByThread_.get(Thread.currentThread());
-        if (httpClientContext == null) {
-            httpClientContext = new HttpClientContext();
+    private HttpContext getHttpContext() {
+        synchronized (httpClientContextByThread_) {
+            HttpClientContext httpClientContext = httpClientContextByThread_.get(Thread.currentThread());
+            if (httpClientContext == null) {
+                httpClientContext = new HttpClientContext();
 
-            // set the shared authentication cache
-            httpClientContext.setAttribute(HttpClientContext.AUTH_CACHE, sharedAuthCache_);
+                // set the shared authentication cache
+                httpClientContext.setAttribute(HttpClientContext.AUTH_CACHE, sharedAuthCache_);
 
-            httpClientContextByThread_.put(Thread.currentThread(), httpClientContext);
+                httpClientContextByThread_.put(Thread.currentThread(), httpClientContext);
+            }
+            return httpClientContext;
         }
-        return httpClientContext;
     }
 
     private void setProxy(final HttpRequestBase httpRequest, final WebRequest webRequest) {
@@ -287,7 +292,7 @@ public class HttpWebConnection implements WebConnection {
         // URLs; because of this we allow some Unicode chars in URLs. However, at this point we're
         // handing things over the HttpClient, and HttpClient will blow up if we leave these Unicode
         // chars in the URL.
-        final URL url = UrlUtils.encodeUrl(webRequest.getUrl(), false, charset);
+        final URL url = UrlUtils.encodeUrl(webRequest.getUrl(), charset);
 
         URI uri = UrlUtils.toURI(url, escapeQuery(url.getQuery()));
         if (getVirtualHost() != null) {
@@ -296,20 +301,22 @@ public class HttpWebConnection implements WebConnection {
         final HttpRequestBase httpMethod = buildHttpMethod(webRequest.getHttpMethod(), uri);
         setProxy(httpMethod, webRequest);
 
-        // POST, PUT and PATCH
-        if (httpMethod instanceof HttpEntityEnclosingRequest) {
-            // developer note:
-            // this has to be in sync with
-            // org.htmlunit.WebRequest.getRequestParameters()
+        // developer note:
+        // this has to be in sync with org.htmlunit.WebRequest.getRequestParameters()
+
+        // POST, PUT, PATCH, DELETE, OPTIONS
+        if (httpMethod instanceof HttpPost
+                || httpMethod instanceof HttpPut
+                || httpMethod instanceof HttpPatch
+                || httpMethod instanceof org.htmlunit.httpclient.HttpDelete
+                || httpMethod instanceof org.htmlunit.httpclient.HttpOptions) {
 
             final HttpEntityEnclosingRequest method = (HttpEntityEnclosingRequest) httpMethod;
 
-            if (webRequest.getEncodingType() == FormEncodingType.URL_ENCODED && method instanceof HttpPost) {
-                final HttpPost postMethod = (HttpPost) method;
+            if (FormEncodingType.URL_ENCODED == webRequest.getEncodingType()) {
                 if (webRequest.getRequestBody() == null) {
                     final List<NameValuePair> pairs = webRequest.getRequestParameters();
-                    final String query = URLEncodedUtils.format(
-                                            HttpClientConverter.nameValuePairsToHttpClient(pairs), charset);
+                    final String query = HttpUtils.toQueryFormFields(pairs, charset);
 
                     final StringEntity urlEncodedEntity;
                     if (webRequest.hasHint(HttpHint.IncludeCharsetInContentTypeHeader)) {
@@ -321,17 +328,16 @@ public class HttpWebConnection implements WebConnection {
                         urlEncodedEntity = new StringEntity(query, charset);
                         urlEncodedEntity.setContentType(URLEncodedUtils.CONTENT_TYPE);
                     }
-                    postMethod.setEntity(urlEncodedEntity);
+                    method.setEntity(urlEncodedEntity);
                 }
                 else {
                     final String body = StringUtils.defaultString(webRequest.getRequestBody());
                     final StringEntity urlEncodedEntity = new StringEntity(body, charset);
                     urlEncodedEntity.setContentType(URLEncodedUtils.CONTENT_TYPE);
-                    postMethod.setEntity(urlEncodedEntity);
+                    method.setEntity(urlEncodedEntity);
                 }
             }
-            else if (webRequest.getEncodingType() == FormEncodingType.TEXT_PLAIN && method instanceof HttpPost) {
-                final HttpPost postMethod = (HttpPost) method;
+            else if (FormEncodingType.TEXT_PLAIN == webRequest.getEncodingType()) {
                 if (webRequest.getRequestBody() == null) {
                     final StringBuilder body = new StringBuilder();
                     for (final NameValuePair pair : webRequest.getRequestParameters()) {
@@ -342,13 +348,13 @@ public class HttpWebConnection implements WebConnection {
                     }
                     final StringEntity bodyEntity = new StringEntity(body.toString(), charset);
                     bodyEntity.setContentType(MimeType.TEXT_PLAIN);
-                    postMethod.setEntity(bodyEntity);
+                    method.setEntity(bodyEntity);
                 }
                 else {
                     final String body = StringUtils.defaultString(webRequest.getRequestBody());
                     final StringEntity bodyEntity =
                             new StringEntity(body, ContentType.create(MimeType.TEXT_PLAIN, charset));
-                    postMethod.setEntity(bodyEntity);
+                    method.setEntity(bodyEntity);
                 }
             }
             else if (FormEncodingType.MULTIPART == webRequest.getEncodingType()) {
@@ -357,8 +363,8 @@ public class HttpWebConnection implements WebConnection {
                 builder.setCharset(c);
 
                 for (final NameValuePair pair : webRequest.getRequestParameters()) {
-                    if (pair instanceof KeyDataPair) {
-                        buildFilePart((KeyDataPair) pair, builder);
+                    if (pair instanceof KeyDataPair dataPair) {
+                        buildFilePart(dataPair, builder);
                     }
                     else {
                         builder.addTextBody(pair.getName(), pair.getValue(),
@@ -367,7 +373,8 @@ public class HttpWebConnection implements WebConnection {
                 }
                 method.setEntity(builder.build());
             }
-            else { // for instance a PUT or PATCH request
+            else {
+                // for instance a PATCH request
                 final String body = webRequest.getRequestBody();
                 if (body != null) {
                     method.setEntity(new StringEntity(body, charset));
@@ -375,11 +382,10 @@ public class HttpWebConnection implements WebConnection {
             }
         }
         else {
-            // this is the case for GET as well as TRACE, DELETE, OPTIONS and HEAD
-            if (!webRequest.getRequestParameters().isEmpty()) {
-                final List<NameValuePair> pairs = webRequest.getRequestParameters();
-                final String query = URLEncodedUtils.format(
-                                        HttpClientConverter.nameValuePairsToHttpClient(pairs), charset);
+            // GET, TRACE, HEAD
+            final List<NameValuePair> pairs = webRequest.getRequestParameters();
+            if (!pairs.isEmpty()) {
+                final String query = HttpUtils.toQueryFormFields(pairs, charset);
                 uri = UrlUtils.toURI(url, query);
                 httpMethod.setURI(uri);
             }
@@ -393,8 +399,7 @@ public class HttpWebConnection implements WebConnection {
 
         // if the used url contains credentials, we have to add this
         final Credentials requestUrlCredentials = webRequest.getUrlCredentials();
-        if (null != requestUrlCredentials
-                && webClient_.getBrowserVersion().hasFeature(URL_AUTH_CREDENTIALS)) {
+        if (null != requestUrlCredentials) {
             final URL requestUrl = webRequest.getUrl();
             final AuthScope authScope = new AuthScope(requestUrl.getHost(), requestUrl.getPort());
             // updating our client to keep the credentials for the next request
@@ -424,11 +429,11 @@ public class HttpWebConnection implements WebConnection {
 
     private static Charset getCharset(final Charset charset, final List<NameValuePair> pairs) {
         for (final NameValuePair pair : pairs) {
-            if (pair instanceof KeyDataPair) {
-                final KeyDataPair pairWithFile = (KeyDataPair) pair;
+            if (pair instanceof KeyDataPair pairWithFile) {
                 if (pairWithFile.getData() == null && pairWithFile.getFile() != null) {
                     final String fileName = pairWithFile.getFile().getName();
-                    for (int i = 0; i < fileName.length(); i++) {
+                    final int length = fileName.length();
+                    for (int i = 0; i < length; i++) {
                         if (fileName.codePointAt(i) > 127) {
                             return charset;
                         }
@@ -446,48 +451,36 @@ public class HttpWebConnection implements WebConnection {
         }
 
         final ContentType contentType = ContentType.create(mimeType);
-        final File file = pairWithFile.getFile();
 
-        if (pairWithFile.getData() != null) {
-            final String filename;
-            if (file == null) {
+        final File file = pairWithFile.getFile();
+        if (file != null) {
+            String filename = pairWithFile.getFileName();
+            if (filename == null) {
+                filename = pairWithFile.getFile().getName();
+            }
+            builder.addBinaryBody(pairWithFile.getName(), file, contentType, filename);
+            return;
+        }
+
+        final byte[] data = pairWithFile.getData();
+        if (data != null) {
+            String filename = pairWithFile.getFileName();
+            if (filename == null) {
                 filename = pairWithFile.getValue();
             }
-            else if (pairWithFile.getFileName() == null) {
-                filename = file.getName();
-            }
-            else {
-                filename = pairWithFile.getFileName();
-            }
 
-            builder.addBinaryBody(pairWithFile.getName(), new ByteArrayInputStream(pairWithFile.getData()),
-                    contentType, filename);
+            builder.addBinaryBody(pairWithFile.getName(), data, contentType, filename);
             return;
         }
 
-        if (file == null) {
-            builder.addPart(pairWithFile.getName(),
-                    // Overridden in order not to have a chunked response.
-                    new InputStreamBody(new ByteArrayInputStream(new byte[0]), contentType, pairWithFile.getValue()) {
-                    @Override
-                    public long getContentLength() {
-                        return 0;
-                    }
-                });
-            return;
-        }
-
-        final String filename;
-        if (pairWithFile.getFile() == null) {
-            filename = pairWithFile.getValue();
-        }
-        else if (pairWithFile.getFileName() == null) {
-            filename = pairWithFile.getFile().getName();
-        }
-        else {
-            filename = pairWithFile.getFileName();
-        }
-        builder.addBinaryBody(pairWithFile.getName(), pairWithFile.getFile(), contentType, filename);
+        builder.addPart(pairWithFile.getName(),
+                // Overridden in order not to have a chunked response.
+                new InputStreamBody(new ByteArrayInputStream(new byte[0]), contentType, pairWithFile.getValue()) {
+                @Override
+                public long getContentLength() {
+                    return 0;
+                }
+            });
     }
 
     /**
@@ -497,43 +490,16 @@ public class HttpWebConnection implements WebConnection {
      * @return a new HttpClient HTTP method based on the specified parameters
      */
     private static HttpRequestBase buildHttpMethod(final HttpMethod submitMethod, final URI uri) {
-        final HttpRequestBase method;
-        switch (submitMethod) {
-            case GET:
-                method = new HttpGet(uri);
-                break;
-
-            case POST:
-                method = new HttpPost(uri);
-                break;
-
-            case PUT:
-                method = new HttpPut(uri);
-                break;
-
-            case DELETE:
-                method = new HttpDelete(uri);
-                break;
-
-            case OPTIONS:
-                method = new HttpOptions(uri);
-                break;
-
-            case HEAD:
-                method = new HttpHead(uri);
-                break;
-
-            case TRACE:
-                method = new HttpTrace(uri);
-                break;
-
-            case PATCH:
-                method = new HttpPatch(uri);
-                break;
-
-            default:
-                throw new IllegalStateException("Submit method not yet supported: " + submitMethod);
-        }
+        final HttpRequestBase method = switch (submitMethod) {
+            case GET -> new HttpGet(uri);
+            case POST -> new HttpPost(uri);
+            case PUT -> new HttpPut(uri);
+            case DELETE -> new org.htmlunit.httpclient.HttpDelete(uri);
+            case OPTIONS -> new org.htmlunit.httpclient.HttpOptions(uri);
+            case HEAD -> new HttpHead(uri);
+            case TRACE -> new HttpTrace(uri);
+            case PATCH -> new HttpPatch(uri);
+        };
         return method;
     }
 
@@ -544,23 +510,26 @@ public class HttpWebConnection implements WebConnection {
      */
     protected HttpClientBuilder getHttpClientBuilder() {
         final Thread currentThread = Thread.currentThread();
-        HttpClientBuilder builder = httpClientBuilder_.get(currentThread);
-        if (builder == null) {
-            builder = createHttpClientBuilder();
 
-            // this factory is required later
-            // to be sure this is done, we do it outside the createHttpClient() call
-            final RegistryBuilder<CookieSpecProvider> registeryBuilder
-                = RegistryBuilder.<CookieSpecProvider>create()
-                            .register(HACKED_COOKIE_POLICY, htmlUnitCookieSpecProvider_);
-            builder.setDefaultCookieSpecRegistry(registeryBuilder.build());
+        synchronized (httpClientBuilder_) {
+            HttpClientBuilder builder = httpClientBuilder_.get(currentThread);
+            if (builder == null) {
+                builder = createHttpClientBuilder();
 
-            builder.setDefaultCookieStore(new HtmlUnitCookieStore(webClient_.getCookieManager()));
-            builder.setUserAgent(webClient_.getBrowserVersion().getUserAgent());
-            httpClientBuilder_.put(currentThread, builder);
+                // this factory is required later
+                // to be sure this is done, we do it outside the createHttpClient() call
+                final RegistryBuilder<CookieSpecProvider> registeryBuilder
+                    = RegistryBuilder.<CookieSpecProvider>create()
+                                .register(HACKED_COOKIE_POLICY, htmlUnitCookieSpecProvider_);
+                builder.setDefaultCookieSpecRegistry(registeryBuilder.build());
+
+                builder.setDefaultCookieStore(new HtmlUnitCookieStore(webClient_.getCookieManager()));
+                builder.setUserAgent(webClient_.getBrowserVersion().getUserAgent());
+                httpClientBuilder_.put(currentThread, builder);
+            }
+
+            return builder;
         }
-
-        return builder;
     }
 
     /**
@@ -677,7 +646,8 @@ public class HttpWebConnection implements WebConnection {
         builder.setSSLSocketFactory(socketFactory);
 
         usedOptions_.setUseInsecureSSL(options.isUseInsecureSSL());
-        usedOptions_.setSSLClientCertificateStore(options.getSSLClientCertificateStore());
+        usedOptions_.setSSLClientCertificateKeyStore(options.getSSLClientCertificateStore(),
+                        options.getSSLClientCertificatePassword());
         usedOptions_.setSSLTrustStore(options.getSSLTrustStore());
         usedOptions_.setSSLClientCipherSuites(options.getSSLClientCipherSuites());
         usedOptions_.setSSLClientProtocols(options.getSSLClientProtocols());
@@ -722,9 +692,14 @@ public class HttpWebConnection implements WebConnection {
     }
 
     /**
-     * Converts an HttpMethod into a WebResponse.
+     * Converts an HttpMethod into a {@link WebResponse}.
+     * @param httpResponse the web server's response
+     * @param webRequest the {@link WebRequest}
+     * @param responseBody the {@link DownloadedContent}
+     * @param loadTime the download time
+     * @return a wrapper for the downloaded body.
      */
-    private WebResponse makeWebResponse(final HttpResponse httpResponse,
+    protected WebResponse makeWebResponse(final HttpResponse httpResponse,
             final WebRequest webRequest, final DownloadedContent responseBody, final long loadTime) {
 
         String statusMessage = httpResponse.getStatusLine().getReasonPhrase();
@@ -741,6 +716,26 @@ public class HttpWebConnection implements WebConnection {
     }
 
     /**
+     * Downloads the response.
+     * This calls {@link #downloadResponseBody(HttpResponse)} and constructs the {@link WebResponse}.
+     * @param httpMethod the HttpUriRequest
+     * @param webRequest the {@link WebRequest}
+     * @param httpResponse the web server's response
+     * @param startTime the download start time
+     * @return a wrapper for the downloaded body.
+     * @throws IOException in case of problem reading/saving the body
+     */
+    protected WebResponse downloadResponse(final HttpUriRequest httpMethod,
+            final WebRequest webRequest, final HttpResponse httpResponse,
+            final long startTime) throws IOException {
+
+        final DownloadedContent downloadedBody = downloadResponseBody(httpResponse);
+        final long endTime = System.currentTimeMillis();
+
+        return makeWebResponse(httpResponse, webRequest, downloadedBody, endTime - startTime);
+    }
+
+    /**
      * Downloads the response body.
      * @param httpResponse the web server's response
      * @return a wrapper for the downloaded body.
@@ -753,7 +748,8 @@ public class HttpWebConnection implements WebConnection {
         }
 
         try (InputStream is = httpEntity.getContent()) {
-            return downloadContent(is, webClient_.getOptions().getMaxInMemory());
+            return downloadContent(is, webClient_.getOptions().getMaxInMemory(),
+                        webClient_.getOptions().getTempFileDirectory());
         }
     }
 
@@ -761,10 +757,12 @@ public class HttpWebConnection implements WebConnection {
      * Reads the content of the stream and saves it in memory or on the file system.
      * @param is the stream to read
      * @param maxInMemory the maximumBytes to store in memory, after which save to a local file
+     * @param tempFileDirectory the directory to be used or null for the system default
      * @return a wrapper around the downloaded content
      * @throws IOException in case of read issues
      */
-    public static DownloadedContent downloadContent(final InputStream is, final int maxInMemory) throws IOException {
+    public static DownloadedContent downloadContent(final InputStream is, final int maxInMemory,
+            final File tempFileDirectory) throws IOException {
         if (is == null) {
             return new DownloadedContent.InMemory(null);
         }
@@ -775,9 +773,9 @@ public class HttpWebConnection implements WebConnection {
             try {
                 while ((nbRead = is.read(buffer)) != -1) {
                     bos.write(buffer, 0, nbRead);
-                    if (bos.size() > maxInMemory) {
+                    if (maxInMemory > 0 && bos.size() > maxInMemory) {
                         // we have exceeded the max for memory, let's write everything to a temporary file
-                        final File file = File.createTempFile("htmlunit", ".tmp");
+                        final File file = File.createTempFile("htmlunit", ".tmp", tempFileDirectory);
                         file.deleteOnExit();
                         try (OutputStream fos = Files.newOutputStream(file.toPath())) {
                             bos.writeTo(fos); // what we have already read
@@ -804,7 +802,7 @@ public class HttpWebConnection implements WebConnection {
     /**
      * Constructs an appropriate WebResponse.
      * May be overridden by subclasses to return a specialized WebResponse.
-     * @param responseData Data that was send back
+     * @param responseData Data that was sent back
      * @param webRequest the request used to get this response
      * @param loadTime How long the response took to be sent
      * @return the new WebResponse
@@ -816,20 +814,164 @@ public class HttpWebConnection implements WebConnection {
         return new WebResponse(responseData, webRequest, loadTime);
     }
 
+    /**
+     * Returns the {@code Sec-Fetch-Mode} value to use for this request: the explicit
+     * override set on the request if any, otherwise the default mode implied by its
+     * {@link WebRequest.FetchDestination}.
+     * @param webRequest the request
+     * @return the {@code Sec-Fetch-Mode} header value
+     */
+    private static String computeSecFetchMode(final WebRequest webRequest) {
+        final WebRequest.FetchMode override = webRequest.getFetchModeOverride();
+        if (override != null) {
+            return override.getValue();
+        }
+        return defaultFetchModeFor(webRequest.getFetchDestination()).getValue();
+    }
+
+    /**
+     * The default {@link WebRequest.FetchMode} implied by a given
+     * {@link WebRequest.FetchDestination}, absent an explicit override.
+     * @param destination the destination
+     * @return the default mode for that destination
+     */
+    private static WebRequest.FetchMode defaultFetchModeFor(final WebRequest.FetchDestination destination) {
+        switch (destination) {
+            case DOCUMENT:
+            case IFRAME:
+            case FRAME:
+                return WebRequest.FetchMode.NAVIGATE;
+
+            // fonts are always fetched in CORS mode regardless of crossorigin attribute;
+            // XHR/fetch() default to CORS mode too (fetch() can override to no-cors/same-origin,
+            // via WebRequest.setFetchModeOverride)
+            case FONT:
+            case MANIFEST:
+            case EMPTY:
+                return WebRequest.FetchMode.CORS;
+
+            // workers can never be cross-origin
+            case WORKER:
+            case SHARED_WORKER:
+            case SERVICE_WORKER:
+                return WebRequest.FetchMode.SAME_ORIGIN;
+
+            case WEBSOCKET:
+                return WebRequest.FetchMode.WEBSOCKET;
+
+            // image, script, style, object, embed, audio, video, track, report
+            default:
+                return WebRequest.FetchMode.NO_CORS;
+        }
+    }
+
+    /**
+     * Computes the {@code Sec-Fetch-Site} value for this request by comparing the
+     * request's {@link WebRequest#getRequestingUrl() initiator} against the target
+     * URL.
+     * @param webRequest the request
+     * @param targetUrl the target URL (passed separately since callers already have it)
+     * @return one of {@code none}, {@code same-origin}, {@code same-site} or {@code cross-site}
+     */
+    private static String computeSecFetchSite(final WebRequest webRequest, final URL targetUrl) {
+        final URL requestingUrl = webRequest.getRequestingUrl();
+        if (requestingUrl == null) {
+            // no initiator - e.g. a typed URL, bookmark, or other browser-chrome-initiated navigation
+            return "none";
+        }
+        if (isSameOrigin(requestingUrl, targetUrl)) {
+            return "same-origin";
+        }
+        if (isSameSite(requestingUrl, targetUrl)) {
+            return "same-site";
+        }
+        return "cross-site";
+    }
+
+    private static boolean isSameOrigin(final URL a, final URL b) {
+        return a.getProtocol().equals(b.getProtocol())
+                && a.getHost().equalsIgnoreCase(b.getHost())
+                && effectivePort(a) == effectivePort(b);
+    }
+
+    private static int effectivePort(final URL url) {
+        final int port = url.getPort();
+        return port == -1 ? url.getDefaultPort() : port;
+    }
+
+    /**
+     * Same-site comparison per the Fetch Metadata / HTML "same site" algorithm: same
+     * scheme and same registrable domain (eTLD+1), ignoring port and subdomain.
+     *
+     * @param a first URL
+     * @param b second URL
+     * @return whether both URLs are considered "same-site"
+     */
+    private static boolean isSameSite(final URL a, final URL b) {
+        if (!a.getProtocol().equals(b.getProtocol())) {
+            return false;
+        }
+
+        final String registrableDomainA = HttpClientConverter.registrableDomain(a.getHost());
+        final String registrableDomainB = HttpClientConverter.registrableDomain(b.getHost());
+
+        // both are normalized and in lower case
+        return registrableDomainA.equals(registrableDomainB);
+    }
+
+    /**
+     * Returns whether the given URL is a "potentially trustworthy origin" as defined by
+     * the Secure Contexts spec, which gates whether {@code Sec-Fetch-*} headers (and
+     * {@code Upgrade-Insecure-Requests}) are sent at all. Note that {@code localhost}
+     * and loopback addresses are considered trustworthy even over plain HTTP.
+     * @param url the target URL
+     * @return whether the origin is potentially trustworthy
+     */
+    private static boolean isPotentiallyTrustworthy(final URL url) {
+        final String protocol = url.getProtocol();
+        if ("https".equals(protocol) || "wss".equals(protocol) || "file".equals(protocol)) {
+            return true;
+        }
+        if (!"http".equals(protocol) && !"ws".equals(protocol)) {
+            // be conservative for schemes not explicitly handled here (e.g. about:, data:, blob:
+            // callers should special-case these before reaching HTTP request construction)
+            return false;
+        }
+
+        final String host = url.getHost();
+        return "localhost".equalsIgnoreCase(host)
+                || host.toLowerCase(java.util.Locale.ROOT).endsWith(".localhost")
+                || "127.0.0.1".equals(host)
+                || host.startsWith("127.")
+                || "::1".equals(host)
+                || "[::1]".equals(host);
+    }
+
     private List<HttpRequestInterceptor> getHttpRequestInterceptors(final WebRequest webRequest) {
         final List<HttpRequestInterceptor> list = new ArrayList<>();
-        final Map<String, String> requestHeaders = webRequest.getAdditionalHeaders();
+        final Map<String, String> requestHeaders = new HashMap<>(webRequest.getAdditionalHeaders());
         final URL url = webRequest.getUrl();
         final StringBuilder host = new StringBuilder(url.getHost());
 
+        final BrowserVersion browserVersion = webClient_.getBrowserVersion();
+
         final int port = url.getPort();
         if (port > 0 && port != url.getDefaultPort()) {
-            host.append(':');
-            host.append(port);
+            host.append(':').append(port);
         }
 
+        // Both Sec-Fetch-* (https://www.w3.org/TR/fetch-metadata/) and Client Hints
+        // (https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Sec-CH-UA) are
+        // only sent to potentially-trustworthy target origins; computed once up front.
+        final boolean isSecureContext = isPotentiallyTrustworthy(url);
+
+        // computed unconditionally: also drives Upgrade-Insecure-Requests below,
+        // which is not gated by origin trustworthiness the way Sec-Fetch-*/Client
+        // Hints are
+        final String secFetchMode = computeSecFetchMode(webRequest);
+
         // make sure the headers are added in the right order
-        final String[] headerNames = webClient_.getBrowserVersion().getHeaderNamesOrdered();
+        final String[] headerNames = browserVersion.getHeaderNamesOrdered();
         for (final String header : headerNames) {
             if (HttpHeader.HOST.equals(header)) {
                 list.add(new HostHeaderHttpRequestInterceptor(host.toString()));
@@ -837,85 +979,158 @@ public class HttpWebConnection implements WebConnection {
             else if (HttpHeader.USER_AGENT.equals(header)) {
                 String headerValue = webRequest.getAdditionalHeader(HttpHeader.USER_AGENT);
                 if (headerValue == null) {
-                    headerValue = webClient_.getBrowserVersion().getUserAgent();
+                    headerValue = browserVersion.getUserAgent();
                 }
                 list.add(new UserAgentHeaderHttpRequestInterceptor(headerValue));
+                requestHeaders.remove(HttpHeader.USER_AGENT);
             }
             else if (HttpHeader.ACCEPT.equals(header)) {
                 final String headerValue = webRequest.getAdditionalHeader(HttpHeader.ACCEPT);
                 if (headerValue != null) {
                     list.add(new AcceptHeaderHttpRequestInterceptor(headerValue));
+                    requestHeaders.remove(HttpHeader.ACCEPT);
                 }
             }
             else if (HttpHeader.ACCEPT_LANGUAGE.equals(header)) {
                 final String headerValue = webRequest.getAdditionalHeader(HttpHeader.ACCEPT_LANGUAGE);
                 if (headerValue != null) {
                     list.add(new AcceptLanguageHeaderHttpRequestInterceptor(headerValue));
+                    requestHeaders.remove(HttpHeader.ACCEPT_LANGUAGE);
                 }
             }
             else if (HttpHeader.ACCEPT_ENCODING.equals(header)) {
                 final String headerValue = webRequest.getAdditionalHeader(HttpHeader.ACCEPT_ENCODING);
                 if (headerValue != null) {
                     list.add(new AcceptEncodingHeaderHttpRequestInterceptor(headerValue));
+                    requestHeaders.remove(HttpHeader.ACCEPT_ENCODING);
                 }
             }
             else if (HttpHeader.SEC_FETCH_DEST.equals(header)) {
                 final String headerValue = webRequest.getAdditionalHeader(HttpHeader.SEC_FETCH_DEST);
                 if (headerValue != null) {
                     list.add(new SecFetchDestHeaderHttpRequestInterceptor(headerValue));
+                    requestHeaders.remove(HttpHeader.SEC_FETCH_DEST);
+                }
+                else if (isSecureContext) {
+                    list.add(new SecFetchDestHeaderHttpRequestInterceptor(webRequest.getFetchDestination().getValue()));
                 }
             }
             else if (HttpHeader.SEC_FETCH_MODE.equals(header)) {
                 final String headerValue = webRequest.getAdditionalHeader(HttpHeader.SEC_FETCH_MODE);
                 if (headerValue != null) {
                     list.add(new SecFetchModeHeaderHttpRequestInterceptor(headerValue));
+                    requestHeaders.remove(HttpHeader.SEC_FETCH_MODE);
+                }
+                else if (isSecureContext) {
+                    list.add(new SecFetchModeHeaderHttpRequestInterceptor(secFetchMode));
                 }
             }
             else if (HttpHeader.SEC_FETCH_SITE.equals(header)) {
                 final String headerValue = webRequest.getAdditionalHeader(HttpHeader.SEC_FETCH_SITE);
                 if (headerValue != null) {
                     list.add(new SecFetchSiteHeaderHttpRequestInterceptor(headerValue));
+                    requestHeaders.remove(HttpHeader.SEC_FETCH_SITE);
+                }
+                else if (isSecureContext) {
+                    list.add(new SecFetchSiteHeaderHttpRequestInterceptor(computeSecFetchSite(webRequest, url)));
                 }
             }
             else if (HttpHeader.SEC_FETCH_USER.equals(header)) {
                 final String headerValue = webRequest.getAdditionalHeader(HttpHeader.SEC_FETCH_USER);
                 if (headerValue != null) {
                     list.add(new SecFetchUserHeaderHttpRequestInterceptor(headerValue));
+                    requestHeaders.remove(HttpHeader.SEC_FETCH_USER);
+                }
+
+                // Per spec, sent only for navigations backed by real user activation;
+                // real browsers omit it entirely otherwise (never send "?0").
+                else if (isSecureContext
+                        && WebRequest.FetchMode.NAVIGATE.getValue().equals(secFetchMode)
+                        && webRequest.isUserActivation()) {
+                    list.add(new SecFetchUserHeaderHttpRequestInterceptor("?1"));
                 }
             }
             else if (HttpHeader.SEC_CH_UA.equals(header)) {
-                final String headerValue = webRequest.getAdditionalHeader(HttpHeader.SEC_CH_UA);
-                if (headerValue != null) {
-                    list.add(new SecClientHintUserAgentHeaderHttpRequestInterceptor(headerValue));
+                // Client Hints require a secure context, same as Sec-Fetch-*
+                // (https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Sec-CH-UA)
+                if (isSecureContext) {
+                    String headerValue = webRequest.getAdditionalHeader(HttpHeader.SEC_CH_UA);
+                    if (headerValue != null) {
+                        list.add(new SecClientHintUserAgentHeaderHttpRequestInterceptor(headerValue));
+                        requestHeaders.remove(HttpHeader.SEC_CH_UA);
+                    }
+                    else {
+                        if (browserVersion.hasFeature(HTTP_HEADER_CH_UA)) {
+                            headerValue = browserVersion.getSecClientHintUserAgentHeader();
+                            list.add(new SecClientHintUserAgentHeaderHttpRequestInterceptor(headerValue));
+                        }
+                    }
                 }
             }
             else if (HttpHeader.SEC_CH_UA_MOBILE.equals(header)) {
-                final String headerValue = webRequest.getAdditionalHeader(HttpHeader.SEC_CH_UA_MOBILE);
-                if (headerValue != null) {
-                    list.add(new SecClientHintUserAgentMobileHeaderHttpRequestInterceptor(headerValue));
+                if (isSecureContext) {
+                    final String headerValue = webRequest.getAdditionalHeader(HttpHeader.SEC_CH_UA_MOBILE);
+                    if (headerValue != null) {
+                        list.add(new SecClientHintUserAgentMobileHeaderHttpRequestInterceptor(headerValue));
+                        requestHeaders.remove(HttpHeader.SEC_CH_UA_MOBILE);
+                    }
+                    else {
+                        if (browserVersion.hasFeature(HTTP_HEADER_CH_UA)) {
+                            list.add(new SecClientHintUserAgentMobileHeaderHttpRequestInterceptor("?0"));
+                        }
+                    }
                 }
             }
             else if (HttpHeader.SEC_CH_UA_PLATFORM.equals(header)) {
-                final String headerValue = webRequest.getAdditionalHeader(HttpHeader.SEC_CH_UA_PLATFORM);
+                if (isSecureContext) {
+                    String headerValue = webRequest.getAdditionalHeader(HttpHeader.SEC_CH_UA_PLATFORM);
+                    if (headerValue != null) {
+                        list.add(new SecClientHintUserAgentPlatformHeaderHttpRequestInterceptor(headerValue));
+                        requestHeaders.remove(HttpHeader.SEC_CH_UA_PLATFORM);
+                    }
+                    else {
+                        if (browserVersion.hasFeature(HTTP_HEADER_CH_UA)) {
+                            headerValue = browserVersion.getSecClientHintUserAgentPlatformHeader();
+                            list.add(new SecClientHintUserAgentPlatformHeaderHttpRequestInterceptor(headerValue));
+                        }
+                    }
+                }
+            }
+            else if (HttpHeader.PRIORITY.equals(header)) {
+                final String headerValue = webRequest.getAdditionalHeader(HttpHeader.PRIORITY);
                 if (headerValue != null) {
-                    list.add(new SecClientHintUserAgentPlatformHeaderHttpRequestInterceptor(headerValue));
+                    list.add(new PriorityHeaderHttpRequestInterceptor(headerValue));
+                    requestHeaders.remove(HttpHeader.PRIORITY);
+                }
+                else {
+                    if (browserVersion.hasFeature(HTTP_HEADER_PRIORITY)) {
+                        list.add(new PriorityHeaderHttpRequestInterceptor("u=0, i"));
+                    }
                 }
             }
             else if (HttpHeader.UPGRADE_INSECURE_REQUESTS.equals(header)) {
                 final String headerValue = webRequest.getAdditionalHeader(HttpHeader.UPGRADE_INSECURE_REQUESTS);
                 if (headerValue != null) {
                     list.add(new UpgradeInsecureRequestHeaderHttpRequestInterceptor(headerValue));
+                    requestHeaders.remove(HttpHeader.UPGRADE_INSECURE_REQUESTS);
+                }
+
+                // Real browsers only send this for navigations (top-level, iframe, frame),
+                // never for subresource fetches (image/script/style/xhr/...).
+                else if (WebRequest.FetchMode.NAVIGATE.getValue().equals(secFetchMode)
+                            && HttpMethod.OPTIONS != webRequest.getHttpMethod()) {
+                    list.add(new UpgradeInsecureRequestHeaderHttpRequestInterceptor("1"));
                 }
             }
             else if (HttpHeader.REFERER.equals(header)) {
                 final String headerValue = webRequest.getAdditionalHeader(HttpHeader.REFERER);
                 if (headerValue != null) {
                     list.add(new RefererHeaderHttpRequestInterceptor(headerValue));
+                    requestHeaders.remove(HttpHeader.REFERER);
                 }
             }
             else if (HttpHeader.CONNECTION.equals(header)) {
-                list.add(new RequestClientConnControl(
-                                webClient_.getBrowserVersion().hasFeature(CONNECTION_KEEP_ALIVE_IE)));
+                list.add(new RequestClientConnControl());
             }
             else if (HttpHeader.COOKIE.equals(header)) {
                 if (!webRequest.hasHint(HttpHint.BlockCookies)) {
@@ -1137,6 +1352,20 @@ public class HttpWebConnection implements WebConnection {
         }
     }
 
+    private static final class PriorityHeaderHttpRequestInterceptor
+            implements HttpRequestInterceptor {
+        private final String value_;
+
+        PriorityHeaderHttpRequestInterceptor(final String value) {
+            value_ = value;
+        }
+
+        @Override
+        public void process(final HttpRequest request, final HttpContext context) throws HttpException, IOException {
+            request.setHeader(HttpHeader.PRIORITY, value_);
+        }
+    }
+
     private static class MultiHttpRequestInterceptor implements HttpRequestInterceptor {
         private final Map<String, String> map_;
 
@@ -1158,12 +1387,12 @@ public class HttpWebConnection implements WebConnection {
         private static final String PROXY_CONN_DIRECTIVE = "Proxy-Connection";
         private static final String CONN_DIRECTIVE = "Connection";
         private static final String CONN_KEEP_ALIVE = "keep-alive";
-        private static final String CONN_KEEP_ALIVE_IE = "Keep-Alive";
 
-        private final boolean ie_;
-
-        RequestClientConnControl(final boolean ie) {
-            ie_ = ie;
+        /**
+         * Ctor.
+         */
+        RequestClientConnControl() {
+            super();
         }
 
         @Override
@@ -1171,7 +1400,7 @@ public class HttpWebConnection implements WebConnection {
             throws HttpException, IOException {
             final String method = request.getRequestLine().getMethod();
             if ("CONNECT".equalsIgnoreCase(method)) {
-                request.setHeader(PROXY_CONN_DIRECTIVE, ie_ ? CONN_KEEP_ALIVE_IE : CONN_KEEP_ALIVE);
+                request.setHeader(PROXY_CONN_DIRECTIVE, CONN_KEEP_ALIVE);
                 return;
             }
 
@@ -1183,50 +1412,15 @@ public class HttpWebConnection implements WebConnection {
                 return;
             }
 
-            if (route.getHopCount() == 1 || route.isTunnelled()) {
-                if (!request.containsHeader(CONN_DIRECTIVE)) {
-                    request.addHeader(CONN_DIRECTIVE, ie_ ? CONN_KEEP_ALIVE_IE : CONN_KEEP_ALIVE);
-                }
+            if ((route.getHopCount() == 1 || route.isTunnelled())
+                    && !request.containsHeader(CONN_DIRECTIVE)) {
+                request.addHeader(CONN_DIRECTIVE, CONN_KEEP_ALIVE);
             }
-            if (route.getHopCount() == 2 && !route.isTunnelled()) {
-                if (!request.containsHeader(PROXY_CONN_DIRECTIVE)) {
-                    request.addHeader(PROXY_CONN_DIRECTIVE, ie_ ? CONN_KEEP_ALIVE_IE : CONN_KEEP_ALIVE);
-                }
+            if (route.getHopCount() == 2
+                    && !route.isTunnelled()
+                    && !request.containsHeader(PROXY_CONN_DIRECTIVE)) {
+                request.addHeader(PROXY_CONN_DIRECTIVE, CONN_KEEP_ALIVE);
             }
-        }
-    }
-
-    /**
-     * An authentication cache that is synchronized.
-     */
-    private static final class SynchronizedAuthCache extends BasicAuthCache {
-
-        SynchronizedAuthCache() {
-        }
-
-        @Override
-        public synchronized void put(final HttpHost host, final AuthScheme authScheme) {
-            super.put(host, authScheme);
-        }
-
-        @Override
-        public synchronized AuthScheme get(final HttpHost host) {
-            return super.get(host);
-        }
-
-        @Override
-        public synchronized void remove(final HttpHost host) {
-            super.remove(host);
-        }
-
-        @Override
-        public synchronized void clear() {
-            super.clear();
-        }
-
-        @Override
-        public synchronized String toString() {
-            return super.toString();
         }
     }
 
@@ -1235,7 +1429,13 @@ public class HttpWebConnection implements WebConnection {
      */
     @Override
     public void close() {
-        httpClientBuilder_.clear();
+        synchronized (httpClientBuilder_) {
+            httpClientBuilder_.clear();
+        }
+        sharedAuthCache_.clear();
+        synchronized (httpClientContextByThread_) {
+            httpClientContextByThread_.clear();
+        }
 
         if (connectionManager_ != null) {
             connectionManager_.shutdown();

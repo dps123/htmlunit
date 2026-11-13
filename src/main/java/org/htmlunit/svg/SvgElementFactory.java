@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,17 @@
  */
 package org.htmlunit.svg;
 
-import static org.htmlunit.BrowserVersionFeatures.SVG_UNKNOWN_ARE_DOM;
-
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
-
-import org.xml.sax.Attributes;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.htmlunit.SgmlPage;
 import org.htmlunit.html.DomAttr;
 import org.htmlunit.html.DomElement;
 import org.htmlunit.html.ElementFactory;
 import org.htmlunit.util.StringUtils;
+import org.xml.sax.Attributes;
 
 /**
  * Element factory which creates elements by calling the constructor on a
@@ -56,13 +54,33 @@ public class SvgElementFactory implements ElementFactory {
         SvgTitle.class, SvgTRef.class, SvgTSpan.class, SvgUse.class, SvgView.class, SvgVKern.class
     };
 
-    private static final Map<String, Class<?>> ELEMENTS_ = new HashMap<>();
+    private static final Map<String, Class<?>> ELEMENTS_ = new ConcurrentHashMap<>();
+
+    /**
+     * The svg element names with upper case chars; the html parser lowercases the names of
+     * the elements and restores the case of these names.
+     * @see <a href="https://html.spec.whatwg.org/multipage/parsing.html#parsing-main-inforeign">
+     *      HTML Living Standard - adjust SVG tag names</a>
+     */
+    private static final Map<String, String> CASE_SENSITIVE_TAG_NAMES_ = new HashMap<>();
+
+    static {
+        for (final String name : new String[] {
+            "altGlyph", "altGlyphDef", "altGlyphItem", "animateColor", "animateMotion", "animateTransform",
+            "clipPath", "feBlend", "feColorMatrix", "feComponentTransfer", "feComposite", "feConvolveMatrix",
+            "feDiffuseLighting", "feDisplacementMap", "feDistantLight", "feDropShadow", "feFlood", "feFuncA",
+            "feFuncB", "feFuncG", "feFuncR", "feGaussianBlur", "feImage", "feMerge", "feMergeNode", "feMorphology",
+            "feOffset", "fePointLight", "feSpecularLighting", "feSpotLight", "feTile", "feTurbulence",
+            "foreignObject", "glyphRef", "linearGradient", "radialGradient", "textPath"}) {
+            CASE_SENSITIVE_TAG_NAMES_.put(StringUtils.toRootLowerCase(name), name);
+        }
+    }
 
     static {
         try {
             for (final Class<?> klass : CLASSES_) {
                 final String key = klass.getField("TAG_NAME").get(null).toString();
-                ELEMENTS_.put(StringUtils.toRootLowerCaseWithCache(key), klass);
+                ELEMENTS_.put(StringUtils.toRootLowerCase(key), klass);
             }
         }
         catch (final Exception e) {
@@ -84,19 +102,11 @@ public class SvgElementFactory implements ElementFactory {
     @Override
     public DomElement createElementNS(final SgmlPage page, final String namespaceURI, final String qualifiedName,
             final Attributes attributes) {
-        return createElementNS(page, namespaceURI, qualifiedName, attributes, false);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public DomElement createElementNS(final SgmlPage page, final String namespaceURI, String qualifiedNameLC,
-            final Attributes attributes, final boolean checkBrowserCompatibility) {
 
         final Map<String, DomAttr> attributeMap = toMap(page, attributes);
-        qualifiedNameLC = StringUtils.toRootLowerCaseWithCache(qualifiedNameLC);
-        String tagNameLC = qualifiedNameLC;
+        // the lookup is case insensitive, but the element keeps the case of the name
+        // (like the browsers, e.g. 'foreignObject')
+        String tagNameLC = StringUtils.toRootLowerCase(qualifiedName);
         if (tagNameLC.indexOf(':') != -1) {
             tagNameLC = tagNameLC.substring(tagNameLC.indexOf(':') + 1);
         }
@@ -106,19 +116,14 @@ public class SvgElementFactory implements ElementFactory {
         if (klass != null) {
             try {
                 element = (DomElement) klass.getDeclaredConstructors()[0]
-                        .newInstance(namespaceURI, qualifiedNameLC, page, attributeMap);
+                        .newInstance(namespaceURI, qualifiedName, page, attributeMap);
             }
             catch (final Exception e) {
                 throw new IllegalStateException(e);
             }
         }
         if (element == null) {
-            if (page.getWebClient().getBrowserVersion().hasFeature(SVG_UNKNOWN_ARE_DOM)) {
-                element = new DomElement(namespaceURI, qualifiedNameLC, page, attributeMap);
-            }
-            else {
-                element = new SvgElement(namespaceURI, qualifiedNameLC, page, attributeMap);
-            }
+            element = new SvgElement(namespaceURI, qualifiedName, page, attributeMap);
         }
         return element;
     }
@@ -141,6 +146,21 @@ public class SvgElementFactory implements ElementFactory {
             }
         }
         return attributeMap;
+    }
+
+    /**
+     * Returns the name of an svg element created by the html parser; the name is lowercased
+     * and the case of some names is restored (e.g. 'foreignobject' becomes 'foreignObject')
+     * like the browsers do it.
+     *
+     * @param tagName the tag name from the html source
+     * @return the adjusted tag name
+     * @see <a href="https://html.spec.whatwg.org/multipage/parsing.html#parsing-main-inforeign">
+     *      HTML Living Standard - adjust SVG tag names</a>
+     */
+    public static String adjustTagNameForHtmlParser(final String tagName) {
+        final String tagNameLC = StringUtils.toRootLowerCase(tagName);
+        return CASE_SENSITIVE_TAG_NAMES_.getOrDefault(tagNameLC, tagNameLC);
     }
 
     /**

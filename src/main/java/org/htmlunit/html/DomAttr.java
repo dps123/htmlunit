@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,12 @@
  */
 package org.htmlunit.html;
 
-import org.w3c.dom.Attr;
-import org.w3c.dom.TypeInfo;
+import java.io.IOException;
+import java.io.ObjectInputStream;
 
 import org.htmlunit.SgmlPage;
+import org.w3c.dom.Attr;
+import org.w3c.dom.TypeInfo;
 
 /**
  * An attribute of an element. Attributes are stored in {@link HtmlElement},
@@ -26,6 +28,7 @@ import org.htmlunit.SgmlPage;
  * @author Denis N. Antonioli
  * @author David K. Taylor
  * @author Ahmed Ashour
+ * @author Ronald Brill
  */
 public class DomAttr extends DomNamespaceNode implements Attr {
 
@@ -36,7 +39,7 @@ public class DomAttr extends DomNamespaceNode implements Attr {
      * Instantiate a new attribute.
      *
      * @param page the page that the attribute belongs to
-     * @param namespaceURI the namespace that defines the attribute name (may be {@code null})
+     * @param namespaceURI the namespace that defines the attribute name (maybe {@code null})
      * @param qualifiedName the name of the attribute
      * @param value the value of the attribute
      * @param specified {@code true} if this attribute was explicitly given a value in the source document,
@@ -45,15 +48,23 @@ public class DomAttr extends DomNamespaceNode implements Attr {
     public DomAttr(final SgmlPage page, final String namespaceURI, final String qualifiedName, final String value,
         final boolean specified) {
         super(namespaceURI, qualifiedName, page);
-
-        if (value != null && value.isEmpty()) {
-            value_ = DomElement.ATTRIBUTE_VALUE_EMPTY;
-        }
-        else {
-            value_ = value;
-        }
-
+        value_ = normalizeValue(value);
         specified_ = specified;
+    }
+
+    // still done for backward compatibility, see DomElement.ATTRIBUTE_VALUE_EMPTY
+    @SuppressWarnings("deprecation")
+    private static String normalizeValue(final String value) {
+        if (value != null && value.isEmpty()) {
+            return DomElement.ATTRIBUTE_VALUE_EMPTY;
+        }
+        return value;
+    }
+
+    private void readObject(final ObjectInputStream ois) throws ClassNotFoundException, IOException {
+        ois.defaultReadObject();
+        // the deserialized empty string is a new instance
+        value_ = normalizeValue(value_);
     }
 
     /**
@@ -61,7 +72,7 @@ public class DomAttr extends DomNamespaceNode implements Attr {
      */
     @Override
     public short getNodeType() {
-        return org.w3c.dom.Node.ATTRIBUTE_NODE;
+        return ATTRIBUTE_NODE;
     }
 
     /**
@@ -109,7 +120,7 @@ public class DomAttr extends DomNamespaceNode implements Attr {
      */
     @Override
     public void setValue(final String value) {
-        value_ = value;
+        value_ = normalizeValue(value);
         specified_ = true;
     }
 
@@ -143,7 +154,7 @@ public class DomAttr extends DomNamespaceNode implements Attr {
      */
     @Override
     public boolean isId() {
-        return "id".equals(getNodeName());
+        return DomElement.ID_ATTRIBUTE.equals(getNodeName());
     }
 
     /**
@@ -159,7 +170,11 @@ public class DomAttr extends DomNamespaceNode implements Attr {
      */
     @Override
     public String getCanonicalXPath() {
-        return getParentNode().getCanonicalXPath() + "/@" + getName();
+        final DomNode parent = getParentNode();
+        if (parent == null) {
+            return "/@" + getName();
+        }
+        return parent.getCanonicalXPath() + "/@" + getName();
     }
 
     /**
@@ -175,13 +190,19 @@ public class DomAttr extends DomNamespaceNode implements Attr {
      */
     @Override
     public void setTextContent(final String textContent) {
-        final boolean mappedElement = HtmlPage.isMappedElement(getOwnerDocument(), getName());
+        final DomElement owner = getOwnerElement();
+        final boolean mappedElement = owner != null
+                && getOwnerDocument() instanceof HtmlPage
+                && (DomElement.NAME_ATTRIBUTE.equals(getName()) || DomElement.ID_ATTRIBUTE.equals(getName()));
+
+        final HtmlPage htmlPage = mappedElement ? (HtmlPage) getPage() : null;
+
         if (mappedElement) {
-            ((HtmlPage) getPage()).removeMappedElement((HtmlElement) getOwnerElement());
+            htmlPage.removeMappedElement(owner, false, false);
         }
         setValue(textContent);
         if (mappedElement) {
-            ((HtmlPage) getPage()).addMappedElement(getOwnerElement());
+            htmlPage.addMappedElement(owner, false);
         }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,13 @@ package org.htmlunit.javascript.background;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.lang.ref.WeakReference;
-import java.util.ArrayList;
 import java.util.PriorityQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.htmlunit.Page;
 import org.htmlunit.WebWindow;
 
@@ -34,27 +33,35 @@ import org.htmlunit.WebWindow;
  *
  * <p>This job manager is serializable, but any running jobs are transient and are not serialized.</p>
  *
+ * <p>The instance itself is the monitor (synchronized methods, wait / notifyAll); the class is
+ * package private and only exposed through the {@link JavaScriptJobManager} interface.</p>
+ *
  * @author Daniel Gredler
  * @author Katharina Probst
  * @author Amit Manjhi
  * @author Ronald Brill
  * @author Carsten Steul
  */
+@SuppressWarnings("PMD.AvoidSynchronizedAtMethodLevel")
 class JavaScriptJobManagerImpl implements JavaScriptJobManager {
 
     /**
      * The window to which this job manager belongs (weakly referenced, so as not
-     * to leak memory).
+     * to leak memory). Not final because it has to be restored by {@link #readObject(ObjectInputStream)}.
      */
-    private final transient WeakReference<WebWindow> window_;
+    private transient WeakReference<WebWindow> window_;
+
+    /**
+     * True after deserialization; the event loop is not running and has
+     * to be started with the first job added.
+     */
+    private transient volatile boolean startEventLoop_;
 
     /**
      * Queue of jobs that are scheduled to run. This is a priority queue, sorted
      * by closest target execution time.
      */
     private transient PriorityQueue<JavaScriptJob> scheduledJobsQ_ = new PriorityQueue<>();
-
-    private transient ArrayList<Integer> cancelledJobs_ = new ArrayList<>();
 
     private transient JavaScriptJob currentlyRunningJob_;
 
@@ -119,6 +126,12 @@ class JavaScriptJobManagerImpl implements JavaScriptJobManager {
         final int id = NEXT_JOB_ID_.getAndIncrement();
         job.setId(Integer.valueOf(id));
 
+        if (startEventLoop_) {
+            // registering the window more than once does no harm
+            startEventLoop_ = false;
+            w.getWebClient().getJavaScriptEngine().registerWindowAndMaybeStartEventLoop(w);
+        }
+
         synchronized (this) {
             scheduledJobsQ_.add(job);
 
@@ -130,7 +143,7 @@ class JavaScriptJobManagerImpl implements JavaScriptJobManager {
                 printQueue();
             }
 
-            notify();
+            notifyAll();
         }
 
         return id;
@@ -143,43 +156,30 @@ class JavaScriptJobManagerImpl implements JavaScriptJobManager {
             final int jobId = job.getId().intValue();
             if (jobId == id) {
                 scheduledJobsQ_.remove(job);
+                notifyAll();
                 break;
             }
         }
-        cancelledJobs_.add(Integer.valueOf(id));
-        notify();
     }
 
     /** {@inheritDoc} */
     @Override
     public synchronized void stopJob(final int id) {
-        for (final JavaScriptJob job : scheduledJobsQ_) {
-            final int jobId = job.getId().intValue();
-            if (jobId == id) {
-                scheduledJobsQ_.remove(job);
-                // TODO: should we try to interrupt the job if it is running?
-                break;
-            }
-        }
-        cancelledJobs_.add(Integer.valueOf(id));
-        notify();
+        // at the moment the same as removeJob(int) because we
+        // do not touch the current job
+        removeJob(id);
     }
 
     /** {@inheritDoc} */
     @Override
     public synchronized void removeAllJobs() {
-        if (currentlyRunningJob_ != null) {
-            cancelledJobs_.add(currentlyRunningJob_.getId());
-        }
-        for (final JavaScriptJob job : scheduledJobsQ_) {
-            cancelledJobs_.add(job.getId());
-        }
         scheduledJobsQ_.clear();
-        notify();
+        notifyAll();
     }
 
     /** {@inheritDoc} */
     @Override
+    @SuppressWarnings("PMD.GuardLogStatement")
     public int waitForJobs(final long timeoutMillis) {
         final boolean debug = LOG.isDebugEnabled();
         if (debug) {
@@ -196,8 +196,11 @@ class JavaScriptJobManagerImpl implements JavaScriptJobManager {
                     }
                     catch (final InterruptedException e) {
                         LOG.error("InterruptedException while in waitForJobs", e);
+
+                        // restore interrupted status
+                        Thread.currentThread().interrupt();
                     }
-                    // maybe a change triggers the wakup; we have to recalculate the
+                    // maybe a change triggers the wakeup; we have to recalculate the
                     // wait time
                     now = System.currentTimeMillis();
                 }
@@ -213,13 +216,34 @@ class JavaScriptJobManagerImpl implements JavaScriptJobManager {
     /** {@inheritDoc} */
     @Override
     public int waitForJobsStartingBefore(final long delayMillis) {
-        return waitForJobsStartingBefore(delayMillis, null);
+        return waitForJobsStartingBefore(delayMillis, -1, null);
     }
 
     /** {@inheritDoc} */
     @Override
+    public int waitForJobsStartingBefore(final long delayMillis, final long timeoutMillis) {
+        return waitForJobsStartingBefore(delayMillis, timeoutMillis, null);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    @SuppressWarnings("PMD.GuardLogStatement")
     public int waitForJobsStartingBefore(final long delayMillis, final JavaScriptJobFilter filter) {
+        return waitForJobsStartingBefore(delayMillis, -1, filter);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    @SuppressWarnings("PMD.GuardLogStatement")
+    public int waitForJobsStartingBefore(final long delayMillis, final long timeoutMillis,
+            final JavaScriptJobFilter filter) {
         final boolean debug = LOG.isDebugEnabled();
+
+        long now = System.currentTimeMillis();
+        long end = now + timeoutMillis;
+        if (timeoutMillis < 0 || timeoutMillis < delayMillis) {
+            end = -1;
+        }
 
         final long latestExecutionTime = System.currentTimeMillis() + delayMillis;
         if (debug) {
@@ -238,12 +262,18 @@ class JavaScriptJobManagerImpl implements JavaScriptJobManager {
                             && currentlyRunningJob_.getTargetExecutionTime() < latestExecutionTime
                        );
 
-            while (pending) {
+            while (pending && (end == -1 || now < end)) {
                 try {
-                    wait(interval);
+                    final long waitTime = (end == -1)
+                                ? Math.max(40, interval)
+                                : Math.max(40, Math.min(interval, end - now));
+                    wait(waitTime);
                 }
                 catch (final InterruptedException e) {
                     LOG.error("InterruptedException while in waitForJobsStartingBefore", e);
+
+                    // restore interrupted status
+                    Thread.currentThread().interrupt();
                 }
 
                 earliestJob = getEarliestJob(filter);
@@ -254,6 +284,9 @@ class JavaScriptJobManagerImpl implements JavaScriptJobManager {
                                 && (filter == null || filter.passes(currentlyRunningJob_))
                                 && currentlyRunningJob_.getTargetExecutionTime() < latestExecutionTime
                            );
+                if (pending) {
+                    now = System.currentTimeMillis();
+                }
             }
         }
 
@@ -269,7 +302,7 @@ class JavaScriptJobManagerImpl implements JavaScriptJobManager {
     @Override
     public synchronized void shutdown() {
         scheduledJobsQ_.clear();
-        notify();
+        notifyAll();
     }
 
     /**
@@ -356,7 +389,7 @@ class JavaScriptJobManagerImpl implements JavaScriptJobManager {
      * {@inheritDoc}
      */
     @Override
-    public JavaScriptJob getEarliestJob() {
+    public synchronized JavaScriptJob getEarliestJob() {
         return scheduledJobsQ_.peek();
     }
 
@@ -381,6 +414,7 @@ class JavaScriptJobManagerImpl implements JavaScriptJobManager {
      * {@inheritDoc}
      */
     @Override
+    @SuppressWarnings("PMD.GuardLogStatement")
     public boolean runSingleJob(final JavaScriptJob givenJob) {
         assert givenJob != null;
         final JavaScriptJob job = getEarliestJob();
@@ -392,36 +426,35 @@ class JavaScriptJobManagerImpl implements JavaScriptJobManager {
         if (job.getTargetExecutionTime() > currentTime) {
             return false;
         }
+
+        final boolean debug = LOG.isDebugEnabled();
+
         synchronized (this) {
             if (scheduledJobsQ_.remove(job)) {
                 currentlyRunningJob_ = job;
+                // no need to notify if processing is started
             }
-            // no need to notify if processing is started
-        }
 
-        final boolean debug = LOG.isDebugEnabled();
-        final boolean isPeriodicJob = job.isPeriodic();
-        if (isPeriodicJob) {
-            final long jobPeriod = job.getPeriod().longValue();
+            // we have to do this inside the sync block because the removeJob() methods
+            // only looks at the scheduledJobsQ_
+            if (job.isPeriodic()) {
+                final long jobPeriod = job.getPeriod().longValue();
 
-            // reference: http://ejohn.org/blog/how-javascript-timers-work/
-            long timeDifference = currentTime - job.getTargetExecutionTime();
-            timeDifference = (timeDifference / jobPeriod) * jobPeriod + jobPeriod;
-            job.setTargetExecutionTime(job.getTargetExecutionTime() + timeDifference);
+                // reference: http://ejohn.org/blog/how-javascript-timers-work/
+                final long missedPeriods = (currentTime - job.getTargetExecutionTime()) / jobPeriod + 1;
+                job.setTargetExecutionTime(job.getTargetExecutionTime() + missedPeriods * jobPeriod);
 
-            // queue
-            synchronized (this) {
-                if (!cancelledJobs_.contains(job.getId())) {
-                    if (debug) {
-                        LOG.debug("Reschedulling job " + job);
-                    }
-                    scheduledJobsQ_.add(job);
-                    notify();
+                // queue to run again after the next period
+                if (debug) {
+                    LOG.debug("Rescheduling periodic job " + job);
                 }
+                scheduledJobsQ_.add(job);
+                notifyAll();
             }
         }
+
         if (debug) {
-            final String periodicJob = isPeriodicJob ? "interval " : "";
+            final String periodicJob = job.isPeriodic() ? "interval " : "";
             LOG.debug("Starting " + periodicJob + "job " + job);
         }
         try {
@@ -435,28 +468,43 @@ class JavaScriptJobManagerImpl implements JavaScriptJobManager {
                 if (job == currentlyRunningJob_) {
                     currentlyRunningJob_ = null;
                 }
-                notify();
+                notifyAll();
             }
         }
         if (debug) {
-            final String periodicJob = isPeriodicJob ? "interval " : "";
+            final String periodicJob = job.isPeriodic() ? "interval " : "";
             LOG.debug("Finished " + periodicJob + "job " + job);
         }
         return true;
     }
 
     /**
-     * Our own serialization (to handle the weak reference)
-     * @param in the stream to read form
+     * Our own serialization (to handle the weak reference).
+     * The window is part of the serialized object graph anyway (it holds this job manager),
+     * therefore only a back reference is written here.
+     *
+     * @param out the stream to write to
+     * @throws IOException in case of error
+     */
+    private void writeObject(final ObjectOutputStream out) throws IOException {
+        out.defaultWriteObject();
+        out.writeObject(getWindow());
+    }
+
+    /**
+     * Our own serialization (to handle the weak reference).
+     *
+     * @param in the stream to read from
      * @throws IOException in case of error
      * @throws ClassNotFoundException in case of error
      */
     private void readObject(final ObjectInputStream in) throws IOException, ClassNotFoundException {
         in.defaultReadObject();
+        window_ = new WeakReference<>((WebWindow) in.readObject());
+        startEventLoop_ = true;
 
         // we do not store the jobs (at the moment)
         scheduledJobsQ_ = new PriorityQueue<>();
-        cancelledJobs_ = new ArrayList<>();
         currentlyRunningJob_ = null;
     }
 }

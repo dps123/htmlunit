@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,7 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
+import org.htmlunit.html.DomElement;
 import org.htmlunit.html.HtmlMeter;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
@@ -31,33 +27,37 @@ import org.htmlunit.javascript.host.dom.NodeList;
  * @author Marc Guillemot
  * @author Ronald Brill
  * @author Ahmed Ashour
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLMeterElement">MDN Documentation</a>
  */
-@JsxClass(domClass = HtmlMeter.class, value = {CHROME, EDGE, FF, FF_ESR})
+@JsxClass(domClass = HtmlMeter.class)
 public class HTMLMeterElement extends HTMLElement {
 
     /** "Live" labels collection; has to be a member to have equality (==) working. */
     private NodeList labels_;
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public HTMLMeterElement() {
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
-     * The getter for the "value" property.
-     * @return the value
+     * Returns the {@code value} property.
+     * @return the {@code value} property
      */
     @JsxGetter
     @Override
     public Double getValue() {
-        return getAttributeAsDouble("value", 0);
+        return getAttributeAsDouble(DomElement.VALUE_ATTRIBUTE, 0);
     }
 
     /**
-     * The getter for the "min" property.
-     * @return the value
+     * Returns the {@code min} property.
+     * @return the {@code min} property
      */
     @JsxGetter
     public double getMin() {
@@ -65,8 +65,8 @@ public class HTMLMeterElement extends HTMLElement {
     }
 
     /**
-     * The getter for the "max" property.
-     * @return the value
+     * Returns the {@code max} property.
+     * @return the {@code max} property
      */
     @JsxGetter
     public double getMax() {
@@ -74,8 +74,8 @@ public class HTMLMeterElement extends HTMLElement {
     }
 
     /**
-     * The getter for the "low" property.
-     * @return the value
+     * Returns the {@code low} property.
+     * @return the {@code low} property
      */
     @JsxGetter
     public double getLow() {
@@ -87,8 +87,8 @@ public class HTMLMeterElement extends HTMLElement {
     }
 
     /**
-     * The getter for the "high" property.
-     * @return the value
+     * Returns the {@code high} property.
+     * @return the {@code high} property
      */
     @JsxGetter
     public double getHigh() {
@@ -100,8 +100,8 @@ public class HTMLMeterElement extends HTMLElement {
     }
 
     /**
-     * The getter for the "optimum" property.
-     * @return the value
+     * Returns the {@code optimum} property.
+     * @return the {@code optimum} property
      */
     @JsxGetter
     public double getOptimum() {
@@ -125,7 +125,7 @@ public class HTMLMeterElement extends HTMLElement {
      * Returns the labels associated with the element.
      * @return the labels associated with the element
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public NodeList getLabels() {
         if (labels_ == null) {
             labels_ = new LabelsNodeList(getDomNodeOrDie());

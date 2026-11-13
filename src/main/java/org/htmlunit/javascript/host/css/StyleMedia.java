@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,10 @@ package org.htmlunit.javascript.host.css;
 
 import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
 import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
-
-import org.htmlunit.cssparser.dom.MediaListImpl;
-import org.htmlunit.cssparser.parser.CSSErrorHandler;
 
 import org.htmlunit.WebWindow;
 import org.htmlunit.css.CssStyleSheet;
+import org.htmlunit.cssparser.dom.MediaListImpl;
 import org.htmlunit.javascript.HtmlUnitScriptable;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxFunction;
@@ -33,16 +30,11 @@ import org.htmlunit.javascript.configuration.JsxGetter;
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/StyleMedia">MDN Documentation</a>
  */
 @JsxClass(isJSObject = false, value = {CHROME, EDGE})
-@JsxClass(IE)
 public class StyleMedia extends HtmlUnitScriptable {
-
-    /**
-     * Default constructor.
-     */
-    public StyleMedia() {
-    }
 
     /**
      * Returns the {@code type} property.
@@ -61,9 +53,7 @@ public class StyleMedia extends HtmlUnitScriptable {
     @JsxFunction
     public boolean matchMedium(final String media) {
         final WebWindow webWindow = getWindow().getWebWindow();
-        final CSSErrorHandler errorHandler = webWindow.getWebClient().getCssErrorHandler();
-        final MediaListImpl mediaList = CssStyleSheet.parseMedia(errorHandler, media);
+        final MediaListImpl mediaList = CssStyleSheet.parseMedia(media, webWindow.getWebClient());
         return CssStyleSheet.isActive(mediaList, webWindow);
     }
-
 }

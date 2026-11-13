@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,11 @@
  */
 package org.htmlunit.html;
 
-import static org.htmlunit.BrowserVersionFeatures.HTMLINPUT_TYPE_COLOR_NOT_SUPPORTED;
-import static org.htmlunit.BrowserVersionFeatures.JS_INPUT_SET_VALUE_MOVE_SELECTION_TO_START;
-
 import java.util.Map;
-
-import org.apache.commons.lang3.StringUtils;
 
 import org.htmlunit.SgmlPage;
 import org.htmlunit.html.impl.Color;
+import org.htmlunit.util.StringUtils;
 
 /**
  * Wrapper for the HTML element "input" where type is "color".
@@ -43,8 +39,7 @@ public class HtmlColorInput extends HtmlInput implements LabelableElement {
     HtmlColorInput(final String qualifiedName, final SgmlPage page,
             final Map<String, DomAttr> attributes) {
         super(qualifiedName, page, attributes);
-        if (getValueAttribute() == ATTRIBUTE_NOT_DEFINED
-                && !hasFeature(JS_INPUT_SET_VALUE_MOVE_SELECTION_TO_START)) {
+        if (getValueAttribute() == ATTRIBUTE_NOT_DEFINED) {
             setValue("#000000");
         }
     }
@@ -62,18 +57,29 @@ public class HtmlColorInput extends HtmlInput implements LabelableElement {
      */
     @Override
     public void setValue(final String newValue) {
-        if (hasFeature(HTMLINPUT_TYPE_COLOR_NOT_SUPPORTED)) {
-            super.setValue(newValue);
-            return;
-        }
-
-        if (StringUtils.isEmpty(newValue)) {
+        if (StringUtils.isEmptyOrNull(newValue)) {
             super.setValue("#000000");
             return;
         }
 
         if (isValid(newValue)) {
             super.setValue(newValue);
+        }
+    }
+
+    @Override
+    protected void valueAttributeChanged(final String attributeValue, final boolean isValueDirty) {
+        if (isValueDirty) {
+            return;
+        }
+
+        if (StringUtils.isEmptyOrNull(attributeValue)) {
+            setRawValue("#000000");
+            return;
+        }
+
+        if (isValid(attributeValue)) {
+            setRawValue(attributeValue);
         }
     }
 
@@ -87,10 +93,7 @@ public class HtmlColorInput extends HtmlInput implements LabelableElement {
                         Integer.valueOf(value.substring(5, 7), 16));
                 valid = true;
             }
-            catch (final NumberFormatException e) {
-                // ignore
-            }
-            catch (final IllegalArgumentException e) {
+            catch (final IllegalArgumentException ignored) {
                 // ignore
             }
         }

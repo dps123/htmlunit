@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,34 +14,20 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.BrowserVersionFeatures.JS_TEXT_AREA_GET_MAXLENGTH_MAX_INT;
-import static org.htmlunit.BrowserVersionFeatures.JS_TEXT_AREA_SET_COLS_NEGATIVE_THROWS_EXCEPTION;
-import static org.htmlunit.BrowserVersionFeatures.JS_TEXT_AREA_SET_COLS_THROWS_EXCEPTION;
-import static org.htmlunit.BrowserVersionFeatures.JS_TEXT_AREA_SET_MAXLENGTH_NEGATIVE_THROWS_EXCEPTION;
-import static org.htmlunit.BrowserVersionFeatures.JS_TEXT_AREA_SET_ROWS_NEGATIVE_THROWS_EXCEPTION;
-import static org.htmlunit.BrowserVersionFeatures.JS_TEXT_AREA_SET_ROWS_THROWS_EXCEPTION;
-import static org.htmlunit.BrowserVersionFeatures.JS_TEXT_AREA_SET_VALUE_NULL;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
-
 import org.htmlunit.html.HtmlTextArea;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.configuration.JsxSetter;
+import org.htmlunit.javascript.host.dom.DOMException;
 import org.htmlunit.javascript.host.dom.NodeList;
-import org.htmlunit.javascript.host.dom.TextRange;
-
-import org.htmlunit.corejs.javascript.Context;
 
 /**
  * The JavaScript object {@code HTMLTextAreaElement}.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author Marc Guillemot
  * @author Chris Erskine
  * @author Ahmed Ashour
@@ -49,6 +35,8 @@ import org.htmlunit.corejs.javascript.Context;
  * @author Ronald Brill
  * @author Frank Danek
  * @author Carsten Steul
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLTextAreaElement">MDN Documentation</a>
  */
 @JsxClass(domClass = HtmlTextArea.class)
 public class HTMLTextAreaElement extends HTMLElement {
@@ -57,10 +45,12 @@ public class HTMLTextAreaElement extends HTMLElement {
     private NodeList labels_;
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public HTMLTextAreaElement() {
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
@@ -97,12 +87,12 @@ public class HTMLTextAreaElement extends HTMLElement {
     @JsxSetter
     @Override
     public void setValue(final Object value) {
-        if (null == value && getBrowserVersion().hasFeature(JS_TEXT_AREA_SET_VALUE_NULL)) {
+        if (value == null) {
             getDomNodeOrDie().setText("");
             return;
         }
 
-        getDomNodeOrDie().setText(Context.toString(value));
+        getDomNodeOrDie().setText(JavaScriptEngine.toString(value));
     }
 
     /**
@@ -129,18 +119,12 @@ public class HTMLTextAreaElement extends HTMLElement {
         try {
             final int i = Float.valueOf(cols).intValue();
             if (i < 0) {
-                if (getBrowserVersion().hasFeature(JS_TEXT_AREA_SET_COLS_NEGATIVE_THROWS_EXCEPTION)) {
-                    throw new NumberFormatException("New value for cols '" + cols + "' is smaller than zero.");
-                }
                 getDomNodeOrDie().setAttribute("cols", null);
                 return;
             }
             getDomNodeOrDie().setAttribute("cols", Integer.toString(i));
         }
         catch (final NumberFormatException e) {
-            if (getBrowserVersion().hasFeature(JS_TEXT_AREA_SET_COLS_THROWS_EXCEPTION)) {
-                throw Context.throwAsScriptRuntimeEx(e);
-            }
             getDomNodeOrDie().setAttribute("cols", "20");
         }
     }
@@ -169,19 +153,12 @@ public class HTMLTextAreaElement extends HTMLElement {
         try {
             final int i = Float.valueOf(rows).intValue();
             if (i < 0) {
-                if (getBrowserVersion().hasFeature(JS_TEXT_AREA_SET_ROWS_NEGATIVE_THROWS_EXCEPTION)) {
-                    throw new NumberFormatException("New value for rows '" + rows + "' is smaller than zero.");
-                }
                 getDomNodeOrDie().setAttribute("rows", null);
                 return;
             }
             getDomNodeOrDie().setAttribute("rows", Integer.toString(i));
         }
         catch (final NumberFormatException e) {
-            if (getBrowserVersion().hasFeature(JS_TEXT_AREA_SET_ROWS_THROWS_EXCEPTION)) {
-                throw Context.throwAsScriptRuntimeEx(e);
-            }
-
             getDomNodeOrDie().setAttribute("rows", "2");
         }
     }
@@ -189,7 +166,7 @@ public class HTMLTextAreaElement extends HTMLElement {
     /**
      * Returns the textarea's default value, used if the containing form gets reset.
      * @return the textarea's default value, used if the containing form gets reset
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms533718.aspx">MSDN Documentation</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLTextAreaElement/defaultValue">MDN Documentation</a>
      */
     @JsxGetter
     public String getDefaultValue() {
@@ -199,7 +176,7 @@ public class HTMLTextAreaElement extends HTMLElement {
     /**
      * Sets the textarea's default value, used if the containing form gets reset.
      * @param defaultValue the textarea's default value, used if the containing form gets reset
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms533718.aspx">MSDN Documentation</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLTextAreaElement/defaultValue">MDN Documentation</a>
      */
     @JsxSetter
     public void setDefaultValue(final String defaultValue) {
@@ -210,7 +187,7 @@ public class HTMLTextAreaElement extends HTMLElement {
      * Gets the value of {@code textLength} attribute.
      * @return the text length
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public int getTextLength() {
         return getValue().length();
     }
@@ -293,32 +270,30 @@ public class HTMLTextAreaElement extends HTMLElement {
      * @return the maximum number of characters in this text area
      */
     @JsxGetter
-    public Object getMaxLength() {
+    public int getMaxLength() {
         final String maxLength = getDomNodeOrDie().getAttribute("maxLength");
 
         try {
             return Integer.parseInt(maxLength);
         }
         catch (final NumberFormatException e) {
-            if (getBrowserVersion().hasFeature(JS_TEXT_AREA_GET_MAXLENGTH_MAX_INT)) {
-                return Integer.MAX_VALUE;
-            }
             return -1;
         }
     }
 
     /**
      * Sets maximum number of characters in this text area.
-     * @param maxLength maximum number of characters in this text area.
+     * @param maxLength maximum number of characters in this text area
      */
     @JsxSetter
     public void setMaxLength(final String maxLength) {
         try {
             final int i = Integer.parseInt(maxLength);
 
-            if (i < 0 && getBrowserVersion().hasFeature(JS_TEXT_AREA_SET_MAXLENGTH_NEGATIVE_THROWS_EXCEPTION)) {
-                throw Context.throwAsScriptRuntimeEx(
-                    new NumberFormatException("New value for maxLength '" + maxLength + "' is smaller than zero."));
+            if (i < 0) {
+                throw JavaScriptEngine.asJavaScriptException(getWindow(),
+                        "New value for maxLength '" + maxLength + "' is smaller than zero.",
+                        DOMException.INDEX_SIZE_ERR);
             }
             getDomNodeOrDie().setAttribute("maxLength", maxLength);
         }
@@ -331,8 +306,8 @@ public class HTMLTextAreaElement extends HTMLElement {
      * Returns the minimum number of characters in this text area.
      * @return the minimum number of characters in this text area
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
-    public Object getMinLength() {
+    @JsxGetter
+    public int getMinLength() {
         final String minLength = getDomNodeOrDie().getAttribute("minLength");
 
         try {
@@ -345,15 +320,15 @@ public class HTMLTextAreaElement extends HTMLElement {
 
     /**
      * Sets minimum number of characters in this text area.
-     * @param minLength minimum number of characters in this text area.
+     * @param minLength minimum number of characters in this text area
      */
-    @JsxSetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxSetter
     public void setMinLength(final String minLength) {
         try {
             final int i = Integer.parseInt(minLength);
 
             if (i < 0) {
-                throw Context.throwAsScriptRuntimeEx(
+                throw JavaScriptEngine.throwAsScriptRuntimeEx(
                     new NumberFormatException("New value for minLength '" + minLength + "' is smaller than zero."));
             }
             getDomNodeOrDie().setAttribute("minLength", minLength);
@@ -385,7 +360,7 @@ public class HTMLTextAreaElement extends HTMLElement {
      * Returns the labels associated with the element.
      * @return the labels associated with the element
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public NodeList getLabels() {
         if (labels_ == null) {
             labels_ = new LabelsNodeList(getDomNodeOrDie());
@@ -394,21 +369,21 @@ public class HTMLTextAreaElement extends HTMLElement {
     }
 
     /**
-     * {@inheritDoc}
-     */
-    @Override
-    @JsxFunction(IE)
-    public TextRange createTextRange() {
-        return super.createTextRange();
-    }
-
-    /**
      * Checks whether the element has any constraints and whether it satisfies them.
-     * @return if the element is valid
+     * @return {@code true} if the element is valid
      */
     @JsxFunction
     public boolean checkValidity() {
-        return getDomNodeOrDie().isValid();
+        return ValidatableHTMLElement.doCheckValidity(getDomNodeOrDie());
+    }
+
+    /**
+     * Performs the same validity checking steps as the checkValidity() method.
+     * @return {@code true} if the element is valid
+     */
+    @JsxFunction
+    public boolean reportValidity() {
+        return ValidatableHTMLElement.doReportValidity(getDomNodeOrDie());
     }
 
     /**
@@ -427,6 +402,16 @@ public class HTMLTextAreaElement extends HTMLElement {
     @JsxSetter
     public void setRequired(final boolean required) {
         getDomNodeOrDie().setRequired(required);
+    }
+
+    /**
+     * Returns the message describing why the element's value fails constraint
+     * validation, or "" if it's valid or barred from validation.
+     * @return the validation message
+     */
+    @JsxGetter
+    public String getValidationMessage() {
+        return ValidatableHTMLElement.getValidationMessage(getDomNodeOrDie());
     }
 
     /**
@@ -451,7 +436,7 @@ public class HTMLTextAreaElement extends HTMLElement {
      * {@inheritDoc} Overridden to modify browser configurations.
      */
     @Override
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public boolean isDisabled() {
         return super.isDisabled();
     }
@@ -460,7 +445,7 @@ public class HTMLTextAreaElement extends HTMLElement {
      * {@inheritDoc} Overridden to modify browser configurations.
      */
     @Override
-    @JsxSetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxSetter
     public void setDisabled(final boolean disabled) {
         super.setDisabled(disabled);
     }
@@ -475,15 +460,17 @@ public class HTMLTextAreaElement extends HTMLElement {
     }
 
     /**
+     * Returns whether the element is a candidate for constraint validation.
      * @return whether the element is a candidate for constraint validation
      */
     @JsxGetter
-    public boolean getWillValidate() {
+    public boolean isWillValidate() {
         return getDomNodeOrDie().willValidate();
     }
 
     /**
-     * @return a ValidityState with the validity states that this element is in.
+     * Returns a {@link ValidityState} object representing the validity states of this element.
+     * @return a {@link ValidityState} object representing the validity states of this element
      */
     @JsxGetter
     public ValidityState getValidity() {

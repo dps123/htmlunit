@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,11 @@ package org.htmlunit.html;
 import java.net.MalformedURLException;
 import java.util.Map;
 
-import org.apache.commons.lang3.StringUtils;
-
 import org.htmlunit.SgmlPage;
+import org.htmlunit.html.csp.ContentSecurityPolicy;
+import org.htmlunit.javascript.PostponedAction;
+import org.htmlunit.javascript.host.event.Event;
+import org.htmlunit.util.StringUtils;
 
 /**
  * HTML Media element, e.g. {@link HtmlAudio} or {@link HtmlVideo}.
@@ -28,7 +30,10 @@ import org.htmlunit.SgmlPage;
  * @author Frank Danek
  * @author Ronald Brill
  */
-public class HtmlMedia extends HtmlElement {
+public abstract class HtmlMedia extends HtmlElement {
+
+    private boolean childrenChecked_;
+    private String checkedSrc_;
 
     /**
      * Creates an instance.
@@ -43,23 +48,118 @@ public class HtmlMedia extends HtmlElement {
     }
 
     /**
-     * Determines whether the specified media type can be played back.
-     * @param type the type
-     * @return "probably", "maybe", or "". The current implementation returns ""
+     * {@inheritDoc}
+     * Checks the url against the Content-Security-Policy (media-src); the source and track
+     * children are checked after they are added.
      */
-    public String canPlayType(final String type) {
-        if (StringUtils.isAllBlank(type)) {
-            return "";
+    @Override
+    protected void onAddedToPage() {
+        super.onAddedToPage();
+        childrenChecked_ = false;
+        final String src = getAttributeDirect(SRC_ATTRIBUTE);
+        // the src may be checked already (set by script before the element was added)
+        if (ATTRIBUTE_NOT_DEFINED != src && !src.equals(checkedSrc_)) {
+            checkSrc(src);
+        }
+        if (getFirstElementChild() != null) {
+            checkChildrenContentSecurityPolicy();
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void onAllChildrenAddedToPage(final boolean postponed) {
+        super.onAllChildrenAddedToPage(postponed);
+        if (!childrenChecked_) {
+            checkChildrenContentSecurityPolicy();
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     * Checks the new src url against the Content-Security-Policy (media-src); like the browsers,
+     * also if the element is not attached to the page.
+     */
+    @Override
+    protected void setAttributeNS(final String namespaceURI, final String qualifiedName, final String value,
+            final boolean notifyAttributeChangeListeners, final boolean notifyMutationObservers) {
+        final String qualifiedNameLC = StringUtils.toRootLowerCase(qualifiedName);
+        final boolean changed = SRC_ATTRIBUTE.equals(qualifiedNameLC)
+                && !getAttributeNS(namespaceURI, qualifiedNameLC).equals(value);
+
+        super.setAttributeNS(namespaceURI, qualifiedName, value,
+                notifyAttributeChangeListeners, notifyMutationObservers);
+
+        if (changed) {
+            checkSrc(value);
+        }
+    }
+
+    private void checkSrc(final String src) {
+        checkedSrc_ = src;
+        if (!ContentSecurityPolicy.allowsMedia(this, src)) {
+            fireErrorEvent(this);
+        }
+    }
+
+    /**
+     * Fires the error event (async) at the element blocked by the Content-Security-Policy.
+     */
+    private static void fireErrorEvent(final HtmlElement element) {
+        final HtmlPage page = element.getHtmlPageOrNull();
+        if (page == null || !page.getWebClient().isJavaScriptEngineEnabled()) {
+            return;
         }
 
-        final int semPos = type.indexOf(';');
-        final int codecPos = type.indexOf("codec");
+        final PostponedAction action = new PostponedAction(page, "HtmlMedia.blocked") {
+            @Override
+            public void execute() {
+                element.fireEvent(Event.TYPE_ERROR);
+            }
+        };
+        if (READY_STATE_LOADING.equals(page.getReadyState())) {
+            page.addAfterLoadAction(action);
+        }
+        else {
+            page.getWebClient().getJavaScriptEngine().addPostponedAction(action);
+        }
+    }
 
-        if (semPos > 0 && codecPos > semPos) {
-            return "probably";
+    /**
+     * Checks the urls of the children against the Content-Security-Policy (media-src): without
+     * a src attribute the source children (in order, until the first allowed one) and the default track.
+     */
+    private void checkChildrenContentSecurityPolicy() {
+        childrenChecked_ = true;
+        final HtmlPage page = getHtmlPageOrNull();
+        if (page == null || page.getContentSecurityPolicy() == null) {
+            return;
         }
 
-        return "maybe";
+        if (!hasAttribute(SRC_ATTRIBUTE)) {
+            for (final DomNode child : getChildren()) {
+                if (child instanceof HtmlSource source) {
+                    final String sourceSrc = source.getAttributeDirect(SRC_ATTRIBUTE);
+                    if (!StringUtils.isBlank(sourceSrc)) {
+                        if (ContentSecurityPolicy.allowsMedia(source, sourceSrc)) {
+                            break;
+                        }
+                        fireErrorEvent(source);
+                    }
+                }
+            }
+        }
+
+        for (final DomNode child : getChildren()) {
+            if (child instanceof HtmlTrack track && track.hasAttribute("default")) {
+                if (!ContentSecurityPolicy.allowsMedia(track, track.getAttributeDirect(SRC_ATTRIBUTE))) {
+                    fireErrorEvent(track);
+                }
+                break;
+            }
+        }
     }
 
     /**
@@ -74,11 +174,13 @@ public class HtmlMedia extends HtmlElement {
     }
 
     /**
-     * @return the value of the {@code src} value
+     * Returns the fully qualified source URL.
+     *
+     * @return the fully qualified value of the {@code src} attribute
      */
     public String getSrc() {
         final String src = getSrcAttribute();
-        if ("".equals(src)) {
+        if (StringUtils.isEmptyString(src)) {
             return src;
         }
         try {

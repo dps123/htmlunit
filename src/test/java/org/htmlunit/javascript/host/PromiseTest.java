@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,12 @@
  */
 package org.htmlunit.javascript.host;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.htmlunit.WebDriverTestCase;
+import org.htmlunit.corejs.javascript.NativePromise;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
-
-import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-
-import org.htmlunit.corejs.javascript.NativePromise;
 
 /**
  * Tests for {@link NativePromise}.
@@ -34,19 +30,17 @@ import org.htmlunit.corejs.javascript.NativePromise;
  * @author Ronald Brill
  * @author Rural Hunter
  */
-@RunWith(BrowserRunner.class)
 public class PromiseTest extends WebDriverTestCase {
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"function", "function", "undefined", "undefined",
-                       "undefined", "undefined", "function", "function"},
-            IE = {})
+    @Alerts({"function", "function", "undefined", "undefined",
+             "undefined", "undefined", "function", "function"})
     public void staticMethods() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION
@@ -76,32 +70,26 @@ public class PromiseTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "1",
-            IE = {})
+    @Alerts("1")
     public void length() throws Exception {
         final String html =
             "<html>\n"
             + "<head>\n"
             + "  <script>\n"
+            + LOG_TEXTAREA_FUNCTION
             + "    function test() {\n"
             + "      if (window.Promise) {\n"
             + "        log(Promise.length);\n"
             + "      }\n"
             + "    }\n"
-            + "    function log(x) {\n"
-            + "      document.getElementById('log').value += x + '\\n';\n"
-            + "    }\n"
             + "  </script>\n"
             + "</head>\n"
             + "<body onload='test()'>\n"
-            + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+            + LOG_TEXTAREA
             + "</body>\n"
             + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
@@ -119,12 +107,13 @@ public class PromiseTest extends WebDriverTestCase {
             FF_ESR = {"function () {\n    [native code]\n}",
                       "function () {\n    [native code]\n}",
                       "[object Window]",
-                      "done", "resolved value"},
-            IE = {})
+                      "done", "resolved value"})
     public void constructor() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "  <script>\n"
+                + LOG_TEXTAREA_FUNCTION
                 + "    function test() {\n"
                 + "      if (window.Promise) {\n"
                 + "        var p = new Promise(function(resolve, reject) {\n"
@@ -138,20 +127,14 @@ public class PromiseTest extends WebDriverTestCase {
                 + "      }\n"
                 + "    }\n"
                 + "\n"
-                + "    function log(x) {\n"
-                + "      document.getElementById('log').value += x + '\\n';\n"
-                + "    }\n"
                 + "  </script>\n"
                 + "</head>\n"
                 + "<body onload='test()'>\n"
-                + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+                + LOG_TEXTAREA
                 + "</body>\n"
                 + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
@@ -169,13 +152,14 @@ public class PromiseTest extends WebDriverTestCase {
             FF_ESR = {"function () {\n    [native code]\n}",
                       "function () {\n    [native code]\n}",
                       "undefined",
-                      "done", "resolved value"},
-            IE = {})
+                      "done", "resolved value"})
     public void constructorStrict() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "  <script>\n"
                 + "    'use strict';"
+                + LOG_TEXTAREA_FUNCTION
                 + "    function test() {\n"
                 + "      if (window.Promise) {\n"
                 + "        var p = new Promise(function(resolve, reject) {\n"
@@ -189,32 +173,27 @@ public class PromiseTest extends WebDriverTestCase {
                 + "      }\n"
                 + "    }\n"
                 + "\n"
-                + "    function log(x) {\n"
-                + "      document.getElementById('log').value += x + '\\n';\n"
-                + "    }\n"
                 + "  </script>\n"
                 + "</head>\n"
                 + "<body onload='test()'>\n"
-                + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+                + LOG_TEXTAREA
                 + "</body>\n"
                 + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"true", "true", "true"},
-            IE = {})
+    @Alerts({"true", "true", "true"})
     public void constructorWithoutFunction() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "  <script>\n"
+                + LOG_TEXTAREA_FUNCTION
                 + "    function test() {\n"
                 + "      if (window.Promise) {\n"
                 + "        try{\n"
@@ -235,33 +214,27 @@ public class PromiseTest extends WebDriverTestCase {
                 + "      }\n"
                 + "    }\n"
                 + "\n"
-                + "    function log(x) {\n"
-                + "      document.getElementById('log').value += x + '\\n';\n"
-                + "    }\n"
                 + "  </script>\n"
                 + "</head>\n"
                 + "<body onload='test()'>\n"
-                + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+                + LOG_TEXTAREA
                 + "</body>\n"
                 + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "Rejected"},
-            IE = {})
+    @Alerts({"done", "Rejected"})
     public void reject() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
+            + LOG_TEXTAREA_FUNCTION
             + "    function test() {\n"
             + "      if (window.Promise) {\n"
             + "        Promise.reject('Rejected').then(function(value) {\n"
@@ -272,33 +245,27 @@ public class PromiseTest extends WebDriverTestCase {
             + "        log('done');\n"
             + "      }\n"
             + "    }\n"
-            + "    function log(x) {\n"
-            + "      document.getElementById('log').value += x + '\\n';\n"
-            + "    }\n"
             + "  </script>\n"
             + "</head>\n"
             + "<body onload='test()'>\n"
-            + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+            + LOG_TEXTAREA
             + "</body>\n"
             + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "false", "[object Promise]"},
-            IE = {})
+    @Alerts({"done", "false", "[object Promise]"})
     public void rejectPromise() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
+            + LOG_TEXTAREA_FUNCTION
             + "    function test() {\n"
             + "      if (window.Promise) {\n"
             + "        var original = Promise.reject(42);\n"
@@ -312,33 +279,27 @@ public class PromiseTest extends WebDriverTestCase {
             + "        log(original === cast);\n"
             + "      }\n"
             + "    }\n"
-            + "    function log(x) {\n"
-            + "      document.getElementById('log').value += x + '\\n';\n"
-            + "    }\n"
             + "  </script>\n"
             + "</head>\n"
             + "<body onload='test()'>\n"
-            + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+            + LOG_TEXTAREA
             + "</body>\n"
             + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "Resolved"},
-            IE = {})
+    @Alerts({"done", "Resolved"})
     public void resolve() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
+            + LOG_TEXTAREA_FUNCTION
             + "    function test() {\n"
             + "      if (window.Promise) {\n"
             + "        Promise.resolve('Resolved').then(function(value) {\n"
@@ -349,33 +310,27 @@ public class PromiseTest extends WebDriverTestCase {
             + "        log('done');\n"
             + "      }\n"
             + "    }\n"
-            + "    function log(x) {\n"
-            + "      document.getElementById('log').value += x + '\\n';\n"
-            + "    }\n"
             + "  </script>\n"
             + "</head>\n"
             + "<body onload='test()'>\n"
-            + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+            + LOG_TEXTAREA
             + "</body>\n"
             + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "undefined"},
-            IE = {})
+    @Alerts({"done", "undefined"})
     public void resolveEmpty() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
+            + LOG_TEXTAREA_FUNCTION
             + "    function test() {\n"
             + "      if (window.Promise) {\n"
             + "        Promise.resolve().then(function(value) {\n"
@@ -386,33 +341,27 @@ public class PromiseTest extends WebDriverTestCase {
             + "        log('done');\n"
             + "      }\n"
             + "    }\n"
-            + "    function log(x) {\n"
-            + "      document.getElementById('log').value += x + '\\n';\n"
-            + "    }\n"
             + "  </script>\n"
             + "</head>\n"
             + "<body onload='test()'>\n"
-            + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+            + LOG_TEXTAREA
             + "</body>\n"
             + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "1"},
-            IE = {})
+    @Alerts({"done", "1"})
     public void resolveArray() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
+            + LOG_TEXTAREA_FUNCTION
             + "    function test() {\n"
             + "      if (window.Promise) {\n"
             + "        var p = Promise.resolve([1,2,3]);\n"
@@ -422,34 +371,27 @@ public class PromiseTest extends WebDriverTestCase {
             + "        log('done');\n"
             + "      }\n"
             + "    }\n"
-            + "\n"
-            + "    function log(x) {\n"
-            + "      document.getElementById('log').value += x + '\\n';\n"
-            + "    }\n"
             + "  </script>\n"
             + "</head>\n"
             + "<body onload='test()'>\n"
-            + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+            + LOG_TEXTAREA
             + "</body>\n"
             + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "HtmlUnit"},
-            IE = {})
+    @Alerts({"done", "HtmlUnit"})
     public void resolveString() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
+            + LOG_TEXTAREA_FUNCTION
             + "    function test() {\n"
             + "      if (window.Promise) {\n"
             + "        var p = Promise.resolve('HtmlUnit');\n"
@@ -459,34 +401,27 @@ public class PromiseTest extends WebDriverTestCase {
             + "        log('done');\n"
             + "      }\n"
             + "    }\n"
-            + "\n"
-            + "    function log(x) {\n"
-            + "      document.getElementById('log').value += x + '\\n';\n"
-            + "    }\n"
             + "  </script>\n"
             + "</head>\n"
             + "<body onload='test()'>\n"
-            + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+            + LOG_TEXTAREA
             + "</body>\n"
             + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "true", "42"},
-            IE = {})
+    @Alerts({"done", "true", "42"})
     public void resolvePromise() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
+            + LOG_TEXTAREA_FUNCTION
             + "    function test() {\n"
             + "      if (window.Promise) {\n"
             + "        var original = Promise.resolve(42);\n"
@@ -498,32 +433,27 @@ public class PromiseTest extends WebDriverTestCase {
             + "        log(original === cast);\n"
             + "      }\n"
             + "    }\n"
-            + "    function log(x) {\n"
-            + "      document.getElementById('log').value += x + '\\n';\n"
-            + "    }\n"
             + "  </script>\n"
             + "</head>\n"
             + "<body onload='test()'>\n"
-            + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+            + LOG_TEXTAREA
             + "</body>\n"
             + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"true", "fulfilled!"},
-            IE = "")
+    @Alerts({"true", "fulfilled!"})
     public void resolveThenable() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
+            + LOG_TEXTAREA_FUNCTION
             + "    function test() {\n"
             + "      if (window.Promise) {\n"
 
@@ -542,32 +472,27 @@ public class PromiseTest extends WebDriverTestCase {
 
             + "      }\n"
             + "    }\n"
-            + "    function log(x) {\n"
-            + "      document.getElementById('log').value += x + '\\n';\n"
-            + "    }\n"
             + "  </script>\n"
             + "</head>\n"
             + "<body onload='test()'>\n"
-            + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+            + LOG_TEXTAREA
             + "</body>\n"
             + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"true", "aaa"},
-            IE = "")
+    @Alerts({"true", "aaa"})
     public void resolveThenablePrototype() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
+            + LOG_TEXTAREA_FUNCTION
             + "    function test() {\n"
             + "      if (window.Promise) {\n"
             + "        function MyThenable() {\n"
@@ -592,32 +517,27 @@ public class PromiseTest extends WebDriverTestCase {
 
             + "      }\n"
             + "    }\n"
-            + "    function log(x) {\n"
-            + "      document.getElementById('log').value += x + '\\n';\n"
-            + "    }\n"
             + "  </script>\n"
             + "</head>\n"
             + "<body onload='test()'>\n"
-            + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+            + LOG_TEXTAREA
             + "</body>\n"
             + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "TypeError: Throwing 1",
-            IE = "")
+    @Alerts("TypeError: Throwing 1")
     public void resolveThenableThrows() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
+            + LOG_TEXTAREA_FUNCTION
             + "    function test() {\n"
             + "      if (window.Promise) {\n"
 
@@ -637,32 +557,27 @@ public class PromiseTest extends WebDriverTestCase {
 
             + "      }\n"
             + "    }\n"
-            + "    function log(x) {\n"
-            + "      document.getElementById('log').value += x + '\\n';\n"
-            + "    }\n"
             + "  </script>\n"
             + "</head>\n"
             + "<body onload='test()'>\n"
-            + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+            + LOG_TEXTAREA
             + "</body>\n"
             + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "Resolving",
-            IE = "")
+    @Alerts("Resolving")
     public void resolveThenableThrowsAfterCallback() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
+            + LOG_TEXTAREA_FUNCTION
             + "    function test() {\n"
             + "      if (window.Promise) {\n"
 
@@ -681,32 +596,27 @@ public class PromiseTest extends WebDriverTestCase {
             + "        });\n"
             + "      }\n"
             + "    }\n"
-            + "    function log(x) {\n"
-            + "      document.getElementById('log').value += x + '\\n';\n"
-            + "    }\n"
             + "  </script>\n"
             + "</head>\n"
             + "<body onload='test()'>\n"
-            + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+            + LOG_TEXTAREA
             + "</body>\n"
             + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"true", "[object Object]"},
-            IE = "")
+    @Alerts({"true", "[object Object]"})
     public void resolveThenablesWithoutThen() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
+            + LOG_TEXTAREA_FUNCTION
             + "    function test() {\n"
             + "      if (window.Promise) {\n"
             + "        var p1 = Promise.resolve({ id: 17 });\n"
@@ -719,33 +629,27 @@ public class PromiseTest extends WebDriverTestCase {
             + "        });\n"
             + "      }\n"
             + "    }\n"
-            + "    function log(x) {\n"
-            + "      document.getElementById('log').value += x + '\\n';\n"
-            + "    }\n"
             + "  </script>\n"
             + "</head>\n"
             + "<body onload='test()'>\n"
-            + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+            + LOG_TEXTAREA
             + "</body>\n"
             + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "1", "2"},
-            IE = {})
+    @Alerts({"done", "1", "2"})
     public void thenChanining() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
+            + LOG_TEXTAREA_FUNCTION
             + "    function test() {\n"
             + "      if (window.Promise) {\n"
             + "        var p = new Promise(function(resolve, reject) {\n"
@@ -761,33 +665,27 @@ public class PromiseTest extends WebDriverTestCase {
             + "        log('done');\n"
             + "      }\n"
             + "    }\n"
-            + "\n"
-            + "    function log(x) {\n"
-            + "      document.getElementById('log').value += x + '\\n';\n"
-            + "    }\n"
             + "  </script>\n"
             + "</head>\n"
             + "<body onload='test()'>\n"
-            + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+            + LOG_TEXTAREA
             + "</body>\n"
             + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "undefined"},
-            IE = {})
+    @Alerts({"done", "undefined"})
     public void then() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "  <script>\n"
+                + LOG_TEXTAREA_FUNCTION
                 + "    function test() {\n"
                 + "      if (window.Promise) {\n"
                 + "        var p = Promise.resolve(void 0);\n"
@@ -797,32 +695,27 @@ public class PromiseTest extends WebDriverTestCase {
                 + "        log('done');\n"
                 + "      }\n"
                 + "    }\n"
-                + "\n"
-                + "    function log(x) {\n"
-                + "      document.getElementById('log').value += x + '\\n';\n"
-                + "    }\n"
                 + "  </script>\n"
                 + "</head>\n"
                 + "<body onload='test()'>\n"
-                + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+                + LOG_TEXTAREA
                 + "</body>\n"
                 + "</html>";
-        final WebDriver driver = loadPage2(html);
 
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "undefined"},
-            IE = {})
+    @Alerts({"done", "undefined"})
     public void thenAsync() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "  <script>\n"
+                + LOG_TEXTAREA_FUNCTION
                 + "    function test() {\n"
                 + "      if (window.Promise) {\n"
                 + "        var p = new Promise(function(resolve, reject) {\n"
@@ -836,32 +729,27 @@ public class PromiseTest extends WebDriverTestCase {
                 + "        log('done');\n"
                 + "      }\n"
                 + "    }\n"
-                + "\n"
-                + "    function log(x) {\n"
-                + "      document.getElementById('log').value += x + '\\n';\n"
-                + "    }\n"
                 + "  </script>\n"
                 + "</head>\n"
                 + "<body onload='test()'>\n"
-                + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+                + LOG_TEXTAREA
                 + "</body>\n"
                 + "</html>";
-        final WebDriver driver = loadPage2(html);
 
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "1 yes", "2 yes"},
-            IE = {})
+    @Alerts({"done", "1 yes", "2 yes"})
     public void thenTwice() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "  <script>\n"
+                + LOG_TEXTAREA_FUNCTION
                 + "    function test() {\n"
                 + "      if (window.Promise) {\n"
                 + "        var p = Promise.resolve('yes');\n"
@@ -874,32 +762,27 @@ public class PromiseTest extends WebDriverTestCase {
                 + "        log('done');\n"
                 + "      }\n"
                 + "    }\n"
-                + "\n"
-                + "    function log(x) {\n"
-                + "      document.getElementById('log').value += x + '\\n';\n"
-                + "    }\n"
                 + "  </script>\n"
                 + "</head>\n"
                 + "<body onload='test()'>\n"
-                + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+                + LOG_TEXTAREA
                 + "</body>\n"
                 + "</html>";
-        final WebDriver driver = loadPage2(html);
 
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "1 yes", "2 yes"},
-            IE = {})
+    @Alerts({"done", "1 yes", "2 yes"})
     public void thenTwiceAsync() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "  <script>\n"
+                + LOG_TEXTAREA_FUNCTION
                 + "    function test() {\n"
                 + "      if (window.Promise) {\n"
                 + "        var p = new Promise(function(resolve, reject) {\n"
@@ -916,32 +799,27 @@ public class PromiseTest extends WebDriverTestCase {
                 + "        log('done');\n"
                 + "      }\n"
                 + "    }\n"
-                + "\n"
-                + "    function log(x) {\n"
-                + "      document.getElementById('log').value += x + '\\n';\n"
-                + "    }\n"
                 + "  </script>\n"
                 + "</head>\n"
                 + "<body onload='test()'>\n"
-                + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+                + LOG_TEXTAREA
                 + "</body>\n"
                 + "</html>";
-        final WebDriver driver = loadPage2(html);
 
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "first", "second"},
-            IE = {})
+    @Alerts({"done", "first", "second"})
     public void thenAsyncPromiseResolved() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "  <script>\n"
+                + LOG_TEXTAREA_FUNCTION
                 + "    function test() {\n"
                 + "      if (window.Promise) {\n"
                 + "        var p = new Promise(function(resolve, reject) {\n"
@@ -959,32 +837,27 @@ public class PromiseTest extends WebDriverTestCase {
                 + "        log('done');\n"
                 + "      }\n"
                 + "    }\n"
-                + "\n"
-                + "    function log(x) {\n"
-                + "      document.getElementById('log').value += x + '\\n';\n"
-                + "    }\n"
                 + "  </script>\n"
                 + "</head>\n"
                 + "<body onload='test()'>\n"
-                + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+                + LOG_TEXTAREA
                 + "</body>\n"
                 + "</html>";
-        final WebDriver driver = loadPage2(html);
 
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "first", "second"},
-            IE = {})
+    @Alerts({"done", "first", "second"})
     public void thenAsyncPromiseRejected() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "  <script>\n"
+                + LOG_TEXTAREA_FUNCTION
                 + "    function test() {\n"
                 + "      if (window.Promise) {\n"
                 + "        var p = new Promise(function(resolve, reject) {\n"
@@ -1005,32 +878,27 @@ public class PromiseTest extends WebDriverTestCase {
                 + "        log('done');\n"
                 + "      }\n"
                 + "    }\n"
-                + "\n"
-                + "    function log(x) {\n"
-                + "      document.getElementById('log').value += x + '\\n';\n"
-                + "    }\n"
                 + "  </script>\n"
                 + "</head>\n"
                 + "<body onload='test()'>\n"
-                + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+                + LOG_TEXTAREA
                 + "</body>\n"
                 + "</html>";
-        final WebDriver driver = loadPage2(html);
 
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "first", "second"},
-            IE = {})
+    @Alerts({"done", "first", "second"})
     public void thenAsyncPromiseAsyncResolved() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "  <script>\n"
+                + LOG_TEXTAREA_FUNCTION
                 + "    function test() {\n"
                 + "      if (window.Promise) {\n"
                 + "        var p = new Promise(function(resolve, reject) {\n"
@@ -1052,32 +920,27 @@ public class PromiseTest extends WebDriverTestCase {
                 + "        log('done');\n"
                 + "      }\n"
                 + "    }\n"
-                + "\n"
-                + "    function log(x) {\n"
-                + "      document.getElementById('log').value += x + '\\n';\n"
-                + "    }\n"
                 + "  </script>\n"
                 + "</head>\n"
                 + "<body onload='test()'>\n"
-                + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+                + LOG_TEXTAREA
                 + "</body>\n"
                 + "</html>";
-        final WebDriver driver = loadPage2(html);
 
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "first", "second"},
-            IE = {})
+    @Alerts({"done", "first", "second"})
     public void thenAsyncPromiseAsyncRejected() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "  <script>\n"
+                + LOG_TEXTAREA_FUNCTION
                 + "    function test() {\n"
                 + "      if (window.Promise) {\n"
                 + "        var p = new Promise(function(resolve, reject) {\n"
@@ -1102,32 +965,27 @@ public class PromiseTest extends WebDriverTestCase {
                 + "        log('done');\n"
                 + "      }\n"
                 + "    }\n"
-                + "\n"
-                + "    function log(x) {\n"
-                + "      document.getElementById('log').value += x + '\\n';\n"
-                + "    }\n"
                 + "  </script>\n"
                 + "</head>\n"
                 + "<body onload='test()'>\n"
-                + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+                + LOG_TEXTAREA
                 + "</body>\n"
                 + "</html>";
-        final WebDriver driver = loadPage2(html);
 
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "Success first"},
-            IE = {})
+    @Alerts({"done", "Success first"})
     public void thenTestAsyncChainedResolve() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "  <script>\n"
+                + LOG_TEXTAREA_FUNCTION
                 + "    function test() {\n"
                 + "      if (window.Promise) {\n"
                 + "        var p = new Promise(function(resolve, reject) {\n"
@@ -1147,32 +1005,27 @@ public class PromiseTest extends WebDriverTestCase {
                 + "        log('done');\n"
                 + "      }\n"
                 + "    }\n"
-                + "\n"
-                + "    function log(x) {\n"
-                + "      document.getElementById('log').value += x + '\\n';\n"
-                + "    }\n"
                 + "  </script>\n"
                 + "</head>\n"
                 + "<body onload='test()'>\n"
-                + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+                + LOG_TEXTAREA
                 + "</body>\n"
                 + "</html>";
-        final WebDriver driver = loadPage2(html);
 
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "Failure first"},
-            IE = {})
+    @Alerts({"done", "Failure first"})
     public void thenTestAsyncChainedReject() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "  <script>\n"
+                + LOG_TEXTAREA_FUNCTION
                 + "    function test() {\n"
                 + "      if (window.Promise) {\n"
                 + "        var p = new Promise(function(resolve, reject) {\n"
@@ -1192,32 +1045,27 @@ public class PromiseTest extends WebDriverTestCase {
                 + "        log('done');\n"
                 + "      }\n"
                 + "    }\n"
-                + "\n"
-                + "    function log(x) {\n"
-                + "      document.getElementById('log').value += x + '\\n';\n"
-                + "    }\n"
                 + "  </script>\n"
                 + "</head>\n"
                 + "<body onload='test()'>\n"
-                + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+                + LOG_TEXTAREA
                 + "</body>\n"
                 + "</html>";
-        final WebDriver driver = loadPage2(html);
 
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "Success first"},
-            IE = {})
+    @Alerts({"done", "Success first"})
     public void thenTestAsyncChainedNotAFunction() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "  <script>\n"
+                + LOG_TEXTAREA_FUNCTION
                 + "    function test() {\n"
                 + "      if (window.Promise) {\n"
                 + "        var p = new Promise(function(resolve, reject) {\n"
@@ -1236,32 +1084,27 @@ public class PromiseTest extends WebDriverTestCase {
                 + "        log('done');\n"
                 + "      }\n"
                 + "    }\n"
-                + "\n"
-                + "    function log(x) {\n"
-                + "      document.getElementById('log').value += x + '\\n';\n"
-                + "    }\n"
                 + "  </script>\n"
                 + "</head>\n"
                 + "<body onload='test()'>\n"
-                + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+                + LOG_TEXTAREA
                 + "</body>\n"
                 + "</html>";
-        final WebDriver driver = loadPage2(html);
 
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"Success", "string", "oh, no!", "after catch"},
-            IE = {})
+    @Alerts({"Success", "string", "oh, no!", "after catch"})
     public void catchTest() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "  <script>\n"
+                + LOG_TEXTAREA_FUNCTION
                 + "    function test() {\n"
                 + "      if (window.Promise) {\n"
                 + "        var p = new Promise(function(resolve, reject) {\n"
@@ -1281,33 +1124,27 @@ public class PromiseTest extends WebDriverTestCase {
                 + "        });\n"
                 + "      }\n"
                 + "    }\n"
-                + "\n"
-                + "    function log(x) {\n"
-                + "      document.getElementById('log').value += x + '\\n';\n"
-                + "    }\n"
                 + "  </script>\n"
                 + "</head>\n"
                 + "<body onload='test()'>\n"
-                + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+                + LOG_TEXTAREA
                 + "</body>\n"
                 + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"Success", "string", "oh, no!", "after catch"},
-            IE = {})
+    @Alerts({"Success", "string", "oh, no!", "after catch"})
     public void catchTestAsync() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "  <script>\n"
+                + LOG_TEXTAREA_FUNCTION
                 + "    function test() {\n"
                 + "      if (window.Promise) {\n"
                 + "        var p = new Promise(function(resolve, reject) {\n"
@@ -1328,33 +1165,27 @@ public class PromiseTest extends WebDriverTestCase {
                 + "        });\n"
                 + "      }\n"
                 + "    }\n"
-                + "\n"
-                + "    function log(x) {\n"
-                + "      document.getElementById('log').value += x + '\\n';\n"
-                + "    }\n"
                 + "  </script>\n"
                 + "</head>\n"
                 + "<body onload='test()'>\n"
-                + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+                + LOG_TEXTAREA
                 + "</body>\n"
                 + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "Success first"},
-            IE = {})
+    @Alerts({"done", "Success first"})
     public void catchTestAsyncChained() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "  <script>\n"
+                + LOG_TEXTAREA_FUNCTION
                 + "    function test() {\n"
                 + "      if (window.Promise) {\n"
                 + "        var p = new Promise(function(resolve, reject) {\n"
@@ -1374,32 +1205,27 @@ public class PromiseTest extends WebDriverTestCase {
                 + "        log('done');\n"
                 + "      }\n"
                 + "    }\n"
-                + "\n"
-                + "    function log(x) {\n"
-                + "      document.getElementById('log').value += x + '\\n';\n"
-                + "    }\n"
                 + "  </script>\n"
                 + "</head>\n"
                 + "<body onload='test()'>\n"
-                + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+                + LOG_TEXTAREA
                 + "</body>\n"
                 + "</html>";
-        final WebDriver driver = loadPage2(html);
 
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "Success"},
-            IE = "")
+    @Alerts({"done", "Success"})
     public void thenInsideEventHandler() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "  <script>\n"
+                + LOG_TEXTAREA_FUNCTION
                 + "    function test() {\n"
                 + "      if (window.Promise) {\n"
                 + "        document.getElementById('btn1').onclick = function() {\n"
@@ -1414,34 +1240,31 @@ public class PromiseTest extends WebDriverTestCase {
                 + "        };\n"
                 + "      }\n"
                 + "    }\n"
-                + "\n"
-                + "    function log(x) {\n"
-                + "      document.getElementById('log').value += x + '\\n';\n"
-                + "    }\n"
                 + "  </script>\n"
                 + "</head>\n"
                 + "<body onload='test()'>\n"
                 + "  <button id='btn1'>BTN1</button>\n"
-                + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+                + LOG_TEXTAREA
                 + "</body>\n"
                 + "</html>\n";
+
         final WebDriver driver = loadPage2(html);
         driver.findElement(By.id("btn1")).click();
 
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        verifyTextArea2(driver, getExpectedAlerts());
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"create thenable 4", "fulfilled"},
-            IE = "")
+    @Alerts({"create thenable 4", "fulfilled"})
     public void thenThenable() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
+            + LOG_TEXTAREA_FUNCTION
             + "    function test() {\n"
             + "      if (window.Promise) {\n"
 
@@ -1459,32 +1282,27 @@ public class PromiseTest extends WebDriverTestCase {
 
             + "      }\n"
             + "    }\n"
-            + "    function log(x) {\n"
-            + "      document.getElementById('log').value += x + '\\n';\n"
-            + "    }\n"
             + "  </script>\n"
             + "</head>\n"
             + "<body onload='test()'>\n"
-            + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+            + LOG_TEXTAREA
             + "</body>\n"
             + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "failure1",
-            IE = "")
+    @Alerts("failure1")
     public void thenThenableThrows() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
+            + LOG_TEXTAREA_FUNCTION
             + "    function test() {\n"
             + "      if (window.Promise) {\n"
 
@@ -1506,32 +1324,27 @@ public class PromiseTest extends WebDriverTestCase {
 
             + "      }\n"
             + "    }\n"
-            + "    function log(x) {\n"
-            + "      document.getElementById('log').value += x + '\\n';\n"
-            + "    }\n"
             + "  </script>\n"
             + "</head>\n"
             + "<body onload='test()'>\n"
-            + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+            + LOG_TEXTAREA
             + "</body>\n"
             + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "failure1"},
-            IE = "")
+    @Alerts({"done", "failure1"})
     public void thenNotThenable() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
+            + LOG_TEXTAREA_FUNCTION
             + "    function test() {\n"
             + "      if (window.Promise) {\n"
 
@@ -1555,32 +1368,27 @@ public class PromiseTest extends WebDriverTestCase {
 
             + "      }\n"
             + "    }\n"
-            + "    function log(x) {\n"
-            + "      document.getElementById('log').value += x + '\\n';\n"
-            + "    }\n"
             + "  </script>\n"
             + "</head>\n"
             + "<body onload='test()'>\n"
-            + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+            + LOG_TEXTAREA
             + "</body>\n"
             + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "1",
-            IE = "")
+    @Alerts("1")
     public void thenThenableThrowsAfterCallback() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
+            + LOG_TEXTAREA_FUNCTION
             + "    function test() {\n"
             + "      if (window.Promise) {\n"
 
@@ -1601,32 +1409,27 @@ public class PromiseTest extends WebDriverTestCase {
             + "        });\n"
             + "      }\n"
             + "    }\n"
-            + "    function log(x) {\n"
-            + "      document.getElementById('log').value += x + '\\n';\n"
-            + "    }\n"
             + "  </script>\n"
             + "</head>\n"
             + "<body onload='test()'>\n"
-            + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+            + LOG_TEXTAREA
             + "</body>\n"
             + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "object", "3", "3,1337,Success"},
-            IE = {})
+    @Alerts({"done", "object", "3", "3,1337,Success"})
     public void allAsyncArray() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
+            + LOG_TEXTAREA_FUNCTION
             + "    function test() {\n"
             + "      if (window.Promise) {\n"
             + "        var p1 = Promise.resolve(3);\n"
@@ -1645,32 +1448,26 @@ public class PromiseTest extends WebDriverTestCase {
             + "        log('done');\n"
             + "      }\n"
             + "    }\n"
-            + "\n"
-            + "    function log(x) {\n"
-            + "      document.getElementById('log').value += x + '\\n';\n"
-            + "    }\n"
             + "</script></head>\n"
             + "<body onload='test()'>\n"
-            + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+            + LOG_TEXTAREA
             + "</body>\n"
             + "</html>\n";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "first 3,1337,Success", "second 3,Success"},
-            IE = {})
+    @Alerts({"done", "first 3,1337,Success", "second 3,Success"})
     public void allAsyncArray2() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
+            + LOG_TEXTAREA_FUNCTION
             + "    function test() {\n"
             + "      if (window.Promise) {\n"
             + "        var p1 = Promise.resolve(3);\n"
@@ -1690,32 +1487,26 @@ public class PromiseTest extends WebDriverTestCase {
             + "        log('done');\n"
             + "      }\n"
             + "    }\n"
-            + "\n"
-            + "    function log(x) {\n"
-            + "      document.getElementById('log').value += x + '\\n';\n"
-            + "    }\n"
             + "</script></head>\n"
             + "<body onload='test()'>\n"
-            + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+            + LOG_TEXTAREA
             + "</body>\n"
             + "</html>\n";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "object", "3", "3,1337,Success"},
-            IE = {})
+    @Alerts({"done", "object", "3", "3,1337,Success"})
     public void allAsyncSet() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
+            + LOG_TEXTAREA_FUNCTION
             + "    function test() {\n"
             + "      if (window.Promise) {\n"
             + "        var p1 = Promise.resolve(3);\n"
@@ -1734,32 +1525,26 @@ public class PromiseTest extends WebDriverTestCase {
             + "        log('done');\n"
             + "      }\n"
             + "    }\n"
-            + "\n"
-            + "    function log(x) {\n"
-            + "      document.getElementById('log').value += x + '\\n';\n"
-            + "    }\n"
             + "</script></head>\n"
             + "<body onload='test()'>\n"
-            + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+            + LOG_TEXTAREA
             + "</body>\n"
             + "</html>\n";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "string", "Failed"},
-            IE = {})
+    @Alerts({"done", "string", "Failed"})
     public void allRejectAsync() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
+            + LOG_TEXTAREA_FUNCTION
             + "    function test() {\n"
             + "      if (window.Promise) {\n"
             + "        var p1 = Promise.resolve(3);\n"
@@ -1779,32 +1564,26 @@ public class PromiseTest extends WebDriverTestCase {
             + "        log('done');\n"
             + "      }\n"
             + "    }\n"
-            + "\n"
-            + "    function log(x) {\n"
-            + "      document.getElementById('log').value += x + '\\n';\n"
-            + "    }\n"
             + "</script></head>\n"
             + "<body onload='test()'>\n"
-            + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+            + LOG_TEXTAREA
             + "</body>\n"
             + "</html>\n";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "first Failed", "second Failed"},
-            IE = {})
+    @Alerts({"done", "first Failed", "second Failed"})
     public void allRejectAsync2() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
+            + LOG_TEXTAREA_FUNCTION
             + "    function test() {\n"
             + "      if (window.Promise) {\n"
             + "        var p1 = Promise.resolve(3);\n"
@@ -1828,32 +1607,26 @@ public class PromiseTest extends WebDriverTestCase {
             + "        log('done');\n"
             + "      }\n"
             + "    }\n"
-            + "\n"
-            + "    function log(x) {\n"
-            + "      document.getElementById('log').value += x + '\\n';\n"
-            + "    }\n"
             + "</script></head>\n"
             + "<body onload='test()'>\n"
-            + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+            + LOG_TEXTAREA
             + "</body>\n"
             + "</html>\n";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "Success 2"},
-            IE = {})
+    @Alerts({"done", "Success 2"})
     public void raceAsync() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
+            + LOG_TEXTAREA_FUNCTION
             + "    function test() {\n"
             + "      if (window.Promise) {\n"
             + "        var p1 = new Promise(function(resolve, reject) {\n"
@@ -1875,32 +1648,26 @@ public class PromiseTest extends WebDriverTestCase {
             + "        log('done');\n"
             + "      }\n"
             + "    }\n"
-            + "\n"
-            + "    function log(x) {\n"
-            + "      document.getElementById('log').value += x + '\\n';\n"
-            + "    }\n"
             + "</script></head>\n"
             + "<body onload='test()'>\n"
-            + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+            + LOG_TEXTAREA
             + "</body>\n"
             + "</html>\n";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "first Success 2", "second Success 2"},
-            IE = {})
+    @Alerts({"done", "first Success 2", "second Success 2"})
     public void raceAsync2() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
+            + LOG_TEXTAREA_FUNCTION
             + "    function test() {\n"
             + "      if (window.Promise) {\n"
             + "        var p1 = new Promise(function(resolve, reject) {\n"
@@ -1927,32 +1694,26 @@ public class PromiseTest extends WebDriverTestCase {
             + "        log('done');\n"
             + "      }\n"
             + "    }\n"
-            + "\n"
-            + "    function log(x) {\n"
-            + "      document.getElementById('log').value += x + '\\n';\n"
-            + "    }\n"
             + "</script></head>\n"
             + "<body onload='test()'>\n"
-            + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+            + LOG_TEXTAREA
             + "</body>\n"
             + "</html>\n";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "Failed"},
-            IE = {})
+    @Alerts({"done", "Failed"})
     public void raceRejectAsync() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
+            + LOG_TEXTAREA_FUNCTION
             + "    function test() {\n"
             + "      if (window.Promise) {\n"
             + "        var p1 = new Promise(function(resolve, reject) {\n"
@@ -1974,32 +1735,26 @@ public class PromiseTest extends WebDriverTestCase {
             + "        log('done');\n"
             + "      }\n"
             + "    }\n"
-            + "\n"
-            + "    function log(x) {\n"
-            + "      document.getElementById('log').value += x + '\\n';\n"
-            + "    }\n"
             + "</script></head>\n"
             + "<body onload='test()'>\n"
-            + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+            + LOG_TEXTAREA
             + "</body>\n"
             + "</html>\n";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"done", "first Failed", "second Failed"},
-            IE = {})
+    @Alerts({"done", "first Failed", "second Failed"})
     public void raceRejectAsync2() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
+            + LOG_TEXTAREA_FUNCTION
             + "    function test() {\n"
             + "      if (window.Promise) {\n"
             + "        var p1 = new Promise(function(resolve, reject) {\n"
@@ -2026,31 +1781,23 @@ public class PromiseTest extends WebDriverTestCase {
             + "        log('done');\n"
             + "      }\n"
             + "    }\n"
-            + "\n"
-            + "    function log(x) {\n"
-            + "      document.getElementById('log').value += x + '\\n';\n"
-            + "    }\n"
             + "</script></head>\n"
             + "<body onload='test()'>\n"
-            + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+            + LOG_TEXTAREA
             + "</body>\n"
             + "</html>\n";
 
-        final WebDriver driver = loadPage2(html);
-
-        verify(() -> driver.findElement(By.id("log"))
-                .getAttribute("value").trim().replaceAll("\r", ""), String.join("\n", getExpectedAlerts()));
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "",
-            IE = "test")
+    @Alerts("")
     public void changeLocationFromPromise() throws Exception {
-        final String html =
-                "<html>\n"
+        final String html = DOCTYPE_HTML
+              + "<html>\n"
               + "<head>\n"
               + "  <title>test</title>\n"
               + "  <script>\n"
@@ -2068,7 +1815,44 @@ public class PromiseTest extends WebDriverTestCase {
               + "</html>";
 
         final WebDriver driver = loadPage2(html);
-        Thread.sleep(100);
         assertTitle(driver, getExpectedAlerts()[0]);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts(DEFAULT = {"function\\sPromise()\\s{\\s[native\\scode]\\s}", "true", "[GC]"},
+            FF = {"function\\sPromise()\\s{\\n\\s\\s\\s\\s[native\\scode]\\n}", "true", "[GC]"},
+            FF_ESR = {"function\\sPromise()\\s{\\n\\s\\s\\s\\s[native\\scode]\\n}", "true", "[GC]"})
+    public void speciesValue() throws Exception {
+        final String html = DOCTYPE_HTML
+              + "<html>\n"
+              + "<head>\n"
+              + "  <script>\n"
+              + LOG_TITLE_FUNCTION_NORMALIZE
+              + "    function test() {\n"
+              + "      if (window.Promise) {\n"
+              + "        log(Promise[Symbol.species]);\n"
+              + "        log(Promise === Promise[Symbol.species]);\n"
+
+              + "        let desc = Object.getOwnPropertyDescriptor(Promise, Symbol.species);\n"
+              + "        let props = '[';\n"
+              + "        if (desc.get != undefined) props += 'G';\n"
+              + "        if (desc.set != undefined) props += 'S';\n"
+              + "        if (desc.writable) props += 'W';\n"
+              + "        if (desc.configurable) props += 'C';\n"
+              + "        if (desc.enumerable) props += 'E';\n"
+              + "        props += ']';\n"
+              + "        log(props);\n"
+              + "      }\n"
+              + "    }\n"
+              + "  </script>\n"
+              + "</head>\n"
+              + "<body onload='test()'>\n"
+              + "</body>\n"
+              + "</html>";
+
+        loadPageVerifyTitle2(html);
     }
 }

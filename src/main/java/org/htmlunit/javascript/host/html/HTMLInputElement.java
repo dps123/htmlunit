@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,69 +14,39 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.BrowserVersionFeatures.HTMLINPUT_FILES_UNDEFINED;
-import static org.htmlunit.BrowserVersionFeatures.HTMLINPUT_FILE_SELECTION_START_END_NULL;
-import static org.htmlunit.BrowserVersionFeatures.HTMLINPUT_TYPE_COLOR_NOT_SUPPORTED;
-import static org.htmlunit.BrowserVersionFeatures.HTMLINPUT_TYPE_DATETIME_LOCAL_SUPPORTED;
-import static org.htmlunit.BrowserVersionFeatures.HTMLINPUT_TYPE_DATETIME_SUPPORTED;
-import static org.htmlunit.BrowserVersionFeatures.HTMLINPUT_TYPE_MONTH_SUPPORTED;
-import static org.htmlunit.BrowserVersionFeatures.HTMLINPUT_TYPE_WEEK_SUPPORTED;
-import static org.htmlunit.BrowserVersionFeatures.JS_ALIGN_FOR_INPUT_IGNORES_VALUES;
-import static org.htmlunit.BrowserVersionFeatures.JS_INPUT_CHANGE_TYPE_DROPS_VALUE;
-import static org.htmlunit.BrowserVersionFeatures.JS_INPUT_CHANGE_TYPE_DROPS_VALUE_WEEK_MONTH;
 import static org.htmlunit.BrowserVersionFeatures.JS_INPUT_NUMBER_DOT_AT_END_IS_DOUBLE;
-import static org.htmlunit.BrowserVersionFeatures.JS_INPUT_NUMBER_SELECTION_START_END_NULL;
-import static org.htmlunit.BrowserVersionFeatures.JS_INPUT_SET_TYPE_LOWERCASE;
-import static org.htmlunit.BrowserVersionFeatures.JS_INPUT_SET_UNSUPORTED_TYPE_EXCEPTION;
-import static org.htmlunit.BrowserVersionFeatures.JS_SELECT_FILE_THROWS;
-import static org.htmlunit.html.DomElement.ATTRIBUTE_NOT_DEFINED;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
 import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
 import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
 
 import java.io.IOException;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.math.NumberUtils;
-import org.xml.sax.helpers.AttributesImpl;
-
-import org.htmlunit.BrowserVersion;
-import org.htmlunit.SgmlPage;
+import org.htmlunit.html.DomElement;
 import org.htmlunit.html.DomNode;
 import org.htmlunit.html.HtmlCheckBoxInput;
-import org.htmlunit.html.HtmlDateTimeLocalInput;
 import org.htmlunit.html.HtmlFileInput;
-import org.htmlunit.html.HtmlImageInput;
 import org.htmlunit.html.HtmlInput;
-import org.htmlunit.html.HtmlMonthInput;
 import org.htmlunit.html.HtmlNumberInput;
 import org.htmlunit.html.HtmlRadioButtonInput;
-import org.htmlunit.html.HtmlResetInput;
-import org.htmlunit.html.HtmlSubmitInput;
 import org.htmlunit.html.HtmlTextInput;
-import org.htmlunit.html.HtmlTimeInput;
-import org.htmlunit.html.HtmlWeekInput;
 import org.htmlunit.html.impl.SelectableTextInput;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.configuration.JsxSetter;
+import org.htmlunit.javascript.host.DOMRectList;
+import org.htmlunit.javascript.host.dom.DOMException;
 import org.htmlunit.javascript.host.dom.NodeList;
-import org.htmlunit.javascript.host.dom.TextRange;
 import org.htmlunit.javascript.host.event.Event;
 import org.htmlunit.javascript.host.file.FileList;
-
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.Undefined;
+import org.htmlunit.util.StringUtils;
 
 /**
  * The JavaScript object for {@link HtmlInput}.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
- * @author <a href="mailto:cse@dynabean.de">Christian Sell</a>
+ * @author Mike Bowler
+ * @author Christian Sell
  * @author Marc Guillemot
  * @author Chris Erskine
  * @author Ahmed Ashour
@@ -84,6 +54,8 @@ import org.htmlunit.corejs.javascript.Undefined;
  * @author Ronald Brill
  * @author Frank Danek
  * @author Anton Demydenko
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLInputElement">MDN Documentation</a>
  */
 @JsxClass(domClass = HtmlInput.class)
 public class HTMLInputElement extends HTMLElement {
@@ -92,10 +64,12 @@ public class HTMLInputElement extends HTMLElement {
     private NodeList labels_;
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public HTMLInputElement() {
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
@@ -104,166 +78,17 @@ public class HTMLInputElement extends HTMLElement {
      */
     @JsxGetter
     public String getType() {
-        final BrowserVersion browserVersion = getBrowserVersion();
-        String type = getDomNodeOrDie().getTypeAttribute();
-        type = org.htmlunit.util.StringUtils.toRootLowerCaseWithCache(type);
-        return isSupported(type, browserVersion) ? type : "text";
-    }
-
-    /**
-     * Returns whether the specified type is supported or not.
-     * @param type the input type
-     * @param browserVersion the browser version
-     * @return whether the specified type is supported or not
-     */
-    private static boolean isSupported(final String type, final BrowserVersion browserVersion) {
-        boolean supported = false;
-        switch (type) {
-            case "date":
-                supported = browserVersion.hasFeature(HTMLINPUT_TYPE_DATETIME_SUPPORTED);
-                break;
-            case "datetime-local":
-                supported = browserVersion.hasFeature(HTMLINPUT_TYPE_DATETIME_LOCAL_SUPPORTED);
-                break;
-            case "month":
-                supported = browserVersion.hasFeature(HTMLINPUT_TYPE_MONTH_SUPPORTED);
-                break;
-            case "time":
-                supported = browserVersion.hasFeature(HTMLINPUT_TYPE_DATETIME_SUPPORTED);
-                break;
-            case "week":
-                supported = browserVersion.hasFeature(HTMLINPUT_TYPE_WEEK_SUPPORTED);
-                break;
-            case "color":
-                supported = !browserVersion.hasFeature(HTMLINPUT_TYPE_COLOR_NOT_SUPPORTED);
-                break;
-            case "email":
-            case "text":
-            case "submit":
-            case "checkbox":
-            case "radio":
-            case "hidden":
-            case "password":
-            case "image":
-            case "reset":
-            case "button":
-            case "file":
-            case "number":
-            case "range":
-            case "search":
-            case "tel":
-            case "url":
-                supported = true;
-                break;
-
-            default:
-        }
-        return supported;
+        return getDomNodeOrDie().getType();
     }
 
     /**
      * Sets the value of the attribute {@code type}.
-     * Note: this replace the DOM node with a new one.
+     * Note: this replaces the DOM node with a new one.
      * @param newType the new type to set
      */
     @JsxSetter
     public void setType(final String newType) {
-        setType(newType, false);
-    }
-
-    /**
-     * Sets the value of the attribute {@code type}.
-     * Note: this replace the DOM node with a new one.
-     * @param newType the new type to set
-     * @param setThroughAttribute set type value through setAttribute()
-     */
-    private void setType(String newType, final boolean setThroughAttribute) {
-        HtmlInput input = getDomNodeOrDie();
-
-        final String currentType = input.getAttributeDirect("type");
-
-        final BrowserVersion browser = getBrowserVersion();
-        if (!currentType.equalsIgnoreCase(newType)) {
-            if (newType != null && browser.hasFeature(JS_INPUT_SET_TYPE_LOWERCASE)) {
-                newType = org.htmlunit.util.StringUtils.toRootLowerCaseWithCache(newType);
-            }
-
-            if (!isSupported(org.htmlunit.util.StringUtils
-                                    .toRootLowerCaseWithCache(newType), browser)) {
-                if (setThroughAttribute) {
-                    newType = "text";
-                }
-                else if (browser.hasFeature(JS_INPUT_SET_UNSUPORTED_TYPE_EXCEPTION)) {
-                    throw Context.reportRuntimeError("Invalid argument '" + newType
-                            + "' for setting property type.");
-                }
-            }
-
-            final AttributesImpl attributes = readAttributes(input);
-            final int index = attributes.getIndex("type");
-            if (index > -1) {
-                attributes.setValue(index, newType);
-            }
-            else {
-                attributes.addAttribute(null, "type", "type", null, newType);
-            }
-
-            // create a new one only if we have a new type
-            if (ATTRIBUTE_NOT_DEFINED != currentType || !"text".equalsIgnoreCase(newType)) {
-                final SgmlPage page = input.getPage();
-                final HtmlInput newInput = (HtmlInput) page.getWebClient().getPageCreator().getHtmlParser()
-                        .getFactory(HtmlInput.TAG_NAME)
-                        .createElement(page, HtmlInput.TAG_NAME, attributes);
-
-                if (browser.hasFeature(JS_INPUT_CHANGE_TYPE_DROPS_VALUE)) {
-                    // a hack for the moment
-                    if (!(newInput instanceof HtmlSubmitInput)
-                            && !(newInput instanceof HtmlResetInput)
-                            && !(newInput instanceof HtmlCheckBoxInput)
-                            && !(newInput instanceof HtmlRadioButtonInput)
-                            && !(newInput instanceof HtmlImageInput)) {
-                        newInput.setRawValue(input.getRawValue());
-                    }
-                }
-                else {
-                    if (newInput instanceof HtmlTimeInput
-                            || newInput instanceof HtmlDateTimeLocalInput
-                            || newInput instanceof HtmlFileInput) {
-                        newInput.setValue("");
-                    }
-                    else if (browser.hasFeature(JS_INPUT_CHANGE_TYPE_DROPS_VALUE_WEEK_MONTH)
-                            && (newInput instanceof HtmlWeekInput || newInput instanceof HtmlMonthInput)) {
-                        newInput.setValue("");
-                    }
-                    else {
-                        final String originalValue = input.getValue();
-                        if (ATTRIBUTE_NOT_DEFINED != originalValue) {
-                            newInput.setValue(originalValue);
-                        }
-                    }
-                }
-
-                if (input.wasCreatedByJavascript()) {
-                    newInput.markAsCreatedByJavascript();
-                }
-
-                if (input.getParentNode() == null) {
-                    // the input hasn't yet been inserted into the DOM tree (likely has been
-                    // created via document.createElement()), so simply replace it with the
-                    // new Input instance created in the code above
-                    input = newInput;
-                }
-                else {
-                    input.getParentNode().replaceChild(newInput, input);
-                }
-
-                input.setScriptableObject(null);
-                setDomNode(newInput, true);
-            }
-            else {
-                super.setAttribute("type", newType);
-            }
-        }
+        getDomNodeOrDie().changeType(newType, false);
     }
 
     /**
@@ -274,17 +99,19 @@ public class HTMLInputElement extends HTMLElement {
     @JsxSetter
     @Override
     public void setValue(final Object newValue) {
-        if (null == newValue) {
+        if (newValue == null) {
             getDomNodeOrDie().setValue("");
             getDomNodeOrDie().valueModifiedByJavascript();
             return;
         }
 
-        final String val = Context.toString(newValue);
-        if ("file".equalsIgnoreCase(getType())) {
-            if (StringUtils.isNotEmpty(val) &&  getBrowserVersion().hasFeature(JS_SELECT_FILE_THROWS)) {
-                throw Context.reportRuntimeError("InvalidStateError: "
-                        + "Failed to set the 'value' property on 'HTMLInputElement'.");
+        final String val = JavaScriptEngine.toString(newValue);
+        if ("file".equals(getType())) {
+            if (!StringUtils.isEmptyOrNull(val)) {
+                throw JavaScriptEngine.asJavaScriptException(
+                        getWindow(),
+                        "Failed to set the 'value' property on 'HTMLInputElement'.",
+                        DOMException.INVALID_STATE_ERR);
             }
             return;
         }
@@ -295,11 +122,11 @@ public class HTMLInputElement extends HTMLElement {
 
     /**
      * Sets the checked property. Although this property is defined in Input it
-     * doesn't make any sense for input's other than checkbox and radio. This
+     * doesn't make any sense for inputs other than checkbox and radio. This
      * implementation does nothing. The implementations in Checkbox and Radio
      * actually do the work.
      *
-     * @param checked True if this input should have the {@code checked} attribute set
+     * @param checked {@code true} if this input should have the {@code checked} attribute set
      */
     @JsxSetter
     public void setChecked(final boolean checked) {
@@ -316,11 +143,11 @@ public class HTMLInputElement extends HTMLElement {
 
     /**
      * Returns the value of the checked property. Although this property is
-     * defined in Input it doesn't make any sense for input's other than
+     * defined in Input it doesn't make any sense for inputs other than
      * checkbox and radio. This implementation does nothing. The
      * implementations in Checkbox and Radio actually do the work.
      *
-     *@return the checked property
+     * @return the checked property
      */
     @JsxGetter
     public boolean isChecked() {
@@ -333,35 +160,16 @@ public class HTMLInputElement extends HTMLElement {
     @JsxFunction
     public void select() {
         final HtmlInput input = getDomNodeOrDie();
-        if (input instanceof HtmlTextInput) {
-            ((HtmlTextInput) input).select();
+        if (input instanceof HtmlTextInput textInput) {
+            textInput.select();
         }
         // currently nothing for other input types
     }
 
     /**
-     * Uses {@link #setType(String)} if attribute's name is type to
-     * replace DOM node as well as long as we have subclasses of {@link HtmlInput}.
-     * {@inheritDoc}
-     */
-    @Override
-    public void setAttribute(final String name, final String value) {
-        if ("type".equalsIgnoreCase(name)) {
-            setType(value, true);
-            return;
-        }
-        if ("value".equalsIgnoreCase(name)) {
-            setDefaultValue(value);
-            return;
-        }
-
-        super.setAttribute(name, value);
-    }
-
-    /**
      * Returns the input's default value, used if the containing form gets reset.
      * @return the input's default value, used if the containing form gets reset
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms533718.aspx">MSDN Documentation</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLInputElement/defaultValue">MDN Documentation</a>
      */
     @JsxGetter
     public String getDefaultValue() {
@@ -371,7 +179,7 @@ public class HTMLInputElement extends HTMLElement {
     /**
      * Sets the input's default value, used if the containing form gets reset.
      * @param defaultValue the input's default value, used if the containing form gets reset
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms533718.aspx">MSDN Documentation</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLInputElement/defaultValue">MDN Documentation</a>
      */
     @JsxSetter
     public void setDefaultValue(final String defaultValue) {
@@ -381,7 +189,7 @@ public class HTMLInputElement extends HTMLElement {
     /**
      * Returns the input's default checked value, used if the containing form gets reset.
      * @return the input's default checked value, used if the containing form gets reset
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms533715.aspx">MSDN Documentation</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLInputElement/defaultChecked">MDN Documentation</a>
      */
     @JsxGetter
     public boolean isDefaultChecked() {
@@ -391,7 +199,7 @@ public class HTMLInputElement extends HTMLElement {
     /**
      * Sets the input's default checked value, used if the containing form gets reset.
      * @param defaultChecked the input's default checked value, used if the containing form gets reset
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms533715.aspx">MSDN Documentation</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLInputElement/defaultChecked">MDN Documentation</a>
      */
     @JsxSetter
     public void setDefaultChecked(final boolean defaultChecked) {
@@ -412,22 +220,17 @@ public class HTMLInputElement extends HTMLElement {
      * @return the selection start
      */
     @JsxGetter
-    public Object getSelectionStart() {
+    public Integer getSelectionStart() {
         final DomNode dom = getDomNodeOrDie();
-        if (dom instanceof SelectableTextInput) {
-            if ("number".equalsIgnoreCase(getType())
-                    && getBrowserVersion().hasFeature(JS_INPUT_NUMBER_SELECTION_START_END_NULL)) {
+        if (dom instanceof SelectableTextInput input) {
+            if ("number".equals(getType())) {
                 return null;
             }
 
-            return ((SelectableTextInput) dom).getSelectionStart();
+            return input.getSelectionStart();
         }
 
-        if (getBrowserVersion().hasFeature(HTMLINPUT_FILE_SELECTION_START_END_NULL)) {
-            return null;
-        }
-        throw Context.reportRuntimeError("Failed to read the 'selectionStart' property from 'HTMLInputElement': "
-                + "The input element's type (" + getType() + ") does not support selection.");
+        return null;
     }
 
     /**
@@ -437,20 +240,25 @@ public class HTMLInputElement extends HTMLElement {
     @JsxSetter
     public void setSelectionStart(final int start) {
         final DomNode dom = getDomNodeOrDie();
-        if (dom instanceof SelectableTextInput) {
-            if ("number".equalsIgnoreCase(getType())
-                    && getBrowserVersion().hasFeature(JS_INPUT_NUMBER_SELECTION_START_END_NULL)) {
-                throw Context.reportRuntimeError("Failed to set the 'selectionStart' property"
-                        + "from 'HTMLInputElement': "
-                        + "The input element's type ('number') does not support selection.");
+        if (dom instanceof SelectableTextInput input) {
+            if ("number".equals(getType())) {
+                throw JavaScriptEngine.asJavaScriptException(
+                        getWindow(),
+                        "Failed to set the 'selectionStart' property"
+                                + "from 'HTMLInputElement': "
+                                + "The input element's type ('number') does not support selection.",
+                        DOMException.INVALID_STATE_ERR);
             }
 
-            ((SelectableTextInput) dom).setSelectionStart(start);
+            input.setSelectionStart(start);
             return;
         }
 
-        throw Context.reportRuntimeError("Failed to set the 'selectionStart' property from 'HTMLInputElement': "
-                + "The input element's type (" + getType() + ") does not support selection.");
+        throw JavaScriptEngine.asJavaScriptException(
+                getWindow(),
+                "Failed to set the 'selectionStart' property from 'HTMLInputElement': "
+                        + "The input element's type (" + getType() + ") does not support selection.",
+                DOMException.INVALID_STATE_ERR);
     }
 
     /**
@@ -458,22 +266,17 @@ public class HTMLInputElement extends HTMLElement {
      * @return the selection end
      */
     @JsxGetter
-    public Object getSelectionEnd() {
+    public Integer getSelectionEnd() {
         final DomNode dom = getDomNodeOrDie();
-        if (dom instanceof SelectableTextInput) {
-            if ("number".equalsIgnoreCase(getType())
-                    && getBrowserVersion().hasFeature(JS_INPUT_NUMBER_SELECTION_START_END_NULL)) {
+        if (dom instanceof SelectableTextInput input) {
+            if ("number".equals(getType())) {
                 return null;
             }
 
-            return ((SelectableTextInput) dom).getSelectionEnd();
+            return input.getSelectionEnd();
         }
 
-        if (getBrowserVersion().hasFeature(HTMLINPUT_FILE_SELECTION_START_END_NULL)) {
-            return null;
-        }
-        throw Context.reportRuntimeError("Failed to read the 'selectionEnd' property from 'HTMLInputElement': "
-                + "The input element's type (" + getType() + ") does not support selection.");
+        return null;
     }
 
     /**
@@ -483,20 +286,25 @@ public class HTMLInputElement extends HTMLElement {
     @JsxSetter
     public void setSelectionEnd(final int end) {
         final DomNode dom = getDomNodeOrDie();
-        if (dom instanceof SelectableTextInput) {
-            if ("number".equalsIgnoreCase(getType())
-                    && getBrowserVersion().hasFeature(JS_INPUT_NUMBER_SELECTION_START_END_NULL)) {
-                throw Context.reportRuntimeError("Failed to set the 'selectionEnd' property"
-                        + "from 'HTMLInputElement': "
-                        + "The input element's type ('number') does not support selection.");
+        if (dom instanceof SelectableTextInput input) {
+            if ("number".equals(getType())) {
+                throw JavaScriptEngine.asJavaScriptException(
+                        getWindow(),
+                        "Failed to set the 'selectionEnd' property"
+                                + "from 'HTMLInputElement': "
+                                + "The input element's type ('number') does not support selection.",
+                        DOMException.INVALID_STATE_ERR);
             }
 
-            ((SelectableTextInput) dom).setSelectionEnd(end);
+            input.setSelectionEnd(end);
             return;
         }
 
-        throw Context.reportRuntimeError("Failed to set the 'selectionEnd' property from 'HTMLInputElement': "
-                + "The input element's type (" + getType() + ") does not support selection.");
+        throw JavaScriptEngine.asJavaScriptException(
+                getWindow(),
+                "Failed to set the 'selectionEnd' property from 'HTMLInputElement': "
+                        + "The input element's type (" + getType() + ") does not support selection.",
+                DOMException.INVALID_STATE_ERR);
     }
 
     /**
@@ -506,7 +314,7 @@ public class HTMLInputElement extends HTMLElement {
     @JsxGetter
     public int getMaxLength() {
         final String attrValue = getDomNodeOrDie().getAttribute("maxLength");
-        return NumberUtils.toInt(attrValue, -1);
+        return StringUtils.toInt(attrValue, -1);
     }
 
     /**
@@ -522,17 +330,17 @@ public class HTMLInputElement extends HTMLElement {
      * Gets the {@code minLength}.
      * @return the {@code minLength}
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public int getMinLength() {
         final String attrValue = getDomNodeOrDie().getAttribute("minLength");
-        return NumberUtils.toInt(attrValue, -1);
+        return StringUtils.toInt(attrValue, -1);
     }
 
     /**
      * Sets the value of {@code minLength} attribute.
      * @param length the new value
      */
-    @JsxSetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxSetter
     public void setMinLength(final int length) {
         getDomNodeOrDie().setMinLength(length);
     }
@@ -548,7 +356,7 @@ public class HTMLInputElement extends HTMLElement {
 
     /**
      * Sets the {@code min} property.
-     * @param min the {@code min} property
+     * @param min the {@code min} property value
      */
     @JsxSetter
     public void setMin(final String min) {
@@ -566,7 +374,7 @@ public class HTMLInputElement extends HTMLElement {
 
     /**
      * Sets the {@code max} property.
-     * @param max the {@code max} property
+     * @param max the {@code max} property value
      */
     @JsxSetter
     public void setMax(final String max) {
@@ -584,7 +392,7 @@ public class HTMLInputElement extends HTMLElement {
 
     /**
      * Sets the {@code step} property.
-     * @param step the {@code step} property
+     * @param step the {@code step} property value
      */
     @JsxSetter
     public void setStep(final String step) {
@@ -630,30 +438,12 @@ public class HTMLInputElement extends HTMLElement {
     }
 
     /**
-     * Returns the value of the {@code alt} property.
-     * @param alt the value
+     * Sets the value of the {@code alt} property.
+     * @param alt the {@code alt} property value
      */
     @JsxSetter
     public void setAlt(final String alt) {
         getDomNodeOrDie().setAttribute("alt", alt);
-    }
-
-    /**
-     * Gets the {@code border} attribute.
-     * @return the {@code border} attribute
-     */
-    @JsxGetter(IE)
-    public String getBorder() {
-        return getDomNodeOrDie().getAttributeDirect("border");
-    }
-
-    /**
-     * Sets the {@code border} attribute.
-     * @param border the {@code border} attribute
-     */
-    @JsxSetter(IE)
-    public void setBorder(final String border) {
-        getDomNodeOrDie().setAttribute("border", border);
     }
 
     /**
@@ -662,9 +452,6 @@ public class HTMLInputElement extends HTMLElement {
      */
     @JsxGetter
     public String getAlign() {
-        if (getBrowserVersion().hasFeature(JS_ALIGN_FOR_INPUT_IGNORES_VALUES)) {
-            return "";
-        }
         return getAlign(true);
     }
 
@@ -674,8 +461,7 @@ public class HTMLInputElement extends HTMLElement {
      */
     @JsxSetter
     public void setAlign(final String align) {
-        final boolean ignoreIfNoError = getBrowserVersion().hasFeature(JS_ALIGN_FOR_INPUT_IGNORES_VALUES);
-        setAlign(align, ignoreIfNoError);
+        setAlign(align, false);
     }
 
     /**
@@ -709,7 +495,8 @@ public class HTMLInputElement extends HTMLElement {
         if (htmlInput instanceof HtmlNumberInput) {
             final String valueAttr = htmlInput.getValue();
             if (!valueAttr.isEmpty()) {
-                if ("-".equals(valueAttr) || "+".equals(valueAttr)) {
+                if (org.htmlunit.util.StringUtils.equalsChar('-', valueAttr)
+                        || org.htmlunit.util.StringUtils.equalsChar('+', valueAttr)) {
                     return "";
                 }
 
@@ -735,9 +522,9 @@ public class HTMLInputElement extends HTMLElement {
      * {@inheritDoc}
      */
     @Override
-    public String getAttribute(final String attributeName, final Integer flags) {
-        final String superAttribute = super.getAttribute(attributeName, flags);
-        if ("value".equalsIgnoreCase(attributeName)) {
+    public String getAttribute(final String attributeName) {
+        final String superAttribute = super.getAttribute(attributeName);
+        if (DomElement.VALUE_ATTRIBUTE.equalsIgnoreCase(attributeName)) {
             if ((superAttribute == null || !superAttribute.isEmpty())
                     && getDefaultValue().isEmpty()) {
                 return null;
@@ -852,16 +639,13 @@ public class HTMLInputElement extends HTMLElement {
      * @return the {@code files} property
      */
     @JsxGetter
-    public Object getFiles() {
+    public FileList getFiles() {
         final HtmlInput htmlInput = getDomNodeOrDie();
-        if (htmlInput instanceof HtmlFileInput) {
-            final FileList list = new FileList(((HtmlFileInput) htmlInput).getFiles());
+        if (htmlInput instanceof HtmlFileInput input) {
+            final FileList list = new FileList(input.getFiles());
             list.setParentScope(getParentScope());
             list.setPrototype(getPrototype(list.getClass()));
             return list;
-        }
-        if (getBrowserVersion().hasFeature(HTMLINPUT_FILES_UNDEFINED)) {
-            return Undefined.instance;
         }
         return null;
     }
@@ -900,7 +684,7 @@ public class HTMLInputElement extends HTMLElement {
 
     /**
      * Sets the {@code width} property.
-     * @param width the {@code width} property
+     * @param width the {@code width} property value
      */
     @JsxSetter
     public void setWidth(final int width) {
@@ -923,7 +707,7 @@ public class HTMLInputElement extends HTMLElement {
 
     /**
      * Sets the {@code height} property.
-     * @param height the {@code height} property
+     * @param height the {@code height} property value
      */
     @JsxSetter
     public void setHeight(final int height) {
@@ -934,7 +718,7 @@ public class HTMLInputElement extends HTMLElement {
      * Returns the labels associated with the element.
      * @return the labels associated with the element
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public NodeList getLabels() {
         if (labels_ == null) {
             labels_ = new LabelsNodeList(getDomNodeOrDie());
@@ -944,20 +728,30 @@ public class HTMLInputElement extends HTMLElement {
 
     /**
      * Checks whether the element has any constraints and whether it satisfies them.
-     * @return if the element is valid
+     * @return {@code true} if the element is valid
      */
     @JsxFunction
     public boolean checkValidity() {
-        return getDomNodeOrDie().isValid();
+        return ValidatableHTMLElement.doCheckValidity(getDomNodeOrDie());
     }
 
     /**
-     * {@inheritDoc}
+     * Performs the same validity checking steps as the checkValidity() method.
+     * @return {@code true} if the element is valid
      */
-    @Override
-    @JsxFunction(IE)
-    public TextRange createTextRange() {
-        return super.createTextRange();
+    @JsxFunction
+    public boolean reportValidity() {
+        return ValidatableHTMLElement.doCheckValidity(getDomNodeOrDie());
+    }
+
+    /**
+     * Returns the message describing why the element's value fails constraint
+     * validation, or "" if it's valid or barred from validation.
+     * @return the validation message
+     */
+    @JsxGetter
+    public String getValidationMessage() {
+        return ValidatableHTMLElement.getValidationMessage(getDomNodeOrDie());
     }
 
     /**
@@ -982,7 +776,7 @@ public class HTMLInputElement extends HTMLElement {
      * {@inheritDoc} Overridden to modify browser configurations.
      */
     @Override
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public boolean isDisabled() {
         return super.isDisabled();
     }
@@ -991,7 +785,7 @@ public class HTMLInputElement extends HTMLElement {
      * {@inheritDoc} Overridden to modify browser configurations.
      */
     @Override
-    @JsxSetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxSetter
     public void setDisabled(final boolean disabled) {
         super.setDisabled(disabled);
     }
@@ -1006,7 +800,8 @@ public class HTMLInputElement extends HTMLElement {
     }
 
     /**
-     * @return a ValidityState with the validity states that this element is in.
+     * Returns a {@link ValidityState} object representing the validity states of this element.
+     * @return a {@link ValidityState} object representing the validity states of this element
      */
     @JsxGetter
     public ValidityState getValidity() {
@@ -1018,10 +813,11 @@ public class HTMLInputElement extends HTMLElement {
     }
 
     /**
+     * Returns whether the element is a candidate for constraint validation.
      * @return whether the element is a candidate for constraint validation
      */
     @JsxGetter
-    public boolean getWillValidate() {
+    public boolean isWillValidate() {
         return getDomNodeOrDie().willValidate();
     }
 
@@ -1050,5 +846,21 @@ public class HTMLInputElement extends HTMLElement {
     @JsxSetter
     public void setFormNoValidate(final boolean value) {
         getDomNodeOrDie().setFormNoValidate(value);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public DOMRectList getClientRects() {
+        if ("hidden".equals(getType())) {
+            final DOMRectList rectList = new DOMRectList();
+            rectList.setParentScope(getTopLevelScope(getParentScope()));
+            rectList.setPrototype(getPrototype(rectList.getClass()));
+
+            return rectList;
+        }
+
+        return super.getClientRects();
     }
 }

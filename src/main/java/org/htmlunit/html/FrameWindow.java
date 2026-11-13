@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,15 @@ import org.htmlunit.WebWindowImpl;
 public class FrameWindow extends WebWindowImpl {
 
     /** The different deny states. */
-    public enum PageDenied { NONE, BY_X_FRAME_OPTIONS, BY_CONTENT_SECURIRY_POLICY }
+    public enum PageDenied {
+        /** NONE. */
+        NONE,
+
+        /** BY_X_FRAME_OPTIONS. */
+        BY_X_FRAME_OPTIONS,
+
+        /** BY_CONTENT_SECURIRY_POLICY. */
+        BY_CONTENT_SECURIRY_POLICY }
 
     private final BaseFrameElement frame_;
     private PageDenied pageDenied_;
@@ -114,8 +122,7 @@ public class FrameWindow extends WebWindowImpl {
         // so we have to disable future updates during initialization
         // see org.htmlunit.html.HtmlPage.loadFrames()
         final WebResponse webResponse = page.getWebResponse();
-        if (webResponse instanceof StringWebResponse) {
-            final StringWebResponse response = (StringWebResponse) webResponse;
+        if (webResponse instanceof StringWebResponse response) {
             if (response.isFromJavascript()) {
                 final BaseFrameElement frame = getFrameElement();
                 frame.setContentLoaded();
@@ -158,6 +165,8 @@ public class FrameWindow extends WebWindowImpl {
     }
 
     /**
+     * Returns PageDenied if the page was denied.
+     *
      * @return PageDenied if the page was denied
      */
     public PageDenied getPageDenied() {

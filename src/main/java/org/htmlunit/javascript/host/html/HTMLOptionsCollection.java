@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,57 +14,39 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.BrowserVersionFeatures.JS_SELECT_OPTIONS_HAS_SELECT_CLASS_NAME;
-import static org.htmlunit.BrowserVersionFeatures.JS_SELECT_OPTIONS_IGNORE_NEGATIVE_LENGTH;
-import static org.htmlunit.BrowserVersionFeatures.JS_SELECT_OPTIONS_IN_ALWAYS_TRUE;
-import static org.htmlunit.BrowserVersionFeatures.JS_SELECT_OPTIONS_NULL_FOR_OUTSIDE;
-import static org.htmlunit.BrowserVersionFeatures.JS_SELECT_OPTIONS_REMOVE_IGNORE_IF_INDEX_NEGATIVE;
-import static org.htmlunit.BrowserVersionFeatures.JS_SELECT_OPTIONS_REMOVE_THROWS_IF_NEGATIV;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
-
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Supplier;
-
-import org.htmlunit.BrowserVersion;
 import org.htmlunit.SgmlPage;
 import org.htmlunit.WebAssert;
-import org.htmlunit.html.DomNode;
+import org.htmlunit.corejs.javascript.Context;
+import org.htmlunit.corejs.javascript.Scriptable;
+import org.htmlunit.corejs.javascript.ScriptableObject;
+import org.htmlunit.corejs.javascript.VarScope;
 import org.htmlunit.html.ElementFactory;
 import org.htmlunit.html.HtmlOption;
 import org.htmlunit.html.HtmlSelect;
 import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.configuration.JsxSetter;
-import org.htmlunit.javascript.host.dom.NodeList;
-
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.EvaluatorException;
-import org.htmlunit.corejs.javascript.Scriptable;
-import org.htmlunit.corejs.javascript.ScriptableObject;
-import org.htmlunit.corejs.javascript.Undefined;
+import org.htmlunit.javascript.configuration.JsxSymbol;
+import org.htmlunit.javascript.host.dom.DOMException;
 
 /**
  * This is the array returned by the "options" property of Select.
  *
  * @author David K. Taylor
- * @author <a href="mailto:cse@dynabean.de">Christian Sell</a>
+ * @author Christian Sell
  * @author Marc Guillemot
  * @author Daniel Gredler
  * @author Bruce Faulkner
  * @author Ahmed Ashour
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLOptionsCollection">MDN Documentation</a>
  */
-@JsxClass({CHROME, EDGE, FF, FF_ESR})
-@JsxClass(isJSObject = false, value = IE)
+@JsxClass
 public class HTMLOptionsCollection extends HtmlUnitScriptable {
 
     private HtmlSelect htmlSelect_;
@@ -72,29 +54,26 @@ public class HTMLOptionsCollection extends HtmlUnitScriptable {
     /**
      * Creates an instance.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
     public HTMLOptionsCollection() {
+        super();
+    }
+
+    /**
+     * JavaScript constructor.
+     */
+    @JsxConstructor
+    public void jsConstructor() {
+        // nothing to do
     }
 
     /**
      * Creates an instance.
      * @param parentScope parent scope
      */
-    public HTMLOptionsCollection(final HtmlUnitScriptable parentScope) {
+    public HTMLOptionsCollection(final VarScope parentScope) {
+        super();
         setParentScope(parentScope);
         setPrototype(getPrototype(getClass()));
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getClassName() {
-        if (getWindow().getWebWindow() != null
-                && getBrowserVersion().hasFeature(JS_SELECT_OPTIONS_HAS_SELECT_CLASS_NAME)) {
-            return "HTMLSelectElement";
-        }
-        return super.getClassName();
     }
 
     /**
@@ -116,27 +95,18 @@ public class HTMLOptionsCollection extends HtmlUnitScriptable {
     @Override
     public Object get(final int index, final Scriptable start) {
         if (htmlSelect_ == null || index < 0) {
-            return Undefined.instance;
+            return JavaScriptEngine.UNDEFINED;
         }
 
         if (index >= htmlSelect_.getOptionSize()) {
-            if (getBrowserVersion().hasFeature(JS_SELECT_OPTIONS_NULL_FOR_OUTSIDE)) {
-                return null;
-            }
-            return Undefined.instance;
+            return JavaScriptEngine.UNDEFINED;
         }
 
         return getScriptableFor(htmlSelect_.getOption(index));
     }
 
     /**
-     * <p>If IE is emulated, and this class does not have the specified property, and the owning
-     * select *does* have the specified property, this method delegates the call to the parent
-     * select element.</p>
-     *
-     * @param name {@inheritDoc}
-     * @param start {@inheritDoc}
-     * @param value {@inheritDoc}
+     * {@inheritDoc}
      */
     @Override
     public void put(final String name, final Scriptable start, final Object value) {
@@ -165,7 +135,11 @@ public class HTMLOptionsCollection extends HtmlUnitScriptable {
      */
     @JsxFunction
     public Object item(final int index) {
-        return get(index, null);
+        final Object item = get(index, this);
+        if (JavaScriptEngine.UNDEFINED == item) {
+            return null;
+        }
+        return item;
     }
 
     /**
@@ -214,10 +188,7 @@ public class HTMLOptionsCollection extends HtmlUnitScriptable {
     @JsxSetter
     public void setLength(final int newLength) {
         if (newLength < 0) {
-            if (getBrowserVersion().hasFeature(JS_SELECT_OPTIONS_IGNORE_NEGATIVE_LENGTH)) {
-                return;
-            }
-            throw Context.reportRuntimeError("Length is negative");
+            return;
         }
 
         final int currentLength = htmlSelect_.getOptionSize();
@@ -256,17 +227,19 @@ public class HTMLOptionsCollection extends HtmlUnitScriptable {
      * <p>This method will call the {@link #put(int, Scriptable, Object)} method for actually
      * adding the element to the collection.</p>
      *
-     * <p>According to <a href="http://msdn.microsoft.com/en-us/library/ms535921.aspx">the
-     * Microsoft DHTML reference page for the JavaScript add() method of the options collection</a>,
+     * <p>Per the <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLOptionsCollection/add">MDN
+     * documentation</a> for the JavaScript add() method of the options collection,
      * the index parameter is specified as follows:
+     * </p>
      * <p>
      * <i>Optional. Integer that specifies the index position in the collection where the element is
      * placed. If no value is given, the method places the element at the end of the collection.</i>
+     * </p>
      *
      * @param newOptionObject the DomNode to insert in the collection
      * @param beforeOptionObject An optional parameter which specifies the index position in the
-     * collection where the element is placed. If no value is given, the method places
-     * the element at the end of the collection.
+     *        collection where the element is placed. If no value is given, the method places
+     *        the element at the end of the collection.
      *
      * @see #put(int, Scriptable, Object)
      */
@@ -286,14 +259,18 @@ public class HTMLOptionsCollection extends HtmlUnitScriptable {
 
             beforeOption = (HtmlOption) ((HTMLOptionElement) item(index)).getDomNodeOrDie();
         }
-        else if (beforeOptionObject instanceof HTMLOptionElement) {
-            beforeOption = (HtmlOption) ((HTMLOptionElement) beforeOptionObject).getDomNodeOrDie();
+        else if (beforeOptionObject instanceof HTMLOptionElement element) {
+            beforeOption = (HtmlOption) element.getDomNodeOrDie();
             if (beforeOption.getParentNode() != htmlSelect_) {
-                throw new EvaluatorException("Unknown option.");
+                throw JavaScriptEngine.asJavaScriptException(
+                        getWindow(),
+                        "Unknown option.",
+                        DOMException.NOT_FOUND_ERR);
+
             }
         }
 
-        if (null == beforeOption) {
+        if (beforeOption == null) {
             htmlSelect_.appendOption(htmlOption);
             return;
         }
@@ -307,32 +284,11 @@ public class HTMLOptionsCollection extends HtmlUnitScriptable {
      */
     @JsxFunction
     public void remove(final int index) {
-        int idx = index;
-        final BrowserVersion browser = getBrowserVersion();
-        if (idx < 0) {
-            if (browser.hasFeature(JS_SELECT_OPTIONS_REMOVE_IGNORE_IF_INDEX_NEGATIVE)) {
-                return;
-            }
-            if (index < 0 && getBrowserVersion().hasFeature(JS_SELECT_OPTIONS_REMOVE_THROWS_IF_NEGATIV)) {
-                throw Context.reportRuntimeError("Invalid index for option collection: " + index);
-            }
-        }
-
-        idx = Math.max(idx, 0);
-        if (idx >= getLength()) {
+        if (index < 0 || index >= getLength()) {
             return;
         }
 
-        htmlSelect_.removeOption(idx);
-    }
-
-    @Override
-    public boolean has(final int index, final Scriptable start) {
-        if (getBrowserVersion().hasFeature(JS_SELECT_OPTIONS_IN_ALWAYS_TRUE)) {
-            return true;
-        }
-
-        return super.has(index, start);
+        htmlSelect_.removeOption(index);
     }
 
     /**
@@ -354,22 +310,11 @@ public class HTMLOptionsCollection extends HtmlUnitScriptable {
     }
 
     /**
-     * Returns the child nodes of the current element.
-     * @return the child nodes of the current element
+     * Returns the {@code Symbol.iterator} function that allows iterating over this collection.
+     * @return the Iterator symbol
      */
-    @JsxGetter(IE)
-    public NodeList getChildNodes() {
-        final NodeList childNodes = new NodeList(htmlSelect_, false);
-        childNodes.setElementsSupplier(
-                (Supplier<List<DomNode>> & Serializable)
-                () -> {
-                    final List<DomNode> response = new ArrayList<>();
-                    for (final DomNode child : htmlSelect_.getChildren()) {
-                        response.add(child);
-                    }
-
-                    return response;
-                });
-        return childNodes;
+    @JsxSymbol
+    public Scriptable iterator() {
+        return JavaScriptEngine.newArrayIteratorTypeValues(getParentScope(), this);
     }
 }

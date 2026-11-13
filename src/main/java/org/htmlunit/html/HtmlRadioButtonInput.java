@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,7 @@
  */
 package org.htmlunit.html;
 
-import static org.htmlunit.BrowserVersionFeatures.EVENT_ONCHANGE_AFTER_ONCLICK;
-import static org.htmlunit.BrowserVersionFeatures.HTMLINPUT_CHECKBOX_DOES_NOT_CLICK_SURROUNDING_ANCHOR;
+import static org.htmlunit.util.StringUtils.toRootLowerCase;
 
 import java.io.IOException;
 import java.util.Map;
@@ -24,13 +23,14 @@ import org.htmlunit.Page;
 import org.htmlunit.ScriptResult;
 import org.htmlunit.SgmlPage;
 import org.htmlunit.javascript.host.event.Event;
+import org.htmlunit.javascript.host.event.KeyboardEvent;
 
 /**
  * Wrapper for the HTML element "input".
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author David K. Taylor
- * @author <a href="mailto:cse@dynabean.de">Christian Sell</a>
+ * @author Christian Sell
  * @author Marc Guillemot
  * @author Mike Bresnahan
  * @author Daniel Gredler
@@ -64,7 +64,7 @@ public class HtmlRadioButtonInput extends HtmlInput implements LabelableElement 
             final Map<String, DomAttr> attributes) {
         super(qualifiedName, page, attributes);
 
-        if (getAttributeDirect("value") == ATTRIBUTE_NOT_DEFINED) {
+        if (getAttributeDirect(VALUE_ATTRIBUTE) == ATTRIBUTE_NOT_DEFINED) {
             setRawValue(DEFAULT_VALUE);
         }
 
@@ -99,7 +99,7 @@ public class HtmlRadioButtonInput extends HtmlInput implements LabelableElement 
      *
      * @param isChecked true if this element is to be selected
      * @return the page that occupies this window after setting checked status
-     * It may be the same window or it may be a freshly loaded one.
+     *         It may be the same window, or it may be a freshly loaded one.
      */
     @Override
     public Page setChecked(final boolean isChecked) {
@@ -108,22 +108,29 @@ public class HtmlRadioButtonInput extends HtmlInput implements LabelableElement 
         final boolean changed = isChecked() != isChecked;
         checkedState_ = isChecked;
         if (isChecked) {
-            final HtmlForm form = getEnclosingForm();
-            if (form != null) {
-                form.setCheckedRadioButton(this);
-            }
-            else if (page != null && page.isHtmlPage()) {
-                setCheckedForPage((HtmlPage) page);
-            }
+            updateRadioButtonSelection(page);
         }
 
         if (changed) {
             final ScriptResult scriptResult = fireEvent(Event.TYPE_CHANGE);
-            if (scriptResult != null) {
+            if (scriptResult != null && page != null) {
                 page = page.getEnclosingWindow().getWebClient().getCurrentWindow().getEnclosedPage();
             }
         }
         return page;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void doType(final int keyCode, final boolean lastType) throws IOException {
+        if (keyCode == KeyboardEvent.DOM_VK_SPACE) {
+            click();
+            return;
+        }
+
+        super.doType(keyCode, lastType);
     }
 
     /**
@@ -135,18 +142,24 @@ public class HtmlRadioButtonInput extends HtmlInput implements LabelableElement 
      */
     @Override
     protected boolean doClickStateUpdate(final boolean shiftKey, final boolean ctrlKey) throws IOException {
-        final HtmlForm form = getEnclosingForm();
         final boolean changed = !isChecked();
+        updateRadioButtonSelection(getPage());
 
-        final Page page = getPage();
+        super.doClickStateUpdate(shiftKey, ctrlKey);
+        return changed;
+    }
+
+    /**
+     * Updates radio selection within form context or page scope.
+     */
+    private void updateRadioButtonSelection(final Page page) {
+        final HtmlForm form = getEnclosingForm();
         if (form != null) {
             form.setCheckedRadioButton(this);
         }
         else if (page != null && page.isHtmlPage()) {
             setCheckedForPage((HtmlPage) page);
         }
-        super.doClickStateUpdate(shiftKey, ctrlKey);
-        return changed;
     }
 
     /**
@@ -154,16 +167,11 @@ public class HtmlRadioButtonInput extends HtmlInput implements LabelableElement 
      */
     private void setCheckedForPage(final HtmlPage htmlPage) {
         final String name = getNameAttribute();
-        for (final DomNode domNode : htmlPage.getDescendants()) {
-            if (domNode instanceof HtmlRadioButtonInput) {
-                final HtmlRadioButtonInput radioInput = (HtmlRadioButtonInput) domNode;
-                if (name.equals(radioInput.getAttribute("name")) && radioInput.getEnclosingForm() == null) {
-                    if (radioInput == this) {
-                        setCheckedInternal(true);
-                    }
-                    else {
-                        radioInput.setCheckedInternal(false);
-                    }
+        for (final HtmlElement htmlElement : htmlPage.getHtmlElementDescendants()) {
+            if (htmlElement instanceof HtmlRadioButtonInput radioInput) {
+                if (name.equals(radioInput.getNameAttribute())
+                        && radioInput.getEnclosingForm() == null) {
+                    radioInput.setCheckedInternal(radioInput == this);
                 }
             }
         }
@@ -173,22 +181,8 @@ public class HtmlRadioButtonInput extends HtmlInput implements LabelableElement 
      * {@inheritDoc}
      */
     @Override
-    protected ScriptResult doClickFireClickEvent(final Event event) {
-        if (!hasFeature(EVENT_ONCHANGE_AFTER_ONCLICK)) {
-            executeOnChangeHandlerIfAppropriate(this);
-        }
-
-        return super.doClickFireClickEvent(event);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     protected void doClickFireChangeEvent() {
-        if (hasFeature(EVENT_ONCHANGE_AFTER_ONCLICK)) {
-            executeOnChangeHandlerIfAppropriate(this);
-        }
+        executeOnChangeHandlerIfAppropriate(this);
     }
 
     /**
@@ -272,10 +266,19 @@ public class HtmlRadioButtonInput extends HtmlInput implements LabelableElement 
     @Override
     protected void setAttributeNS(final String namespaceURI, final String qualifiedName, final String attributeValue,
             final boolean notifyAttributeChangeListeners, final boolean notifyMutationObservers) {
-        if (ATTRIBUTE_CHECKED.equals(qualifiedName)) {
+        final String qualifiedNameLC = toRootLowerCase(qualifiedName);
+
+        if (VALUE_ATTRIBUTE.equals(qualifiedNameLC)) {
+            super.setAttributeNS(namespaceURI, qualifiedNameLC, attributeValue, notifyAttributeChangeListeners,
+                    notifyMutationObservers);
+            setRawValue(attributeValue);
+            return;
+        }
+
+        if (ATTRIBUTE_CHECKED.equals(qualifiedNameLC)) {
             checkedState_ = true;
         }
-        super.setAttributeNS(namespaceURI, qualifiedName, attributeValue, notifyAttributeChangeListeners,
+        super.setAttributeNS(namespaceURI, qualifiedNameLC, attributeValue, notifyAttributeChangeListeners,
                 notifyMutationObservers);
     }
 
@@ -284,8 +287,7 @@ public class HtmlRadioButtonInput extends HtmlInput implements LabelableElement 
      */
     @Override
     protected boolean propagateClickStateUpdateToParent() {
-        return !hasFeature(HTMLINPUT_CHECKBOX_DOES_NOT_CLICK_SURROUNDING_ANCHOR)
-                && super.propagateClickStateUpdateToParent();
+        return false;
     }
 
     @Override
@@ -293,18 +295,15 @@ public class HtmlRadioButtonInput extends HtmlInput implements LabelableElement 
         if (ATTRIBUTE_NOT_DEFINED == getAttributeDirect(ATTRIBUTE_REQUIRED)) {
             return false;
         }
-        if (ATTRIBUTE_NOT_DEFINED == getNameAttribute()) {
+        final String name = getNameAttribute();
+        if (ATTRIBUTE_NOT_DEFINED == name) {
             return false;
         }
 
-        final String name = getNameAttribute();
-        for (final DomNode domNode : getPage().getDescendants()) {
-            if (domNode instanceof HtmlRadioButtonInput) {
-                final HtmlRadioButtonInput radioInput = (HtmlRadioButtonInput) domNode;
-                if (name.equals(radioInput.getAttribute("name"))) {
-                    if (radioInput.isChecked()) {
-                        return false;
-                    }
+        for (final HtmlElement htmlElement : getPage().getHtmlElementDescendants()) {
+            if (htmlElement instanceof HtmlRadioButtonInput radioInput) {
+                if (name.equals(radioInput.getNameAttribute()) && radioInput.isChecked()) {
+                    return false;
                 }
             }
         }

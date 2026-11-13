@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,68 +14,43 @@
  */
 package org.htmlunit.javascript.host.dom;
 
-import static org.htmlunit.BrowserVersionFeatures.EVENT_ONANIMATION_DOCUMENT_CREATE_NOT_SUPPORTED;
-import static org.htmlunit.BrowserVersionFeatures.EVENT_ONCLOSE_DOCUMENT_CREATE_NOT_SUPPORTED;
-import static org.htmlunit.BrowserVersionFeatures.EVENT_ONPOPSTATE_DOCUMENT_CREATE_NOT_SUPPORTED;
-import static org.htmlunit.BrowserVersionFeatures.EVENT_TYPE_BEFOREUNLOADEVENT;
-import static org.htmlunit.BrowserVersionFeatures.EVENT_TYPE_HASHCHANGEEVENT;
-import static org.htmlunit.BrowserVersionFeatures.EVENT_TYPE_MOUSEWHEELEVENT;
-import static org.htmlunit.BrowserVersionFeatures.EVENT_TYPE_POINTEREVENT;
-import static org.htmlunit.BrowserVersionFeatures.EVENT_TYPE_PROGRESSEVENT;
-import static org.htmlunit.BrowserVersionFeatures.EVENT_TYPE_WHEELEVENT;
-import static org.htmlunit.BrowserVersionFeatures.HTMLDOCUMENT_CHARSET_LOWERCASE;
-import static org.htmlunit.BrowserVersionFeatures.HTMLDOCUMENT_COLOR;
-import static org.htmlunit.BrowserVersionFeatures.HTML_COLOR_EXPAND_ZERO;
-import static org.htmlunit.BrowserVersionFeatures.JS_ANCHORS_REQUIRES_NAME_OR_ID;
-import static org.htmlunit.BrowserVersionFeatures.JS_DOCUMENT_DESIGN_MODE_INHERIT;
-import static org.htmlunit.BrowserVersionFeatures.JS_DOCUMENT_FORMS_FUNCTION_SUPPORTED;
+import static org.htmlunit.BrowserVersionFeatures.JS_DOCUMENT_EVALUATE_RECREATES_RESULT;
 import static org.htmlunit.BrowserVersionFeatures.JS_DOCUMENT_SELECTION_RANGE_COUNT;
-import static org.htmlunit.BrowserVersionFeatures.JS_DOCUMENT_SETTING_DOMAIN_THROWS_FOR_ABOUT_BLANK;
-import static org.htmlunit.BrowserVersionFeatures.JS_TREEWALKER_EXPAND_ENTITY_REFERENCES_FALSE;
-import static org.htmlunit.BrowserVersionFeatures.JS_TREEWALKER_FILTER_FUNCTION_ONLY;
-import static org.htmlunit.BrowserVersionFeatures.JS_XML_GET_ELEMENT_BY_ID__ANY_ELEMENT;
-import static org.htmlunit.BrowserVersionFeatures.QUERYSELECTORALL_NOT_IN_QUIRKS;
-import static org.htmlunit.html.DomElement.ATTRIBUTE_NOT_DEFINED;
 import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
 import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
 import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
 import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
-import java.nio.charset.Charset;
-import java.text.SimpleDateFormat;
-import java.util.Collections;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.htmlunit.BrowserVersion;
-import org.htmlunit.ElementNotFoundException;
 import org.htmlunit.HttpHeader;
 import org.htmlunit.Page;
 import org.htmlunit.SgmlPage;
+import org.htmlunit.StringWebResponse;
 import org.htmlunit.WebResponse;
 import org.htmlunit.WebWindow;
 import org.htmlunit.corejs.javascript.Callable;
 import org.htmlunit.corejs.javascript.Context;
 import org.htmlunit.corejs.javascript.Function;
-import org.htmlunit.corejs.javascript.FunctionObject;
 import org.htmlunit.corejs.javascript.NativeFunction;
-import org.htmlunit.corejs.javascript.ScriptRuntime;
 import org.htmlunit.corejs.javascript.Scriptable;
 import org.htmlunit.corejs.javascript.ScriptableObject;
+import org.htmlunit.corejs.javascript.VarScope;
 import org.htmlunit.cssparser.parser.CSSException;
 import org.htmlunit.html.DomComment;
 import org.htmlunit.html.DomDocumentFragment;
@@ -85,29 +60,35 @@ import org.htmlunit.html.DomText;
 import org.htmlunit.html.FrameWindow;
 import org.htmlunit.html.Html;
 import org.htmlunit.html.HtmlAnchor;
-import org.htmlunit.html.HtmlApplet;
 import org.htmlunit.html.HtmlArea;
 import org.htmlunit.html.HtmlAttributeChangeEvent;
 import org.htmlunit.html.HtmlElement;
 import org.htmlunit.html.HtmlEmbed;
 import org.htmlunit.html.HtmlForm;
+import org.htmlunit.html.HtmlFrameSet;
 import org.htmlunit.html.HtmlImage;
-import org.htmlunit.html.HtmlInput;
 import org.htmlunit.html.HtmlPage;
+import org.htmlunit.html.HtmlRb;
 import org.htmlunit.html.HtmlRp;
 import org.htmlunit.html.HtmlRt;
+import org.htmlunit.html.HtmlRtc;
 import org.htmlunit.html.HtmlScript;
 import org.htmlunit.html.HtmlSvg;
 import org.htmlunit.html.HtmlUnknownElement;
 import org.htmlunit.html.UnknownElementFactory;
+import org.htmlunit.html.XHtmlPage;
 import org.htmlunit.html.impl.SimpleRange;
-import org.htmlunit.httpclient.HttpClientConverter;
+import org.htmlunit.http.Cookie;
+import org.htmlunit.http.HttpUtils;
+import org.htmlunit.httpclient.HtmlUnitBrowserCompatCookieSpec;
 import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.configuration.JsxSetter;
+import org.htmlunit.javascript.configuration.JsxStaticFunction;
 import org.htmlunit.javascript.host.Element;
 import org.htmlunit.javascript.host.FontFaceSet;
 import org.htmlunit.javascript.host.Location;
@@ -117,9 +98,10 @@ import org.htmlunit.javascript.host.animations.AnimationEvent;
 import org.htmlunit.javascript.host.css.StyleSheetList;
 import org.htmlunit.javascript.host.dom.AbstractList.EffectOnCache;
 import org.htmlunit.javascript.host.event.BeforeUnloadEvent;
-import org.htmlunit.javascript.host.event.CloseEvent;
 import org.htmlunit.javascript.host.event.CompositionEvent;
 import org.htmlunit.javascript.host.event.CustomEvent;
+import org.htmlunit.javascript.host.event.DeviceMotionEvent;
+import org.htmlunit.javascript.host.event.DeviceOrientationEvent;
 import org.htmlunit.javascript.host.event.DragEvent;
 import org.htmlunit.javascript.host.event.Event;
 import org.htmlunit.javascript.host.event.FocusEvent;
@@ -127,25 +109,19 @@ import org.htmlunit.javascript.host.event.HashChangeEvent;
 import org.htmlunit.javascript.host.event.KeyboardEvent;
 import org.htmlunit.javascript.host.event.MessageEvent;
 import org.htmlunit.javascript.host.event.MouseEvent;
-import org.htmlunit.javascript.host.event.MouseWheelEvent;
-import org.htmlunit.javascript.host.event.MutationEvent;
 import org.htmlunit.javascript.host.event.PointerEvent;
 import org.htmlunit.javascript.host.event.PopStateEvent;
 import org.htmlunit.javascript.host.event.ProgressEvent;
-import org.htmlunit.javascript.host.event.SVGZoomEvent;
 import org.htmlunit.javascript.host.event.TextEvent;
 import org.htmlunit.javascript.host.event.UIEvent;
 import org.htmlunit.javascript.host.event.WheelEvent;
-import org.htmlunit.javascript.host.html.DocumentProxy;
 import org.htmlunit.javascript.host.html.HTMLAllCollection;
 import org.htmlunit.javascript.host.html.HTMLBodyElement;
 import org.htmlunit.javascript.host.html.HTMLCollection;
-import org.htmlunit.javascript.host.html.HTMLDocument;
 import org.htmlunit.javascript.host.html.HTMLElement;
 import org.htmlunit.javascript.host.html.HTMLFrameSetElement;
-import org.htmlunit.util.EncodingSniffer;
+import org.htmlunit.util.StringUtils;
 import org.htmlunit.util.UrlUtils;
-import org.htmlunit.xml.XmlPage;
 import org.htmlunit.xpath.xml.utils.PrefixResolver;
 import org.w3c.dom.CDATASection;
 import org.w3c.dom.DOMException;
@@ -155,36 +131,41 @@ import org.w3c.dom.ProcessingInstruction;
 /**
  * A JavaScript object for {@code Document}.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author David K. Taylor
- * @author <a href="mailto:chen_jun@users.sourceforge.net">Chen Jun</a>
- * @author <a href="mailto:cse@dynabean.de">Christian Sell</a>
+ * @author Chen Jun
+ * @author Christian Sell
  * @author Chris Erskine
  * @author Marc Guillemot
  * @author Daniel Gredler
  * @author Michael Ottati
- * @author <a href="mailto:george@murnock.com">George Murnock</a>
+ * @author George Murnock
  * @author Ahmed Ashour
  * @author Rob Di Marco
  * @author Ronald Brill
  * @author Chuck Dumont
  * @author Frank Danek
  * @author Madis Pärn
- * @see <a href="http://msdn.microsoft.com/en-us/library/ms531073.aspx">MSDN documentation</a>
+ * @author Lai Quang Duong
+ * @author Sven Strickroth
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/Document">MDN Documentation</a>
  * @see <a href="http://www.w3.org/TR/2000/WD-DOM-Level-1-20000929/level-one-html.html#ID-7068919">W3C Dom Level 1</a>
  */
 @JsxClass
 public class Document extends Node {
 
     private static final Log LOG = LogFactory.getLog(Document.class);
-    private static final Pattern TAG_NAME_PATTERN = Pattern.compile("\\w+");
-    // all as lowercase for performance
-    private static final Set<String> EXECUTE_CMDS_IE = new HashSet<>();
-    /** https://developer.mozilla.org/en/Rich-Text_Editing_in_Mozilla#Executing_Commands */
+
+    /**
+     * See <a href="https://developer.mozilla.org/en/Rich-Text_Editing_in_Mozilla#Executing_Commands">
+     *     Executing Commands</a>.
+     */
     private static final Set<String> EXECUTE_CMDS_FF = new HashSet<>();
     private static final Set<String> EXECUTE_CMDS_CHROME = new HashSet<>();
-    /** The format to use for the <code>lastModified</code> attribute. */
-    private static final String LAST_MODIFIED_DATE_FORMAT = "MM/dd/yyyy HH:mm:ss";
+    /** The formatter to use for the <code>lastModified</code> attribute. */
+    private static final DateTimeFormatter LAST_MODIFIED_DATE_FORMATTER
+                                            = DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss");
 
     /** Contains all supported DOM level 2 events. */
     private static final Map<String, Class<? extends Event>> SUPPORTED_DOM2_EVENT_TYPE_MAP;
@@ -202,54 +183,42 @@ public class Document extends Node {
       have a no-arg constructor.
      */
     static {
-        final Map<String, Class<? extends Event>> dom2EventMap = new HashMap<>();
-        dom2EventMap.put("HTMLEvents", Event.class);
-        dom2EventMap.put("MouseEvents", MouseEvent.class);
-        dom2EventMap.put("MutationEvents", MutationEvent.class);
-        dom2EventMap.put("UIEvents", UIEvent.class);
-        SUPPORTED_DOM2_EVENT_TYPE_MAP = Collections.unmodifiableMap(dom2EventMap);
+        SUPPORTED_DOM2_EVENT_TYPE_MAP = Map.of(
+                "HTMLEvents", Event.class,
+                "MouseEvents", MouseEvent.class,
+                "UIEvents", UIEvent.class);
 
-        final Map<String, Class<? extends Event>> dom3EventMap = new HashMap<>();
-        dom3EventMap.put("Event", Event.class);
-        dom3EventMap.put("KeyboardEvent", KeyboardEvent.class);
-        dom3EventMap.put("MouseEvent", MouseEvent.class);
-        dom3EventMap.put("MessageEvent", MessageEvent.class);
-        dom3EventMap.put("MutationEvent", MutationEvent.class);
-        dom3EventMap.put("UIEvent", UIEvent.class);
-        dom3EventMap.put("CustomEvent", CustomEvent.class);
-        dom3EventMap.put("CloseEvent", CloseEvent.class);
-        dom3EventMap.put("CompositionEvent", CompositionEvent.class);
-        dom3EventMap.put("DragEvent", DragEvent.class);
-        dom3EventMap.put("TextEvent", TextEvent.class);
-        SUPPORTED_DOM3_EVENT_TYPE_MAP = Collections.unmodifiableMap(dom3EventMap);
+        SUPPORTED_DOM3_EVENT_TYPE_MAP = Map.ofEntries(
+                Map.entry("Event", Event.class),
+                Map.entry("KeyboardEvent", KeyboardEvent.class),
+                Map.entry("MouseEvent", MouseEvent.class),
+                Map.entry("MessageEvent", MessageEvent.class),
+                Map.entry("UIEvent", UIEvent.class),
+                Map.entry("CustomEvent", CustomEvent.class),
+                Map.entry("CompositionEvent", CompositionEvent.class),
+                Map.entry("DragEvent", DragEvent.class),
+                Map.entry("TextEvent", TextEvent.class),
+                Map.entry("DeviceMotionEvent", DeviceMotionEvent.class),
+                Map.entry("DeviceOrientationEvent", DeviceOrientationEvent.class));
 
-        final Map<String, Class<? extends Event>> additionalEventMap = new HashMap<>();
-        additionalEventMap.put("BeforeUnloadEvent", BeforeUnloadEvent.class);
-        additionalEventMap.put("Events", Event.class);
-        additionalEventMap.put("HashChangeEvent", HashChangeEvent.class);
-        additionalEventMap.put("KeyEvents", KeyboardEvent.class);
-        additionalEventMap.put("PointerEvent", PointerEvent.class);
-        additionalEventMap.put("PopStateEvent", PopStateEvent.class);
-        additionalEventMap.put("ProgressEvent", ProgressEvent.class);
-        additionalEventMap.put("MouseWheelEvent", MouseWheelEvent.class);
-        additionalEventMap.put("FocusEvent", FocusEvent.class);
-        additionalEventMap.put("WheelEvent", WheelEvent.class);
-        additionalEventMap.put("SVGZoomEvent", SVGZoomEvent.class);
-        additionalEventMap.put("AnimationEvent", AnimationEvent.class);
-        SUPPORTED_VENDOR_EVENT_TYPE_MAP = Collections.unmodifiableMap(additionalEventMap);
+        SUPPORTED_VENDOR_EVENT_TYPE_MAP = Map.ofEntries(
+                Map.entry("BeforeUnloadEvent", BeforeUnloadEvent.class),
+                Map.entry("Events", Event.class),
+                Map.entry("HashChangeEvent", HashChangeEvent.class),
+                Map.entry("KeyEvents", KeyboardEvent.class),
+                Map.entry("PointerEvent", PointerEvent.class),
+                Map.entry("PopStateEvent", PopStateEvent.class),
+                Map.entry("ProgressEvent", ProgressEvent.class),
+                Map.entry("FocusEvent", FocusEvent.class),
+                Map.entry("WheelEvent", WheelEvent.class),
+                Map.entry("AnimationEvent", AnimationEvent.class));
     }
-
-    /**
-     * Static counter for {@link #uniqueID_}.
-     */
-    private static final AtomicInteger UniqueID_Counter_ = new AtomicInteger(1);
 
     private Window window_;
     private DOMImplementation implementation_;
     private String designMode_;
     private String compatMode_;
     private int documentMode_ = -1;
-    private String uniqueID_;
     private String domain_;
     private String lastModified_;
     private ScriptableObject currentScript_;
@@ -259,28 +228,6 @@ public class Document extends Node {
     static {
         // commands
         String[] cmds = {
-            "2D-Position", "AbsolutePosition",
-            "BlockDirLTR", "BlockDirRTL", "BrowseMode",
-            "ClearAuthenticationCache", "CreateBookmark", "Copy", "Cut",
-            "DirLTR", "DirRTL",
-            "EditMode",
-            "InlineDirLTR", "InlineDirRTL", "InsertButton", "InsertFieldset",
-            "InsertIFrame", "InsertInputButton", "InsertInputCheckbox",
-            "InsertInputFileUpload", "InsertInputHidden", "InsertInputImage", "InsertInputPassword", "InsertInputRadio",
-            "InsertInputReset", "InsertInputSubmit", "InsertInputText", "InsertMarquee",
-            "InsertSelectDropdown", "InsertSelectListbox", "InsertTextArea",
-            "LiveResize", "MultipleSelection", "Open",
-            "OverWrite", "PlayImage",
-            "Refresh", "RemoveParaFormat", "SaveAs",
-            "SizeToControl", "SizeToControlHeight", "SizeToControlWidth", "Stop", "StopImage",
-            "UnBookmark",
-            "Paste"
-        };
-        for (final String cmd : cmds) {
-            EXECUTE_CMDS_IE.add(cmd.toLowerCase(Locale.ROOT));
-        }
-
-        cmds = new String[] {
             "BackColor", "BackgroundImageCache" /* Undocumented */,
             "Bold",
             "CreateLink", "Delete",
@@ -296,7 +243,6 @@ public class Document extends Node {
             "Underline", "Undo", "Unlink", "Unselect"
         };
         for (final String cmd : cmds) {
-            EXECUTE_CMDS_IE.add(cmd.toLowerCase(Locale.ROOT));
             if (!"Bold".equals(cmd)) {
                 EXECUTE_CMDS_CHROME.add(cmd.toLowerCase(Locale.ROOT));
             }
@@ -320,10 +266,50 @@ public class Document extends Node {
     }
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public Document() {
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        throw JavaScriptEngine.typeErrorIllegalConstructor();
+    }
+
+    /**
+     * Parses the given string of HTML without sanitizing it and returns a new HTMLDocument.
+     *
+     * @param cx the current context
+     * @param scope the scope
+     * @param thisObj the scriptable this object
+     * @param args the arguments
+     * @param funObj the function object
+     * @return a newly created {@link org.htmlunit.javascript.host.html.HTMLDocument}
+     *
+     * @see <a href="https://html.spec.whatwg.org/multipage/dynamic-markup-insertion.html#dom-parsehtmlunsafe">
+     *     HTML spec - parseHTMLUnsafe</a>
+     */
+    @JsxStaticFunction
+    public static Document parseHTMLUnsafe(final Context cx, final VarScope scope,
+            final Scriptable thisObj, final Object[] args, final Function funObj) {
+        if (args.length < 1) {
+            throw JavaScriptEngine
+                    .typeError("Document.parseHTMLUnsafe: At least 1 argument required, but only 0 passed");
+        }
+
+        final Window win = getWindow(thisObj);
+        if (JavaScriptEngine.isUndefined(args[0])) {
+            return win.getDocument();
+        }
+
+        final String html = JavaScriptEngine.toString(args[0]);
+
+        try {
+            final WebWindow webWindow = win.getWebWindow();
+            final WebResponse webResponse = new StringWebResponse(html, webWindow.getEnclosedPage().getUrl());
+            return DOMParser.parseHtmlDocument(win.getDocument(), webResponse, webWindow);
+        }
+        catch (final IOException e) {
+            throw JavaScriptEngine.syntaxError("Parsing failed" + e.getMessage());
+        }
     }
 
     /**
@@ -350,7 +336,7 @@ public class Document extends Node {
      * Sets the value of the {@code location} property. The location's default property is "href",
      * so setting "document.location='http://www.sf.net'" is equivalent to setting
      * "document.location.href='http://www.sf.net'".
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms535866.aspx">MSDN documentation</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/Document/location">MDN Documentation</a>
      * @param location the location to navigate to
      * @throws IOException when location loading fails
      */
@@ -419,12 +405,7 @@ public class Document extends Node {
     @JsxGetter
     public String getDesignMode() {
         if (designMode_ == null) {
-            if (getBrowserVersion().hasFeature(JS_DOCUMENT_DESIGN_MODE_INHERIT)) {
-                designMode_ = "inherit";
-            }
-            else {
-                designMode_ = "off";
-            }
+            designMode_ = "off";
         }
         return designMode_;
     }
@@ -435,38 +416,19 @@ public class Document extends Node {
      */
     @JsxSetter
     public void setDesignMode(final String mode) {
-        final BrowserVersion browserVersion = getBrowserVersion();
-        final boolean inherit = browserVersion.hasFeature(JS_DOCUMENT_DESIGN_MODE_INHERIT);
-        if (inherit) {
-            if (!"on".equalsIgnoreCase(mode) && !"off".equalsIgnoreCase(mode) && !"inherit".equalsIgnoreCase(mode)) {
-                throw Context.reportRuntimeError("Invalid document.designMode value '" + mode + "'.");
-            }
-
-            if ("on".equalsIgnoreCase(mode)) {
-                designMode_ = "on";
-            }
-            else if ("off".equalsIgnoreCase(mode)) {
-                designMode_ = "off";
-            }
-            else if ("inherit".equalsIgnoreCase(mode)) {
-                designMode_ = "inherit";
+        if ("on".equalsIgnoreCase(mode)) {
+            designMode_ = "on";
+            final SgmlPage page = getPage();
+            if (page != null && page.isHtmlPage()
+                    && getBrowserVersion().hasFeature(JS_DOCUMENT_SELECTION_RANGE_COUNT)) {
+                final HtmlPage htmlPage = (HtmlPage) page;
+                final DomNode child = htmlPage.getBody().getFirstChild();
+                final DomNode rangeNode = child == null ? htmlPage.getBody() : child;
+                htmlPage.setSelectionRange(new SimpleRange(rangeNode, 0));
             }
         }
-        else {
-            if ("on".equalsIgnoreCase(mode)) {
-                designMode_ = "on";
-                final SgmlPage page = getPage();
-                if (page != null && page.isHtmlPage()
-                        && getBrowserVersion().hasFeature(JS_DOCUMENT_SELECTION_RANGE_COUNT)) {
-                    final HtmlPage htmlPage = (HtmlPage) page;
-                    final DomNode child = htmlPage.getBody().getFirstChild();
-                    final DomNode rangeNode = child == null ? htmlPage.getBody() : child;
-                    htmlPage.setSelectionRange(new SimpleRange(rangeNode, 0));
-                }
-            }
-            else if ("off".equalsIgnoreCase(mode)) {
-                designMode_ = "off";
-            }
+        else if ("off".equalsIgnoreCase(mode)) {
+            designMode_ = "off";
         }
     }
 
@@ -492,7 +454,7 @@ public class Document extends Node {
      * @return a newly created document fragment
      */
     @JsxFunction
-    public Object createDocumentFragment() {
+    public HtmlUnitScriptable createDocumentFragment() {
         final DomDocumentFragment fragment = getDomNodeOrDie().getPage().createDocumentFragment();
         final DocumentFragment node = new DocumentFragment();
         node.setParentScope(getParentScope());
@@ -522,7 +484,7 @@ public class Document extends Node {
      * @return the imported node that belongs to this Document
      */
     @JsxFunction
-    public Object importNode(final Node importedNode, final boolean deep) {
+    public HtmlUnitScriptable importNode(final Node importedNode, final boolean deep) {
         DomNode domNode = importedNode.getDomNodeOrDie();
         domNode = domNode.cloneNode(deep);
         domNode.processImportNode(this);
@@ -534,7 +496,7 @@ public class Document extends Node {
 
     /**
      * Adopts a node from an external document.
-     * The node and its subtree is removed from the document it's in (if any),
+     * The node and its subtree are removed from the document it's in (if any),
      * and its ownerDocument is changed to the current document.
      * The node can then be inserted into the current document.
      *
@@ -542,9 +504,15 @@ public class Document extends Node {
      * @return the adopted node that can be used in the current document
      */
     @JsxFunction
-    public Object adoptNode(final Node externalNode) {
+    public HtmlUnitScriptable adoptNode(final Node externalNode) {
         externalNode.remove();
-        return importNode(externalNode, true);
+
+        final DomNode domNode = externalNode.getDomNodeOrDie();
+        domNode.processImportNode(this);
+        for (final DomNode childNode : domNode.getDescendants()) {
+            childNode.processImportNode(this);
+        }
+        return domNode.getScriptableObject();
     }
 
     /**
@@ -555,7 +523,7 @@ public class Document extends Node {
     public DOMImplementation getImplementation() {
         if (implementation_ == null) {
             implementation_ = new DOMImplementation();
-            implementation_.setParentScope(getWindow());
+            implementation_.setParentScope(getParentScope());
             implementation_.setPrototype(getPrototype(implementation_.getClass()));
         }
         return implementation_;
@@ -568,11 +536,11 @@ public class Document extends Node {
      * @return an XPathNSResolver which resolves namespaces with respect to the definitions
      *         in scope for a specified node
      */
-    @JsxFunction({CHROME, EDGE, FF, FF_ESR})
-    public XPathNSResolver createNSResolver(final Node nodeResolver) {
-        final XPathNSResolver resolver = new XPathNSResolver();
+    @JsxFunction
+    public NativeXPathNSResolver createNSResolver(final Node nodeResolver) {
+        final NativeXPathNSResolver resolver = new NativeXPathNSResolver();
         resolver.setElement(nodeResolver);
-        resolver.setParentScope(getWindow());
+        resolver.setParentScope(getParentScope());
         resolver.setPrototype(getPrototype(resolver.getClass()));
         return resolver;
     }
@@ -584,25 +552,9 @@ public class Document extends Node {
      * @return the new text node or NOT_FOUND if there is an error
      */
     @JsxFunction
-    public Object createTextNode(final String newData) {
-        try {
-            final DomNode domNode = new DomText(getDomNodeOrDie().getPage(), newData);
-            final HtmlUnitScriptable jsElement = makeScriptableFor(domNode);
-
-            if (jsElement == NOT_FOUND) {
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("createTextNode(" + newData
-                            + ") cannot return a result as there isn't a JavaScript object for the DOM node "
-                            + domNode.getClass().getName());
-                }
-            }
-            return jsElement;
-        }
-        catch (final ElementNotFoundException e) {
-            // Just fall through - result is already set to NOT_FOUND
-        }
-
-        return NOT_FOUND;
+    public HtmlUnitScriptable createTextNode(final String newData) {
+        final DomNode domNode = new DomText(getDomNodeOrDie().getPage(), newData);
+        return makeScriptableFor(domNode);
     }
 
     /**
@@ -611,7 +563,7 @@ public class Document extends Node {
      * @return the new Comment
      */
     @JsxFunction
-    public Object createComment(final String comment) {
+    public HtmlUnitScriptable createComment(final String comment) {
         final DomNode domNode = new DomComment(getDomNodeOrDie().getPage(), comment);
         return getScriptableFor(domNode);
     }
@@ -626,30 +578,47 @@ public class Document extends Node {
      * @param result the result object which may be reused and returned by this method
      * @return the result of the evaluation of the XPath expression
      */
-    @JsxFunction({CHROME, EDGE, FF, FF_ESR})
+    @JsxFunction
     public XPathResult evaluate(final String expression, final Node contextNode,
             final Object resolver, final int type, final Object result) {
-        try {
-            XPathResult xPathResult = (XPathResult) result;
-            if (xPathResult == null) {
+        XPathResult xPathResult = null;
+        if (result instanceof XPathResult pathResult) {
+            xPathResult = pathResult;
+
+            if (getBrowserVersion().hasFeature(JS_DOCUMENT_EVALUATE_RECREATES_RESULT)) {
                 xPathResult = new XPathResult();
                 xPathResult.setParentScope(getParentScope());
                 xPathResult.setPrototype(getPrototype(xPathResult.getClass()));
             }
+        }
+        else if (result == null
+                || JavaScriptEngine.isUndefined(result)
+                || result instanceof ScriptableObject) {
+            xPathResult = new XPathResult();
+            xPathResult.setParentScope(getParentScope());
+            xPathResult.setPrototype(getPrototype(xPathResult.getClass()));
+        }
+        else {
+            throw JavaScriptEngine.typeError("Argument 5 of Document.evaluate has to be an XPathResult or null.");
+        }
 
+        try {
             PrefixResolver prefixResolver = null;
-            if (resolver instanceof NativeFunction) {
+            if (resolver instanceof NativeFunction function) {
                 prefixResolver = new NativeFunctionPrefixResolver(
-                                            (NativeFunction) resolver, contextNode.getParentScope());
+                                            function, contextNode.getParentScope());
             }
-            else if (resolver instanceof PrefixResolver) {
-                prefixResolver = (PrefixResolver) resolver;
+            else if (resolver instanceof PrefixResolver prefixResolver1) {
+                prefixResolver = prefixResolver1;
             }
             xPathResult.init(contextNode.getDomNodeOrDie().getByXPath(expression, prefixResolver), type);
             return xPathResult;
         }
         catch (final Exception e) {
-            throw Context.reportRuntimeError("Failed to execute 'evaluate': " + e.getMessage());
+            throw JavaScriptEngine.asJavaScriptException(
+                    getWindow(),
+                    "Failed to execute 'evaluate': " + e.getMessage(),
+                    org.htmlunit.javascript.host.dom.DOMException.SYNTAX_ERR);
         }
     }
 
@@ -660,64 +629,107 @@ public class Document extends Node {
      * @return the new HTML element, or NOT_FOUND if the tag is not supported
      */
     @JsxFunction
-    public Object createElement(String tagName) {
-        try {
-            if (tagName.contains("<") || tagName.contains(">")) {
+    public HtmlUnitScriptable createElement(final Object tagName) {
+        if (tagName == null || JavaScriptEngine.isUndefined(tagName)) {
+            final org.w3c.dom.Node element = getPage().createElement("unknown");
+            ((HtmlUnknownElement) element).markAsCreatedByJavascript();
+            return getScriptableFor(element);
+        }
+
+        // https://dom.spec.whatwg.org/#dom-document-createelement
+        // NameStartChar ::= ":" | [A-Z] | "_" | [a-z] | [#xC0-#xD6] | [#xD8-#xF6] | [#xF8-#x2FF] | [#x370-#x37D]
+        //                       | [#x37F-#x1FFF] | [#x200C-#x200D] | [#x2070-#x218F] | [#x2C00-#x2FEF]
+        //                       | [#x3001-#xD7FF] | [#xF900-#xFDCF] | [#xFDF0-#xFFFD] | [#x10000-#xEFFFF]
+        // NameChar      ::= NameStartChar | "-" | "." | [0-9] | #xB7 | [#x0300-#x036F] | [#x203F-#x2040]
+        // Name          ::= NameStartChar (NameChar)*
+
+        // but I have no idea what the browsers are doing
+        // the following code is a wild guess that might be good enough for the moment
+
+        // April 2026
+        // looks like the browsers using a more simple approach now
+        // see
+        //   org.htmlunit.javascript.host.dom.DocumentTest.documentCreateElementValidTagNames()
+        //   org.htmlunit.javascript.host.dom.DocumentTest.documentCreateElementValidTagNames1000()
+        //   org.htmlunit.javascript.host.dom.DocumentTest.documentCreateElementValidTagNames2000()
+        //   org.htmlunit.javascript.host.dom.DocumentTest.documentCreateElementValidTagNames3000()
+        //   org.htmlunit.javascript.host.dom.DocumentTest.documentCreateElementValidTagNames4000()
+
+        final String tagNameString = JavaScriptEngine.toString(tagName);
+        if (tagNameString.length() > 0) {
+            final int firstChar = tagNameString.charAt(0);
+            if (firstChar < 128
+                    && !Character.isLetter(firstChar)
+                    && firstChar != ':' && firstChar != '_') {
                 if (LOG.isInfoEnabled()) {
-                    LOG.info("createElement: Provided string '"
-                                + tagName + "' contains an invalid character; '<' and '>' are not allowed");
+                    LOG.info("createElement: Provided string '" + tagNameString + "' contains an invalid character");
                 }
-                throw Context.reportRuntimeError("String contains an invalid character");
+                throw JavaScriptEngine.asJavaScriptException(
+                        getWindow(),
+                        "createElement: Provided string '" + tagNameString + "' contains an invalid character",
+                        org.htmlunit.javascript.host.dom.DOMException.INVALID_CHARACTER_ERR);
             }
-            else if (tagName.length() > 0 && tagName.charAt(0) == '<' && tagName.endsWith(">")) {
-                tagName = tagName.substring(1, tagName.length() - 1);
 
-                final Matcher matcher = TAG_NAME_PATTERN.matcher(tagName);
-                if (!matcher.matches()) {
-                    if (LOG.isInfoEnabled()) {
-                        LOG.info("createElement: Provided string '" + tagName + "' contains an invalid character");
+            final int length = tagNameString.length();
+            for (int i = 1; i < length; i++) {
+                final int c = tagNameString.charAt(i);
+                if (c < 128) {
+                    if (c == 0
+                            || c == 9
+                            || c == 10
+                            || c == 12
+                            || c == 13
+                            || c == ' '
+                            || c == '/'
+                            || c == '>') {
+                        if (LOG.isInfoEnabled()) {
+                            LOG.info("createElement: Provided string '"
+                                        + tagNameString + "' contains an invalid character");
+                        }
+                        throw JavaScriptEngine.asJavaScriptException(
+                                getWindow(),
+                                "createElement: Provided string '" + tagNameString
+                                    + "' contains an invalid character",
+                                org.htmlunit.javascript.host.dom.DOMException.INVALID_CHARACTER_ERR);
                     }
-                    throw Context.reportRuntimeError("String contains an invalid character");
                 }
             }
-
-            final SgmlPage page = getPage();
-            org.w3c.dom.Node element = page.createElement(tagName);
-
-            if (element instanceof HtmlInput) {
-                ((HtmlInput) element).markAsCreatedByJavascript();
-            }
-            else if (element instanceof HtmlImage) {
-                ((HtmlImage) element).markAsCreatedByJavascript();
-            }
-            else if (element instanceof HtmlRp) {
-                ((HtmlRp) element).markAsCreatedByJavascript();
-            }
-            else if (element instanceof HtmlRt) {
-                ((HtmlRt) element).markAsCreatedByJavascript();
-            }
-            else if (element instanceof HtmlUnknownElement) {
-                ((HtmlUnknownElement) element).markAsCreatedByJavascript();
-            }
-            else if (element instanceof HtmlSvg) {
-                element = UnknownElementFactory.instance.createElementNS(page, "", "svg", null);
-                ((HtmlUnknownElement) element).markAsCreatedByJavascript();
-            }
-            final Object jsElement = getScriptableFor(element);
-
-            if (jsElement == NOT_FOUND) {
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("createElement(" + tagName
-                        + ") cannot return a result as there isn't a JavaScript object for the element "
-                        + element.getClass().getName());
-                }
-            }
-            return jsElement;
         }
-        catch (final ElementNotFoundException e) {
-            // Just fall through - result is already set to NOT_FOUND
+
+        org.w3c.dom.Node element = getPage().createElement(tagNameString);
+
+        if (element instanceof HtmlImage image) {
+            image.markAsCreatedByJavascript();
         }
-        return NOT_FOUND;
+        else if (element instanceof HtmlRb rb) {
+            rb.markAsCreatedByJavascript();
+        }
+        else if (element instanceof HtmlRp rp) {
+            rp.markAsCreatedByJavascript();
+        }
+        else if (element instanceof HtmlRt rt) {
+            rt.markAsCreatedByJavascript();
+        }
+        else if (element instanceof HtmlRtc rtc) {
+            rtc.markAsCreatedByJavascript();
+        }
+        else if (element instanceof HtmlUnknownElement unknownElement) {
+            unknownElement.markAsCreatedByJavascript();
+        }
+        else if (element instanceof HtmlSvg) {
+            element = UnknownElementFactory.INSTANCE.createElementNS(getPage(), "", "svg", null);
+            ((HtmlUnknownElement) element).markAsCreatedByJavascript();
+        }
+        final HtmlUnitScriptable jsElement = getScriptableFor(element);
+
+        if (jsElement == NOT_FOUND) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("createElement(" + tagName
+                    + ") cannot return a result as there isn't a JavaScript object for the element "
+                    + element.getClass().getName());
+            }
+        }
+        return jsElement;
     }
 
     /**
@@ -728,9 +740,9 @@ public class Document extends Node {
      * @return the new HTML element, or NOT_FOUND if the tag is not supported
      */
     @JsxFunction
-    public Object createElementNS(final String namespaceURI, final String qualifiedName) {
+    public HtmlUnitScriptable createElementNS(final String namespaceURI, final String qualifiedName) {
         if ("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul".equals(namespaceURI)) {
-            throw Context.reportRuntimeError("XUL not available");
+            throw JavaScriptEngine.typeError("XUL not available");
         }
 
         final org.w3c.dom.Element element;
@@ -753,7 +765,7 @@ public class Document extends Node {
     public HTMLCollection getElementsByTagName(final String tagName) {
         final HTMLCollection collection = new HTMLCollection(getDomNodeOrDie(), false);
 
-        if ("*".equals(tagName)) {
+        if (StringUtils.equalsChar('*', tagName)) {
             collection.setIsMatchingPredicate((Predicate<DomNode> & Serializable) node -> true);
         }
         else {
@@ -773,7 +785,7 @@ public class Document extends Node {
      * @return a live NodeList of found elements in the order they appear in the tree
      */
     @JsxFunction
-    public Object getElementsByTagNameNS(final Object namespaceURI, final String localName) {
+    public HTMLCollection getElementsByTagNameNS(final Object namespaceURI, final String localName) {
         final HTMLCollection elements = new HTMLCollection(getDomNodeOrDie(), false);
         elements.setIsMatchingPredicate(
                 (Predicate<DomNode> & Serializable)
@@ -783,7 +795,7 @@ public class Document extends Node {
 
     /**
      * Returns the value of the {@code activeElement} property.
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms533065.aspx">MSDN documentation</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/Document/activeElement">MDN Documentation</a>
      * @return the value of the {@code activeElement} property
      */
     @JsxGetter
@@ -801,11 +813,7 @@ public class Document extends Node {
             // TODO: implement XmlPage.getCharset
             return "";
         }
-        final Charset charset = getPage().getCharset();
-        if (charset != null && getBrowserVersion().hasFeature(HTMLDOCUMENT_CHARSET_LOWERCASE)) {
-            return charset.name().toLowerCase(Locale.ROOT);
-        }
-        return EncodingSniffer.translateEncodingLabel(charset);
+        return getPage().getCharset().name();
     }
 
     /**
@@ -818,50 +826,34 @@ public class Document extends Node {
             // TODO: implement XmlPage.getCharset
             return "";
         }
-        final Charset charset = getPage().getCharset();
-        if (getBrowserVersion().hasFeature(HTMLDOCUMENT_CHARSET_LOWERCASE)) {
-            return charset.name().toLowerCase(Locale.ROOT);
-        }
-        return EncodingSniffer.translateEncodingLabel(charset);
-    }
-
-    /**
-     * Gets the default character set from the current regional language settings.
-     * @return the default character set from the current regional language settings
-     */
-    @JsxGetter(IE)
-    public String getDefaultCharset() {
-        return "windows-1252";
+        return getPage().getCharset().name();
     }
 
     /**
      * Returns the value of the JavaScript property {@code anchors}.
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms537435.aspx">MSDN documentation</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/Document/anchors">MDN Documentation</a>
      * @see <a href="http://www.mozilla.org/docs/dom/domref/dom_doc_ref4.html#1024543">
-     * Gecko DOM reference</a>
+     *     Gecko DOM reference</a>
      * @return the value of this property
      */
     @JsxGetter
-    public Object getAnchors() {
+    public HTMLCollection getAnchors() {
         final HTMLCollection anchors = new HTMLCollection(getDomNodeOrDie(), true);
 
         anchors.setIsMatchingPredicate(
                 (Predicate<DomNode> & Serializable)
                 node -> {
-                    if (!(node instanceof HtmlAnchor)) {
+                    if (!(node instanceof HtmlAnchor anchor)) {
                         return false;
                     }
-                    final HtmlAnchor anchor = (HtmlAnchor) node;
-                    if (getBrowserVersion().hasFeature(JS_ANCHORS_REQUIRES_NAME_OR_ID)) {
-                        return anchor.hasAttribute("name") || anchor.hasAttribute("id");
-                    }
-                    return anchor.hasAttribute("name");
+                    return anchor.hasAttribute(DomElement.NAME_ATTRIBUTE);
                 });
 
         anchors.setEffectOnCacheFunction(
                 (java.util.function.Function<HtmlAttributeChangeEvent, EffectOnCache> & Serializable)
                     event -> {
-                        if ("name".equals(event.getName()) || "id".equals(event.getName())) {
+                        if (DomElement.NAME_ATTRIBUTE.equals(event.getName())
+                                || DomElement.ID_ATTRIBUTE.equals(event.getName())) {
                             return EffectOnCache.RESET;
                         }
                         return EffectOnCache.NONE;
@@ -872,17 +864,13 @@ public class Document extends Node {
 
     /**
      * Returns the value of the JavaScript property {@code applets}.
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms537436.aspx">
-     * MSDN documentation</a>
-     * @see <a href="https://developer.mozilla.org/En/DOM:document.applets">
-     * Gecko DOM reference</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/Document/applets">
+     *     MDN Documentation</a>
      * @return the value of this property
      */
     @JsxGetter
-    public Object getApplets() {
-        final HTMLCollection applets = new HTMLCollection(getDomNodeOrDie(), false);
-        applets.setIsMatchingPredicate((Predicate<DomNode> & Serializable) node -> node instanceof HtmlApplet);
-        return applets;
+    public HTMLCollection getApplets() {
+        return new HTMLCollection(getDomNodeOrDie(), false);
     }
 
     /**
@@ -892,10 +880,20 @@ public class Document extends Node {
     @JsxGetter
     public HTMLElement getBody() {
         final Page page = getPage();
-        if (page instanceof HtmlPage) {
-            final HtmlElement body = ((HtmlPage) page).getBody();
+        if (page instanceof HtmlPage htmlPage) {
+            final HtmlElement body = htmlPage.getBody();
             if (body != null) {
                 return body.getScriptableObject();
+            }
+
+            // strange but this returns the frameset element
+            final DomElement doc = htmlPage.getDocumentElement();
+            if (doc != null) {
+                for (final DomNode node : doc.getChildren()) {
+                    if (node instanceof HtmlFrameSet) {
+                        return node.getScriptableObject();
+                    }
+                }
             }
         }
         return null;
@@ -909,17 +907,20 @@ public class Document extends Node {
     public void setBody(final HTMLElement htmlElement) {
         if (htmlElement instanceof HTMLBodyElement || htmlElement instanceof HTMLFrameSetElement) {
             final Page page = getPage();
-            if (page instanceof HtmlPage) {
-                final HtmlElement body = ((HtmlPage) page).getBody();
+            if (page instanceof HtmlPage htmlPage) {
+                final HtmlElement body = htmlPage.getBody();
                 if (body != null) {
                     body.replace(htmlElement.getDomNodeOrDie());
                 }
             }
             return;
         }
-        throw Context.reportRuntimeError("Failed to set the 'body' property on 'Document': "
-                + "The new body element is of type '" +  htmlElement.getTagName() + "'. "
-                + "It must be either a 'BODY' or 'FRAMESET' element.");
+        throw JavaScriptEngine.asJavaScriptException(
+                getWindow(),
+                "Failed to set the 'body' property on 'Document': "
+                        + "The new body element is of type '" +  htmlElement.getTagName() + "'. "
+                        + "It must be either a 'BODY' or 'FRAMESET' element.",
+                org.htmlunit.javascript.host.dom.DOMException.HIERARCHY_REQUEST_ERR);
     }
 
     /**
@@ -930,8 +931,9 @@ public class Document extends Node {
      *
      * @throws IOException if an IO problem occurs
      */
-    @JsxFunction({CHROME, EDGE, IE})
+    @JsxFunction({CHROME, EDGE})
     public void close() throws IOException {
+        // nothing to do
     }
 
     /**
@@ -949,7 +951,6 @@ public class Document extends Node {
      * Returns the {@code documentMode} property.
      * @return the {@code documentMode} property
      */
-    @JsxGetter(IE)
     public int getDocumentMode() {
         if (documentMode_ != -1) {
             return documentMode_;
@@ -997,7 +998,7 @@ public class Document extends Node {
     /**
      * <span style="color:red">INTERNAL API - SUBJECT TO CHANGE AT ANY TIME - USE AT YOUR OWN RISK.</span><br>
      *
-     * Called from the HTMLParser if a 'X-UA-Compatible' meta tag found.
+     * Called from the HTMLParser if an 'X-UA-Compatible' meta tag found.
      * @param documentMode the mode forced by the meta tag
      */
     public void forceDocumentMode(final int documentMode) {
@@ -1013,16 +1014,20 @@ public class Document extends Node {
     @JsxFunction
     public Node querySelector(final String selectors) {
         try {
-            final DomNode node = getDomNodeOrDie().querySelector(selectors);
+            final Element doc = getDocumentElement();
+            final DomNode scope = doc == null ? null : doc.getDomNodeOrNull();
+            final DomNode node = getDomNodeOrDie().querySelector(selectors, scope);
             if (node != null) {
                 return node.getScriptableObject();
             }
             return null;
         }
         catch (final CSSException e) {
-            throw ScriptRuntime.constructError("SyntaxError",
+            throw JavaScriptEngine.asJavaScriptException(
+                    getWindow(),
                     "An invalid or illegal selector was specified (selector: '"
-                            + selectors + "' error: " + e.getMessage() + ").");
+                            + selectors + "' error: " + e.getMessage() + ").",
+                    org.htmlunit.javascript.host.dom.DOMException.SYNTAX_ERR);
         }
     }
 
@@ -1036,17 +1041,23 @@ public class Document extends Node {
     @JsxFunction
     public NodeList querySelectorAll(final String selectors) {
         try {
-            return NodeList.staticNodeList(this, getDomNodeOrDie().querySelectorAll(selectors));
+            final DomNode domNode = getDomNodeOrDie();
+            final Element doc = getDocumentElement();
+            final DomNode scope = doc == null ? null : doc.getDomNodeOrNull();
+            return NodeList.staticNodeList(getParentScope(), domNode.querySelectorAll(selectors, scope));
         }
         catch (final CSSException e) {
-            throw Context.reportRuntimeError("An invalid or illegal selector was specified (selector: '"
-                    + selectors + "' error: " + e.getMessage() + ").");
+            throw JavaScriptEngine.asJavaScriptException(
+                    getWindow(),
+                    "An invalid or illegal selector was specified (selector: '"
+                            + selectors + "' error: " + e.getMessage() + ").",
+                    org.htmlunit.javascript.host.dom.DOMException.SYNTAX_ERR);
         }
     }
 
     /**
      * Indicates if the command is supported.
-     * @see <a href="http://msdn2.microsoft.com/en-us/library/ms536681.aspx">MSDN documentation</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/Document/queryCommandSupported">MDN Documentation</a>
      * @param cmd the command identifier
      * @return {@code true} if the command is supported
      */
@@ -1056,14 +1067,11 @@ public class Document extends Node {
     }
 
     private boolean hasCommand(final String cmd, final boolean includeBold) {
-        if (null == cmd) {
+        if (cmd == null) {
             return false;
         }
 
         final String cmdLC = cmd.toLowerCase(Locale.ROOT);
-        if (getBrowserVersion().isIE()) {
-            return EXECUTE_CMDS_IE.contains(cmdLC);
-        }
         if (getBrowserVersion().isChrome() || getBrowserVersion().isEdge()) {
             return EXECUTE_CMDS_CHROME.contains(cmdLC) || (includeBold && "bold".equalsIgnoreCase(cmd));
         }
@@ -1083,7 +1091,7 @@ public class Document extends Node {
 
     /**
      * Executes a command.
-     * @see <a href="http://msdn2.microsoft.com/en-us/library/ms536419.aspx">MSDN documentation</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/Document/execCommand">MDN Documentation</a>
      * @param cmd the command identifier
      * @param userInterface display a user interface if the command supports one
      * @param value the string, number, or other value to assign (possible values depend on the command)
@@ -1101,19 +1109,6 @@ public class Document extends Node {
     }
 
     /**
-     * Retrieves an auto-generated, unique identifier for the object.
-     * <b>Note</b> The unique ID generated is not guaranteed to be the same every time the page is loaded.
-     * @return an auto-generated, unique identifier for the object
-     */
-    @JsxGetter(IE)
-    public String getUniqueID() {
-        if (uniqueID_ == null) {
-            uniqueID_ = "ms__id" + Document.UniqueID_Counter_.getAndIncrement();
-        }
-        return uniqueID_;
-    }
-
-    /**
      * Returns the value of the {@code URL} property.
      * @return the value of the {@code URL} property
      */
@@ -1126,58 +1121,65 @@ public class Document extends Node {
      * Returns the value of the {@code documentURI} property.
      * @return the value of the {@code documentURI} property
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public String getDocumentURI() {
         return getURL_js();
-    }
-
-    /**
-     * Returns the value of the {@code URLUnencoded} property.
-     * @return the value of the {@code URLUnencoded} property
-     */
-    @JsxGetter(value = IE, propertyName = "URLUnencoded")
-    public String getURLUnencoded_js() {
-        return getURL_js();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Object get(final String name, final Scriptable start) {
-        final Object response = super.get(name, start);
-
-        // IE support .querySelector(All) but not in quirks mode
-        // => TODO: find a better way to handle this!
-        if (response instanceof FunctionObject
-            && ("querySelectorAll".equals(name) || "querySelector".equals(name))
-            && getBrowserVersion().hasFeature(QUERYSELECTORALL_NOT_IN_QUIRKS)) {
-            Document document = null;
-            if (start instanceof DocumentProxy) {
-                // if in prototype no domNode is set -> use start
-                document = ((DocumentProxy) start).getDelegee();
-            }
-            else if (start instanceof HTMLDocument) {
-                final DomNode page = ((HTMLDocument) start).getDomNodeOrNull();
-                if (page != null) {
-                    document = page.getScriptableObject();
-                }
-            }
-            if (document instanceof HTMLDocument && document.getDocumentMode() < 8) {
-                return NOT_FOUND;
-            }
-        }
-
-        return response;
     }
 
     /**
      * Returns the {@code cookie} property.
      * @return the {@code cookie} property
      */
-    @JsxGetter({CHROME, EDGE, IE})
+    @JsxGetter
     public String getCookie() {
-        return "";
+        final SgmlPage sgmlPage = getPage();
+
+        final StringBuilder builder = new StringBuilder();
+        final Set<Cookie> cookies = sgmlPage.getWebClient().getCookies(sgmlPage.getUrl());
+        final List<Cookie> visibleCookies = new ArrayList<>();
+        for (final Cookie cookie : cookies) {
+            if (cookie.isHttpOnly()) {
+                continue;
+            }
+            visibleCookies.add(cookie);
+        }
+
+        // RFC 6265 §5.4: longer path first; equal-length paths sorted by creation time ascending
+        // TODO time ascending
+        visibleCookies.sort((a, b) -> {
+            final String pathA = a.getPath();
+            final String pathB = b.getPath();
+            final int lenA = pathA == null ? 0 : pathA.length();
+            final int lenB = pathB == null ? 0 : pathB.length();
+            return Integer.compare(lenB, lenA);
+        });
+
+        for (final Cookie cookie : visibleCookies) {
+            if (builder.length() != 0) {
+                builder.append("; ");
+            }
+            if (!HtmlUnitBrowserCompatCookieSpec.EMPTY_COOKIE_NAME.equals(cookie.getName())) {
+                builder.append(cookie.getName()).append('=');
+            }
+            builder.append(cookie.getValue());
+        }
+
+        return builder.toString();
+    }
+
+    /**
+     * Adds a cookie, as long as cookies are enabled.
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/Document/cookie">MDN Documentation</a>
+     * @param newCookie in the format "name=value[;expires=date][;domain=domainname][;path=path][;secure]"
+     */
+    @JsxSetter
+    public void setCookie(final String newCookie) {
+        if (StringUtils.isBlank(newCookie)) {
+            return;
+        }
+
+        final SgmlPage sgmlPage = getPage();
+        sgmlPage.getWebClient().addCookie(newCookie, sgmlPage.getUrl(), this);
     }
 
     /**
@@ -1196,53 +1198,33 @@ public class Document extends Node {
         Class<? extends Event> clazz = SUPPORTED_DOM2_EVENT_TYPE_MAP.get(eventType);
         if (clazz == null) {
             clazz = SUPPORTED_DOM3_EVENT_TYPE_MAP.get(eventType);
-            if (CloseEvent.class == clazz
-                    && getBrowserVersion().hasFeature(EVENT_ONCLOSE_DOCUMENT_CREATE_NOT_SUPPORTED)) {
-                clazz = null;
-            }
         }
+
         if (clazz == null
                 && ("Events".equals(eventType)
-                || "HashChangeEvent".equals(eventType)
-                        && getBrowserVersion().hasFeature(EVENT_TYPE_HASHCHANGEEVENT)
-                || "BeforeUnloadEvent".equals(eventType)
-                        && getBrowserVersion().hasFeature(EVENT_TYPE_BEFOREUNLOADEVENT)
-                || "MouseWheelEvent".equals(eventType)
-                        && getBrowserVersion().hasFeature(EVENT_TYPE_MOUSEWHEELEVENT)
-                || "PointerEvent".equals(eventType)
-                        && getBrowserVersion().hasFeature(EVENT_TYPE_POINTEREVENT)
-                || "PopStateEvent".equals(eventType)
-                || "ProgressEvent".equals(eventType)
-                        && getBrowserVersion().hasFeature(EVENT_TYPE_PROGRESSEVENT)
-                || "FocusEvent".equals(eventType)
-                || "WheelEvent".equals(eventType)
-                        && getBrowserVersion().hasFeature(EVENT_TYPE_WHEELEVENT)
-                || "AnimationEvent".equals(eventType))) {
+                    || "HashChangeEvent".equals(eventType)
+                    || "BeforeUnloadEvent".equals(eventType)
+                    || "FocusEvent".equals(eventType))) {
             clazz = SUPPORTED_VENDOR_EVENT_TYPE_MAP.get(eventType);
+        }
 
-            if (PopStateEvent.class == clazz
-                    && getBrowserVersion().hasFeature(EVENT_ONPOPSTATE_DOCUMENT_CREATE_NOT_SUPPORTED)) {
-                clazz = null;
-            }
-            if (AnimationEvent.class == clazz
-                    && getBrowserVersion().hasFeature(EVENT_ONANIMATION_DOCUMENT_CREATE_NOT_SUPPORTED)) {
-                clazz = null;
-            }
-        }
         if (clazz == null) {
-            Context.throwAsScriptRuntimeEx(new DOMException(DOMException.NOT_SUPPORTED_ERR,
-                "Event Type is not supported: " + eventType));
-            return null; // to stop eclipse warning
+            throw JavaScriptEngine.asJavaScriptException(
+                    this,
+                    "Event Type '" + eventType + "' is not supported.",
+                    org.htmlunit.javascript.host.dom.DOMException.NOT_SUPPORTED_ERR);
         }
+
         try {
-            final Event event = clazz.newInstance();
-            event.setParentScope(getWindow());
+            final Event event = clazz.getDeclaredConstructor().newInstance();
+            event.setParentScope(getParentScope());
             event.setPrototype(getPrototype(clazz));
             event.eventCreated();
             return event;
         }
-        catch (final InstantiationException | IllegalAccessException e) {
-            throw Context.reportRuntimeError("Failed to instantiate event: class ='" + clazz.getName()
+        catch (final InstantiationException | IllegalAccessException
+                | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException e) {
+            throw JavaScriptEngine.reportRuntimeError("Failed to instantiate event: class ='" + clazz.getName()
                             + "' for event type of '" + eventType + "': " + e.getMessage());
         }
     }
@@ -1251,15 +1233,19 @@ public class Document extends Node {
      * Returns a new NodeIterator object.
      *
      * @param root The root node at which to begin the NodeIterator's traversal.
-     * @param whatToShow an optional long representing a bitmask created by combining
-     * the constant properties of {@link NodeFilter}
+     * @param whatToShow an optional unsigned long representing a bitmask created by combining
+     *        the constant properties of {@link NodeFilter}; defaults to {@link NodeFilter#SHOW_ALL}
      * @param filter an object implementing the {@link NodeFilter} interface
      * @return a new NodeIterator object
      */
     @JsxFunction
-    public NodeIterator createNodeIterator(final Node root, final int whatToShow, final Scriptable filter) {
+    public NodeIterator createNodeIterator(final Node root, final Object whatToShow, final Scriptable filter) {
+        // the dom iterator uses the int based constants of org.w3c.dom.traversal.NodeFilter (SHOW_ALL is -1)
+        final int whatToShowI = JavaScriptEngine.isUndefined(whatToShow)
+                ? org.w3c.dom.traversal.NodeFilter.SHOW_ALL
+                : JavaScriptEngine.toInt32(whatToShow);
         final org.w3c.dom.traversal.NodeFilter filterWrapper = createFilterWrapper(filter, false);
-        final NodeIterator iterator = new NodeIterator(getPage(), root, whatToShow, filterWrapper);
+        final NodeIterator iterator = new NodeIterator(root, whatToShowI, filterWrapper);
         iterator.setParentScope(getParentScope());
         iterator.setPrototype(getPrototype(iterator.getClass()));
         return iterator;
@@ -1272,16 +1258,16 @@ public class Document extends Node {
             filterWrapper = n -> {
                 final Object[] args = {((DomNode) n).getScriptableObject()};
                 final Object response;
-                if (filter instanceof Callable) {
-                    response = ((Callable) filter).call(Context.getCurrentContext(), filter, filter, args);
+                if (filter instanceof Callable callable) {
+                    response = callable.call(Context.getCurrentContext(), filter.getParentScope(), filter, args);
                 }
                 else {
                     if (filterFunctionOnly) {
-                        throw Context.reportRuntimeError("only a function is allowed as filter");
+                        throw JavaScriptEngine.reportRuntimeError("only a function is allowed as filter");
                     }
                     response = ScriptableObject.callMethod(filter, "acceptNode", args);
                 }
-                return (short) Context.toNumber(response);
+                return (short) JavaScriptEngine.toNumber(response);
             };
         }
         return filterWrapper;
@@ -1309,21 +1295,16 @@ public class Document extends Node {
      * @return a new TreeWalker
      */
     @JsxFunction
-    public Object createTreeWalker(final Node root, final double whatToShow, final Scriptable filter,
-            boolean expandEntityReferences) throws DOMException {
+    public TreeWalker createTreeWalker(final Node root, final double whatToShow, final Scriptable filter,
+            final boolean expandEntityReferences) throws DOMException {
 
         // seems that Rhino doesn't like long as parameter type
         // this strange conversation preserves NodeFilter.SHOW_ALL
         final int whatToShowI = (int) Double.valueOf(whatToShow).longValue();
 
-        if (getBrowserVersion().hasFeature(JS_TREEWALKER_EXPAND_ENTITY_REFERENCES_FALSE)) {
-            expandEntityReferences = false;
-        }
-
-        final boolean filterFunctionOnly = getBrowserVersion().hasFeature(JS_TREEWALKER_FILTER_FUNCTION_ONLY);
-        final org.w3c.dom.traversal.NodeFilter filterWrapper = createFilterWrapper(filter, filterFunctionOnly);
-        final TreeWalker t = new TreeWalker(root, whatToShowI, filterWrapper, expandEntityReferences);
-        t.setParentScope(getWindow(this));
+        final org.w3c.dom.traversal.NodeFilter filterWrapper = createFilterWrapper(filter, false);
+        final TreeWalker t = new TreeWalker(root, whatToShowI, filterWrapper, false);
+        t.setParentScope(getParentScope());
         t.setPrototype(staticGetPrototype(getWindow(this), TreeWalker.class));
         return t;
     }
@@ -1346,7 +1327,7 @@ public class Document extends Node {
     @JsxFunction
     public Range createRange() {
         final Range range = new Range(this);
-        range.setParentScope(getWindow());
+        range.setParentScope(getParentScope());
         range.setPrototype(getPrototype(Range.class));
         return range;
     }
@@ -1356,7 +1337,7 @@ public class Document extends Node {
      * cannot be identified by a domain name.
      * @return the domain name of the server that served the document
      * @see <a href="http://www.w3.org/TR/2000/WD-DOM-Level-1-20000929/level-one-html.html#ID-2250147">
-     * W3C documentation</a>
+     *     W3C documentation</a>
      */
     @JsxGetter
     public String getDomain() {
@@ -1364,8 +1345,8 @@ public class Document extends Node {
             URL url = getPage().getUrl();
             if (url == UrlUtils.URL_ABOUT_BLANK) {
                 final WebWindow w = getWindow().getWebWindow();
-                if (w instanceof FrameWindow) {
-                    url = ((FrameWindow) w).getEnclosingPage().getUrl();
+                if (w instanceof FrameWindow window) {
+                    url = window.getEnclosingPage().getUrl();
                 }
                 else {
                     return null;
@@ -1381,9 +1362,10 @@ public class Document extends Node {
      * Sets the domain of this document.
      *
      * <p>Domains can only be set to suffixes of the existing domain
-     * with the exception of setting the domain to itself.</p>
+     * with the except of setting the domain to itself.</p>
      * <p>
      * The domain will be set according to the following rules:
+     * </p>
      * <ol>
      * <li>If the newDomain.equalsIgnoreCase(currentDomain) the method returns with no error.</li>
      * <li>If the browser version is netscape, the newDomain is downshifted.</li>
@@ -1394,7 +1376,7 @@ public class Document extends Node {
      *          d2.d3.gargoylesoftware.com
      *             d3.gargoylesoftware.com
      *                gargoylesoftware.com
-     * <p>
+     * <br>
      *        transformation to:        com
      *        will fail
      * </li>
@@ -1403,39 +1385,30 @@ public class Document extends Node {
      * TODO This code could be modified to understand country domain suffixes.
      * The domain www.bbc.co.uk should be trimmable only down to bbc.co.uk
      * trimming to co.uk should not be possible.
+     * </p>
      * @param newDomain the new domain to set
      */
     @JsxSetter
-    public void setDomain(String newDomain) {
-        final BrowserVersion browserVersion = getBrowserVersion();
-
-        // IE doesn't allow to set domain of about:blank
-        if (UrlUtils.URL_ABOUT_BLANK == getPage().getUrl()
-            && browserVersion.hasFeature(JS_DOCUMENT_SETTING_DOMAIN_THROWS_FOR_ABOUT_BLANK)) {
-            throw Context.reportRuntimeError("Illegal domain value, cannot set domain from \""
-                    + UrlUtils.URL_ABOUT_BLANK + "\" to: \""
-                    + newDomain + "\".");
-        }
-
-        newDomain = newDomain.toLowerCase(Locale.ROOT);
+    public void setDomain(final String newDomain) {
+        final String domain = newDomain.toLowerCase(Locale.ROOT);
 
         final String currentDomain = getDomain();
-        if (currentDomain.equalsIgnoreCase(newDomain)) {
+        if (currentDomain.equalsIgnoreCase(domain)) {
             return;
         }
 
-        if (newDomain.indexOf('.') == -1) {
-            throw Context.reportRuntimeError("Illegal domain value, cannot set domain from: \""
-                    + currentDomain + "\" to: \"" + newDomain + "\" (new domain has to contain a dot).");
+        if (domain.indexOf('.') == -1) {
+            throw JavaScriptEngine.reportRuntimeError("Illegal domain value, cannot set domain from: \""
+                    + currentDomain + "\" to: \"" + domain + "\" (new domain has to contain a dot).");
         }
 
         if (currentDomain.indexOf('.') > -1
-                && !currentDomain.toLowerCase(Locale.ROOT).endsWith("." + newDomain.toLowerCase(Locale.ROOT))) {
-            throw Context.reportRuntimeError("Illegal domain value, cannot set domain from: \""
-                    + currentDomain + "\" to: \"" + newDomain + "\"");
+                && !currentDomain.toLowerCase(Locale.ROOT).endsWith("." + domain)) {
+            throw JavaScriptEngine.reportRuntimeError("Illegal domain value, cannot set domain from: \""
+                    + currentDomain + "\" to: \"" + domain + "\"");
         }
 
-        domain_ = newDomain;
+        domain_ = domain;
     }
 
     /**
@@ -1452,7 +1425,7 @@ public class Document extends Node {
      * @return the {@code onclick} event handler for this element
      */
     @JsxGetter
-    public Object getOnclick() {
+    public Function getOnclick() {
         return getEventHandler(MouseEvent.TYPE_CLICK);
     }
 
@@ -1470,7 +1443,7 @@ public class Document extends Node {
      * @return the {@code ondblclick} event handler for this element
      */
     @JsxGetter
-    public Object getOndblclick() {
+    public Function getOndblclick() {
         return getEventHandler(MouseEvent.TYPE_DBL_CLICK);
     }
 
@@ -1488,7 +1461,7 @@ public class Document extends Node {
      * @return the {@code onblur} event handler for this element
      */
     @JsxGetter
-    public Object getOnblur() {
+    public Function getOnblur() {
         return getEventHandler(Event.TYPE_BLUR);
     }
 
@@ -1506,44 +1479,8 @@ public class Document extends Node {
      * @return the {@code onfocus} event handler for this element
      */
     @JsxGetter
-    public Object getOnfocus() {
+    public Function getOnfocus() {
         return getEventHandler(Event.TYPE_FOCUS);
-    }
-
-    /**
-     * Sets the {@code onfocusin} event handler for this element.
-     * @param handler the {@code onfocusin} event handler for this element
-     */
-    @JsxSetter(IE)
-    public void setOnfocusin(final Object handler) {
-        setEventHandler(Event.TYPE_FOCUS_IN, handler);
-    }
-
-    /**
-     * Returns the {@code onfocusin} event handler for this element.
-     * @return the {@code onfocusin} event handler for this element
-     */
-    @JsxGetter(IE)
-    public Object getOnfocusin() {
-        return getEventHandler(Event.TYPE_FOCUS_IN);
-    }
-
-    /**
-     * Sets the {@code onfocusout} event handler for this element.
-     * @param handler the {@code onfocusout} event handler for this element
-     */
-    @JsxSetter(IE)
-    public void setOnfocusout(final Object handler) {
-        setEventHandler(Event.TYPE_FOCUS_OUT, handler);
-    }
-
-    /**
-     * Returns the {@code onfocusout} event handler for this element.
-     * @return the {@code onfocusout} event handler for this element
-     */
-    @JsxGetter(IE)
-    public Object getOnfocusout() {
-        return getEventHandler(Event.TYPE_FOCUS_OUT);
     }
 
     /**
@@ -1560,7 +1497,7 @@ public class Document extends Node {
      * @return the {@code onkeydown} event handler for this element
      */
     @JsxGetter
-    public Object getOnkeydown() {
+    public Function getOnkeydown() {
         return getEventHandler(Event.TYPE_KEY_DOWN);
     }
 
@@ -1578,7 +1515,7 @@ public class Document extends Node {
      * @return the {@code onkeypress} event handler for this element
      */
     @JsxGetter
-    public Object getOnkeypress() {
+    public Function getOnkeypress() {
         return getEventHandler(Event.TYPE_KEY_PRESS);
     }
 
@@ -1596,7 +1533,7 @@ public class Document extends Node {
      * @return the {@code onkeyup} event handler for this element
      */
     @JsxGetter
-    public Object getOnkeyup() {
+    public Function getOnkeyup() {
         return getEventHandler(Event.TYPE_KEY_UP);
     }
 
@@ -1614,7 +1551,7 @@ public class Document extends Node {
      * @return the {@code onmousedown} event handler for this element
      */
     @JsxGetter
-    public Object getOnmousedown() {
+    public Function getOnmousedown() {
         return getEventHandler(MouseEvent.TYPE_MOUSE_DOWN);
     }
 
@@ -1632,7 +1569,7 @@ public class Document extends Node {
      * @return the {@code onmousemove} event handler for this element
      */
     @JsxGetter
-    public Object getOnmousemove() {
+    public Function getOnmousemove() {
         return getEventHandler(MouseEvent.TYPE_MOUSE_MOVE);
     }
 
@@ -1650,7 +1587,7 @@ public class Document extends Node {
      * @return the {@code onmouseout} event handler for this element
      */
     @JsxGetter
-    public Object getOnmouseout() {
+    public Function getOnmouseout() {
         return getEventHandler(MouseEvent.TYPE_MOUSE_OUT);
     }
 
@@ -1668,7 +1605,7 @@ public class Document extends Node {
      * @return the {@code onmouseover} event handler for this element
      */
     @JsxGetter
-    public Object getOnmouseover() {
+    public Function getOnmouseover() {
         return getEventHandler(MouseEvent.TYPE_MOUSE_OVER);
     }
 
@@ -1686,7 +1623,7 @@ public class Document extends Node {
      * @return the {@code onmouseup} event handler for this element
      */
     @JsxGetter
-    public Object getOnmouseup() {
+    public Function getOnmouseup() {
         return getEventHandler(MouseEvent.TYPE_MOUSE_UP);
     }
 
@@ -1704,7 +1641,7 @@ public class Document extends Node {
      * @return the {@code oncontextmenu} event handler for this element
      */
     @JsxGetter
-    public Object getOncontextmenu() {
+    public Function getOncontextmenu() {
         return getEventHandler(MouseEvent.TYPE_CONTEXT_MENU);
     }
 
@@ -1712,7 +1649,7 @@ public class Document extends Node {
      * Sets the {@code onresize} event handler for this element.
      * @param handler the {@code onresize} event handler for this element
      */
-    @JsxSetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxSetter
     public void setOnresize(final Object handler) {
         setEventHandler(Event.TYPE_RESIZE, handler);
     }
@@ -1721,8 +1658,8 @@ public class Document extends Node {
      * Returns the {@code onresize} event handler for this element.
      * @return the {@code onresize} event handler for this element
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
-    public Object getOnresize() {
+    @JsxGetter
+    public Function getOnresize() {
         return getEventHandler(Event.TYPE_RESIZE);
     }
 
@@ -1740,7 +1677,7 @@ public class Document extends Node {
      * @return the {@code onerror} event handler for this element
      */
     @JsxGetter
-    public Object getOnerror() {
+    public Function getOnerror() {
         return getEventHandler(Event.TYPE_ERROR);
     }
 
@@ -1767,7 +1704,7 @@ public class Document extends Node {
      * @return the {@code hidden} property
      */
     @JsxGetter
-    public boolean getHidden() {
+    public boolean isHidden() {
         return false;
     }
 
@@ -1775,7 +1712,7 @@ public class Document extends Node {
      * {@inheritDoc}
      */
     @Override
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public int getChildElementCount() {
         int counter = 0;
         if (getPage().getDocumentElement() != null) {
@@ -1786,14 +1723,14 @@ public class Document extends Node {
 
     /**
      * Returns the element for the specified x coordinate and the specified y coordinate.
-     * The current implementation always returns the &lt;body&gt; element.
+     * The current implementation always returns null element.
      *
      * @param x the x offset, in pixels
      * @param y the y offset, in pixels
      * @return the element for the specified x coordinate and the specified y coordinate
      */
     @JsxFunction
-    public Object elementFromPoint(final int x, final int y) {
+    public HtmlUnitScriptable elementFromPoint(final int x, final int y) {
         return null;
     }
 
@@ -1802,17 +1739,8 @@ public class Document extends Node {
      * @return the value of the {@code forms} property
      */
     @JsxGetter
-    public Object getForms() {
-        final HTMLCollection forms = new HTMLCollection(getDomNodeOrDie(), false) {
-            @Override
-            public Object call(final Context cx, final Scriptable scope,
-                    final Scriptable thisObj, final Object[] args) {
-                if (getBrowserVersion().hasFeature(JS_DOCUMENT_FORMS_FUNCTION_SUPPORTED)) {
-                    return super.call(cx, scope, thisObj, args);
-                }
-                throw ScriptRuntime.typeError("document.forms is not a function");
-            }
-        };
+    public HTMLCollection getForms() {
+        final HTMLCollection forms = new HTMLCollection(getDomNodeOrDie(), false);
 
         forms.setIsMatchingPredicate(
                 (Predicate<DomNode> & Serializable)
@@ -1825,17 +1753,8 @@ public class Document extends Node {
      * @return the value of the {@code embeds} property
      */
     @JsxGetter
-    public Object getEmbeds() {
-        final HTMLCollection embeds = new HTMLCollection(getDomNodeOrDie(), false) {
-            @Override
-            public Object call(final Context cx, final Scriptable scope,
-                    final Scriptable thisObj, final Object[] args) {
-                if (getBrowserVersion().hasFeature(JS_DOCUMENT_FORMS_FUNCTION_SUPPORTED)) {
-                    return super.call(cx, scope, thisObj, args);
-                }
-                throw ScriptRuntime.typeError("document.embeds is not a function");
-            }
-        };
+    public HTMLCollection getEmbeds() {
+        final HTMLCollection embeds = new HTMLCollection(getDomNodeOrDie(), false);
 
         embeds.setIsMatchingPredicate((Predicate<DomNode> & Serializable) node -> node instanceof HtmlEmbed);
         return embeds;
@@ -1846,17 +1765,8 @@ public class Document extends Node {
      * @return the value of the {@code embeds} property
      */
     @JsxGetter
-    public Object getImages() {
-        final HTMLCollection images = new HTMLCollection(getDomNodeOrDie(), false) {
-            @Override
-            public Object call(final Context cx, final Scriptable scope,
-                    final Scriptable thisObj, final Object[] args) {
-                if (getBrowserVersion().hasFeature(JS_DOCUMENT_FORMS_FUNCTION_SUPPORTED)) {
-                    return super.call(cx, scope, thisObj, args);
-                }
-                throw ScriptRuntime.typeError("document.images is not a function");
-            }
-        };
+    public HTMLCollection getImages() {
+        final HTMLCollection images = new HTMLCollection(getDomNodeOrDie(), false);
 
         images.setIsMatchingPredicate((Predicate<DomNode> & Serializable) node -> node instanceof HtmlImage);
         return images;
@@ -1867,17 +1777,8 @@ public class Document extends Node {
      * @return the value of the {@code scripts} property
      */
     @JsxGetter
-    public Object getScripts() {
-        final HTMLCollection scripts = new HTMLCollection(getDomNodeOrDie(), false) {
-            @Override
-            public Object call(final Context cx, final Scriptable scope,
-                    final Scriptable thisObj, final Object[] args) {
-                if (getBrowserVersion().hasFeature(JS_DOCUMENT_FORMS_FUNCTION_SUPPORTED)) {
-                    return super.call(cx, scope, thisObj, args);
-                }
-                throw ScriptRuntime.typeError("document.scripts is not a function");
-            }
-        };
+    public HTMLCollection getScripts() {
+        final HTMLCollection scripts = new HTMLCollection(getDomNodeOrDie(), false);
 
         scripts.setIsMatchingPredicate((Predicate<DomNode> & Serializable) node -> node instanceof HtmlScript);
         return scripts;
@@ -1903,17 +1804,17 @@ public class Document extends Node {
      * @return the value of the {@code plugins} property
      */
     @JsxGetter
-    public Object getPlugins() {
+    public HTMLCollection getPlugins() {
         return getEmbeds();
     }
 
     /**
      * Returns the value of the JavaScript property {@code links}. Refer also to the
-     * <a href="http://msdn.microsoft.com/en-us/library/ms537465.aspx">MSDN documentation</a>.
+     * <a href="https://developer.mozilla.org/en-US/docs/Web/API/Document/links">MDN Documentation</a>.
      * @return the value of this property
      */
     @JsxGetter
-    public Object getLinks() {
+    public HTMLCollection getLinks() {
         final HTMLCollection links = new HTMLCollection(getDomNodeOrDie(), true);
 
         links.setEffectOnCacheFunction(
@@ -1951,12 +1852,13 @@ public class Document extends Node {
      * <p>
      * Refer to <a href="http://www.w3.org/TR/DOM-Level-2-HTML/html.html#ID-71555259">
      * The DOM spec</a> for details.
+     * </p>
      *
      * @param elementName - value of the {@code name} attribute to look for
      * @return all HTML elements that have a {@code name} attribute with the specified value
      */
-    @JsxFunction({CHROME, EDGE, IE})
-    public HTMLCollection getElementsByName(final String elementName) {
+    @JsxFunction
+    public NodeList getElementsByName(final String elementName) {
         return null;
     }
 
@@ -1985,13 +1887,14 @@ public class Document extends Node {
      */
     @JsxSetter
     public void setTitle(final String title) {
+        // nothing to do
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public HTMLCollection getChildren() {
         return super.getChildren();
     }
@@ -2000,7 +1903,7 @@ public class Document extends Node {
      * Returns the {@code contentType} property.
      * @return the {@code contentType} property
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public String getContentType() {
         return getPage().getContentType();
     }
@@ -2009,7 +1912,7 @@ public class Document extends Node {
      * Returns the current selection.
      * @return the current selection
      */
-    @JsxFunction({CHROME, EDGE})
+    @JsxFunction
     public Selection getSelection() {
         return null;
     }
@@ -2018,7 +1921,7 @@ public class Document extends Node {
      * Returns this document's {@code head} element.
      * @return this document's {@code head} element
      */
-    @JsxGetter({CHROME, EDGE, IE})
+    @JsxGetter
     public Object getHead() {
         return null;
     }
@@ -2029,11 +1932,7 @@ public class Document extends Node {
      */
     @JsxGetter
     public String getInputEncoding() {
-        final Charset encoding = getPage().getCharset();
-        if (getBrowserVersion().hasFeature(HTMLDOCUMENT_CHARSET_LOWERCASE)) {
-            return encoding.name();
-        }
-        return EncodingSniffer.translateEncodingLabel(encoding);
+        return getPage().getCharset().name();
     }
 
     /**
@@ -2056,13 +1955,15 @@ public class Document extends Node {
             else {
                 lastModified = new Date();
             }
-            lastModified_ = new SimpleDateFormat(LAST_MODIFIED_DATE_FORMAT, Locale.ROOT).format(lastModified);
+
+            final ZoneId zoneid = Context.getCurrentContext().getTimeZone().toZoneId();
+            lastModified_ = LAST_MODIFIED_DATE_FORMATTER.format(lastModified.toInstant().atZone(zoneid));
         }
         return lastModified_;
     }
 
     private static Date parseDateOrNow(final String stringDate) {
-        final Date date = HttpClientConverter.parseHttpDate(stringDate);
+        final Date date = HttpUtils.parseDate(stringDate);
         if (date == null) {
             return new Date();
         }
@@ -2071,11 +1972,10 @@ public class Document extends Node {
 
     /**
      * Mock for the moment.
-     * @return true for success
      */
-    @JsxFunction({FF, FF_ESR, IE})
-    public boolean releaseCapture() {
-        return true;
+    @JsxFunction({FF, FF_ESR})
+    public void releaseCapture() {
+        // nothing to do
     }
 
     /**
@@ -2122,19 +2022,8 @@ public class Document extends Node {
     @JsxGetter
     public String getAlinkColor() {
         final HTMLElement body = getBody();
-        if (body instanceof HTMLBodyElement) {
-            String color = ((HTMLBodyElement) body).getALink();
-            if (ATTRIBUTE_NOT_DEFINED == color && getBrowserVersion().hasFeature(HTMLDOCUMENT_COLOR)) {
-                color = "#0000ff";
-            }
-            else if (getBrowserVersion().hasFeature(HTML_COLOR_EXPAND_ZERO) && "#0".equals(color)) {
-                color = "#000000";
-            }
-            return color;
-        }
-
-        if (getBrowserVersion().hasFeature(HTMLDOCUMENT_COLOR)) {
-            return "#0000ff";
+        if (body instanceof HTMLBodyElement element) {
+            return element.getALink();
         }
         return null;
     }
@@ -2146,32 +2035,21 @@ public class Document extends Node {
     @JsxSetter
     public void setAlinkColor(final String color) {
         final HTMLElement body = getBody();
-        if (body instanceof HTMLBodyElement) {
-            ((HTMLBodyElement) body).setALink(color);
+        if (body instanceof HTMLBodyElement element) {
+            element.setALink(color);
         }
     }
 
     /**
      * Returns the value of the {@code bgColor} property.
      * @return the value of the {@code bgColor} property
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms533505.aspx">MSDN Documentation</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/Document/bgColor">MDN Documentation</a>
      */
     @JsxGetter
     public String getBgColor() {
         final HTMLElement body = getBody();
-        if (body instanceof HTMLBodyElement) {
-            String color = ((HTMLBodyElement) body).getBgColor();
-            if (ATTRIBUTE_NOT_DEFINED == color && getBrowserVersion().hasFeature(HTMLDOCUMENT_COLOR)) {
-                color = "#ffffff";
-            }
-            else if (getBrowserVersion().hasFeature(HTML_COLOR_EXPAND_ZERO) && "#0".equals(color)) {
-                color = "#000000";
-            }
-            return color;
-        }
-
-        if (getBrowserVersion().hasFeature(HTMLDOCUMENT_COLOR)) {
-            return "#ffffff";
+        if (body instanceof HTMLBodyElement element) {
+            return element.getBgColor();
         }
         return null;
     }
@@ -2179,13 +2057,13 @@ public class Document extends Node {
     /**
      * Sets the value of the {@code bgColor} property.
      * @param color the value of the {@code bgColor} property
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms533505.aspx">MSDN Documentation</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/Document/bgColor">MDN Documentation</a>
      */
     @JsxSetter
     public void setBgColor(final String color) {
         final HTMLElement body = getBody();
-        if (body instanceof HTMLBodyElement) {
-            ((HTMLBodyElement) body).setBgColor(color);
+        if (body instanceof HTMLBodyElement element) {
+            element.setBgColor(color);
         }
     }
 
@@ -2196,19 +2074,8 @@ public class Document extends Node {
     @JsxGetter
     public String getFgColor() {
         final HTMLElement body = getBody();
-        if (body instanceof HTMLBodyElement) {
-            String color = ((HTMLBodyElement) body).getText();
-            if (ATTRIBUTE_NOT_DEFINED == color && getBrowserVersion().hasFeature(HTMLDOCUMENT_COLOR)) {
-                color = "#000000";
-            }
-            if (getBrowserVersion().hasFeature(HTML_COLOR_EXPAND_ZERO) && "#0".equals(color)) {
-                color = "#000000";
-            }
-            return color;
-        }
-
-        if (getBrowserVersion().hasFeature(HTMLDOCUMENT_COLOR)) {
-            return "#000000";
+        if (body instanceof HTMLBodyElement element) {
+            return element.getText();
         }
         return null;
     }
@@ -2220,8 +2087,8 @@ public class Document extends Node {
     @JsxSetter
     public void setFgColor(final String color) {
         final HTMLElement body = getBody();
-        if (body instanceof HTMLBodyElement) {
-            ((HTMLBodyElement) body).setText(color);
+        if (body instanceof HTMLBodyElement element) {
+            element.setText(color);
         }
     }
 
@@ -2232,19 +2099,8 @@ public class Document extends Node {
     @JsxGetter
     public String getLinkColor() {
         final HTMLElement body = getBody();
-        if (body instanceof HTMLBodyElement) {
-            String color = ((HTMLBodyElement) body).getLink();
-            if (ATTRIBUTE_NOT_DEFINED == color && getBrowserVersion().hasFeature(HTMLDOCUMENT_COLOR)) {
-                color = "#0000ff";
-            }
-            if (getBrowserVersion().hasFeature(HTML_COLOR_EXPAND_ZERO) && "#0".equals(color)) {
-                color = "#000000";
-            }
-            return color;
-        }
-
-        if (getBrowserVersion().hasFeature(HTMLDOCUMENT_COLOR)) {
-            return "#0000ff";
+        if (body instanceof HTMLBodyElement element) {
+            return element.getLink();
         }
         return null;
     }
@@ -2256,8 +2112,8 @@ public class Document extends Node {
     @JsxSetter
     public void setLinkColor(final String color) {
         final HTMLElement body = getBody();
-        if (body instanceof HTMLBodyElement) {
-            ((HTMLBodyElement) body).setLink(color);
+        if (body instanceof HTMLBodyElement element) {
+            element.setLink(color);
         }
     }
 
@@ -2268,19 +2124,8 @@ public class Document extends Node {
     @JsxGetter
     public String getVlinkColor() {
         final HTMLElement body = getBody();
-        if (body instanceof HTMLBodyElement) {
-            String color = ((HTMLBodyElement) body).getVLink();
-            if (ATTRIBUTE_NOT_DEFINED == color && getBrowserVersion().hasFeature(HTMLDOCUMENT_COLOR)) {
-                color = "#800080";
-            }
-            if (getBrowserVersion().hasFeature(HTML_COLOR_EXPAND_ZERO) && "#0".equals(color)) {
-                color = "#000000";
-            }
-            return color;
-        }
-
-        if (getBrowserVersion().hasFeature(HTMLDOCUMENT_COLOR)) {
-            return "#800080";
+        if (body instanceof HTMLBodyElement element) {
+            return element.getVLink();
         }
         return null;
     }
@@ -2292,29 +2137,16 @@ public class Document extends Node {
     @JsxSetter
     public void setVlinkColor(final String color) {
         final HTMLElement body = getBody();
-        if (body instanceof HTMLBodyElement) {
-            ((HTMLBodyElement) body).setVLink(color);
+        if (body instanceof HTMLBodyElement element) {
+            element.setVLink(color);
         }
-    }
-
-    /**
-     * Returns the value of the {@code frames} property.
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms537459.aspx">MSDN documentation</a>
-     * @return the live collection of frames contained by this document
-     */
-    @JsxGetter(IE)
-    public Object getFrames() {
-        if (ScriptableObject.getTopLevelScope(this) == null) {
-            throw ScriptRuntime.constructError("Error", "Not implemented");
-        }
-        return getWindow().getFrames_js();
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public Element getLastElementChild() {
         return super.getLastElementChild();
     }
@@ -2323,7 +2155,7 @@ public class Document extends Node {
      * {@inheritDoc}
      */
     @Override
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public Element getFirstElementChild() {
         return super.getFirstElementChild();
     }
@@ -2332,20 +2164,16 @@ public class Document extends Node {
      * Returns the {@code xmlEncoding} property.
      * @return the {@code xmlEncoding} property
      */
-    @JsxGetter({CHROME, EDGE, IE})
+    @JsxGetter({CHROME, EDGE})
     public String getXmlEncoding() {
-        String encoding = getPage().getXmlEncoding();
-        if (encoding == null && getBrowserVersion().hasFeature(HTMLDOCUMENT_CHARSET_LOWERCASE)) {
-            encoding = "";
-        }
-        return encoding;
+        return getPage().getXmlEncoding();
     }
 
     /**
      * Returns the {@code xmlStandalone} property.
      * @return the {@code xmlStandalone} property
      */
-    @JsxGetter({CHROME, EDGE, IE})
+    @JsxGetter({CHROME, EDGE})
     public boolean isXmlStandalone() {
         return getPage().getXmlStandalone();
     }
@@ -2354,13 +2182,9 @@ public class Document extends Node {
      * Returns the {@code xmlVersion} property.
      * @return the {@code xmlVersion} property
      */
-    @JsxGetter({CHROME, EDGE, IE})
+    @JsxGetter({CHROME, EDGE})
     public String getXmlVersion() {
-        String version = getPage().getXmlVersion();
-        if (version == null && getBrowserVersion().hasFeature(HTMLDOCUMENT_CHARSET_LOWERCASE)) {
-            version = "";
-        }
-        return version;
+        return getPage().getXmlVersion();
     }
 
     /**
@@ -2547,7 +2371,7 @@ public class Document extends Node {
      * Returns the {@code oncopy} event handler for this element.
      * @return the {@code oncopy} event handler for this element
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public Function getOncopy() {
         return getEventHandler(Event.TYPE_COPY);
     }
@@ -2556,7 +2380,7 @@ public class Document extends Node {
      * Sets the {@code oncopy} event handler for this element.
      * @param oncopy the {@code oncopy} event handler for this element
      */
-    @JsxSetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxSetter
     public void setOncopy(final Object oncopy) {
         setEventHandler(Event.TYPE_COPY, oncopy);
     }
@@ -2583,7 +2407,7 @@ public class Document extends Node {
      * Returns the {@code oncut} event handler for this element.
      * @return the {@code oncut} event handler for this element
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public Function getOncut() {
         return getEventHandler(Event.TYPE_CUT);
     }
@@ -2592,7 +2416,7 @@ public class Document extends Node {
      * Sets the {@code oncut} event handler for this element.
      * @param oncut the {@code oncut} event handler for this element
      */
-    @JsxSetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxSetter
     public void setOncut(final Object oncut) {
         setEventHandler(Event.TYPE_CUT, oncut);
     }
@@ -2799,7 +2623,7 @@ public class Document extends Node {
      * Returns the {@code oninvalid} event handler for this element.
      * @return the {@code oninvalid} event handler for this element
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public Function getOninvalid() {
         return getEventHandler(Event.TYPE_INVALID);
     }
@@ -2808,7 +2632,7 @@ public class Document extends Node {
      * Sets the {@code oninvalid} event handler for this element.
      * @param oninvalid the {@code oninvalid} event handler for this element
      */
-    @JsxSetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxSetter
     public void setOninvalid(final Object oninvalid) {
         setEventHandler(Event.TYPE_INVALID, oninvalid);
     }
@@ -2907,7 +2731,7 @@ public class Document extends Node {
      * Returns the {@code onmouseenter} event handler for this element.
      * @return the {@code onmouseenter} event handler for this element
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public Function getOnmouseenter() {
         return getEventHandler(Event.TYPE_MOUDEENTER);
     }
@@ -2916,7 +2740,7 @@ public class Document extends Node {
      * Sets the {@code onmouseenter} event handler for this element.
      * @param onmouseenter the {@code onmouseenter} event handler for this element
      */
-    @JsxSetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxSetter
     public void setOnmouseenter(final Object onmouseenter) {
         setEventHandler(Event.TYPE_MOUDEENTER, onmouseenter);
     }
@@ -2925,7 +2749,7 @@ public class Document extends Node {
      * Returns the {@code onmouseleave} event handler for this element.
      * @return the {@code onmouseleave} event handler for this element
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public Function getOnmouseleave() {
         return getEventHandler(Event.TYPE_MOUSELEAVE);
     }
@@ -2934,7 +2758,7 @@ public class Document extends Node {
      * Sets the {@code onmouseleave} event handler for this element.
      * @param onmouseleave the {@code onmouseleave} event handler for this element
      */
-    @JsxSetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxSetter
     public void setOnmouseleave(final Object onmouseleave) {
         setEventHandler(Event.TYPE_MOUSELEAVE, onmouseleave);
     }
@@ -2943,7 +2767,7 @@ public class Document extends Node {
      * Returns the {@code onmousewheel} event handler for this element.
      * @return the {@code onmousewheel} event handler for this element
      */
-    @JsxGetter({CHROME, EDGE, IE})
+    @JsxGetter({CHROME, EDGE})
     public Function getOnmousewheel() {
         return getEventHandler(Event.TYPE_MOUSEWHEEL);
     }
@@ -2952,7 +2776,7 @@ public class Document extends Node {
      * Sets the {@code onmousewheel} event handler for this element.
      * @param onmousewheel the {@code onmousewheel} event handler for this element
      */
-    @JsxSetter({CHROME, EDGE, IE})
+    @JsxSetter({CHROME, EDGE})
     public void setOnmousewheel(final Object onmousewheel) {
         setEventHandler(Event.TYPE_MOUSEWHEEL, onmousewheel);
     }
@@ -2961,7 +2785,7 @@ public class Document extends Node {
      * Returns the {@code onpaste} event handler for this element.
      * @return the {@code onpaste} event handler for this element
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public Function getOnpaste() {
         return getEventHandler(Event.TYPE_PASTE);
     }
@@ -2970,7 +2794,7 @@ public class Document extends Node {
      * Sets the {@code onpaste} event handler for this element.
      * @param onpaste the {@code onpaste} event handler for this element
      */
-    @JsxSetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxSetter
     public void setOnpaste(final Object onpaste) {
         setEventHandler(Event.TYPE_PASTE, onpaste);
     }
@@ -3017,7 +2841,7 @@ public class Document extends Node {
      */
     @JsxGetter
     public Function getOnplaying() {
-        return getEventHandler(Event.TYPE_PLAYNG);
+        return getEventHandler(Event.TYPE_PLAYING);
     }
 
     /**
@@ -3026,14 +2850,14 @@ public class Document extends Node {
      */
     @JsxSetter
     public void setOnplaying(final Object onplaying) {
-        setEventHandler(Event.TYPE_PLAYNG, onplaying);
+        setEventHandler(Event.TYPE_PLAYING, onplaying);
     }
 
     /**
      * Returns the {@code onpointercancel} event handler for this element.
      * @return the {@code onpointercancel} event handler for this element
      */
-    @JsxGetter({CHROME, EDGE, IE})
+    @JsxGetter({CHROME, EDGE})
     public Function getOnpointercancel() {
         return getEventHandler(Event.TYPE_POINTERCANCEL);
     }
@@ -3042,7 +2866,7 @@ public class Document extends Node {
      * Sets the {@code onpointercancel} event handler for this element.
      * @param onpointercancel the {@code onpointercancel} event handler for this element
      */
-    @JsxSetter({CHROME, EDGE, IE})
+    @JsxSetter({CHROME, EDGE})
     public void setOnpointercancel(final Object onpointercancel) {
         setEventHandler(Event.TYPE_POINTERCANCEL, onpointercancel);
     }
@@ -3051,7 +2875,7 @@ public class Document extends Node {
      * Returns the {@code onpointerdown} event handler for this element.
      * @return the {@code onpointerdown} event handler for this element
      */
-    @JsxGetter({CHROME, EDGE, IE})
+    @JsxGetter({CHROME, EDGE})
     public Function getOnpointerdown() {
         return getEventHandler(Event.TYPE_POINTERDOWN);
     }
@@ -3060,7 +2884,7 @@ public class Document extends Node {
      * Sets the {@code onpointerdown} event handler for this element.
      * @param onpointerdown the {@code onpointerdown} event handler for this element
      */
-    @JsxSetter({CHROME, EDGE, IE})
+    @JsxSetter({CHROME, EDGE})
     public void setOnpointerdown(final Object onpointerdown) {
         setEventHandler(Event.TYPE_POINTERDOWN, onpointerdown);
     }
@@ -3069,7 +2893,7 @@ public class Document extends Node {
      * Returns the {@code onpointerenter} event handler for this element.
      * @return the {@code onpointerenter} event handler for this element
      */
-    @JsxGetter({CHROME, EDGE, IE})
+    @JsxGetter({CHROME, EDGE})
     public Function getOnpointerenter() {
         return getEventHandler(Event.TYPE_POINTERENTER);
     }
@@ -3078,7 +2902,7 @@ public class Document extends Node {
      * Sets the {@code onpointerenter} event handler for this element.
      * @param onpointerenter the {@code onpointerenter} event handler for this element
      */
-    @JsxSetter({CHROME, EDGE, IE})
+    @JsxSetter({CHROME, EDGE})
     public void setOnpointerenter(final Object onpointerenter) {
         setEventHandler(Event.TYPE_POINTERENTER, onpointerenter);
     }
@@ -3087,7 +2911,7 @@ public class Document extends Node {
      * Returns the {@code onpointerleave} event handler for this element.
      * @return the {@code onpointerleave} event handler for this element
      */
-    @JsxGetter({CHROME, EDGE, IE})
+    @JsxGetter({CHROME, EDGE})
     public Function getOnpointerleave() {
         return getEventHandler(Event.TYPE_POINTERLEAVE);
     }
@@ -3096,7 +2920,7 @@ public class Document extends Node {
      * Sets the {@code onpointerleave} event handler for this element.
      * @param onpointerleave the {@code onpointerleave} event handler for this element
      */
-    @JsxSetter({CHROME, EDGE, IE})
+    @JsxSetter({CHROME, EDGE})
     public void setOnpointerleave(final Object onpointerleave) {
         setEventHandler(Event.TYPE_POINTERLEAVE, onpointerleave);
     }
@@ -3141,7 +2965,7 @@ public class Document extends Node {
      * Returns the {@code onpointermove} event handler for this element.
      * @return the {@code onpointermove} event handler for this element
      */
-    @JsxGetter({CHROME, EDGE, IE})
+    @JsxGetter({CHROME, EDGE})
     public Function getOnpointermove() {
         return getEventHandler(Event.TYPE_POINTERMOVE);
     }
@@ -3150,7 +2974,7 @@ public class Document extends Node {
      * Sets the {@code onpointermove} event handler for this element.
      * @param onpointermove the {@code onpointermove} event handler for this element
      */
-    @JsxSetter({CHROME, EDGE, IE})
+    @JsxSetter({CHROME, EDGE})
     public void setOnpointermove(final Object onpointermove) {
         setEventHandler(Event.TYPE_POINTERMOVE, onpointermove);
     }
@@ -3159,7 +2983,7 @@ public class Document extends Node {
      * Returns the {@code onpointerout} event handler for this element.
      * @return the {@code onpointerout} event handler for this element
      */
-    @JsxGetter({CHROME, EDGE, IE})
+    @JsxGetter({CHROME, EDGE})
     public Function getOnpointerout() {
         return getEventHandler(Event.TYPE_POINTEROUT);
     }
@@ -3168,7 +2992,7 @@ public class Document extends Node {
      * Sets the {@code onpointerout} event handler for this element.
      * @param onpointerout the {@code onpointerout} event handler for this element
      */
-    @JsxSetter({CHROME, EDGE, IE})
+    @JsxSetter({CHROME, EDGE})
     public void setOnpointerout(final Object onpointerout) {
         setEventHandler(Event.TYPE_POINTEROUT, onpointerout);
     }
@@ -3177,7 +3001,7 @@ public class Document extends Node {
      * Returns the {@code onpointerover} event handler for this element.
      * @return the {@code onpointerover} event handler for this element
      */
-    @JsxGetter({CHROME, EDGE, IE})
+    @JsxGetter({CHROME, EDGE})
     public Function getOnpointerover() {
         return getEventHandler(Event.TYPE_POINTEROVER);
     }
@@ -3186,7 +3010,7 @@ public class Document extends Node {
      * Sets the {@code onpointerover} event handler for this element.
      * @param onpointerover the {@code onpointerover} event handler for this element
      */
-    @JsxSetter({CHROME, EDGE, IE})
+    @JsxSetter({CHROME, EDGE})
     public void setOnpointerover(final Object onpointerover) {
         setEventHandler(Event.TYPE_POINTEROVER, onpointerover);
     }
@@ -3195,7 +3019,7 @@ public class Document extends Node {
      * Returns the {@code onpointerup} event handler for this element.
      * @return the {@code onpointerup} event handler for this element
      */
-    @JsxGetter({CHROME, EDGE, IE})
+    @JsxGetter({CHROME, EDGE})
     public Function getOnpointerup() {
         return getEventHandler(Event.TYPE_POINTERUP);
     }
@@ -3204,7 +3028,7 @@ public class Document extends Node {
      * Sets the {@code onpointerup} event handler for this element.
      * @param onpointerup the {@code onpointerup} event handler for this element
      */
-    @JsxSetter({CHROME, EDGE, IE})
+    @JsxSetter({CHROME, EDGE})
     public void setOnpointerup(final Object onpointerup) {
         setEventHandler(Event.TYPE_POINTERUP, onpointerup);
     }
@@ -3375,7 +3199,7 @@ public class Document extends Node {
      * Returns the {@code onselectionchange} event handler for this element.
      * @return the {@code onselectionchange} event handler for this element
      */
-    @JsxGetter({CHROME, EDGE, IE})
+    @JsxGetter({CHROME, EDGE})
     public Function getOnselectionchange() {
         return getEventHandler(Event.TYPE_SELECTIONCHANGE);
     }
@@ -3384,7 +3208,7 @@ public class Document extends Node {
      * Sets the {@code onselectionchange} event handler for this element.
      * @param onselectionchange the {@code onselectionchange} event handler for this element
      */
-    @JsxSetter({CHROME, EDGE, IE})
+    @JsxSetter({CHROME, EDGE})
     public void setOnselectionchange(final Object onselectionchange) {
         setEventHandler(Event.TYPE_SELECTIONCHANGE, onselectionchange);
     }
@@ -3573,7 +3397,7 @@ public class Document extends Node {
      * Returns the {@code onwheel} event handler for this element.
      * @return the {@code onwheel} event handler for this element
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public Function getOnwheel() {
         return getEventHandler(Event.TYPE_WHEEL);
     }
@@ -3582,7 +3406,7 @@ public class Document extends Node {
      * Sets the {@code onwheel} event handler for this element.
      * @param onwheel the {@code onwheel} event handler for this element
      */
-    @JsxSetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxSetter
     public void setOnwheel(final Object onwheel) {
         setEventHandler(Event.TYPE_WHEEL, onwheel);
     }
@@ -3660,518 +3484,16 @@ public class Document extends Node {
     }
 
     /**
-     * Returns the {@code onhelp} event handler for this element.
-     * @return the {@code onhelp} event handler for this element
-     */
-    @JsxGetter(IE)
-    public Function getOnhelp() {
-        return getEventHandler(Event.TYPE_HELP);
-    }
-
-    /**
-     * Sets the {@code onhelp} event handler for this element.
-     * @param onhelp the {@code onhelp} event handler for this element
-     */
-    @JsxSetter(IE)
-    public void setOnhelp(final Object onhelp) {
-        setEventHandler(Event.TYPE_HELP, onhelp);
-    }
-
-    /**
-     * Returns the {@code onmscontentzoom} event handler for this element.
-     * @return the {@code onmscontentzoom} event handler for this element
-     */
-    @JsxGetter(IE)
-    public Function getOnmscontentzoom() {
-        return getEventHandler(Event.TYPE_MSCONTENTZOOM);
-    }
-
-    /**
-     * Sets the {@code onmscontentzoom} event handler for this element.
-     * @param onmscontentzoom the {@code onmscontentzoom} event handler for this element
-     */
-    @JsxSetter(IE)
-    public void setOnmscontentzoom(final Object onmscontentzoom) {
-        setEventHandler(Event.TYPE_MSCONTENTZOOM, onmscontentzoom);
-    }
-
-    /**
-     * Returns the {@code onmsfullscreenchange} event handler for this element.
-     * @return the {@code onmsfullscreenchange} event handler for this element
-     */
-    @JsxGetter(IE)
-    public Function getOnmsfullscreenchange() {
-        return getEventHandler(Event.TYPE_MSFULLSCREENCHANGE);
-    }
-
-    /**
-     * Sets the {@code onmsfullscreenchange} event handler for this element.
-     * @param onmsfullscreenchange the {@code onmsfullscreenchange} event handler for this element
-     */
-    @JsxSetter(IE)
-    public void setOnmsfullscreenchange(final Object onmsfullscreenchange) {
-        setEventHandler(Event.TYPE_MSFULLSCREENCHANGE, onmsfullscreenchange);
-    }
-
-    /**
-     * Returns the {@code onmsfullscreenerror} event handler for this element.
-     * @return the {@code onmsfullscreenerror} event handler for this element
-     */
-    @JsxGetter(IE)
-    public Function getOnmsfullscreenerror() {
-        return getEventHandler(Event.TYPE_MSFULLSCREENERROR);
-    }
-
-    /**
-     * Sets the {@code onmsfullscreenerror} event handler for this element.
-     * @param onmsfullscreenerror the {@code onmsfullscreenerror} event handler for this element
-     */
-    @JsxSetter(IE)
-    public void setOnmsfullscreenerror(final Object onmsfullscreenerror) {
-        setEventHandler(Event.TYPE_MSFULLSCREENERROR, onmsfullscreenerror);
-    }
-
-    /**
-     * Returns the {@code onmsgesturechange} event handler for this element.
-     * @return the {@code onmsgesturechange} event handler for this element
-     */
-    @JsxGetter(IE)
-    public Function getOnmsgesturechange() {
-        return getEventHandler(Event.TYPE_MSGESTURECHANGE);
-    }
-
-    /**
-     * Sets the {@code onmsgesturechange} event handler for this element.
-     * @param onmsgesturechange the {@code onmsgesturechange} event handler for this element
-     */
-    @JsxSetter(IE)
-    public void setOnmsgesturechange(final Object onmsgesturechange) {
-        setEventHandler(Event.TYPE_MSGESTURECHANGE, onmsgesturechange);
-    }
-
-    /**
-     * Returns the {@code onmsgesturedoubletap} event handler for this element.
-     * @return the {@code onmsgesturedoubletap} event handler for this element
-     */
-    @JsxGetter(IE)
-    public Function getOnmsgesturedoubletap() {
-        return getEventHandler(Event.TYPE_MSGESTUREDOUBLETAP);
-    }
-
-    /**
-     * Sets the {@code onmsgesturedoubletap} event handler for this element.
-     * @param onmsgesturedoubletap the {@code onmsgesturedoubletap} event handler for this element
-     */
-    @JsxSetter(IE)
-    public void setOnmsgesturedoubletap(final Object onmsgesturedoubletap) {
-        setEventHandler(Event.TYPE_MSGESTUREDOUBLETAP, onmsgesturedoubletap);
-    }
-
-    /**
-     * Returns the {@code onmsgestureend} event handler for this element.
-     * @return the {@code onmsgestureend} event handler for this element
-     */
-    @JsxGetter(IE)
-    public Function getOnmsgestureend() {
-        return getEventHandler(Event.TYPE_MSGESTUREEND);
-    }
-
-    /**
-     * Sets the {@code onmsgestureend} event handler for this element.
-     * @param onmsgestureend the {@code onmsgestureend} event handler for this element
-     */
-    @JsxSetter(IE)
-    public void setOnmsgestureend(final Object onmsgestureend) {
-        setEventHandler(Event.TYPE_MSGESTUREEND, onmsgestureend);
-    }
-
-    /**
-     * Returns the {@code onmsgesturehold} event handler for this element.
-     * @return the {@code onmsgesturehold} event handler for this element
-     */
-    @JsxGetter(IE)
-    public Function getOnmsgesturehold() {
-        return getEventHandler(Event.TYPE_MSGESTUREHOLD);
-    }
-
-    /**
-     * Sets the {@code onmsgesturehold} event handler for this element.
-     * @param onmsgesturehold the {@code onmsgesturehold} event handler for this element
-     */
-    @JsxSetter(IE)
-    public void setOnmsgesturehold(final Object onmsgesturehold) {
-        setEventHandler(Event.TYPE_MSGESTUREHOLD, onmsgesturehold);
-    }
-
-    /**
-     * Returns the {@code onmsgesturestart} event handler for this element.
-     * @return the {@code onmsgesturestart} event handler for this element
-     */
-    @JsxGetter(IE)
-    public Function getOnmsgesturestart() {
-        return getEventHandler(Event.TYPE_MSGESTURESTART);
-    }
-
-    /**
-     * Sets the {@code onmsgesturestart} event handler for this element.
-     * @param onmsgesturestart the {@code onmsgesturestart} event handler for this element
-     */
-    @JsxSetter(IE)
-    public void setOnmsgesturestart(final Object onmsgesturestart) {
-        setEventHandler(Event.TYPE_MSGESTURESTART, onmsgesturestart);
-    }
-
-    /**
-     * Returns the {@code onmsgesturetap} event handler for this element.
-     * @return the {@code onmsgesturetap} event handler for this element
-     */
-    @JsxGetter(IE)
-    public Function getOnmsgesturetap() {
-        return getEventHandler(Event.TYPE_MSGESTURETAP);
-    }
-
-    /**
-     * Sets the {@code onmsgesturetap} event handler for this element.
-     * @param onmsgesturetap the {@code onmsgesturetap} event handler for this element
-     */
-    @JsxSetter(IE)
-    public void setOnmsgesturetap(final Object onmsgesturetap) {
-        setEventHandler(Event.TYPE_MSGESTURETAP, onmsgesturetap);
-    }
-
-    /**
-     * Returns the {@code onmsinertiastart} event handler for this element.
-     * @return the {@code onmsinertiastart} event handler for this element
-     */
-    @JsxGetter(IE)
-    public Function getOnmsinertiastart() {
-        return getEventHandler(Event.TYPE_MSINERTIASTART);
-    }
-
-    /**
-     * Sets the {@code onmsinertiastart} event handler for this element.
-     * @param onmsinertiastart the {@code onmsinertiastart} event handler for this element
-     */
-    @JsxSetter(IE)
-    public void setOnmsinertiastart(final Object onmsinertiastart) {
-        setEventHandler(Event.TYPE_MSINERTIASTART, onmsinertiastart);
-    }
-
-    /**
-     * Returns the {@code onmsmanipulationstatechanged} event handler for this element.
-     * @return the {@code onmsmanipulationstatechanged} event handler for this element
-     */
-    @JsxGetter(IE)
-    public Function getOnmsmanipulationstatechanged() {
-        return getEventHandler(Event.TYPE_MSMANIPULATIONSTATECHANGED);
-    }
-
-    /**
-     * Sets the {@code onmsmanipulationstatechanged} event handler for this element.
-     * @param onmsmanipulationstatechanged the {@code onmsmanipulationstatechanged} event handler for this element
-     */
-    @JsxSetter(IE)
-    public void setOnmsmanipulationstatechanged(final Object onmsmanipulationstatechanged) {
-        setEventHandler(Event.TYPE_MSMANIPULATIONSTATECHANGED, onmsmanipulationstatechanged);
-    }
-
-    /**
-     * Returns the {@code onmspointercancel} event handler for this element.
-     * @return the {@code onmspointercancel} event handler for this element
-     */
-    @JsxGetter(IE)
-    public Function getOnmspointercancel() {
-        return getEventHandler(Event.TYPE_MSPOINTERCANCEL);
-    }
-
-    /**
-     * Sets the {@code onmspointercancel} event handler for this element.
-     * @param onmspointercancel the {@code onmspointercancel} event handler for this element
-     */
-    @JsxSetter(IE)
-    public void setOnmspointercancel(final Object onmspointercancel) {
-        setEventHandler(Event.TYPE_MSPOINTERCANCEL, onmspointercancel);
-    }
-
-    /**
-     * Returns the {@code onmspointerdown} event handler for this element.
-     * @return the {@code onmspointerdown} event handler for this element
-     */
-    @JsxGetter(IE)
-    public Function getOnmspointerdown() {
-        return getEventHandler(Event.TYPE_MSPOINTERDOWN);
-    }
-
-    /**
-     * Sets the {@code onmspointerdown} event handler for this element.
-     * @param onmspointerdown the {@code onmspointerdown} event handler for this element
-     */
-    @JsxSetter(IE)
-    public void setOnmspointerdown(final Object onmspointerdown) {
-        setEventHandler(Event.TYPE_MSPOINTERDOWN, onmspointerdown);
-    }
-
-    /**
-     * Returns the {@code onmspointerenter} event handler for this element.
-     * @return the {@code onmspointerenter} event handler for this element
-     */
-    @JsxGetter(IE)
-    public Function getOnmspointerenter() {
-        return getEventHandler(Event.TYPE_MSPOINTENTER);
-    }
-
-    /**
-     * Sets the {@code onmspointerenter} event handler for this element.
-     * @param onmspointerenter the {@code onmspointerenter} event handler for this element
-     */
-    @JsxSetter(IE)
-    public void setOnmspointerenter(final Object onmspointerenter) {
-        setEventHandler(Event.TYPE_MSPOINTENTER, onmspointerenter);
-    }
-
-    /**
-     * Returns the {@code onmspointerleave} event handler for this element.
-     * @return the {@code onmspointerleave} event handler for this element
-     */
-    @JsxGetter(IE)
-    public Function getOnmspointerleave() {
-        return getEventHandler(Event.TYPE_MSPOINTERLEAVE);
-    }
-
-    /**
-     * Sets the {@code onmspointerleave} event handler for this element.
-     * @param onmspointerleave the {@code onmspointerleave} event handler for this element
-     */
-    @JsxSetter(IE)
-    public void setOnmspointerleave(final Object onmspointerleave) {
-        setEventHandler(Event.TYPE_MSPOINTERLEAVE, onmspointerleave);
-    }
-
-    /**
-     * Returns the {@code onmspointermove} event handler for this element.
-     * @return the {@code onmspointermove} event handler for this element
-     */
-    @JsxGetter(IE)
-    public Function getOnmspointermove() {
-        return getEventHandler(Event.TYPE_MSPOINTERMOVE);
-    }
-
-    /**
-     * Sets the {@code onmspointermove} event handler for this element.
-     * @param onmspointermove the {@code onmspointermove} event handler for this element
-     */
-    @JsxSetter(IE)
-    public void setOnmspointermove(final Object onmspointermove) {
-        setEventHandler(Event.TYPE_MSPOINTERMOVE, onmspointermove);
-    }
-
-    /**
-     * Returns the {@code onmspointerout} event handler for this element.
-     * @return the {@code onmspointerout} event handler for this element
-     */
-    @JsxGetter(IE)
-    public Function getOnmspointerout() {
-        return getEventHandler(Event.TYPE_MSPOINTEROUT);
-    }
-
-    /**
-     * Sets the {@code onmspointerout} event handler for this element.
-     * @param onmspointerout the {@code onmspointerout} event handler for this element
-     */
-    @JsxSetter(IE)
-    public void setOnmspointerout(final Object onmspointerout) {
-        setEventHandler(Event.TYPE_MSPOINTEROUT, onmspointerout);
-    }
-
-    /**
-     * Returns the {@code onmspointerover} event handler for this element.
-     * @return the {@code onmspointerover} event handler for this element
-     */
-    @JsxGetter(IE)
-    public Function getOnmspointerover() {
-        return getEventHandler(Event.TYPE_MSPOINTEROVER);
-    }
-
-    /**
-     * Sets the {@code onmspointerover} event handler for this element.
-     * @param onmspointerover the {@code onmspointerover} event handler for this element
-     */
-    @JsxSetter(IE)
-    public void setOnmspointerover(final Object onmspointerover) {
-        setEventHandler(Event.TYPE_MSPOINTEROVER, onmspointerover);
-    }
-
-    /**
-     * Returns the {@code onmspointerup} event handler for this element.
-     * @return the {@code onmspointerup} event handler for this element
-     */
-    @JsxGetter(IE)
-    public Function getOnmspointerup() {
-        return getEventHandler(Event.TYPE_MSPOINTERUP);
-    }
-
-    /**
-     * Sets the {@code onmspointerup} event handler for this element.
-     * @param onmspointerup the {@code onmspointerup} event handler for this element
-     */
-    @JsxSetter(IE)
-    public void setOnmspointerup(final Object onmspointerup) {
-        setEventHandler(Event.TYPE_MSPOINTERUP, onmspointerup);
-    }
-
-    /**
-     * Returns the {@code onmssitemodejumplistitemremoved} event handler for this element.
-     * @return the {@code onmssitemodejumplistitemremoved} event handler for this element
-     */
-    @JsxGetter(IE)
-    public Function getOnmssitemodejumplistitemremoved() {
-        return getEventHandler(Event.TYPE_MSSITEMODEJUMPLISTITEMREMOVED);
-    }
-
-    /**
-     * Sets the {@code onmssitemodejumplistitemremoved} event handler for this element.
-     * @param onmssitemodejumplistitemremoved the {@code onmssitemodejumplistitemremoved} event handler for this element
-     */
-    @JsxSetter(IE)
-    public void setOnmssitemodejumplistitemremoved(final Object onmssitemodejumplistitemremoved) {
-        setEventHandler(Event.TYPE_MSSITEMODEJUMPLISTITEMREMOVED, onmssitemodejumplistitemremoved);
-    }
-
-    /**
-     * Returns the {@code onmsthumbnailclick} event handler for this element.
-     * @return the {@code onmsthumbnailclick} event handler for this element
-     */
-    @JsxGetter(IE)
-    public Function getOnmsthumbnailclick() {
-        return getEventHandler(Event.TYPE_MSTHUMBNAILCLICK);
-    }
-
-    /**
-     * Sets the {@code onmsthumbnailclick} event handler for this element.
-     * @param onmsthumbnailclick the {@code onmsthumbnailclick} event handler for this element
-     */
-    @JsxSetter(IE)
-    public void setOnmsthumbnailclick(final Object onmsthumbnailclick) {
-        setEventHandler(Event.TYPE_MSTHUMBNAILCLICK, onmsthumbnailclick);
-    }
-
-    /**
-     * Returns the {@code onstop} event handler for this element.
-     * @return the {@code onstop} event handler for this element
-     */
-    @JsxGetter(IE)
-    public Function getOnstop() {
-        return getEventHandler(Event.TYPE_STOP);
-    }
-
-    /**
-     * Sets the {@code onstop} event handler for this element.
-     * @param onstop the {@code onstop} event handler for this element
-     */
-    @JsxSetter(IE)
-    public void setOnstop(final Object onstop) {
-        setEventHandler(Event.TYPE_STOP, onstop);
-    }
-
-    /**
-     * Returns the {@code onstoragecommit} event handler for this element.
-     * @return the {@code onstoragecommit} event handler for this element
-     */
-    @JsxGetter(IE)
-    public Function getOnstoragecommit() {
-        return getEventHandler(Event.TYPE_STORAGECOMMIT);
-    }
-
-    /**
-     * Sets the {@code onstoragecommit} event handler for this element.
-     * @param onstoragecommit the {@code onstoragecommit} event handler for this element
-     */
-    @JsxSetter(IE)
-    public void setOnstoragecommit(final Object onstoragecommit) {
-        setEventHandler(Event.TYPE_STORAGECOMMIT, onstoragecommit);
-    }
-
-    /**
-     * Returns the {@code onactivate} event handler for this element.
-     * @return the {@code onactivate} event handler for this element
-     */
-    @JsxGetter(IE)
-    public Function getOnactivate() {
-        return getEventHandler(Event.TYPE_ACTIVATE);
-    }
-
-    /**
-     * Sets the {@code onactivate} event handler for this element.
-     * @param onactivate the {@code onactivate} event handler for this element
-     */
-    @JsxSetter(IE)
-    public void setOnactivate(final Object onactivate) {
-        setEventHandler(Event.TYPE_ACTIVATE, onactivate);
-    }
-
-    /**
-     * Returns the {@code onbeforeactivate} event handler for this element.
-     * @return the {@code onbeforeactivate} event handler for this element
-     */
-    @JsxGetter(IE)
-    public Function getOnbeforeactivate() {
-        return getEventHandler(Event.TYPE_BEFOREACTIVATE);
-    }
-
-    /**
-     * Sets the {@code onbeforeactivate} event handler for this element.
-     * @param onbeforeactivate the {@code onbeforeactivate} event handler for this element
-     */
-    @JsxSetter(IE)
-    public void setOnbeforeactivate(final Object onbeforeactivate) {
-        setEventHandler(Event.TYPE_BEFOREACTIVATE, onbeforeactivate);
-    }
-
-    /**
-     * Returns the {@code onbeforedeactivate} event handler for this element.
-     * @return the {@code onbeforedeactivate} event handler for this element
-     */
-    @JsxGetter(IE)
-    public Function getOnbeforedeactivate() {
-        return getEventHandler(Event.TYPE_BEFOREDEACTIVATE);
-    }
-
-    /**
-     * Sets the {@code onbeforedeactivate} event handler for this element.
-     * @param onbeforedeactivate the {@code onbeforedeactivate} event handler for this element
-     */
-    @JsxSetter(IE)
-    public void setOnbeforedeactivate(final Object onbeforedeactivate) {
-        setEventHandler(Event.TYPE_BEFOREDEACTIVATE, onbeforedeactivate);
-    }
-
-    /**
-     * Returns the {@code ondeactivate} event handler for this element.
-     * @return the {@code ondeactivate} event handler for this element
-     */
-    @JsxGetter(IE)
-    public Function getOndeactivate() {
-        return getEventHandler(Event.TYPE_DEACTIVATE);
-    }
-
-    /**
-     * Sets the {@code ondeactivate} event handler for this element.
-     * @param ondeactivate the {@code ondeactivate} event handler for this element
-     */
-    @JsxSetter(IE)
-    public void setOndeactivate(final Object ondeactivate) {
-        setEventHandler(Event.TYPE_DEACTIVATE, ondeactivate);
-    }
-
-    /**
+     * Returns the {@code currentScript} property.
      * @return the {@code currentScript}
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public ScriptableObject getCurrentScript() {
         return currentScript_;
     }
 
     /**
+     * Sets the {@code currentScript} property.
      * @param script the {@code currentScript}
      */
     public void setCurrentScript(final ScriptableObject script) {
@@ -4179,13 +3501,14 @@ public class Document extends Node {
     }
 
     /**
+     * Returns the {@code FontFaceSet} property.
      * @return the {@code FontFaceSet}
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public ScriptableObject getFonts() {
         if (fonts_ == null) {
             final FontFaceSet fonts = new FontFaceSet();
-            fonts.setParentScope(getWindow());
+            fonts.setParentScope(getParentScope());
             fonts.setPrototype(getPrototype(fonts.getClass()));
             fonts_ = fonts;
         }
@@ -4197,20 +3520,11 @@ public class Document extends Node {
      * @return the value of the {@code all} property
      */
     @JsxGetter
-    public HTMLCollection getAll() {
-        final HTMLCollection all = new HTMLAllCollection(getDomNodeOrDie());
+    public HTMLAllCollection getAll() {
+        final HTMLAllCollection all = new HTMLAllCollection(getDomNodeOrDie());
         all.setAvoidObjectDetection(true);
         all.setIsMatchingPredicate((Predicate<DomNode> & Serializable) node -> true);
         return all;
-    }
-
-    /**
-     * Gets the window in which this document is contained.
-     * @return the window
-     */
-    @JsxGetter(IE)
-    public Object getParentWindow() {
-        return getWindow();
     }
 
     /**
@@ -4219,16 +3533,11 @@ public class Document extends Node {
      * @return the element with the specified ID, as long as it is an HTML element; {@code null} otherwise
      */
     @JsxFunction
-    public Object getElementById(final String id) {
+    public HtmlUnitScriptable getElementById(final String id) {
         final DomNode domNode = getDomNodeOrDie();
-        final Object domElement = domNode.getFirstByXPath("//*[@id = \"" + id + "\"]");
-        if (domElement != null) {
-            if (!(domNode instanceof XmlPage) || domElement instanceof HtmlElement
-                    || getBrowserVersion().hasFeature(JS_XML_GET_ELEMENT_BY_ID__ANY_ELEMENT)) {
-                return ((DomElement) domElement).getScriptableObject();
-            }
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("getElementById(" + id + "): no HTML DOM node found with this ID");
+        for (final DomElement descendant : domNode.getDomElementDescendants()) {
+            if (id.equals(descendant.getId())) {
+                return descendant.getScriptableObject();
             }
         }
         return null;
@@ -4236,14 +3545,56 @@ public class Document extends Node {
 
     /**
      * Creates a new ProcessingInstruction.
-     * @param target the target
-     * @param data the data
+     * @param context the JavaScript context
+     * @param scope the scope
+     * @param thisObj the scriptable
+     * @param args the arguments passed into the method: target and data
+     * @param function the function
      * @return the new ProcessingInstruction
      */
     @JsxFunction
-    public Object createProcessingInstruction(final String target, final String data) {
-        final ProcessingInstruction node = getPage().createProcessingInstruction(target, data);
-        return getScriptableFor(node);
+    public static HtmlUnitScriptable createProcessingInstruction(final Context context, final VarScope scope,
+            final Scriptable thisObj, final Object[] args, final Function function) {
+        if (args.length < 2) {
+            throw JavaScriptEngine.typeError("Failed to execute 'createProcessingInstruction' on 'Document': "
+                    + "2 arguments required, but only " + args.length + " present.");
+        }
+
+        final Document document = (Document) thisObj;
+        final String target = JavaScriptEngine.toString(args[0]);
+        final String data = JavaScriptEngine.toString(args[1]);
+
+        if (data.contains("?>") || !isValidProcessingInstructionTarget(target)) {
+            throw JavaScriptEngine.asJavaScriptException(
+                    document.getWindow(),
+                    "createProcessingInstruction: Provided string contains an invalid character",
+                    org.htmlunit.javascript.host.dom.DOMException.INVALID_CHARACTER_ERR);
+        }
+
+        final ProcessingInstruction node = document.getPage().createProcessingInstruction(target, data);
+        return document.getScriptableFor(node);
+    }
+
+    // the XML Name production, simplified in the same way as it is done for createElement:
+    // only the ASCII range is checked
+    private static boolean isValidProcessingInstructionTarget(final String target) {
+        if (target.isEmpty()) {
+            return false;
+        }
+
+        final int first = target.charAt(0);
+        if (first < 128 && !Character.isLetter(first) && first != ':' && first != '_') {
+            return false;
+        }
+
+        final int length = target.length();
+        for (int i = 1; i < length; i++) {
+            final int c = target.charAt(i);
+            if (c < 128 && !Character.isLetterOrDigit(c) && c != ':' && c != '_' && c != '-' && c != '.') {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -4252,8 +3603,16 @@ public class Document extends Node {
      * @return the new CDATASection
      */
     @JsxFunction
-    public Object createCDATASection(final String data) {
-        final CDATASection node = getPage().createCDATASection(data);
+    public HtmlUnitScriptable createCDATASection(final String data) {
+        final SgmlPage page = getPage();
+        // https://dom.spec.whatwg.org/#dom-document-createcdatasection
+        if (page instanceof HtmlPage && !(page instanceof XHtmlPage)) {
+            throw JavaScriptEngine.asJavaScriptException(
+                    getWindow(),
+                    "createCDATASection: not supported for HTML documents",
+                    org.htmlunit.javascript.host.dom.DOMException.NOT_SUPPORTED_ERR);
+        }
+        final CDATASection node = page.createCDATASection(data);
         return getScriptableFor(node);
     }
 
@@ -4269,7 +3628,7 @@ public class Document extends Node {
     /**
      * {@inheritDoc}
      */
-    @JsxFunction({CHROME, EDGE, FF, FF_ESR})
+    @JsxFunction
     @Override
     public boolean contains(final Object element) {
         return getDocumentElement().contains(element);

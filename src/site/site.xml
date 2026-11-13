@@ -1,33 +1,26 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 
-<project>
-    <publishDate format="dd MMMMMMMMM yyyy"/>
-
+<site xmlns="http://maven.apache.org/SITE/2.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/SITE/2.0.0 https://maven.apache.org/xsd/site-2.0.0.xsd">
+    
     <skin>
         <groupId>org.apache.maven.skins</groupId>
         <artifactId>maven-fluido-skin</artifactId>
-        <version>1.9</version>
+        <version>2.0.0-M8</version>
     </skin>
-
+  
     <custom>
         <fluidoSkin>
-            <twitter>
-                <user>htmlunit</user>
-                <showUser>true</showUser>
-                <showFollowers>true</showFollowers>
-            </twitter>
+            <brand>
+                <name>HtmlUnit</name>
+                <href>https://www.htmlunit.org/</href>
+            </brand>
         </fluidoSkin>
     </custom>
 
-    <bannerLeft>
-        <name>${project.name}</name>
-        <href>https://www.htmlunit.org</href>
+    <bannerLeft href="https://www.htmlunit.org">
+        <image src="/images/htmlunit.png" alt="HtmlUnit"/>
     </bannerLeft>
-    <bannerRight>
-        <name>Gargoyle Software Inc.</name>
-        <src>/images/GargoyleSoftwareLogo.jpg</src>
-        <href>http://www.GargoyleSoftware.com/</href>
-    </bannerRight>
 
     <body>
         <menu name="GitHub">
@@ -38,24 +31,25 @@
             <item name="Project Page" href="http://www.sourceforge.net/projects/htmlunit"/>
             <item name="Download" href="https://sourceforge.net/projects/htmlunit/files/htmlunit/"/>
         </menu>
-        <menu name="How do I...">
-            <item name="Get started" href="/gettingStarted.html"/>
-            <item name="WebClient - the browser" href="/webclient.html"/>
-            <item name="Use the Keyboard" href="/keyboard-howto.html"/>
-            <item name="Use Tables" href="/table-howto.html"/>
-            <item name="Behind a proxy" href="/proxy-howto.html"/>
-            <item name="File download" href="/filedownload-howto.html"/>
-            <item name="File upload" href="/fileupload-howto.html"/>
-            <item name="Windows and Frames" href="/window-frame.html"/>
-            <item name="Use JavaScript" href="/javascript-howto.html"/>
-            <item name="Image formats" href="/images-howto.html"/>
-            <item name="Migration" href="/migration.html"/>
-            <item name="Use ActiveX" href="/activeX-howto.html"/>
-            <item name="All the details" href="/details.html"/>
-        </menu>
-        <menu name="User docs">
+        <menu name="User Documentation">
+            <item name="Getting Started" href="/gettingStarted.html"/>
+            <item name="WebClient - The Browser" href="/webclient.html"/>
+            <item name="Content Extraction" href="/contentExtraction.html"/>
+            <item name="Form Inputs" href="/input-howto.html"/>
+            <item name="Tables" href="/table-howto.html"/>
+            <item name="File Download" href="/filedownload-howto.html"/>
+            <item name="File Upload" href="/fileupload-howto.html"/>
+            <item name="Keyboard Simulation" href="/keyboard-howto.html"/>
+            <item name="Windows &amp; Frames" href="/window-frame.html"/>
+            <item name="JavaScript Support" href="/javascript.html"/>
+            <item name="Content Security Policy" href="/csp.html"/>
+            <item name="Image Formats" href="/images-howto.html"/>
             <item name="Logging" href="/logging.html"/>
+            <item name="Security" href="/security.html"/>
+            <item name="All Details" href="/details.html"/>
             <item name="FAQ" href="/faq.html"/>
+            <item name="Migration" href="/migration.html"/>
+            <item name="Project History" href="/history.html"/>
         </menu>
         <menu name="Support">
             <item name="Issues tracker" href="https://github.com/HtmlUnit/htmlunit/issues"/>
@@ -64,11 +58,9 @@
         </menu>
         <menu name="Developer docs">
             <item name="Getting Latest Code" href="/gettingLatestCode.html"/>
+            <item name="Development" href="/development.html"/>
             <item name="Coding conventions" href="/codingConventions.html"/>
-            <item name="Submitting bugs" href="/submittingBugs.html"/>
-            <item name="Submitting JavaScript bugs" href="/submittingJSBugs.html"/>
-            <item name="Submitting pull requests" href="/submittingPatches.html"/>
-            <item name="JavaScript engine" href="/javascript.html"/>
+            <item name="Contributing to HtmlUnit" href="/contributing.html"/>
             <item name="Packaging a release" href="/packagingARelease.html"/>
             <item name="Updating selenium" href="/updatingSelenium.html"/>
         </menu>
@@ -77,5 +69,4 @@
         <menu ref="modules"/>
 
     </body>
-</project>
-
+</site>

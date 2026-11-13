@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,13 @@ package org.htmlunit.libraries;
 
 import java.util.List;
 
-import org.eclipse.jetty.server.Server;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.htmlunit.WebDriverTestCase;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
-
-import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.WebServerTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.BuggyWebDriver;
 
 /**
  * Tests for 2.2 version of <a href="http://www.extjs.com/">Ext JS</a>.
@@ -37,29 +30,14 @@ import org.htmlunit.junit.BrowserRunner.BuggyWebDriver;
  * @author Ahmed Ashour
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class ExtJS22Test extends WebDriverTestCase {
 
-    private static Server SERVER_;
-
     /**
      * @throws Exception if an error occurs
      */
-    @BeforeClass
-    public static void startSesrver() throws Exception {
-        SERVER_ = WebServerTestCase.createWebServer("src/test/resources/libraries/ExtJS/" + getVersion(), null);
-    }
-
-    /**
-     * @throws Exception if an error occurs
-     */
-    @AfterClass
-    public static void stopServer() throws Exception {
-        if (SERVER_ != null) {
-            SERVER_.stop();
-            SERVER_.destroy();
-            SERVER_ = null;
-        }
+    @BeforeAll
+    public static void startServer() throws Exception {
+        startWebServer("src/test/resources/libraries/ExtJS/" + getVersion(), null);
     }
 
     /**
@@ -163,7 +141,6 @@ public class ExtJS22Test extends WebDriverTestCase {
      */
     @Test
     @Alerts("Hello from the Ext console.")
-    @BuggyWebDriver(IE = "Todo")
     public void debug_console() throws Exception {
         final WebDriver driver = getPage("debug", "debug-console");
 
@@ -219,7 +196,7 @@ public class ExtJS22Test extends WebDriverTestCase {
         // usually this need 1s but sometimes our build machine is slower
         // this is not a performance test, we only like to ensure that all
         // functionality is running
-        Thread.sleep(2 * DEFAULT_WAIT_TIME);
+        Thread.sleep(DEFAULT_WAIT_TIME.multipliedBy(2).toMillis());
 
         final WebElement detailPanel = driver.findElement(By.id("detailPanel"));
         final WebElement resultsDiv = detailPanel.findElement(By.xpath("div/div[1]"));

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,74 +21,67 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.commons.lang3.StringUtils;
-
 import org.htmlunit.BrowserVersion;
+import org.htmlunit.corejs.javascript.Context;
+import org.htmlunit.corejs.javascript.Function;
+import org.htmlunit.corejs.javascript.FunctionObject;
+import org.htmlunit.corejs.javascript.NativeArray;
+import org.htmlunit.corejs.javascript.Scriptable;
+import org.htmlunit.corejs.javascript.VarScope;
 import org.htmlunit.javascript.HtmlUnitScriptable;
-import org.htmlunit.javascript.RecursiveFunctionObject;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
+import org.htmlunit.javascript.configuration.JsxStaticFunction;
+import org.htmlunit.javascript.configuration.JsxSymbolConstant;
 import org.htmlunit.javascript.host.Window;
-
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.Function;
-import org.htmlunit.corejs.javascript.NativeArray;
-import org.htmlunit.corejs.javascript.ScriptRuntime;
-import org.htmlunit.corejs.javascript.Scriptable;
+import org.htmlunit.util.StringUtils;
 
 /**
- * A JavaScript object for {@code NumberFormat}.
+ * A JavaScript object for Intl.NumberFormat.
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ * @author Lai Quang Duong
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/NumberFormat">MDN Documentation</a>
  */
 @JsxClass
 public class NumberFormat extends HtmlUnitScriptable {
+
+    /** Symbol.toStringTag support. */
+    @JsxSymbolConstant
+    public static final String TO_STRING_TAG = "Intl.NumberFormat";
 
     private static final ConcurrentHashMap<String, String> CHROME_FORMATS_ = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, String> EDGE_FORMATS_ = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, String> FF_FORMATS_ = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, String> FF_ESR_FORMATS_ = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<String, String> IE_FORMATS_ = new ConcurrentHashMap<>();
 
     private transient NumberFormatHelper formatter_;
 
     static {
-
         final Map<String, String> commonFormats = new HashMap<>();
         commonFormats.put("", "");
-        commonFormats.put("ar", "\u066c\u066b\u0660");
         commonFormats.put("ar-DZ", ".,");
         commonFormats.put("ar-LY", ".,");
         commonFormats.put("ar-MA", ".,");
         commonFormats.put("ar-TN", ".,");
         commonFormats.put("id", ".,");
         commonFormats.put("de-AT", "\u00a0");
-        commonFormats.put("de-CH", "\u2019");
+        commonFormats.put("de-CH", "'");
         commonFormats.put("en-ZA", "\u00a0,");
         commonFormats.put("es-CR", "\u00a0,");
         commonFormats.put("fr-LU", ".,");
         commonFormats.put("hi-IN", ",.0");
-        commonFormats.put("it-CH", "\u2019");
+        commonFormats.put("it-CH", "'");
         commonFormats.put("pt-PT", "\u00a0,");
         commonFormats.put("sq", "\u00a0,");
-
-        IE_FORMATS_.putAll(commonFormats);
-        IE_FORMATS_.put("ar-DZ", ",.");
-        IE_FORMATS_.put("ar-LY", ",.");
-        IE_FORMATS_.put("ar-MA", ",.");
-        IE_FORMATS_.put("ar-TN", ",.");
-        IE_FORMATS_.put("fr", "\u00a0,");
-        IE_FORMATS_.put("fr-BE", ".");
-        IE_FORMATS_.put("ban", ".,");
 
         commonFormats.put("ar-AE", ",.0");
         commonFormats.put("fr", "\u202f,");
         commonFormats.put("fr-CA", "\u00a0,");
-
-        FF_FORMATS_.putAll(commonFormats);
-        FF_ESR_FORMATS_.putAll(commonFormats);
 
         commonFormats.put("ar", ",.0");
         commonFormats.put("ar-BH", "\u066c\u066b\u0660");
@@ -104,31 +97,38 @@ public class NumberFormat extends HtmlUnitScriptable {
         commonFormats.put("ar-SY", "\u066c\u066b\u0660");
         commonFormats.put("ar-YE", "\u066c\u066b\u0660");
 
-        CHROME_FORMATS_.putAll(commonFormats);
-        EDGE_FORMATS_.putAll(commonFormats);
+        FF_FORMATS_.putAll(commonFormats);
+        FF_FORMATS_.put("fr-CH", "',");
 
-        CHROME_FORMATS_.put("be", ",.");
-        CHROME_FORMATS_.put("mk", ",.");
-        CHROME_FORMATS_.put("is", ",.");
+        FF_ESR_FORMATS_.putAll(commonFormats);
+        FF_ESR_FORMATS_.put("fr-CH", "',");
+
+        commonFormats.put("be", ",.");
+        commonFormats.put("mk", ",.");
+        commonFormats.put("is", ",.");
+
+        CHROME_FORMATS_.putAll(commonFormats);
         CHROME_FORMATS_.put("sq", ",.");
+
+        EDGE_FORMATS_.putAll(commonFormats);
     }
 
     /**
      * Default constructor.
      */
     public NumberFormat() {
+        super();
     }
 
     private NumberFormat(final String[] locales, final BrowserVersion browserVersion) {
+        super();
+
         final Map<String, String> formats;
         if (browserVersion.isChrome()) {
             formats = CHROME_FORMATS_;
         }
         else if (browserVersion.isEdge()) {
             formats = EDGE_FORMATS_;
-        }
-        else if (browserVersion.isIE()) {
-            formats = IE_FORMATS_;
         }
         else if (browserVersion.isFirefoxESR()) {
             formats = FF_ESR_FORMATS_;
@@ -159,7 +159,7 @@ public class NumberFormat extends HtmlUnitScriptable {
 
     private static String getPattern(final Map<String, String> formats, final String locale) {
         if ("no-NO-NY".equals(locale)) {
-            throw ScriptRuntime.rangeError("Invalid language tag: " + locale);
+            throw JavaScriptEngine.rangeError("Invalid language tag: " + locale);
         }
         String pattern = formats.get(locale);
         if (pattern == null && locale.indexOf('-') != -1) {
@@ -171,66 +171,87 @@ public class NumberFormat extends HtmlUnitScriptable {
     /**
      * JavaScript constructor.
      * @param cx the current context
-     * @param args the arguments to the WebSocket constructor
+     * @param scope the scope
+     * @param args the arguments to the NumberFormat constructor
      * @param ctorObj the function object
-     * @param inNewExpr Is new or not
-     * @return the java object to allow JavaScript to access
+     * @param inNewExpr {@code true} if invoked with the {@code new} operator
+     * @return the Java object that JavaScript can access
      */
     @JsxConstructor
-    public static Scriptable jsConstructor(final Context cx, final Object[] args, final Function ctorObj,
-            final boolean inNewExpr) {
+    public static Scriptable jsConstructor(final Context cx, final VarScope scope,
+            final Object[] args, final Function ctorObj, final boolean inNewExpr) {
         final String[] locales;
-        if (args.length != 0) {
-            if (args[0] instanceof NativeArray) {
-                final NativeArray array = (NativeArray) args[0];
+        if (args.length == 0) {
+            locales = new String[] {""};
+        }
+        else {
+            if (args[0] instanceof NativeArray array) {
                 locales = new String[(int) array.getLength()];
                 for (int i = 0; i < locales.length; i++) {
-                    locales[i] = Context.toString(array.get(i));
+                    locales[i] = JavaScriptEngine.toString(array.get(i));
                 }
             }
             else {
-                locales = new String[] {Context.toString(args[0])};
+                locales = new String[] {JavaScriptEngine.toString(args[0])};
             }
-        }
-        else {
-            locales = new String[] {""};
         }
         final Window window = getWindow(ctorObj);
         final NumberFormat format = new NumberFormat(locales, window.getBrowserVersion());
-        format.setParentScope(window);
-        format.setPrototype(((RecursiveFunctionObject) ctorObj).getClassPrototype());
+        format.setParentScope(getTopLevelScope(scope));
+        format.setPrototype(((FunctionObject) ctorObj).getClassPrototype());
         return format;
     }
 
     /**
      * Formats a number according to the locale and formatting options of this Intl.NumberFormat object.
      * @param object the JavaScript object to convert
-     * @return the dated formated
+     * @return the formatted number
      */
     @JsxFunction
     public String format(final Object object) {
-        final double number = Context.toNumber(object);
+        final double number = JavaScriptEngine.toNumber(object);
         return formatter_.format(number);
     }
 
     /**
-     * @return A new object with properties reflecting the locale and date and time formatting options
-     * computed during the initialization of the given {@code DateTimeFormat} object.
+     * Returns the resolved options for this Intl.NumberFormat object.
+     * @return a new object with properties reflecting the locale and number formatting options
+     *         computed during the initialization of the given {@code NumberFormat} object.
      */
     @JsxFunction
     public Scriptable resolvedOptions() {
-        return Context.getCurrentContext().newObject(getParentScope());
+        return JavaScriptEngine.newObject(getParentScope());
+    }
+
+    /**
+     * Returns an array containing those of the provided locales that are supported
+     * without having to fall back to the default locale.
+     * @param localesArgument A string with a BCP 47 language tag, or an array of such strings
+     * @param options unused
+     * @return an array containing supported locales
+     */
+    @JsxStaticFunction
+    public static Scriptable supportedLocalesOf(final Scriptable localesArgument, final Scriptable options) {
+        return Intl.supportedLocalesOf(localesArgument);
+    }
+
+    @Override
+    public Object getDefaultValue(final Class<?> hint) {
+        if (String.class.equals(hint) || hint == null) {
+            return "[object Intl.NumberFormat]";
+        }
+        return super.getDefaultValue(hint);
     }
 
     /**
      * Helper.
      */
     static final class NumberFormatHelper {
-        private DecimalFormat formatter_;
+        private final DecimalFormat formatter_;
 
         NumberFormatHelper(final String localeName, final BrowserVersion browserVersion, final String pattern) {
             Locale locale = browserVersion.getBrowserLocale();
-            if (StringUtils.isNotEmpty(localeName)) {
+            if (!StringUtils.isEmptyOrNull(localeName)) {
                 locale = Locale.forLanguageTag(localeName);
             }
 

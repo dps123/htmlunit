@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,26 +14,21 @@
  */
 package org.htmlunit.javascript.host.canvas;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
-
 import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstant;
 import org.htmlunit.javascript.configuration.JsxConstructor;
-
-import org.htmlunit.corejs.javascript.Context;
 
 /**
  * A JavaScript object for {@code WebGL2RenderingContext}.
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext">MDN Documentation</a>
  */
-@JsxClass({CHROME, EDGE, FF, FF_ESR})
+@JsxClass
 public class WebGL2RenderingContext extends HtmlUnitScriptable {
 
     /** The constant {@code ACTIVE_ATTRIBUTES}. */
@@ -1648,10 +1643,6 @@ public class WebGL2RenderingContext extends HtmlUnitScriptable {
     @JsxConstant
     public static final long STENCIL_FUNC = 2_962L;
 
-    /** The constant {@code STENCIL_INDEX}. */
-    @JsxConstant(IE)
-    public static final long STENCIL_INDEX = 6_401L;
-
     /** The constant {@code STENCIL_INDEX8}. */
     @JsxConstant
     public static final long STENCIL_INDEX8 = 36_168L;
@@ -2277,16 +2268,10 @@ public class WebGL2RenderingContext extends HtmlUnitScriptable {
     public static final long ZERO = 0L;
 
     /**
-     * Default constructor.
-     */
-    public WebGL2RenderingContext() {
-    }
-
-    /**
      * Creates an instance.
      */
     @JsxConstructor
     public void jsConstructor() {
-        throw Context.reportRuntimeError("Illegal constructor.");
+        throw JavaScriptEngine.typeErrorIllegalConstructor();
     }
 }

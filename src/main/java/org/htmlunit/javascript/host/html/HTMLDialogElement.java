@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,28 +14,118 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
 import org.htmlunit.html.HtmlDialog;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
+import org.htmlunit.javascript.configuration.JsxFunction;
+import org.htmlunit.javascript.configuration.JsxGetter;
+import org.htmlunit.javascript.configuration.JsxSetter;
 
 /**
  * The JavaScript object {@code HTMLDialogElement}.
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLDialogElement">MDN Documentation</a>
  */
-@JsxClass(domClass = HtmlDialog.class, value = {CHROME, EDGE, FF, FF_ESR})
+@JsxClass(domClass = HtmlDialog.class)
 public class HTMLDialogElement extends HTMLElement {
 
     /**
-     * Creates a new instance.
+     * JavaScript constructor.
      */
+    @Override
     @JsxConstructor
-    public HTMLDialogElement() {
+    public void jsConstructor() {
+        super.jsConstructor();
+    }
+
+    /**
+     * Returns the {@code open} property.
+     * @return the {@code open} property
+     */
+    @JsxGetter
+    public boolean isOpen() {
+        return ((HtmlDialog) getDomNodeOrDie()).isOpen();
+    }
+
+    /**
+     * Sets the {@code open} property.
+     * @param newValue the new value to set
+     */
+    @JsxSetter
+    public void setOpen(final Object newValue) {
+        final boolean bool = JavaScriptEngine.toBoolean(newValue);
+
+        ((HtmlDialog) getDomNodeOrDie()).setOpen(bool);
+    }
+
+    /**
+     * Displays the dialog non-modally.
+     */
+    @JsxFunction
+    public void show() {
+        final HtmlDialog dialog = (HtmlDialog) getDomNodeOrDie();
+
+        if (dialog.isOpen()) {
+            if (dialog.isModal()) {
+                throw JavaScriptEngine.reportRuntimeError("InvalidStateError: Dialog is already open.");
+            }
+        }
+
+        dialog.show();
+    }
+
+    /**
+     * Closes the dialog.
+     * @param returnValue the return value
+     */
+    @JsxFunction
+    public void close(final Object returnValue) {
+        if (returnValue == null || JavaScriptEngine.isUndefined(returnValue)) {
+            ((HtmlDialog) getDomNodeOrDie()).close("");
+        }
+
+        ((HtmlDialog) getDomNodeOrDie()).close(JavaScriptEngine.toString(returnValue));
+    }
+
+    /**
+     * Displays the dialog modally.
+     */
+    @JsxFunction
+    public void showModal() {
+        final HtmlDialog dialog = (HtmlDialog) getDomNodeOrDie();
+
+        if (dialog.isOpen()) {
+            if (!dialog.isModal()) {
+                throw JavaScriptEngine.reportRuntimeError("InvalidStateError: Dialog is already open.");
+            }
+        }
+
+        dialog.showModal();
+    }
+
+    /**
+     * Returns the {@code returnValue} property.
+     * @return the {@code returnValue} property
+     */
+    @JsxGetter
+    public String getReturnValue() {
+        return ((HtmlDialog) getDomNodeOrDie()).getReturnValue();
+    }
+
+    /**
+     * Sets the {@code returnValue} property.
+     * @param newValue the new value to set
+     */
+    @JsxSetter
+    public void setReturnValue(final Object newValue) {
+        if (newValue == null || JavaScriptEngine.isUndefined(newValue)) {
+            ((HtmlDialog) getDomNodeOrDie()).setReturnValue("");
+        }
+
+        ((HtmlDialog) getDomNodeOrDie()).setReturnValue(JavaScriptEngine.toString(newValue));
     }
 }

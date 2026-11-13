@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,9 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link HTMLTableSectionElement}.
@@ -28,15 +25,13 @@ import org.htmlunit.junit.BrowserRunner.Alerts;
  * @author Frank Danek
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class HTMLTableSectionElementTest extends WebDriverTestCase {
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"", "hello", "left", "hi", "right"},
-            IE = {"", "error", "", "left", "error", "left", "right"})
+    @Alerts({"", "hello", "left", "hi", "right"})
     public void align_thead() throws Exception {
         align("th");
     }
@@ -45,8 +40,7 @@ public class HTMLTableSectionElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"", "hello", "left", "hi", "right"},
-            IE = {"", "error", "", "left", "error", "left", "right"})
+    @Alerts({"", "hello", "left", "hi", "right"})
     public void align_tbody() throws Exception {
         align("tb");
     }
@@ -55,15 +49,14 @@ public class HTMLTableSectionElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"", "hello", "left", "hi", "right"},
-            IE = {"", "error", "", "left", "error", "left", "right"})
+    @Alerts({"", "hello", "left", "hi", "right"})
     public void align_tfoot() throws Exception {
         align("tf");
     }
 
     private void align(final String id) throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION
@@ -82,9 +75,7 @@ public class HTMLTableSectionElementTest extends WebDriverTestCase {
             + "      function set(e, value) {\n"
             + "        try {\n"
             + "          e.align = value;\n"
-            + "        } catch (e) {\n"
-            + "          log('error');\n"
-            + "        }\n"
+            + "        } catch(e) { logEx(e); }\n"
             + "      }\n"
             + "    </script>\n"
             + "  </head>\n"
@@ -104,8 +95,7 @@ public class HTMLTableSectionElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"top", "baseline", "3", "middle", "8", "BOTtom"},
-            IE = {"top", "baseline", "top", "error", "middle", "baseline", "bottom"})
+    @Alerts({"top", "baseline", "3", "middle", "8", "BOTtom"})
     public void vAlign_thead() throws Exception {
         vAlign("th");
     }
@@ -114,8 +104,7 @@ public class HTMLTableSectionElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"top", "baseline", "3", "middle", "8", "BOTtom"},
-            IE = {"top", "baseline", "top", "error", "middle", "baseline", "bottom"})
+    @Alerts({"top", "baseline", "3", "middle", "8", "BOTtom"})
     public void vAlign_tbody() throws Exception {
         vAlign("tb");
     }
@@ -124,15 +113,14 @@ public class HTMLTableSectionElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"top", "baseline", "3", "middle", "8", "BOTtom"},
-            IE = {"top", "baseline", "top", "error", "middle", "baseline", "bottom"})
+    @Alerts({"top", "baseline", "3", "middle", "8", "BOTtom"})
     public void vAlign_tfoot() throws Exception {
         vAlign("tf");
     }
 
     private void vAlign(final String id) throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION
@@ -153,9 +141,7 @@ public class HTMLTableSectionElementTest extends WebDriverTestCase {
             + "      function set(e, value) {\n"
             + "        try {\n"
             + "          e.vAlign = value;\n"
-            + "        } catch (e) {\n"
-            + "          log('error');\n"
-            + "        }\n"
+            + "        } catch(e) { logEx(e); }\n"
             + "      }\n"
             + "    </script>\n"
             + "  </head>\n"
@@ -209,8 +195,8 @@ public class HTMLTableSectionElementTest extends WebDriverTestCase {
     }
 
     private void ch(final String id) throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION
@@ -231,9 +217,7 @@ public class HTMLTableSectionElementTest extends WebDriverTestCase {
             + "      function set(e, value) {\n"
             + "        try {\n"
             + "          e.ch = value;\n"
-            + "        } catch (e) {\n"
-            + "          log('error');\n"
-            + "        }\n"
+            + "        } catch(e) { logEx(e); }\n"
             + "      }\n"
             + "    </script>\n"
             + "  </head>\n"
@@ -287,8 +271,8 @@ public class HTMLTableSectionElementTest extends WebDriverTestCase {
     }
 
     private void chOff(final String id) throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION
@@ -309,9 +293,7 @@ public class HTMLTableSectionElementTest extends WebDriverTestCase {
             + "      function set(e, value) {\n"
             + "        try {\n"
             + "          e.chOff = value;\n"
-            + "        } catch (e) {\n"
-            + "          log('error');\n"
-            + "        }\n"
+            + "        } catch(e) { logEx(e); }\n"
             + "      }\n"
             + "    </script>\n"
             + "  </head>\n"
@@ -343,14 +325,15 @@ public class HTMLTableSectionElementTest extends WebDriverTestCase {
     @Test
     @Alerts("<tr><td>world</td></tr>")
     public void TBODY_innerHTML() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
             + "    var t = document.getElementById('myId');\n"
             + "    try {\n"
             + "      t.innerHTML = '<tr><td>world</td></tr>';\n"
-            + "    } catch(e) { log('exception'); }\n"
+            + "    } catch(e) { logEx(e); }\n"
             + "    log(t.innerHTML.toLowerCase());\n"
             + "  }\n"
             + "</script>\n"
@@ -369,8 +352,8 @@ public class HTMLTableSectionElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"cell1", "[object HTMLTableRowElement]", "abc", "[object Text]", ""})
     public void innerText_body() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "  <table>\n"
             + "    <tbody id='tab_row'><tr><td>cell1</td></tr></tbody>\n"
             + "  </table>\n"
@@ -380,11 +363,11 @@ public class HTMLTableSectionElementTest extends WebDriverTestCase {
             + "  log(node.innerText);\n"
             + "  log(node.firstChild);\n"
 
-            + "  try { node.innerText = 'abc'; } catch(e) {log('ex');}\n"
+            + "  try { node.innerText = 'abc'; } catch(e) { logEx(e); }\n"
             + "  log(node.innerText);\n"
             + "  log(node.firstChild);\n"
 
-            + "  try { node.innerText = ''; } catch(e) {log('ex');}\n"
+            + "  try { node.innerText = ''; } catch(e) { logEx(e); }\n"
             + "  log(node.innerText);\n"
             + "</script></body></html>";
 
@@ -397,8 +380,8 @@ public class HTMLTableSectionElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"cell1", "[object HTMLTableRowElement]", "abc", "[object Text]", ""})
     public void innerText_header() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "  <table>\n"
             + "    <thead id='tab_row'><tr><td>cell1</td></tr></thead>\n"
             + "  </table>\n"
@@ -408,11 +391,11 @@ public class HTMLTableSectionElementTest extends WebDriverTestCase {
             + "  log(node.innerText);\n"
             + "  log(node.firstChild);\n"
 
-            + "  try { node.innerText = 'abc'; } catch(e) {log('ex');}\n"
+            + "  try { node.innerText = 'abc'; } catch(e) { log(e); }\n"
             + "  log(node.innerText);\n"
             + "  log(node.firstChild);\n"
 
-            + "  try { node.innerText = ''; } catch(e) {log('ex');}\n"
+            + "  try { node.innerText = ''; } catch(e) { logEx(e); }\n"
             + "  log(node.innerText);\n"
             + "</script></body></html>";
 
@@ -425,8 +408,8 @@ public class HTMLTableSectionElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"cell1", "[object HTMLTableRowElement]", "abc", "[object Text]", ""})
     public void innerText_footer() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "  <table>\n"
             + "    <tfoot id='tab_row'><tr><td>cell1</td></tr></tfoot>\n"
             + "  </table>\n"
@@ -436,11 +419,11 @@ public class HTMLTableSectionElementTest extends WebDriverTestCase {
             + "  log(node.innerText);\n"
             + "  log(node.firstChild);\n"
 
-            + "  try { node.innerText = 'abc'; } catch(e) {log('ex');}\n"
+            + "  try { node.innerText = 'abc'; } catch(e) { logEx(e); }\n"
             + "  log(node.innerText);\n"
             + "  log(node.firstChild);\n"
 
-            + "  try { node.innerText = ''; } catch(e) {log('ex');}\n"
+            + "  try { node.innerText = ''; } catch(e) { logEx(e); }\n"
             + "  log(node.innerText);\n"
             + "</script></body></html>";
 
@@ -453,8 +436,8 @@ public class HTMLTableSectionElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"cell1", "[object HTMLTableRowElement]", "abc", "[object Text]", ""})
     public void textContent_body() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "  <table>\n"
             + "    <tbody id='tab_row'><tr><td>cell1</td></tr></tbody>\n"
             + "  </table>\n"
@@ -464,11 +447,11 @@ public class HTMLTableSectionElementTest extends WebDriverTestCase {
             + "  log(node.textContent);\n"
             + "  log(node.firstChild);\n"
 
-            + "  try { node.textContent = 'abc'; } catch(e) {log('ex');}\n"
+            + "  try { node.textContent = 'abc'; } catch(e) { logEx(e); }\n"
             + "  log(node.textContent);\n"
             + "  log(node.firstChild);\n"
 
-            + "  try { node.textContent = ''; } catch(e) {log('ex');}\n"
+            + "  try { node.textContent = ''; } catch(e) { logEx(e); }\n"
             + "  log(node.textContent);\n"
             + "</script></body></html>";
 
@@ -481,8 +464,8 @@ public class HTMLTableSectionElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"cell1", "[object HTMLTableRowElement]", "abc", "[object Text]", ""})
     public void textContent_header() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "  <table>\n"
             + "    <thead id='tab_row'><tr><td>cell1</td></tr></thead>\n"
             + "  </table>\n"
@@ -492,11 +475,11 @@ public class HTMLTableSectionElementTest extends WebDriverTestCase {
             + "  log(node.textContent);\n"
             + "  log(node.firstChild);\n"
 
-            + "  try { node.textContent = 'abc'; } catch(e) {log('ex');}\n"
+            + "  try { node.textContent = 'abc'; } catch(e) { logEx(e); }\n"
             + "  log(node.textContent);\n"
             + "  log(node.firstChild);\n"
 
-            + "  try { node.textContent = ''; } catch(e) {log('ex');}\n"
+            + "  try { node.textContent = ''; } catch(e) { logEx(e); }\n"
             + "  log(node.textContent);\n"
             + "</script></body></html>";
 
@@ -509,8 +492,8 @@ public class HTMLTableSectionElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"cell1", "[object HTMLTableRowElement]", "abc", "[object Text]", ""})
     public void textContent_footer() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "  <table>\n"
             + "    <tfoot id='tab_row'><tr><td>cell1</td></tr></tfoot>\n"
             + "  </table>\n"
@@ -520,11 +503,11 @@ public class HTMLTableSectionElementTest extends WebDriverTestCase {
             + "  log(node.textContent);\n"
             + "  log(node.firstChild);\n"
 
-            + "  try { node.textContent = 'abc'; } catch(e) {log('ex');}\n"
+            + "  try { node.textContent = 'abc'; } catch(e) { logEx(e); }\n"
             + "  log(node.textContent);\n"
             + "  log(node.firstChild);\n"
 
-            + "  try { node.textContent = ''; } catch(e) {log('ex');}\n"
+            + "  try { node.textContent = ''; } catch(e) { logEx(e); }\n"
             + "  log(node.textContent);\n"
             + "</script></body></html>";
 
@@ -535,11 +518,10 @@ public class HTMLTableSectionElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"undefined", "#0000aa", "x"},
-            IE = {"", "#0000aa", "#0"})
+    @Alerts({"undefined", "#0000aa", "x"})
     public void bgColorFooter() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION
@@ -565,11 +547,10 @@ public class HTMLTableSectionElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"undefined", "#0000aa", "x"},
-            IE = {"", "#0000aa", "#0"})
+    @Alerts({"undefined", "#0000aa", "x"})
     public void bgColorHeader() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION
@@ -597,8 +578,8 @@ public class HTMLTableSectionElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"<thead id=\"thead\"><tr><td>cell1</td></tr></thead>", "new"})
     public void outerHTML() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION

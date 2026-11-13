@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,17 @@
  */
 package org.htmlunit.html;
 
+import java.io.IOException;
 import java.util.Map;
 
 import org.htmlunit.SgmlPage;
+import org.htmlunit.javascript.host.event.KeyboardEvent;
 
 /**
  * Wrapper for the HTML element "input" where type is "button".
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
- * @author <a href="mailto:cse@dynabean.de">Christian Sell</a>
+ * @author Mike Bowler
+ * @author Christian Sell
  * @author Daniel Gredler
  * @author Ahmed Ashour
  * @author Ronald Brill
@@ -55,8 +57,21 @@ public class HtmlButtonInput extends HtmlInput implements LabelableElement {
      * {@inheritDoc}
      */
     @Override
+    protected void doType(final int keyCode, final boolean lastType) throws IOException {
+        if (keyCode == KeyboardEvent.DOM_VK_SPACE) {
+            click();
+            return;
+        }
+
+        super.doType(keyCode, lastType);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public void setValue(final String newValue) {
-        super.setValue(newValue);
+        unmarkValueDirty();
         setDefaultValue(newValue);
     }
 
@@ -83,4 +98,13 @@ public class HtmlButtonInput extends HtmlInput implements LabelableElement {
     public boolean willValidate() {
         return false;
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected boolean isCustomValidityValid() {
+        return true;
+    }
+
 }

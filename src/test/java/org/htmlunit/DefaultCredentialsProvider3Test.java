@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +14,18 @@
  */
 package org.htmlunit;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.http.auth.AuthScope;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link DefaultCredentialsProvider}.
  *
  * @author Marc Guillemot
+ * @author Ronald Brill
  */
 public class DefaultCredentialsProvider3Test {
 
@@ -34,7 +35,7 @@ public class DefaultCredentialsProvider3Test {
     @Test
     public void serialization() {
         final String username = "foo";
-        final String password = "password";
+        final char[] password = "password".toCharArray();
         final String host = "my.host";
         final int port = 1234;
         final String realm = "blah";

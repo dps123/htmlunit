@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,33 +14,31 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
 import org.htmlunit.html.HtmlFont;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.configuration.JsxSetter;
-
-import org.htmlunit.corejs.javascript.Context;
 
 /**
  * The JavaScript object {@code HTMLFontElement}.
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLFontElement">MDN Documentation</a>
  */
 @JsxClass(domClass = HtmlFont.class)
 public class HTMLFontElement extends HTMLElement {
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public HTMLFontElement() {
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
@@ -54,7 +52,7 @@ public class HTMLFontElement extends HTMLElement {
 
     /**
      * Sets the {@code color} property.
-     * @param color the {@code color} property
+     * @param color the {@code color} property value
      */
     @JsxSetter
     public void setColor(final String color) {
@@ -85,15 +83,15 @@ public class HTMLFontElement extends HTMLElement {
      */
     @JsxGetter
     public int getSize() {
-        return (int) Context.toNumber(getDomNodeOrDie().getAttributeDirect("size"));
+        return (int) JavaScriptEngine.toNumber(getDomNodeOrDie().getAttributeDirect("size"));
     }
 
     /**
      * Sets the {@code size} attribute.
-     * @param size the {@code size} attribute
+     * @param size the {@code size} attribute value
      */
     @JsxSetter
     public void setSize(final int size) {
-        getDomNodeOrDie().setAttribute("size", Context.toString(size));
+        getDomNodeOrDie().setAttribute("size", JavaScriptEngine.toString(size));
     }
 }

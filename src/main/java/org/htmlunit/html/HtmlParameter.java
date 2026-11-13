@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
  */
 package org.htmlunit.html;
 
-import static org.htmlunit.BrowserVersionFeatures.CSS_DISPLAY_BLOCK2;
-
 import java.util.Map;
 
 import org.htmlunit.SgmlPage;
@@ -23,8 +21,8 @@ import org.htmlunit.SgmlPage;
 /**
  * Wrapper for the HTML element "param".
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
- * @author <a href="mailto:cse@dynabean.de">Christian Sell</a>
+ * @author Mike Bowler
+ * @author Christian Sell
  * @author Ahmed Ashour
  * @author Ronald Brill
  * @author Frank Danek
@@ -35,7 +33,7 @@ public class HtmlParameter extends HtmlElement {
     public static final String TAG_NAME = "param";
 
     /**
-     * Creates an instance of HtmlParameter
+     * Creates an instance of HtmlParameter.
      *
      * @param qualifiedName the qualified name of the element type to instantiate
      * @param page the HtmlPage that contains this element
@@ -52,10 +50,10 @@ public class HtmlParameter extends HtmlElement {
      * documentation for details on the use of this attribute.
      *
      * @return the value of the attribute {@code id}
-     * or an empty string if that attribute isn't defined.
+     *         or an empty string if that attribute isn't defined.
      */
     public final String getIdAttribute() {
-        return getAttributeDirect("id");
+        return getAttributeDirect(ID_ATTRIBUTE);
     }
 
     /**
@@ -64,10 +62,10 @@ public class HtmlParameter extends HtmlElement {
      * documentation for details on the use of this attribute.
      *
      * @return the value of the attribute {@code name}
-     * or an empty string if that attribute isn't defined.
+     *         or an empty string if that attribute isn't defined.
      */
     public final String getNameAttribute() {
-        return getAttributeDirect("name");
+        return getAttributeDirect(NAME_ATTRIBUTE);
     }
 
     /**
@@ -76,10 +74,10 @@ public class HtmlParameter extends HtmlElement {
      * documentation for details on the use of this attribute.
      *
      * @return the value of the attribute {@code value}
-     * or an empty string if that attribute isn't defined.
+     *         or an empty string if that attribute isn't defined.
      */
     public final String getValueAttribute() {
-        return getAttributeDirect("value");
+        return getAttributeDirect(VALUE_ATTRIBUTE);
     }
 
     /**
@@ -88,7 +86,7 @@ public class HtmlParameter extends HtmlElement {
      * documentation for details on the use of this attribute.
      *
      * @return the value of the attribute {@code valuetype}
-     * or an empty string if that attribute isn't defined.
+     *         or an empty string if that attribute isn't defined.
      */
     public final String getValueTypeAttribute() {
         return getAttributeDirect("valuetype");
@@ -100,10 +98,10 @@ public class HtmlParameter extends HtmlElement {
      * documentation for details on the use of this attribute.
      *
      * @return the value of the attribute {@code type}
-     * or an empty string if that attribute isn't defined.
+     *         or an empty string if that attribute isn't defined.
      */
     public final String getTypeAttribute() {
-        return getAttributeDirect("type");
+        return getAttributeDirect(TYPE_ATTRIBUTE);
     }
 
     /**
@@ -111,9 +109,6 @@ public class HtmlParameter extends HtmlElement {
      */
     @Override
     public DisplayStyle getDefaultStyleDisplay() {
-        if (hasFeature(CSS_DISPLAY_BLOCK2)) {
-            return DisplayStyle.NONE;
-        }
-        return DisplayStyle.INLINE;
+        return DisplayStyle.NONE;
     }
 }

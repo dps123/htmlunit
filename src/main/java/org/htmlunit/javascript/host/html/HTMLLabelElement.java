@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,12 +13,6 @@
  * limitations under the License.
  */
 package org.htmlunit.javascript.host.html;
-
-import static org.htmlunit.BrowserVersionFeatures.JS_LABEL_FORM_OF_SELF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
 
 import org.htmlunit.html.HtmlElement;
 import org.htmlunit.html.HtmlForm;
@@ -34,15 +28,19 @@ import org.htmlunit.javascript.configuration.JsxSetter;
  * @author Ahmed Ashour
  * @author Ronald Brill
  * @author Frank Danek
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLLabelElement">MDN Documentation</a>
  */
 @JsxClass(domClass = HtmlLabel.class)
 public class HTMLLabelElement extends HTMLElement {
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public HTMLLabelElement() {
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
@@ -56,8 +54,8 @@ public class HTMLLabelElement extends HTMLElement {
 
     /**
      * Sets or retrieves the object to which the given label object is assigned.
-     * @param id Specifies the identifier of the element to which the label element is assigned
-     * @see <a href="http://msdn2.microsoft.com/en-us/library/ms533872.aspx">MSDN Documentation</a>
+     * @param id specifies the identifier of the element to which the label element is assigned
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLLabelElement/htmlFor">MDN Documentation</a>
      */
     @JsxSetter
     public void setHtmlFor(final String id) {
@@ -65,9 +63,10 @@ public class HTMLLabelElement extends HTMLElement {
     }
 
     /**
+     * Returns the {@link HTMLElement} labeled by the given label object.
      * @return the HTMLElement labeled by the given label object
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public HTMLElement getControl() {
         final HtmlLabel label = (HtmlLabel) getDomNodeOrDie();
         final HtmlElement labeledElement = label.getLabeledElement();
@@ -80,16 +79,6 @@ public class HTMLLabelElement extends HTMLElement {
     }
 
     /**
-     * The control attribute is read-only.
-     *
-     * @param control ignored
-     */
-    @JsxSetter({CHROME, EDGE, FF, FF_ESR})
-    public void setControl(final HTMLElement control) {
-        // the control attribute is read-only
-    }
-
-    /**
      * Returns the value of the JavaScript {@code form} attribute.
      *
      * @return the value of the JavaScript {@code form} attribute
@@ -97,14 +86,6 @@ public class HTMLLabelElement extends HTMLElement {
     @JsxGetter
     @Override
     public HTMLFormElement getForm() {
-        if (getBrowserVersion().hasFeature(JS_LABEL_FORM_OF_SELF)) {
-            final HtmlForm form = getDomNodeOrDie().getEnclosingForm();
-            if (form == null) {
-                return null;
-            }
-            return (HTMLFormElement) getScriptableFor(form);
-        }
-
         final HtmlLabel label = (HtmlLabel) getDomNodeOrDie();
         final HtmlElement labeledElement = label.getLabeledElement();
 
@@ -118,15 +99,5 @@ public class HTMLLabelElement extends HTMLElement {
         }
 
         return (HTMLFormElement) getScriptableFor(form);
-    }
-
-    /**
-     * The form attribute is read-only.
-     *
-     * @param form ignored
-     */
-    @JsxSetter
-    public void setForm(final HTMLFormElement form) {
-        // the form attribute is read-only
     }
 }

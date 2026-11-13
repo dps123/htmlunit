@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,24 +14,22 @@
  */
 package org.htmlunit.html;
 
-import static org.htmlunit.BrowserVersionFeatures.EVENT_ONCHANGE_AFTER_ONCLICK;
-import static org.htmlunit.BrowserVersionFeatures.HTMLINPUT_CHECKBOX_DOES_NOT_CLICK_SURROUNDING_ANCHOR;
+import static org.htmlunit.util.StringUtils.toRootLowerCase;
 
 import java.io.IOException;
 import java.util.Map;
 
 import org.htmlunit.Page;
-import org.htmlunit.ScriptResult;
 import org.htmlunit.SgmlPage;
-import org.htmlunit.javascript.host.event.Event;
+import org.htmlunit.javascript.host.event.KeyboardEvent;
 
 /**
  * Wrapper for the HTML element "input".
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author David K. Taylor
- * @author <a href="mailto:chen_jun@users.sourceforge.net">Jun Chen</a>
- * @author <a href="mailto:cse@dynabean.de">Christian Sell</a>
+ * @author Jun Chen
+ * @author Christian Sell
  * @author Marc Guillemot
  * @author Mike Bresnahan
  * @author Daniel Gredler
@@ -63,7 +61,7 @@ public class HtmlCheckBoxInput extends HtmlInput implements LabelableElement {
             final Map<String, DomAttr> attributes) {
         super(qualifiedName, page, attributes);
 
-        if (getAttributeDirect("value") == ATTRIBUTE_NOT_DEFINED) {
+        if (getAttributeDirect(VALUE_ATTRIBUTE) == ATTRIBUTE_NOT_DEFINED) {
             setRawValue(DEFAULT_VALUE);
         }
 
@@ -95,8 +93,20 @@ public class HtmlCheckBoxInput extends HtmlInput implements LabelableElement {
     @Override
     public Page setChecked(final boolean isChecked) {
         checkedState_ = isChecked;
-
         return executeOnChangeHandlerIfAppropriate(this);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void doType(final int keyCode, final boolean lastType) throws IOException {
+        if (keyCode == KeyboardEvent.DOM_VK_SPACE) {
+            click();
+            return;
+        }
+
+        super.doType(keyCode, lastType);
     }
 
     /**
@@ -113,22 +123,8 @@ public class HtmlCheckBoxInput extends HtmlInput implements LabelableElement {
      * {@inheritDoc}
      */
     @Override
-    protected ScriptResult doClickFireClickEvent(final Event event) {
-        if (!hasFeature(EVENT_ONCHANGE_AFTER_ONCLICK)) {
-            executeOnChangeHandlerIfAppropriate(this);
-        }
-
-        return super.doClickFireClickEvent(event);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     protected void doClickFireChangeEvent() {
-        if (hasFeature(EVENT_ONCHANGE_AFTER_ONCLICK)) {
-            executeOnChangeHandlerIfAppropriate(this);
-        }
+        executeOnChangeHandlerIfAppropriate(this);
     }
 
     /**
@@ -204,10 +200,19 @@ public class HtmlCheckBoxInput extends HtmlInput implements LabelableElement {
     @Override
     protected void setAttributeNS(final String namespaceURI, final String qualifiedName, final String attributeValue,
             final boolean notifyAttributeChangeListeners, final boolean notifyMutationObservers) {
-        if (ATTRIBUTE_CHECKED.equals(qualifiedName)) {
+        final String qualifiedNameLC = toRootLowerCase(qualifiedName);
+
+        if (VALUE_ATTRIBUTE.equals(qualifiedNameLC)) {
+            super.setAttributeNS(namespaceURI, qualifiedNameLC, attributeValue, notifyAttributeChangeListeners,
+                    notifyMutationObservers);
+            setRawValue(attributeValue);
+            return;
+        }
+
+        if (ATTRIBUTE_CHECKED.equals(qualifiedNameLC)) {
             checkedState_ = true;
         }
-        super.setAttributeNS(namespaceURI, qualifiedName, attributeValue, notifyAttributeChangeListeners,
+        super.setAttributeNS(namespaceURI, qualifiedNameLC, attributeValue, notifyAttributeChangeListeners,
                 notifyMutationObservers);
     }
 
@@ -216,13 +221,11 @@ public class HtmlCheckBoxInput extends HtmlInput implements LabelableElement {
      */
     @Override
     protected boolean propagateClickStateUpdateToParent() {
-        return !hasFeature(HTMLINPUT_CHECKBOX_DOES_NOT_CLICK_SURROUNDING_ANCHOR)
-                && super.propagateClickStateUpdateToParent();
+        return false;
     }
 
     @Override
     public boolean isValueMissingValidityState() {
-        return ATTRIBUTE_NOT_DEFINED != getAttributeDirect(ATTRIBUTE_REQUIRED)
-                && !isChecked();
+        return hasAttribute(ATTRIBUTE_REQUIRED) && !isChecked();
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +14,13 @@
  */
 package org.htmlunit.javascript.host.css;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import org.htmlunit.BrowserVersion;
+import org.htmlunit.SimpleWebTestCase;
+import org.htmlunit.WebWindow;
+import org.htmlunit.css.ComputedCssStyleDeclaration;
+import org.htmlunit.css.CssStyleSheet;
 import org.htmlunit.cssparser.parser.CSSErrorHandler;
 import org.htmlunit.cssparser.parser.CSSException;
 import org.htmlunit.cssparser.parser.CSSOMParser;
@@ -22,22 +29,16 @@ import org.htmlunit.cssparser.parser.javacc.CSS3Parser;
 import org.htmlunit.cssparser.parser.selector.Selector;
 import org.htmlunit.cssparser.parser.selector.SelectorList;
 import org.htmlunit.cssparser.parser.selector.SelectorListImpl;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.w3c.dom.NodeList;
-
-import org.htmlunit.BrowserVersion;
-import org.htmlunit.SimpleWebTestCase;
-import org.htmlunit.css.CssStyleSheet;
 import org.htmlunit.html.DomElement;
 import org.htmlunit.html.HtmlElement;
 import org.htmlunit.html.HtmlForm;
 import org.htmlunit.html.HtmlInput;
 import org.htmlunit.html.HtmlPage;
 import org.htmlunit.html.HtmlStyle;
-import org.htmlunit.javascript.host.html.HTMLElement;
 import org.htmlunit.javascript.host.html.HTMLStyleElement;
-import org.htmlunit.junit.BrowserRunner;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
+import org.w3c.dom.NodeList;
 
 /**
  * Unit tests for {@link CSSStyleSheet}.
@@ -45,8 +46,8 @@ import org.htmlunit.junit.BrowserRunner;
  * @author Marc Guillemot
  * @author Ahmed Ashour
  * @author Frank Danek
+ * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class CSSStyleSheet2Test extends SimpleWebTestCase {
 
     /**
@@ -54,7 +55,8 @@ public class CSSStyleSheet2Test extends SimpleWebTestCase {
      */
     @Test
     public void selects_miscSelectors() throws Exception {
-        final String html = "<html><head><title>test</title>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><title>test</title>\n"
             + "</head><body><style></style>\n"
             + "<form name='f1' action='foo' class='yui-log'>\n"
             + "<div><div><input name='i1' id='m1'></div></div>\n"
@@ -74,21 +76,21 @@ public class CSSStyleSheet2Test extends SimpleWebTestCase {
         final BrowserVersion browserVersion = getBrowserVersion();
 
         final HtmlStyle node = (HtmlStyle) page.getElementsByTagName("style").item(0);
-        final HTMLStyleElement host = (HTMLStyleElement) node.getScriptableObject();
+        final HTMLStyleElement host = node.getScriptableObject();
         final CSSStyleSheet sheet = host.getSheet();
 
         Selector selector = parseSelector(sheet, "*.yui-log input");
 
-        assertFalse(CssStyleSheet.selects(browserVersion, selector, body, null, false, true));
-        assertFalse(CssStyleSheet.selects(browserVersion, selector, form, null, false, true));
-        assertTrue(CssStyleSheet.selects(browserVersion, selector, input1, null, false, true));
-        assertTrue(CssStyleSheet.selects(browserVersion, selector, input2, null, false, true));
-        assertFalse(CssStyleSheet.selects(browserVersion, selector, button1, null, false, true));
-        assertFalse(CssStyleSheet.selects(browserVersion, selector, button2, null, false, true));
+        assertFalse(CssStyleSheet.selects(browserVersion, body, selector, null, null, false, true));
+        assertFalse(CssStyleSheet.selects(browserVersion, form, selector, null, null, false, true));
+        assertTrue(CssStyleSheet.selects(browserVersion, input1, selector, null, null, false, true));
+        assertTrue(CssStyleSheet.selects(browserVersion, input2, selector, null, null, false, true));
+        assertFalse(CssStyleSheet.selects(browserVersion, button1, selector, null, null, false, true));
+        assertFalse(CssStyleSheet.selects(browserVersion, button2, selector, null, null, false, true));
 
         selector = parseSelector(sheet, "#m1");
-        assertTrue(CssStyleSheet.selects(browserVersion, selector, input1, null, false, true));
-        assertFalse(CssStyleSheet.selects(browserVersion, selector, input2, null, false, true));
+        assertTrue(CssStyleSheet.selects(browserVersion, input1, selector, null, null, false, true));
+        assertFalse(CssStyleSheet.selects(browserVersion, input2, selector, null, null, false, true));
     }
 
     private static Selector parseSelector(final CSSStyleSheet sheet, final String rule) throws Exception {
@@ -179,8 +181,8 @@ public class CSSStyleSheet2Test extends SimpleWebTestCase {
      */
     @Test
     public void selectsIdConditionWithSpecialChars() throws Exception {
-        final String html =
-                "<html><body><style></style>\n"
+        final String html = DOCTYPE_HTML
+              + "<html><body><style></style>\n"
               + "<div id='d:e'></div>\n"
               + "<div id='d-e'></div>\n"
               + "</body></html>";
@@ -188,10 +190,10 @@ public class CSSStyleSheet2Test extends SimpleWebTestCase {
         final BrowserVersion browserVersion = getBrowserVersion();
 
         Selector selector = parseSelectors("#d\\:e").get(0);
-        assertTrue(CssStyleSheet.selects(browserVersion, selector, page.getHtmlElementById("d:e"), null, false, true));
+        assertTrue(CssStyleSheet.selects(browserVersion, page.getHtmlElementById("d:e"), selector, null, null, false, true));
 
         selector = parseSelectors("#d-e").get(0);
-        assertTrue(CssStyleSheet.selects(browserVersion, selector, page.getHtmlElementById("d-e"), null, false, true));
+        assertTrue(CssStyleSheet.selects(browserVersion, page.getHtmlElementById("d-e"), selector, null, null, false, true));
     }
 
     /**
@@ -231,8 +233,8 @@ public class CSSStyleSheet2Test extends SimpleWebTestCase {
 
     private void testSelects(final String css, final boolean selectBody, final boolean selectDivD,
         final boolean selectSpanS) throws Exception {
-        final String html =
-              "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <body id='b'>\n"
             + "    <style></style>\n"
             + "    <div id='d' class='foo bar' lang='en-GB'>\n"
@@ -246,11 +248,33 @@ public class CSSStyleSheet2Test extends SimpleWebTestCase {
 
         final Selector selector = parseSelectors(css).get(0);
         assertEquals(selectBody,
-                CssStyleSheet.selects(browserVersion, selector, page.getHtmlElementById("b"), null, false, true));
+                CssStyleSheet.selects(browserVersion, page.getHtmlElementById("b"), selector, null, null, false, true));
         assertEquals(selectDivD,
-                CssStyleSheet.selects(browserVersion, selector, page.getHtmlElementById("d"), null, false, true));
+                CssStyleSheet.selects(browserVersion, page.getHtmlElementById("d"), selector, null, null, false, true));
         assertEquals(selectSpanS,
-                CssStyleSheet.selects(browserVersion, selector, page.getHtmlElementById("s"), null, false, true));
+                CssStyleSheet.selects(browserVersion, page.getHtmlElementById("s"), selector, null, null, false, true));
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void selects_relativeSelector_nextSiblingCombinator_nullNextSibling() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body><style></style>\n"
+            + "  <div id='d1'></div>\n"
+            + "  <div id='d2'></div>\n"
+            + "</body></html>";
+        final HtmlPage page = loadPage(html);
+        final BrowserVersion browserVersion = getBrowserVersion();
+
+        final Selector selector = parseSelectors(":has(+ div)").get(0);
+
+        // d1 has a next sibling element (d2) -> true
+        assertTrue(CssStyleSheet.selects(browserVersion, page.getHtmlElementById("d1"), selector, null, null, false, true));
+
+        // d2 has no next sibling element (getNextElementSibling() returns null) -> false (should not throw NPE)
+        assertFalse(CssStyleSheet.selects(browserVersion, page.getHtmlElementById("d2"), selector, null, null, false, true));
     }
 
     /**
@@ -258,6 +282,7 @@ public class CSSStyleSheet2Test extends SimpleWebTestCase {
      * @throws Exception if the test fails
      */
     @Test
+    @Alerts("ComputedCssStyleDeclaration for 'HtmlBody[<body>]'")
     public void brokenExternalCSS() throws Exception {
         final String html = "<html><head>\n"
             + "<link rel='stylesheet' type='text/css' href='" + URL_SECOND + "'/></head></html>";
@@ -267,8 +292,298 @@ public class CSSStyleSheet2Test extends SimpleWebTestCase {
 
         final NodeList list = htmlPage.getElementsByTagName("body");
         final HtmlElement element = (HtmlElement) list.item(0);
-        final ComputedCSSStyleDeclaration style = ((HTMLElement) element.getScriptableObject()).getCurrentStyle();
-        assertEquals("CSSStyleDeclaration for 'null'", style.toString());
+        final ComputedCssStyleDeclaration style = htmlPage.getEnclosingWindow().getComputedStyle(element, null);
+        assertEquals(getExpectedAlerts()[0], style.toString());
     }
 
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void isActive_mediaQueryHeight() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "  <style id='s1' media='(min-height: 500px)'></style>\n"
+            + "  <style id='s2' media='(max-height: 500px)'></style>\n"
+            + "  <style id='s3' media='(min-device-height: 1200px)'></style>\n"
+            + "  <style id='s4' media='(max-device-height: 1200px)'></style>\n"
+            + "</head><body></body></html>";
+
+        final HtmlPage page = loadPage(html);
+        final WebWindow window = page.getEnclosingWindow();
+
+        // Set width and height to distinct values so width-vs-height bugs trigger failures
+        window.setInnerWidth(800);
+        window.setInnerHeight(300);
+        // screen is 1920x1080
+
+        final HtmlStyle s1 = (HtmlStyle) page.getElementById("s1");
+        final HtmlStyle s2 = (HtmlStyle) page.getElementById("s2");
+        final HtmlStyle s3 = (HtmlStyle) page.getElementById("s3");
+        final HtmlStyle s4 = (HtmlStyle) page.getElementById("s4");
+
+        // innerHeight is 300px
+        assertFalse(s1.getSheet().isActive()); // min-height: 500px (300 >= 500 is false)
+        assertTrue(s2.getSheet().isActive());  // max-height: 500px (300 <= 500 is true)
+
+        // device height is 1080px
+        assertFalse(s3.getSheet().isActive()); // min-device-height: 500px (400 >= 500 is false)
+        assertTrue(s4.getSheet().isActive());  // max-device-height: 500px (400 <= 500 is true)
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void isActive_mediaQueryCentimeter() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "  <style id='s1' media='(min-width: 10cm)'></style>\n"
+            + "</head><body></body></html>";
+
+        final HtmlPage page = loadPage(html);
+        final WebWindow window = page.getEnclosingWindow();
+
+        // Standard DPI is 96 -> 10cm is ~377.95px
+        window.setInnerWidth(100);
+
+        final HtmlStyle s1 = (HtmlStyle) page.getElementById("s1");
+
+        // 10cm (~377.95px) > innerWidth (100px), so min-width: 10cm must be false.
+        // Before the fix, 10cm calculated to ~3.78px, so min-width: 10cm incorrectly returned true.
+        assertFalse(s1.getSheet().isActive());
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void selects_pseudoClass_has() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body><style></style>\n"
+            + "  <div id='d1'><span class='foo'>a</span></div>\n"
+            + "  <div id='d2'><p>b</p></div>\n"
+            + "</body></html>";
+        final HtmlPage page = loadPage(html);
+        final BrowserVersion browserVersion = getBrowserVersion();
+
+        // :has with element selector
+        Selector selector = parseSelectors("div:has(span)").get(0);
+        assertTrue(CssStyleSheet.selects(browserVersion, page.getHtmlElementById("d1"), selector, null, null, false, true));
+        assertFalse(CssStyleSheet.selects(browserVersion, page.getHtmlElementById("d2"), selector, null, null, false, true));
+
+        // :has with relative child combinator selector
+        selector = parseSelectors("div:has(> .foo)").get(0);
+        assertTrue(CssStyleSheet.selects(browserVersion, page.getHtmlElementById("d1"), selector, null, null, false, true));
+        assertFalse(CssStyleSheet.selects(browserVersion, page.getHtmlElementById("d2"), selector, null, null, false, true));
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void selects_conditionalSelector_oneOfAttribute() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body><style></style>\n"
+            + "  <div id='d1' data-tags='foo\tbar'></div>\n"
+            + "  <div id='d2' data-tags='foo\nbar'></div>\n"
+            + "</body></html>";
+        final HtmlPage page = loadPage(html);
+        final BrowserVersion browserVersion = getBrowserVersion();
+
+        final Selector selector = parseSelectors("[data-tags~=bar]").get(0);
+
+        // Should match when values are separated by tab (\t) or newline (\n)
+        assertTrue(CssStyleSheet.selects(browserVersion, page.getHtmlElementById("d1"), selector, null, null, false, true));
+        assertTrue(CssStyleSheet.selects(browserVersion, page.getHtmlElementById("d2"), selector, null, null, false, true));
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void selects_pseudoClass_nthChild() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head><style></style></head><body>\n"
+            + "  <div id='d1'></div>\n"
+            + "  <div id='d2'></div>\n"
+            + "  <div id='d3'></div>\n"
+            + "  <div id='d4'></div>\n"
+            + "</body></html>";
+        final HtmlPage page = loadPage(html);
+        final BrowserVersion browserVersion = getBrowserVersion();
+
+        final DomElement d1 = page.getHtmlElementById("d1");
+        final DomElement d2 = page.getHtmlElementById("d2");
+        final DomElement d3 = page.getHtmlElementById("d3");
+        final DomElement d4 = page.getHtmlElementById("d4");
+
+        // :nth-child(2n+1) -> matches 1st and 3rd elements (d1, d3)
+        Selector selector = parseSelectors(":nth-child(2n+1)").get(0);
+        assertTrue(CssStyleSheet.selects(browserVersion, d1, selector, null, null, false, true));
+        assertFalse(CssStyleSheet.selects(browserVersion, d2, selector, null, null, false, true));
+        assertTrue(CssStyleSheet.selects(browserVersion, d3, selector, null, null, false, true));
+        assertFalse(CssStyleSheet.selects(browserVersion, d4, selector, null, null, false, true));
+
+        // :nth-child(-n+2) -> matches 1st and 2nd elements (d1, d2)
+        selector = parseSelectors(":nth-child(-n+2)").get(0);
+        assertTrue(CssStyleSheet.selects(browserVersion, d1, selector, null, null, false, true));
+        assertTrue(CssStyleSheet.selects(browserVersion, d2, selector, null, null, false, true));
+        assertFalse(CssStyleSheet.selects(browserVersion, d3, selector, null, null, false, true));
+        assertFalse(CssStyleSheet.selects(browserVersion, d4, selector, null, null, false, true));
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void validateSelectors_nthPseudoClasses() throws Exception {
+        final HtmlPage page = loadPage(DOCTYPE_HTML + "<html><body></body></html>");
+
+        // Valid formulas for all nth- variants should pass validation without throwing CSSException
+        SelectorList selectors = parseSelectors(":nth-last-child(odd)");
+        CssStyleSheet.validateSelectors(selectors, page);
+
+        selectors = parseSelectors(":nth-of-type(2n+1)");
+        CssStyleSheet.validateSelectors(selectors, page);
+
+        selectors = parseSelectors(":nth-last-of-type(1)");
+        CssStyleSheet.validateSelectors(selectors, page);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void validateSelectors_invalidNthPseudoClass() throws Exception {
+        // the An+B argument is checked by the parser already
+        assertThrows(CSSException.class, () -> parseSelectors(":nth-child(invalid)"));
+        assertThrows(CSSException.class, () -> parseSelectors(":nth-last-child(invalid)"));
+        assertThrows(CSSException.class, () -> parseSelectors(":nth-of-type(invalid)"));
+        assertThrows(CSSException.class, () -> parseSelectors(":nth-last-of-type(invalid)"));
+        assertThrows(CSSException.class, () -> parseSelectors(":nth-child(2 n)"));
+        assertThrows(CSSException.class, () -> parseSelectors(":nth-of-type(1 of p)"));
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void validateSelectors_nthPseudoClassValidation() throws Exception {
+        final HtmlPage page = loadPage(DOCTYPE_HTML + "<html><body></body></html>");
+
+        CssStyleSheet.validateSelectors(parseSelectors(":nth-child(2n + 1 of p, .x)"), page);
+
+        // the selectors of 'of S' are validated also
+        final SelectorList selectors = parseSelectors(":nth-child(1 of :unknown)");
+        assertThrows(CSSException.class, () -> CssStyleSheet.validateSelectors(selectors, page));
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void selects_escapedSelectors() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head><style></style></head><body>\n"
+            + "  <div id='1a' class='foo.bar'></div>\n"
+            + "  <div id='foo:bar' class='a b'></div>\n"
+            + "</body></html>";
+        final HtmlPage page = loadPage(html);
+        final BrowserVersion browserVersion = getBrowserVersion();
+
+        final DomElement d1 = page.getHtmlElementById("1a");
+        final DomElement d2 = page.getHtmlElementById("foo:bar");
+
+        // Hex escape with single delimiting space (#\31 a matching id="1a")
+        Selector selector = parseSelectors("#\\31 a").get(0);
+        assertTrue(CssStyleSheet.selects(browserVersion, d1, selector, null, null, false, true));
+
+        // 6-digit hex escape without space delimiter (#\000031a matching id="1a")
+        selector = parseSelectors("#\\000031a").get(0);
+        assertTrue(CssStyleSheet.selects(browserVersion, d1, selector, null, null, false, true));
+
+        // Escaped dot character in class selector (.foo\.bar matching class="foo.bar")
+        selector = parseSelectors(".foo\\.bar").get(0);
+        assertTrue(CssStyleSheet.selects(browserVersion, d1, selector, null, null, false, true));
+
+        // Escaped colon in ID selector (#foo\:bar matching id="foo:bar")
+        selector = parseSelectors("#foo\\:bar").get(0);
+        assertTrue(CssStyleSheet.selects(browserVersion, d2, selector, null, null, false, true));
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void selects_attributeSelector_hexEscapes() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head><style></style></head><body>\n"
+            + "  <div id='d1' data-val='1'></div>\n"
+            + "  <div id='d2' data-val='A'></div>\n"
+            + "</body></html>";
+        final HtmlPage page = loadPage(html);
+        final BrowserVersion browserVersion = getBrowserVersion();
+
+        final DomElement d1 = page.getHtmlElementById("d1");
+        final DomElement d2 = page.getHtmlElementById("d2");
+
+        // Hex escape \31 (with trailing space) represents '1'
+        Selector selector = parseSelectors("[data-val='\\31 ']").get(0);
+        assertTrue(CssStyleSheet.selects(browserVersion, d1, selector, null, null, false, true));
+
+        // Hex escape \41 (with trailing space) represents 'A'
+        selector = parseSelectors("[data-val='\\41 ']").get(0);
+        assertTrue(CssStyleSheet.selects(browserVersion, d2, selector, null, null, false, true));
+
+        // 6-digit hex escape \000031 represents '1'
+        selector = parseSelectors("[data-val='\\000031']").get(0);
+        assertTrue(CssStyleSheet.selects(browserVersion, d1, selector, null, null, false, true));
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void selects_attributeSelector_unquotedHexEscapes() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head><style></style></head><body>\n"
+            + "  <div id='d1' data-val='1'></div>\n"
+            + "  <div id='d2' data-val='A'></div>\n"
+            + "</body></html>";
+        final HtmlPage page = loadPage(html);
+        final BrowserVersion browserVersion = getBrowserVersion();
+
+        final DomElement d1 = page.getHtmlElementById("d1");
+        final DomElement d2 = page.getHtmlElementById("d2");
+
+        // Unquoted hex escape \31 (with trailing space) represents '1'
+        // Before fix: unescapeSelector("\\31 ") returned "31 ", failing the assertion
+        Selector selector = parseSelectors("[data-val=\\31 ]").get(0);
+        assertTrue(CssStyleSheet.selects(browserVersion, d1, selector, null, null, false, true));
+
+        // Unquoted hex escape \41 (with trailing space) represents 'A'
+        // Before fix: unescapeSelector("\\41 ") returned "41 ", failing the assertion
+        selector = parseSelectors("[data-val=\\41 ]").get(0);
+        assertTrue(CssStyleSheet.selects(browserVersion, d2, selector, null, null, false, true));
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void selects_escapedIdWithHexCharacters() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head><style></style></head><body>\n"
+            + "  <div id='fiddle\\Foo'><span id='fiddleSpan'></span></div>\n"
+            + "</body></html>";
+        final HtmlPage page = loadPage(html);
+        final BrowserVersion browserVersion = getBrowserVersion();
+
+        final DomElement fiddle = page.getHtmlElementById("fiddle\\Foo");
+
+        // Sizzle / CSS selector #fiddle\\Foo (escaped backslash before hex character 'F')
+        final Selector selector = parseSelectors("#fiddle\\\\Foo").get(0);
+        assertTrue(CssStyleSheet.selects(browserVersion, fiddle, selector, null, null, false, true));
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,35 +14,24 @@
  */
 package org.htmlunit.javascript.host.dom;
 
-import static org.htmlunit.BrowserVersionFeatures.HTMLCOLLECTION_NULL_IF_NOT_FOUND;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
 import java.util.ArrayList;
 import java.util.List;
 
 import org.htmlunit.WebClient;
+import org.htmlunit.corejs.javascript.Callable;
+import org.htmlunit.corejs.javascript.Context;
+import org.htmlunit.corejs.javascript.ContextAction;
+import org.htmlunit.corejs.javascript.Function;
+import org.htmlunit.corejs.javascript.Scriptable;
+import org.htmlunit.corejs.javascript.VarScope;
 import org.htmlunit.html.DomNode;
 import org.htmlunit.javascript.HtmlUnitContextFactory;
-import org.htmlunit.javascript.HtmlUnitScriptable;
 import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.configuration.JsxSymbol;
-
-import org.htmlunit.corejs.javascript.Callable;
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.ContextAction;
-import org.htmlunit.corejs.javascript.ES6Iterator;
-import org.htmlunit.corejs.javascript.Function;
-import org.htmlunit.corejs.javascript.NativeArrayIterator;
-import org.htmlunit.corejs.javascript.Scriptable;
-import org.htmlunit.corejs.javascript.ScriptableObject;
-import org.htmlunit.corejs.javascript.Undefined;
 
 /**
  * An array of elements. Used for the element arrays returned by <code>document.all</code>,
@@ -56,6 +45,9 @@ import org.htmlunit.corejs.javascript.Undefined;
  * @author Ahmed Ashour
  * @author Frank Danek
  * @author Ronald Brill
+ * @author Lai Quang Duong
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/NodeList">MDN Documentation</a>
  */
 @JsxClass
 public class NodeList extends AbstractList implements Callable {
@@ -63,8 +55,16 @@ public class NodeList extends AbstractList implements Callable {
     /**
      * Creates an instance.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
     public NodeList() {
+        super();
+    }
+
+    /**
+     * JavaScript constructor.
+     */
+    @JsxConstructor
+    public void jsConstructor() {
+        // nothing to do
     }
 
     /**
@@ -72,7 +72,7 @@ public class NodeList extends AbstractList implements Callable {
      *
      * @param domNode the {@link DomNode}
      * @param attributeChangeSensitive indicates if the content of the collection may change when an attribute
-     * of a descendant node of parentScope changes (attribute added, modified or removed)
+     *        of a descendant node of domNode changes (attribute added, modified or removed)
      */
     public NodeList(final DomNode domNode, final boolean attributeChangeSensitive) {
         super(domNode, attributeChangeSensitive, null);
@@ -91,10 +91,11 @@ public class NodeList extends AbstractList implements Callable {
      * Creates an instance.
      * @param parentScope the parent scope
      */
-    NodeList(final ScriptableObject parentScope) {
+    NodeList(final VarScope parentScope) {
+        super();
         setParentScope(parentScope);
         setPrototype(getPrototype(getClass()));
-        setExternalArrayData(this);
+        setExternalArrayData(parentScope, this);
     }
 
     /**
@@ -104,7 +105,7 @@ public class NodeList extends AbstractList implements Callable {
      * @param elements the elements
      * @return an empty collection
      */
-    public static NodeList staticNodeList(final HtmlUnitScriptable parentScope, final List<DomNode> elements) {
+    public static NodeList staticNodeList(final VarScope parentScope, final List<DomNode> elements) {
         return new NodeList(parentScope) {
             @Override
             public List<DomNode> getElements() {
@@ -115,53 +116,64 @@ public class NodeList extends AbstractList implements Callable {
 
     /**
      * Returns an Iterator allowing to go through all keys contained in this object.
-     * @return an {@link NativeArrayIterator}
+     * @return a NativeArrayIterator
      */
-    @JsxFunction({CHROME, EDGE, FF, FF_ESR})
-    public ES6Iterator keys() {
-        return new NativeArrayIterator(getParentScope(), this, NativeArrayIterator.ARRAY_ITERATOR_TYPE.KEYS);
+    @JsxFunction
+    public Scriptable keys() {
+        return JavaScriptEngine.newArrayIteratorTypeKeys(getParentScope(), this);
     }
 
     /**
      * Returns an Iterator allowing to go through all keys contained in this object.
-     * @return an {@link NativeArrayIterator}
+     * @return a NativeArrayIterator
      */
-    @JsxFunction({CHROME, EDGE, FF, FF_ESR})
-    public ES6Iterator values() {
-        return new NativeArrayIterator(getParentScope(), this, NativeArrayIterator.ARRAY_ITERATOR_TYPE.VALUES);
+    @JsxFunction
+    @JsxSymbol(symbolName = "iterator")
+    public Scriptable values() {
+        return JavaScriptEngine.newArrayIteratorTypeValues(getParentScope(), this);
     }
 
     /**
      * Returns an Iterator allowing to go through all key/value pairs contained in this object.
-     * @return an {@link NativeArrayIterator}
+     * @return a NativeArrayIterator
      */
-    @JsxFunction({CHROME, EDGE, FF, FF_ESR})
-    public ES6Iterator entries() {
-        return new NativeArrayIterator(getParentScope(), this, NativeArrayIterator.ARRAY_ITERATOR_TYPE.ENTRIES);
-    }
-
-    @JsxSymbol({CHROME, EDGE, FF, FF_ESR})
-    public ES6Iterator iterator() {
-        return values();
+    @JsxFunction
+    public Scriptable entries() {
+        return JavaScriptEngine.newArrayIteratorTypeEntries(getParentScope(), this);
     }
 
     /**
      * Calls the {@code callback} given in parameter once for each value pair in the list, in insertion order.
      * @param callback function to execute for each element
      */
-    @JsxFunction({CHROME, EDGE, FF, FF_ESR})
+    @JsxFunction
     public void forEach(final Object callback) {
-        final List<DomNode> nodes = getElements();
+        if (!(callback instanceof Function function)) {
+            throw JavaScriptEngine.typeError(
+                    "Foreach callback '" + JavaScriptEngine.toString(callback) + "' is not a function");
+        }
+
+        if (getElements().isEmpty()) {
+            return;
+        }
 
         final WebClient client = getWindow().getWebWindow().getWebClient();
-        final HtmlUnitContextFactory cf = ((JavaScriptEngine) client.getJavaScriptEngine()).getContextFactory();
+        final HtmlUnitContextFactory cf = client.getJavaScriptEngine().getContextFactory();
 
         final ContextAction<Object> contextAction = cx -> {
-            final Function function = (Function) callback;
-            final Scriptable scope = getParentScope();
-            for (int i = 0; i < nodes.size(); i++) {
+            final VarScope scope = getParentScope();
+
+            List<DomNode> nodes = getElements();
+            final int size = nodes.size();
+            int i = 0;
+            while (i < size && i < nodes.size()) {
                 function.call(cx, scope, this, new Object[] {nodes.get(i).getScriptableObject(), i, this});
+
+                // refresh
+                nodes = getElements();
+                i++;
             }
+
             return null;
         };
         cf.call(contextAction);
@@ -181,7 +193,7 @@ public class NodeList extends AbstractList implements Callable {
      * Returns the item or items corresponding to the specified index or key.
      * @param index the index or key corresponding to the element or elements to return
      * @return the element or elements corresponding to the specified index or key
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms536460.aspx">MSDN doc</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/NodeList/item">MDN Documentation</a>
      */
     @JsxFunction
     public Object item(final Object index) {
@@ -196,16 +208,13 @@ public class NodeList extends AbstractList implements Callable {
      * {@inheritDoc}
      */
     @Override
-    public Object call(final Context cx, final Scriptable scope, final Scriptable thisObj, final Object[] args) {
+    public Object call(final Context cx, final VarScope scope, final Object thisObj, final Object[] args) {
         if (args.length == 0) {
-            throw Context.reportRuntimeError("Zero arguments; need an index or a key.");
+            throw JavaScriptEngine.reportRuntimeError("Zero arguments; need an index or a key.");
         }
         final Object object = getIt(args[0]);
         if (object == NOT_FOUND) {
-            if (getBrowserVersion().hasFeature(HTMLCOLLECTION_NULL_IF_NOT_FOUND)) {
-                return null;
-            }
-            return Undefined.instance;
+            return null;
         }
         return object;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@ package org.htmlunit.javascript;
 
 import org.htmlunit.Page;
 import org.htmlunit.WebWindow;
+import org.htmlunit.corejs.javascript.VarScope;
 import org.htmlunit.html.HtmlPage;
 import org.htmlunit.javascript.configuration.JavaScriptConfiguration;
 
@@ -24,11 +25,11 @@ import org.htmlunit.javascript.configuration.JavaScriptConfiguration;
  *
  * @param <SCRIPT> the script type
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
- * @author <a href="mailto:chen_jun@users.sourceforge.net">Chen Jun</a>
+ * @author Mike Bowler
+ * @author Chen Jun
  * @author David K. Taylor
  * @author Chris Erskine
- * @author <a href="mailto:bcurren@esomnie.com">Ben Curren</a>
+ * @author Ben Curren
  * @author David D. Kilzer
  * @author Marc Guillemot
  * @author Daniel Gredler
@@ -56,20 +57,6 @@ public interface AbstractJavaScriptEngine<SCRIPT> {
      * Process postponed actions, if any.
      */
     void processPostponedActions();
-
-    /**
-     * Executes the specified JavaScript code in the context of a given page.
-     *
-     * @param page the page that the code will execute within
-     * @param sourceCode the JavaScript code to execute
-     * @param sourceName the name that will be displayed on error conditions
-     * @param startLine the line at which the script source starts
-     * @return the result of executing the specified code
-     */
-    Object execute(HtmlPage page,
-                           String sourceCode,
-                           String sourceName,
-                           int startLine);
 
     /**
      * Register WebWindow with the JavaScriptExecutor.
@@ -101,13 +88,18 @@ public interface AbstractJavaScriptEngine<SCRIPT> {
     long getJavaScriptTimeout();
 
     /**
+     * Disable starting of new js threads.
+     */
+    void prepareShutdown();
+
+    /**
      * Shutdown the JavaScriptEngine.
      */
     void shutdown();
 
     /**
      * Indicates if JavaScript is running in current thread.
-     * This allows code to know if their own evaluation is has been triggered by some JS code.
+     * This allows code to know if their own evaluation has been triggered by some JS code.
      * @return {@code true} if JavaScript is running
      */
     boolean isScriptRunning();
@@ -119,22 +111,48 @@ public interface AbstractJavaScriptEngine<SCRIPT> {
     void holdPosponedActions();
 
     /**
-     * Compiles the specified JavaScript code in the context of a given HTML page.
+     * Compiles the specified JavaScript code in the context of a given scope.
      *
-     * @param page the page that the code will execute within
+     * @param owningPage the page from which the code started
+     * @param scope the scope in which to execute the javascript code
      * @param sourceCode the JavaScript code to execute
      * @param sourceName the name that will be displayed on error conditions
      * @param startLine the line at which the script source starts
      * @return the result of executing the specified code
      */
-    SCRIPT compile(HtmlPage page, String sourceCode, String sourceName, int startLine);
+    SCRIPT compile(HtmlPage owningPage, VarScope scope, String sourceCode, String sourceName, int startLine);
 
     /**
      * Executes the specified JavaScript code in the context of a given page.
      *
      * @param page the page that the code will execute within
+     * @param scope the scope in which to execute
      * @param script the script to execute
      * @return the result of executing the specified code
      */
-    Object execute(HtmlPage page, SCRIPT script);
+    Object execute(HtmlPage page, VarScope scope, SCRIPT script);
+
+    /**
+     * Executes the specified JavaScript code in the context of a given page.
+     *
+     * @param page the page that the code will execute within
+     * @param scope the scope in which to execute
+     * @param sourceCode the JavaScript code to execute
+     * @param sourceName the name that will be displayed on error conditions
+     * @param startLine the line at which the script source starts
+     * @return the result of executing the specified code
+     */
+    Object execute(HtmlPage page,
+                    VarScope scope,
+                    String sourceCode,
+                    String sourceName,
+                    int startLine);
+
+    /**
+     * Returns this JavaScript engine's {@link HtmlUnitContextFactory}.
+     *
+     * @return this JavaScript engine's {@link HtmlUnitContextFactory}
+     */
+    HtmlUnitContextFactory getContextFactory();
+
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,64 +14,55 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.BrowserVersionFeatures.JS_ALIGN_ACCEPTS_ARBITRARY_VALUES;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
 
+import org.htmlunit.SgmlPage;
 import org.htmlunit.html.DomElement;
 import org.htmlunit.html.DomNode;
 import org.htmlunit.html.HtmlElement;
 import org.htmlunit.html.HtmlImage;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.configuration.JsxSetter;
 
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.ScriptRuntime;
-
 /**
  * The JavaScript object {@code HTMLImageElement}.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
- * @author <a href="mailto:george@murnock.com">George Murnock</a>
+ * @author Mike Bowler
+ * @author George Murnock
  * @author Chris Erskine
  * @author Marc Guillemot
  * @author Ahmed Ashour
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLImageElement">MDN Documentation</a>
  */
 @JsxClass(domClass = HtmlImage.class)
 public class HTMLImageElement extends HTMLElement {
-    private static final Map<String, String> NORMALIZED_ALIGN_VALUES;
-    static {
-        NORMALIZED_ALIGN_VALUES = new HashMap<>();
-        NORMALIZED_ALIGN_VALUES.put("center", "center");
-        NORMALIZED_ALIGN_VALUES.put("left", "left");
-        NORMALIZED_ALIGN_VALUES.put("right", "right");
-        NORMALIZED_ALIGN_VALUES.put("bottom", "bottom");
-        NORMALIZED_ALIGN_VALUES.put("middle", "middle");
-        NORMALIZED_ALIGN_VALUES.put("top", "top");
-        NORMALIZED_ALIGN_VALUES.put("absbottom", "absBottom");
-        NORMALIZED_ALIGN_VALUES.put("absmiddle", "absMiddle");
-        NORMALIZED_ALIGN_VALUES.put("baseline", "baseline");
-        NORMALIZED_ALIGN_VALUES.put("texttop", "textTop");
-    }
 
     private boolean endTagForbidden_ = true;
 
     /**
      * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
+    @Override
+    @JsxConstructor
     public void jsConstructor() {
-        throw ScriptRuntime.typeError("Invalid constructor.");
+        throw JavaScriptEngine.typeError("Invalid constructor.");
+    }
+
+    /**
+     * JavaScript constructor.
+     */
+    public void jsConstructorImage() {
+        final SgmlPage page = (SgmlPage) getWindow().getWebWindow().getEnclosedPage();
+        final DomElement fake =
+                page.getWebClient().getPageCreator().getHtmlParser()
+                    .getFactory(HtmlImage.TAG_NAME)
+                    .createElement(page, HtmlImage.TAG_NAME, null);
+        setDomNode(fake);
     }
 
     /**
@@ -129,7 +120,7 @@ public class HTMLImageElement extends HTMLElement {
 
     /**
      * Sets the value of the {@code alt} property.
-     * @param alt the value
+     * @param alt the {@code alt} property value
      */
     @JsxSetter
     public void setAlt(final String alt) {
@@ -147,7 +138,7 @@ public class HTMLImageElement extends HTMLElement {
 
     /**
      * Sets the {@code border} attribute.
-     * @param border the {@code border} attribute
+     * @param border the {@code border} attribute value
      */
     @JsxSetter
     public void setBorder(final String border) {
@@ -160,18 +151,7 @@ public class HTMLImageElement extends HTMLElement {
      */
     @JsxGetter
     public String getAlign() {
-        final boolean acceptArbitraryValues = getBrowserVersion().hasFeature(JS_ALIGN_ACCEPTS_ARBITRARY_VALUES);
-
-        final String align = getDomNodeOrDie().getAttributeDirect("align");
-        if (acceptArbitraryValues) {
-            return align;
-        }
-
-        final String normalizedValue = NORMALIZED_ALIGN_VALUES.get(align.toLowerCase(Locale.ROOT));
-        if (null != normalizedValue) {
-            return normalizedValue;
-        }
-        return "";
+        return getDomNodeOrDie().getAttributeDirect("align");
     }
 
     /**
@@ -180,19 +160,7 @@ public class HTMLImageElement extends HTMLElement {
      */
     @JsxSetter
     public void setAlign(final String align) {
-        final boolean acceptArbitraryValues = getBrowserVersion().hasFeature(JS_ALIGN_ACCEPTS_ARBITRARY_VALUES);
-        if (acceptArbitraryValues) {
-            getDomNodeOrDie().setAttribute("align", align);
-            return;
-        }
-
-        final String normalizedValue = NORMALIZED_ALIGN_VALUES.get(align.toLowerCase(Locale.ROOT));
-        if (null != normalizedValue) {
-            getDomNodeOrDie().setAttribute("align", normalizedValue);
-            return;
-        }
-
-        throw Context.reportRuntimeError("Cannot set the align property to invalid value: '" + align + "'");
+        getDomNodeOrDie().setAttribute("align", align);
     }
 
     /**
@@ -242,7 +210,7 @@ public class HTMLImageElement extends HTMLElement {
     }
 
     /**
-     * Support for the image.complete property.
+     * Support for the image.complete() property.
      * @return the value of the {@code complete} property
      */
     @JsxGetter
@@ -287,7 +255,7 @@ public class HTMLImageElement extends HTMLElement {
     @JsxGetter
     @Override
     public String getName() {
-        return getDomNodeOrDie().getAttributeDirect("name");
+        return getDomNodeOrDie().getAttributeDirect(DomElement.NAME_ATTRIBUTE);
     }
 
     /**
@@ -297,7 +265,7 @@ public class HTMLImageElement extends HTMLElement {
     @JsxSetter
     @Override
     public void setName(final String name) {
-        getDomNodeOrDie().setAttribute("name", name);
+        getDomNodeOrDie().setAttribute(DomElement.NAME_ATTRIBUTE, name);
     }
 
 }

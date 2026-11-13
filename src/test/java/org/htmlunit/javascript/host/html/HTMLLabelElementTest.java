@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,12 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.htmlunit.WebDriverTestCase;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
-
-import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
 
 /**
  * Tests for {@link HTMLLabelElement}.
@@ -33,7 +30,6 @@ import org.htmlunit.junit.BrowserRunner.Alerts;
  * @author Frank Danek
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class HTMLLabelElementTest extends WebDriverTestCase {
 
     /**
@@ -42,13 +38,11 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
     @Test
     @Alerts("")
     public void htmlForNone() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
-            + "      function log(x) {\n"
-            + "        document.title += x + ';';\n"
-            + "      }\n"
+            + LOG_TITLE_FUNCTION
             + "      function doTest() {\n"
             + "        log(document.getElementById('label1').htmlFor);\n"
             + "      }\n"
@@ -60,8 +54,7 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "  </body>\n"
             + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(html);
     }
 
     /**
@@ -70,13 +63,11 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
     @Test
     @Alerts("")
     public void htmlForEmpty() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
-            + "      function log(x) {\n"
-            + "        document.title += x + ';';\n"
-            + "      }\n"
+            + LOG_TITLE_FUNCTION
             + "      function doTest() {\n"
             + "        log(document.getElementById('label1').htmlFor);\n"
             + "      }\n"
@@ -88,8 +79,7 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "  </body>\n"
             + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(html);
     }
 
     /**
@@ -98,13 +88,11 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
     @Test
     @Alerts("unknown")
     public void htmlForUnknown() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
-            + "      function log(x) {\n"
-            + "        document.title += x + ';';\n"
-            + "      }\n"
+            + LOG_TITLE_FUNCTION
             + "      function doTest() {\n"
             + "        log(document.getElementById('label1').htmlFor);\n"
             + "      }\n"
@@ -116,8 +104,7 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "  </body>\n"
             + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(html);
     }
 
     /**
@@ -126,13 +113,11 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
     @Test
     @Alerts("text1")
     public void htmlForKnown() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
-            + "      function log(x) {\n"
-            + "        document.title += x + ';';\n"
-            + "      }\n"
+            + LOG_TITLE_FUNCTION
             + "      function doTest() {\n"
             + "        log(document.getElementById('label1').htmlFor);\n"
             + "      }\n"
@@ -144,29 +129,25 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "  </body>\n"
             + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(html);
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"unknown", "null", "null"},
-            IE = {"unknown", "undefined", "null"})
+    @Alerts({"unknown", "null", "null"})
     public void htmlForSetToUnknown() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
-            + "      function log(x) {\n"
-            + "        document.title += x + ';';\n"
-            + "      }\n"
+            + LOG_TITLE_FUNCTION
             + "      function doTest() {\n"
             + "        try {\n"
             + "          document.getElementById('label1').htmlFor = 'unknown';\n"
-            + "        } catch (e) {"
-            + "          log('exception');\n"
+            + "        } catch(e) {"
+            + "          logEx(e);\n"
             + "        }\n"
             + "        log(document.getElementById('label1').htmlFor);\n"
             + "        log(document.getElementById('label1').control);\n"
@@ -182,29 +163,25 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "  </body>\n"
             + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(html);
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"div1", "null", "null"},
-            IE = {"div1", "undefined", "null"})
+    @Alerts({"div1", "null", "null"})
     public void htmlForSetToNotLabelable() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
-            + "      function log(x) {\n"
-            + "        document.title += x + ';';\n"
-            + "      }\n"
+            + LOG_TITLE_FUNCTION
             + "      function doTest() {\n"
             + "        try {\n"
             + "          document.getElementById('label1').htmlFor = 'div1';\n"
-            + "        } catch (e) {"
-            + "          log('exception');\n"
+            + "        } catch(e) {"
+            + "          logEx(e);\n"
             + "        }\n"
             + "        log(document.getElementById('label1').htmlFor);\n"
             + "        log(document.getElementById('label1').control);\n"
@@ -220,29 +197,25 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "  </body>\n"
             + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(html);
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"text1", "[object HTMLInputElement]", "[object HTMLFormElement]"},
-            IE = {"text1", "undefined", "null"})
+    @Alerts({"text1", "[object HTMLInputElement]", "[object HTMLFormElement]"})
     public void htmlForSetToLabelable() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
-            + "      function log(x) {\n"
-            + "        document.title += x + ';';\n"
-            + "      }\n"
+            + LOG_TITLE_FUNCTION
             + "      function doTest() {\n"
             + "        try {\n"
             + "          document.getElementById('label1').htmlFor = 'text1';\n"
-            + "        } catch (e) {"
-            + "          log('exception');\n"
+            + "        } catch(e) {"
+            + "          logEx(e);\n"
             + "        }\n"
             + "        log(document.getElementById('label1').htmlFor);\n"
             + "        log(document.getElementById('label1').control);\n"
@@ -258,212 +231,184 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "  </body>\n"
             + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(html);
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "null",
-            IE = "undefined")
+    @Alerts("null")
     public void controlNone() throws Exception {
         final String html =
               "  <label id='label1'>Item</label>\n"
             + "  <input type='text' id='text1'>\n";
 
-        final WebDriver driver = loadPage2(generateControlPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateControlPage(html));
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "null",
-            IE = "undefined")
+    @Alerts("null")
     public void controlForEmpty() throws Exception {
         final String html =
               "  <label id='label1' for=''>Item</label>\n"
             + "  <input type='text' id='text1'>\n";
 
-        final WebDriver driver = loadPage2(generateControlPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateControlPage(html));
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "null",
-            IE = "undefined")
+    @Alerts("null")
     public void controlForUnknown() throws Exception {
         final String html =
               "  <label id='label1' for='unknown'>Item</label>\n"
             + "  <input type='text' id='text1'>\n";
 
-        final WebDriver driver = loadPage2(generateControlPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateControlPage(html));
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "null",
-            IE = "undefined")
+    @Alerts("null")
     public void controlForNotLabelable() throws Exception {
         final String html =
               "  <label id='label1' for='div1'>Item</label>\n"
             + "  <div id='div1'></div>\n";
 
-        final WebDriver driver = loadPage2(generateControlPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateControlPage(html));
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "[object HTMLButtonElement]:button1",
-            IE = "undefined")
+    @Alerts("[object HTMLButtonElement]:button1")
     public void controlForButton() throws Exception {
         final String html =
               "  <label id='label1' for='button1'>Item</label>\n"
             + "  <button id='button1'></button>\n";
 
-        final WebDriver driver = loadPage2(generateControlPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateControlPage(html));
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "[object HTMLInputElement]:text1",
-            IE = "undefined")
+    @Alerts("[object HTMLInputElement]:text1")
     public void controlForInput() throws Exception {
         final String html =
               "  <label id='label1' for='text1'>Item</label>\n"
             + "  <input type='text' id='text1'>\n";
 
-        final WebDriver driver = loadPage2(generateControlPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateControlPage(html));
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "null",
-            IE = "undefined")
+    @Alerts("null")
     public void controlForInputHidden() throws Exception {
         final String html =
               "  <label id='label1' for='hidden1'>Item</label>\n"
             + "  <input type='hidden' id='hidden1'>\n";
 
-        final WebDriver driver = loadPage2(generateControlPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateControlPage(html));
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "[object HTMLMeterElement]:meter1",
-            IE = "undefined")
+    @Alerts("[object HTMLMeterElement]:meter1")
     public void controlForMeter() throws Exception {
         final String html =
               "  <label id='label1' for='meter1'>Item</label>\n"
             + "  <meter id='meter1'></meter>\n";
 
-        final WebDriver driver = loadPage2(generateControlPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateControlPage(html));
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "[object HTMLOutputElement]:output1",
-            IE = "undefined")
+    @Alerts("[object HTMLOutputElement]:output1")
     public void controlForOutput() throws Exception {
         final String html =
               "  <label id='label1' for='output1'>Item</label>\n"
             + "  <output id='output1'></output>\n";
 
-        final WebDriver driver = loadPage2(generateControlPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateControlPage(html));
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "[object HTMLProgressElement]:progress1",
-            IE = "undefined")
+    @Alerts("[object HTMLProgressElement]:progress1")
     public void controlForProgress() throws Exception {
         final String html =
               "  <label id='label1' for='progress1'>Item</label>\n"
             + "  <progress id='progress1'></progress>\n";
 
-        final WebDriver driver = loadPage2(generateControlPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateControlPage(html));
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "[object HTMLSelectElement]:select1",
-            IE = "undefined")
+    @Alerts("[object HTMLSelectElement]:select1")
     public void controlForSelect() throws Exception {
         final String html =
               "  <label id='label1' for='select1'>Item</label>\n"
             + "  <select id='select1'><option>Option</option></select>\n";
 
-        final WebDriver driver = loadPage2(generateControlPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateControlPage(html));
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "[object HTMLTextAreaElement]:text1",
-            IE = "undefined")
+    @Alerts("[object HTMLTextAreaElement]:text1")
     public void controlForTextArea() throws Exception {
         final String html =
               "  <label id='label1' for='text1'>Item</label>\n"
             + "  <textarea id='text1'></textarea>\n";
 
-        final WebDriver driver = loadPage2(generateControlPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateControlPage(html));
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "null",
-            IE = "undefined")
+    @Alerts("null")
     public void controlNestedNotLabelable() throws Exception {
         final String html =
               "  <label id='label1'>Item\n"
             + "    <div id='div1'></div>\n"
             + "  </label>\n";
 
-        final WebDriver driver = loadPage2(generateControlPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateControlPage(html));
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "[object HTMLButtonElement]:button1",
-            IE = "undefined")
+    @Alerts("[object HTMLButtonElement]:button1")
     public void controlNestedButton() throws Exception {
         final String html =
               "  <label id='label1'>Item\n"
@@ -471,16 +416,14 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "    <button id='button2'></button>\n"
             + "  </label>\n";
 
-        final WebDriver driver = loadPage2(generateControlPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateControlPage(html));
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "[object HTMLInputElement]:text1",
-            IE = "undefined")
+    @Alerts("[object HTMLInputElement]:text1")
     public void controlNestedInput() throws Exception {
         final String html =
               "  <label id='label1'>Item\n"
@@ -488,16 +431,14 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "    <input type='text' id='text2'>\n"
             + "  </label>\n";
 
-        final WebDriver driver = loadPage2(generateControlPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateControlPage(html));
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "null",
-            IE = "undefined")
+    @Alerts("null")
     public void controlNestedInputHidden() throws Exception {
         final String html =
               "  <label id='label1'>Item\n"
@@ -505,16 +446,14 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "    <input type='hidden' id='hidden2'>\n"
             + "  </label>\n";
 
-        final WebDriver driver = loadPage2(generateControlPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateControlPage(html));
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "[object HTMLMeterElement]:meter1",
-            IE = "undefined")
+    @Alerts("[object HTMLMeterElement]:meter1")
     public void controlNestedMeter() throws Exception {
         final String html =
               "  <label id='label1'>Item\n"
@@ -522,16 +461,14 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "    <meter id='meter2'></meter>\n"
             + "  </label>\n";
 
-        final WebDriver driver = loadPage2(generateControlPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateControlPage(html));
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "[object HTMLOutputElement]:output1",
-            IE = "undefined")
+    @Alerts("[object HTMLOutputElement]:output1")
     public void controlNestedOutput() throws Exception {
         final String html =
               "  <label id='label1'>Item\n"
@@ -539,16 +476,14 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "    <output id='output2'></output>\n"
             + "  </label>\n";
 
-        final WebDriver driver = loadPage2(generateControlPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateControlPage(html));
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "[object HTMLProgressElement]:progress1",
-            IE = "undefined")
+    @Alerts("[object HTMLProgressElement]:progress1")
     public void controlNestedProgress() throws Exception {
         final String html =
               "  <label id='label1'>Item\n"
@@ -556,16 +491,14 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "    <progress id='progress2'></progress>\n"
             + "  </label>\n";
 
-        final WebDriver driver = loadPage2(generateControlPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateControlPage(html));
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "[object HTMLSelectElement]:select1",
-            IE = "undefined")
+    @Alerts("[object HTMLSelectElement]:select1")
     public void controlNestedSelect() throws Exception {
         final String html =
               "  <label id='label1'>Item\n"
@@ -573,16 +506,14 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "    <select id='select2'><option>Option</option></select>\n"
             + "  </label>\n";
 
-        final WebDriver driver = loadPage2(generateControlPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateControlPage(html));
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "[object HTMLTextAreaElement]:text1",
-            IE = "undefined")
+    @Alerts("[object HTMLTextAreaElement]:text1")
     public void controlNestedTextArea() throws Exception {
         final String html =
               "  <label id='label1'>Item\n"
@@ -590,16 +521,14 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "    <textarea id='text2'></textarea>\n"
             + "  </label>\n";
 
-        final WebDriver driver = loadPage2(generateControlPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateControlPage(html));
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "[object HTMLInputElement]:text2",
-            IE = "undefined")
+    @Alerts("[object HTMLInputElement]:text2")
     public void controlForVersusNested() throws Exception {
         final String html =
               "  <label id='label1' for='text2'>Item\n"
@@ -607,16 +536,14 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "  </label>\n"
             + "  <input type='text' id='text2'>\n";
 
-        final WebDriver driver = loadPage2(generateControlPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateControlPage(html));
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "null",
-            IE = "undefined")
+    @Alerts("null")
     public void controlForUnknownVersusNested() throws Exception {
         final String html =
               "  <label id='label1' for='unknown'>Item\n"
@@ -624,16 +551,14 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "  </label>\n"
             + "  <input type='text' id='text2'>\n";
 
-        final WebDriver driver = loadPage2(generateControlPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateControlPage(html));
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "null",
-            IE = "undefined")
+    @Alerts("null")
     public void controlForNotLabelableVersusNested() throws Exception {
         final String html =
               "  <label id='label1' for='div1'>Item\n"
@@ -641,20 +566,21 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "  </label>\n"
             + "  <div id='div1'></div>\n";
 
-        final WebDriver driver = loadPage2(generateControlPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateControlPage(html));
     }
 
     private static String generateControlPage(final String snippet) {
-        return "<html>\n"
+        return DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
-            + "      function log(e) {\n"
-            + "        document.title += e + (e ? ':' + e.id : '') + ';';\n"
+            + LOG_TITLE_FUNCTION
+            + "      function dump(e) {\n"
+            + "        log(e + (e ? ':' + e.id : ''));\n"
             + "      }\n"
             + "    </script>\n"
             + "  </head>\n"
-            + "  <body onload='log(document.getElementById(\"label1\").control);'>\n"
+            + "  <body onload='dump(document.getElementById(\"label1\").control)'>\n"
             + snippet
             + "  </body>\n"
             + "</html>";
@@ -664,21 +590,18 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "null",
-            IE = "[object HTMLInputElement]")
+    @Alerts("null")
     public void controlSet() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
-            + "      function log(x) {\n"
-            + "        document.title += x + ';';\n"
-            + "      }\n"
+            + LOG_TITLE_FUNCTION
             + "      function doTest() {\n"
             + "        try {\n"
             + "          document.getElementById('label1').control = document.getElementById('text1');\n"
-            + "        } catch (e) {"
-            + "          log('exception');\n"
+            + "        } catch(e) {"
+            + "          logEx(e);\n"
             + "        }\n"
             + "        log(document.getElementById('label1').control);\n"
             + "      }\n"
@@ -690,8 +613,7 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "  </body>\n"
             + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(html);
     }
 
     /**
@@ -704,8 +626,7 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             = "  <label id='label1'>Item</label>\n"
             + "  <input type='text' id='text1'>\n";
 
-        final WebDriver driver = loadPage2(generateFormPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateFormPage(html));
     }
 
     /**
@@ -720,16 +641,14 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "    <input type='text' id='text1'>\n"
             + "  </form>\n";
 
-        final WebDriver driver = loadPage2(generateFormPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateFormPage(html));
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "null",
-            IE = "[object HTMLFormElement]:form1")
+    @Alerts("null")
     public void formInsideForm() throws Exception {
         final String html
             = "  <form id='form1'>\n"
@@ -737,8 +656,7 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "    <input type='text' id='text1'>\n"
             + "  </form>\n";
 
-        final WebDriver driver = loadPage2(generateFormPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateFormPage(html));
     }
 
     /**
@@ -754,8 +672,7 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "    <input type='text' id='text2'>\n"
             + "  </form>\n";
 
-        final WebDriver driver = loadPage2(generateFormPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateFormPage(html));
     }
 
     /**
@@ -770,16 +687,14 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "    <div id='div1'></div>\n"
             + "  </form>\n";
 
-        final WebDriver driver = loadPage2(generateFormPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateFormPage(html));
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "[object HTMLFormElement]:form1",
-            IE = "null")
+    @Alerts("[object HTMLFormElement]:form1")
     public void formForLabelableInsideForm() throws Exception {
         final String html
             = "  <label id='label1' for='text1'>Item</label>\n"
@@ -787,8 +702,7 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "    <input type='text' id='text1'>\n"
             + "  </form>\n";
 
-        final WebDriver driver = loadPage2(generateFormPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateFormPage(html));
     }
 
     /**
@@ -805,16 +719,14 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "    <input type='text' id='text2'>\n"
             + "  </form>\n";
 
-        final WebDriver driver = loadPage2(generateFormPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateFormPage(html));
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "null",
-            IE = "[object HTMLFormElement]:form1")
+    @Alerts("null")
     public void formNestedNotLabelableInsideForm() throws Exception {
         final String html
             = "  <form id='form1'>\n"
@@ -823,8 +735,7 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "    </label>\n"
             + "  </form>\n";
 
-        final WebDriver driver = loadPage2(generateFormPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateFormPage(html));
     }
 
     /**
@@ -840,19 +751,20 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "    </label>\n"
             + "  </form>\n";
 
-        final WebDriver driver = loadPage2(generateFormPage(html));
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(generateFormPage(html));
     }
 
     private static String generateFormPage(final String snippet) {
-        return "<html>\n"
+        return DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
-            + "      function log(e) {\n"
-            + "        document.title += e + (e ? ':' + e.id : '') + ';';\n"
+            + LOG_TITLE_FUNCTION
+            + "      function dump(e) {\n"
+            + "        log(e + (e ? ':' + e.id : ''));\n"
             + "      }\n"
             + "      function doTest() {\n"
-            + "        log(document.getElementById('label1').form);\n"
+            + "        dump(document.getElementById('label1').form);\n"
             + "      }\n"
             + "    </script>\n"
             + "  </head>\n"
@@ -868,18 +780,16 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
     @Test
     @Alerts("null")
     public void formSet() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
-            + "      function log(x) {\n"
-            + "        document.title += x + ';';\n"
-            + "      }\n"
+            + LOG_TITLE_FUNCTION
             + "      function doTest() {\n"
             + "        try {\n"
             + "          document.getElementById('label1').form = document.getElementById('form1');\n"
-            + "        } catch (e) {"
-            + "          log('exception');\n"
+            + "        } catch(e) {"
+            + "          logEx(e);\n"
             + "        }\n"
             + "        log(document.getElementById('label1').form);\n"
             + "      }\n"
@@ -893,8 +803,7 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "  </body>\n"
             + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(html);
     }
 
     /**
@@ -902,8 +811,8 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
      */
     @Test
     public void clickAfterHtmlForSetByJS() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + "      function doTest() {\n"
@@ -929,8 +838,8 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
      */
     @Test
     public void clickAfterNestedByJS() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + "      function doTest() {\n"
@@ -956,8 +865,8 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
      */
     @Test
     public void clickByJSAfterHtmlForSetByJS() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + "      function doTest() {\n"
@@ -966,7 +875,7 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "      function delegateClick() {\n"
             + "        try {\n"
             + "          document.getElementById('label1').click();\n"
-            + "        } catch (e) {}\n"
+            + "        } catch(e) {}\n"
             + "      }\n"
             + "    </script>\n"
             + "  </head>\n"
@@ -989,8 +898,8 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
      */
     @Test
     public void clickByJSAfterNestedByJS() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + "      function doTest() {\n"
@@ -999,7 +908,7 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "      function delegateClick() {\n"
             + "        try {\n"
             + "          document.getElementById('label1').click();\n"
-            + "        } catch (e) {}\n"
+            + "        } catch(e) {}\n"
             + "      }\n"
             + "    </script>\n"
             + "  </head>\n"
@@ -1023,15 +932,13 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
     @Test
     @Alerts({ "", "A", "a", "A", "a8", "8Afoo", "8", "@" })
     public void accessKey() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <body>\n"
             + "    <label id='a1'>a1</label>\n"
             + "    <label id='a2' accesskey='A'>a2</label>\n"
             + "    <script>\n"
-            + "      function log(x) {\n"
-            + "        document.title += x + ';';\n"
-            + "      }\n"
+            + LOG_TITLE_FUNCTION
             + "      var a1 = document.getElementById('a1'), a2 = document.getElementById('a2');\n"
             + "      log(a1.accessKey);\n"
             + "      log(a2.accessKey);\n"
@@ -1051,7 +958,6 @@ public class HTMLLabelElementTest extends WebDriverTestCase {
             + "  </body>\n"
             + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-        assertTitle(driver, String.join(";", getExpectedAlerts()) + ";");
+        loadPageVerifyTitle2(html);
     }
 }

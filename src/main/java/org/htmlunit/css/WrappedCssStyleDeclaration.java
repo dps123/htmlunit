@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,19 +17,18 @@ package org.htmlunit.css;
 import java.util.Collections;
 import java.util.Map;
 
+import org.htmlunit.BrowserVersion;
+import org.htmlunit.BrowserVersionFeatures;
+import org.htmlunit.css.StyleAttributes.Definition;
 import org.htmlunit.cssparser.dom.AbstractCSSRuleImpl;
 import org.htmlunit.cssparser.dom.CSSStyleDeclarationImpl;
 import org.htmlunit.cssparser.parser.selector.SelectorSpecificity;
 
-import org.htmlunit.css.StyleAttributes.Definition;
-import org.htmlunit.html.DomElement;
-import org.htmlunit.javascript.host.Element;
-
 /**
  * A css StyleDeclaration backed by a {@link CSSStyleDeclarationImpl}.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
- * @author <a href="mailto:cse@dynabean.de">Christian Sell</a>
+ * @author Mike Bowler
+ * @author Christian Sell
  * @author Daniel Gredler
  * @author Chris Erskine
  * @author Ahmed Ashour
@@ -45,14 +44,19 @@ public class WrappedCssStyleDeclaration extends AbstractCssStyleDeclaration {
     // private static final Log LOG = LogFactory.getLog(WrappedCssStyleDeclaration.class);
 
     /** The wrapped CSSStyleDeclaration. */
-    private CSSStyleDeclarationImpl cssStyleDeclarationImpl_;
+    private final CSSStyleDeclarationImpl cssStyleDeclarationImpl_;
+    private final BrowserVersion browserVersion_;
 
     /**
      * Creates an instance which wraps the specified style declaration implementation.
      * @param cssStyleDeclarationImpl the style declaration to wrap
+     * @param browserVersion the {@link BrowserVersion}
      */
-    public WrappedCssStyleDeclaration(final CSSStyleDeclarationImpl cssStyleDeclarationImpl) {
+    public WrappedCssStyleDeclaration(final CSSStyleDeclarationImpl cssStyleDeclarationImpl,
+                final BrowserVersion browserVersion) {
+        super();
         cssStyleDeclarationImpl_ = cssStyleDeclarationImpl;
+        browserVersion_ = browserVersion;
     }
 
     /**
@@ -127,8 +131,8 @@ public class WrappedCssStyleDeclaration extends AbstractCssStyleDeclaration {
      * {@inheritDoc}
      */
     @Override
-    public Object item(final int index) {
-        return cssStyleDeclarationImpl_.getProperties().get(index);
+    public String item(final int index) {
+        return cssStyleDeclarationImpl_.getProperties().get(index).toString();
     }
 
     /**
@@ -172,16 +176,15 @@ public class WrappedCssStyleDeclaration extends AbstractCssStyleDeclaration {
      * {@inheritDoc}
      */
     @Override
-    public Element getElementOrNull() {
-        return null;
+    public boolean hasFeature(final BrowserVersionFeatures property) {
+        return browserVersion_.hasFeature(property);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public DomElement getDomElementOrNull() {
-        return null;
+    public BrowserVersion getBrowserVersion() {
+        return browserVersion_;
     }
-
 }

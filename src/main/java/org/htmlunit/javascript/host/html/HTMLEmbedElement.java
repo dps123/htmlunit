@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,14 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
+import static org.htmlunit.html.DomElement.ATTRIBUTE_NOT_DEFINED;
 
+import java.net.MalformedURLException;
+import java.net.URL;
+
+import org.htmlunit.html.DomElement;
 import org.htmlunit.html.HtmlEmbed;
+import org.htmlunit.html.HtmlPage;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxGetter;
@@ -30,22 +32,27 @@ import org.htmlunit.javascript.configuration.JsxSetter;
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ * @author Lai Quang Duong
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLEmbedElement">MDN Documentation</a>
  */
 @JsxClass(domClass = HtmlEmbed.class)
 public class HTMLEmbedElement extends HTMLElement {
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public HTMLEmbedElement() {
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
      * Returns the value of the {@code align} property.
      * @return the value of the {@code align} property
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public String getAlign() {
         return getAlign(true);
     }
@@ -54,7 +61,7 @@ public class HTMLEmbedElement extends HTMLElement {
      * Sets the value of the {@code align} property.
      * @param align the value of the {@code align} property
      */
-    @JsxSetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxSetter
     public void setAlign(final String align) {
         setAlign(align, false);
     }
@@ -96,6 +103,54 @@ public class HTMLEmbedElement extends HTMLElement {
     }
 
     /**
+     * Returns the value of the {@code src} property.
+     * @return the value of the {@code src} property
+     */
+    @JsxGetter
+    public String getSrc() {
+        final HtmlEmbed embed = (HtmlEmbed) getDomNodeOrDie();
+        String src = embed.getAttributeDirect("src");
+        if (ATTRIBUTE_NOT_DEFINED == src) {
+            return src;
+        }
+        try {
+            final URL expandedSrc = ((HtmlPage) embed.getPage()).getFullyQualifiedUrl(src);
+            src = expandedSrc.toString();
+        }
+        catch (final MalformedURLException ignored) {
+            // ignore
+        }
+        return src;
+    }
+
+    /**
+     * Sets the value of the {@code src} property.
+     * @param src the value of the {@code src} property
+     */
+    @JsxSetter
+    public void setSrc(final String src) {
+        getDomNodeOrDie().setAttribute("src", src);
+    }
+
+    /**
+     * Returns the value of the {@code type} property.
+     * @return the value of the {@code type} property
+     */
+    @JsxGetter
+    public String getType() {
+        return getDomNodeOrDie().getAttributeDirect("type");
+    }
+
+    /**
+     * Sets the value of the {@code type} property.
+     * @param type the value of the {@code type} property
+     */
+    @JsxSetter
+    public void setType(final String type) {
+        getDomNodeOrDie().setAttribute("type", type);
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
@@ -110,17 +165,17 @@ public class HTMLEmbedElement extends HTMLElement {
     @JsxGetter
     @Override
     public String getName() {
-        return getDomNodeOrDie().getAttributeDirect("name");
+        return getDomNodeOrDie().getAttributeDirect(DomElement.NAME_ATTRIBUTE);
     }
 
     /**
      * Sets the {@code name} attribute.
-     * @param name the {@code name} attribute
+     * @param name the {@code name} attribute value
      */
     @JsxSetter
     @Override
     public void setName(final String name) {
-        getDomNodeOrDie().setAttribute("name", name);
+        getDomNodeOrDie().setAttribute(DomElement.NAME_ATTRIBUTE, name);
     }
 
 }

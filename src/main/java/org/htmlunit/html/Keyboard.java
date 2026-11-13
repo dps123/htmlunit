@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,14 +20,86 @@ import java.util.List;
 import org.htmlunit.javascript.host.event.KeyboardEvent;
 
 /**
- * Keeps track of the typed keys.
+ * Represents a sequence of keyboard actions—such as typed characters, key presses,
+ * and key releases—used to simulate realistic user input on HTML elements.
+ * <p>
+ * A {@code Keyboard} instance acts as a keystroke recorder that queues key actions
+ * and maintains modifier state ({@code SHIFT}, {@code CONTROL}, {@code ALT}, {@code META}) across
+ * sequential events. When executed against an element via {@code element.type(keyboard)},
+ * it drives the full browser event lifecycle ({@code keydown}, {@code keypress},
+ * {@code input}, and {@code keyup}) and mutates DOM text values accordingly.
+ * </p>
+ *
+ * <h3>Core Features</h3>
+ * <ul>
+ *   <li><b>Character and Key Code Queuing:</b> Supports typing printable characters as well
+ *       as holding and releasing raw key codes (e.g., navigation, {@code BACK_SPACE}, or modifier keys).</li>
+ *   <li><b>Modifier State Persistence:</b> Tracks modifier keys so subsequent keystrokes inherit
+ *       the active modifier flags during JavaScript event dispatching.</li>
+ *   <li><b>Caret Positioning:</b> Supports configured cursor placement ({@link #isStartAtEnd()})
+ *       to position the selection caret at the end of input fields before typing begins.</li>
+ * </ul>
  *
  * @author Ahmed Ashour
+ * @author Ronald Brill
  */
 public class Keyboard {
 
-    private final List<Object[]> keys_ = new ArrayList<>();
+    /**
+     * Represents a single keyboard input action.
+     *
+     * <p>A {@code KeyAction} is either a typed character ({@link TypedChar}),
+     * a key-code press or release ({@link KeyCodeAction}) or a single key down or
+     * key up of a character ({@link CharKeyAction}) or a key code ({@link KeyCodeKeyAction}).
+     * </p>
+     */
+    public sealed interface KeyAction permits TypedChar, KeyCodeAction, CharKeyAction, KeyCodeKeyAction {
+        // tagging interface
+    }
+
+    /**
+     * A character typed directly, e.g. via {@link Keyboard#type(char)}.
+     *
+     * @param ch the typed character
+     */
+    public record TypedChar(char ch) implements KeyAction { }
+
+    /**
+     * A key-code press or release, e.g. via {@link Keyboard#press(int)}
+     * or {@link Keyboard#release(int)}.
+     *
+     * @param keyCode the DOM key code
+     * @param pressed {@code true} if the key is being pressed,
+     *                {@code false} if it is being released
+     */
+    public record KeyCodeAction(int keyCode, boolean pressed) implements KeyAction { }
+
+    /**
+     * Only the key down or only the key up of a character, e.g. via {@link Keyboard#keyDown(char)}
+     * or {@link Keyboard#keyUp(char)}.
+     *
+     * @param ch the character
+     * @param down {@code true} for the key down, {@code false} for the key up
+     */
+    public record CharKeyAction(char ch, boolean down) implements KeyAction { }
+
+    /**
+     * Only the key down or only the key up of a key code, e.g. via {@link Keyboard#keyDown(int)}
+     * or {@link Keyboard#keyUp(int, int)}.
+     *
+     * @param keyCode the DOM key code
+     * @param location the location of the key (e.g. {@link KeyboardEvent#DOM_KEY_LOCATION_RIGHT})
+     *        or {@link #DEFAULT_LOCATION} for the default location of the key code
+     * @param down {@code true} for the key down, {@code false} for the key up
+     */
+    public record KeyCodeKeyAction(int keyCode, int location, boolean down) implements KeyAction { }
+
+    /** Use the default location of the key code (e.g. the left one for the shift key). */
+    public static final int DEFAULT_LOCATION = -1;
+
+    private final List<KeyAction> keys_ = new ArrayList<>();
     private final boolean startAtEnd_;
+    private boolean[] modifiers_;
 
     /**
      * Creates a new instance.
@@ -49,7 +121,7 @@ public class Keyboard {
      * @param ch the character
      */
     public void type(final char ch) {
-        keys_.add(new Object[] {ch});
+        keys_.add(new TypedChar(ch));
     }
 
     /**
@@ -57,6 +129,7 @@ public class Keyboard {
      * <p>
      * An example of predefined values is
      * {@link org.htmlunit.javascript.host.event.KeyboardEvent#DOM_VK_PAGE_DOWN}.
+     * </p>
      *
      * @param keyCode the key code
      */
@@ -64,7 +137,7 @@ public class Keyboard {
         if (keyCode >= KeyboardEvent.DOM_VK_A && keyCode <= KeyboardEvent.DOM_VK_Z) {
             throw new IllegalArgumentException("For key code " + keyCode + ", use type(char) instead");
         }
-        keys_.add(new Object[] {keyCode, true});
+        keys_.add(new KeyCodeAction(keyCode, true));
     }
 
     /**
@@ -72,11 +145,112 @@ public class Keyboard {
      * <p>
      * An example of predefined values is
      * {@link org.htmlunit.javascript.host.event.KeyboardEvent#DOM_VK_PAGE_DOWN}.
+     * </p>
      *
      * @param keyCode the key code.
      */
     public void release(final int keyCode) {
-        keys_.add(new Object[] {keyCode, false});
+        if (keyCode >= KeyboardEvent.DOM_VK_A && keyCode <= KeyboardEvent.DOM_VK_Z) {
+            throw new IllegalArgumentException("For key code " + keyCode + ", use type(char) instead");
+        }
+        keys_.add(new KeyCodeAction(keyCode, false));
+    }
+
+    /**
+     * Presses only the key of the specified character; the key stays pressed until
+     * {@link #keyUp(char)} is called for the same character. Like in the browsers, the
+     * {@code keydown} and {@code keypress} events are fired and the character is typed.
+     *
+     * @param ch the character
+     */
+    public void keyDown(final char ch) {
+        keys_.add(new CharKeyAction(ch, true));
+    }
+
+    /**
+     * Releases the key of the specified character pressed by {@link #keyDown(char)};
+     * only the {@code keyup} event is fired.
+     *
+     * @param ch the character
+     */
+    public void keyUp(final char ch) {
+        keys_.add(new CharKeyAction(ch, false));
+    }
+
+    /**
+     * Presses only the specified key code; the key stays pressed until {@link #keyUp(int)}
+     * is called for the same key code (in contrast to {@link #press(int)} no {@code keyup}
+     * is fired for keys that are not modifiers).
+     *
+     * @param keyCode the key code (e.g. {@link KeyboardEvent#DOM_VK_LEFT})
+     */
+    public void keyDown(final int keyCode) {
+        keyDown(keyCode, DEFAULT_LOCATION);
+    }
+
+    /**
+     * Presses only the specified key code at the specified location; the key stays pressed
+     * until {@link #keyUp(int, int)} is called for the same key.
+     *
+     * @param keyCode the key code (e.g. {@link KeyboardEvent#DOM_VK_SHIFT})
+     * @param location the location of the key (e.g. {@link KeyboardEvent#DOM_KEY_LOCATION_RIGHT}
+     *        for the right shift key) or {@link #DEFAULT_LOCATION}
+     */
+    public void keyDown(final int keyCode, final int location) {
+        checkKeyCode(keyCode);
+        keys_.add(new KeyCodeKeyAction(keyCode, location, true));
+    }
+
+    /**
+     * Releases the specified key code pressed by {@link #keyDown(int)}; only the
+     * {@code keyup} event is fired.
+     *
+     * @param keyCode the key code (e.g. {@link KeyboardEvent#DOM_VK_LEFT})
+     */
+    public void keyUp(final int keyCode) {
+        keyUp(keyCode, DEFAULT_LOCATION);
+    }
+
+    /**
+     * Releases the specified key code at the specified location pressed by
+     * {@link #keyDown(int, int)}; only the {@code keyup} event is fired.
+     *
+     * @param keyCode the key code (e.g. {@link KeyboardEvent#DOM_VK_SHIFT})
+     * @param location the location of the key (e.g. {@link KeyboardEvent#DOM_KEY_LOCATION_RIGHT}
+     *        for the right shift key) or {@link #DEFAULT_LOCATION}
+     */
+    public void keyUp(final int keyCode, final int location) {
+        checkKeyCode(keyCode);
+        keys_.add(new KeyCodeKeyAction(keyCode, location, false));
+    }
+
+    private static void checkKeyCode(final int keyCode) {
+        if (keyCode >= KeyboardEvent.DOM_VK_A && keyCode <= KeyboardEvent.DOM_VK_Z) {
+            throw new IllegalArgumentException("For key code " + keyCode + ", use keyDown(char) instead");
+        }
+    }
+
+    /**
+     * Sets the state of the modifier keys that are already pressed when this keyboard is typed
+     * (e.g. pressed by a previous keyboard); no events are fired for these keys.
+     *
+     * @param shift whether the shift key is pressed
+     * @param ctrl whether the control key is pressed
+     * @param alt whether the alt key is pressed
+     * @param meta whether the meta key is pressed
+     */
+    public void setPressedModifiers(final boolean shift, final boolean ctrl, final boolean alt, final boolean meta) {
+        modifiers_ = new boolean[] {shift, ctrl, alt, meta};
+    }
+
+    /**
+     * Returns the state of the already pressed modifier keys set by
+     * {@link #setPressedModifiers(boolean, boolean, boolean, boolean)}.
+     *
+     * @return the state of the shift, control, alt and meta keys or {@code null} if not set
+     */
+    boolean[] getPressedModifiers() {
+        return modifiers_;
     }
 
     /**
@@ -88,13 +262,10 @@ public class Keyboard {
 
     /**
      * Returns the keys.
-     * <p>
-     * If the length of the item is 1, then it is a character.
-     * If the length of the item is 2, the first is the key code, the second is boolean whether pressing or not
      *
-     * @return the keys
+     * @return the key actions
      */
-    List<Object[]> getKeys() {
+    List<KeyAction> getKeys() {
         return keys_;
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,8 @@
  */
 package org.htmlunit.html;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.SimpleWebTestCase;
-import org.htmlunit.junit.BrowserRunner;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for elements with onblur and onfocus attributes.
@@ -26,8 +23,8 @@ import org.htmlunit.junit.BrowserRunner;
  * @author David D. Kilzer
  * @author Marc Guillemot
  * @author Ahmed Ashour
+ * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class FocusableElementTest extends SimpleWebTestCase {
 
     /**
@@ -37,8 +34,8 @@ public class FocusableElementTest extends SimpleWebTestCase {
      */
     @Test
     public void onBlurWith2Pages() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + "  var bCalled = false;\n"
@@ -65,8 +62,8 @@ public class FocusableElementTest extends SimpleWebTestCase {
      */
     @Test
     public void focusin() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + "  function handler(_e) {\n"
@@ -105,13 +102,7 @@ public class FocusableElementTest extends SimpleWebTestCase {
         page.setFocusedElement(select2);
         page.setFocusedElement(select1);
         final String expectedString;
-        if (getBrowserVersion().isIE()) {
-            expectedString = "focusin select1,focus select1,focusout select1,focusin select2,blur select1,"
-                + "focus select2,focusout select2,focusin select1,blur select2,focus select1,";
-        }
-        else {
-            expectedString = "focus select1,blur select1,focus select2,blur select2,focus select1,";
-        }
+        expectedString = "focus select1,blur select1,focus select2,blur select2,focus select1,";
         assertEquals(expectedString, textArea.getText());
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,11 @@
  */
 package org.htmlunit.html;
 
+import java.io.Serializable;
+
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Node;
 import org.w3c.dom.traversal.NodeFilter;
-
-import org.htmlunit.corejs.javascript.Context;
 
 /**
  * In general this is an implementation of org.w3c.dom.traversal.TreeWalker.
@@ -26,13 +26,13 @@ import org.htmlunit.corejs.javascript.Context;
  * therefore we have this impl as backend.
  *
  * @see <a href="http://www.w3.org/TR/DOM-Level-2-Traversal-Range/traversal.html">
- * DOM-Level-2-Traversal-Range</a>
- * @author <a href="mailto:mike@10gen.com">Mike Dirolf</a>
+ *     DOM-Level-2-Traversal-Range</a>
+ * @author Mike Dirolf
  * @author Frank Danek
  * @author Ahmed Ashour
  * @author Ronald Brill
  */
-public class HtmlDomTreeWalker {
+public class HtmlDomTreeWalker implements Serializable {
 
     private final DomNode root_;
     private DomNode currentNode_;
@@ -58,8 +58,7 @@ public class HtmlDomTreeWalker {
     public HtmlDomTreeWalker(final DomNode root, final int whatToShow, final NodeFilter filter,
             final boolean expandEntityReferences) throws DOMException {
         if (root == null) {
-            Context.throwAsScriptRuntimeEx(new DOMException(DOMException.NOT_SUPPORTED_ERR,
-                    "root must not be null"));
+            throw new IllegalArgumentException("root must not be null");
         }
         root_ = root;
         whatToShow_ = whatToShow;
@@ -69,6 +68,8 @@ public class HtmlDomTreeWalker {
     }
 
     /**
+     * Returns the root node of this tree walker.
+     *
      * @see org.w3c.dom.traversal.TreeWalker#getRoot()
      * @return the root node
      */
@@ -77,6 +78,8 @@ public class HtmlDomTreeWalker {
     }
 
     /**
+     * Returns the node types visible to this tree walker.
+     *
      * @see org.w3c.dom.traversal.TreeWalker#getWhatToShow()
      * @return NodeFilter constant
      */
@@ -85,6 +88,8 @@ public class HtmlDomTreeWalker {
     }
 
     /**
+     * Returns the node filter used by this tree walker.
+     *
      * @see org.w3c.dom.traversal.TreeWalker#getFilter()
      * @return the filter
      */
@@ -93,14 +98,19 @@ public class HtmlDomTreeWalker {
     }
 
     /**
+     * Returns whether entity reference nodes are expanded.
+     *
      * @see org.w3c.dom.traversal.TreeWalker#getExpandEntityReferences()
      * @return the ExpandEntityReferences setting
      */
+    @SuppressWarnings("PMD.BooleanGetMethodName")
     public boolean getExpandEntityReferences() {
         return expandEntityReferences_;
     }
 
     /**
+     * Returns the current node.
+     *
      * @see org.w3c.dom.traversal.TreeWalker#getCurrentNode()
      * @return the current node
      */
@@ -109,8 +119,11 @@ public class HtmlDomTreeWalker {
     }
 
     /**
+     * Sets the current node.
+     *
      * @see org.w3c.dom.traversal.TreeWalker#setCurrentNode(Node)
      * @param currentNode the current node
+     * @throws DOMException if the current node provided is {@code null}
      */
     public void setCurrentNode(final Node currentNode) throws DOMException {
         if (currentNode == null) {
@@ -121,6 +134,8 @@ public class HtmlDomTreeWalker {
     }
 
     /**
+     * Returns the next node in document order.
+     *
      * @see org.w3c.dom.traversal.TreeWalker#nextNode()
      * @return the next node
      */
@@ -146,8 +161,7 @@ public class HtmlDomTreeWalker {
     }
 
     /**
-     * Helper method to get the first uncle node in document order (preorder
-     * traversal) from the given node.
+     * Returns the first ancestor's next sibling in document order.
      */
     private DomNode getFirstUncleNode(final DomNode n) {
         if (n == root_ || n == null) {
@@ -168,9 +182,12 @@ public class HtmlDomTreeWalker {
     }
 
     /**
+     * Returns the logical node occupying the same position as the specified actual node.
+     * <p>
      * Recursively find the logical node occupying the same position as this
      * _actual_ node. It could be the same node, a different node, or null
      * depending on filtering.
+     * </p>
      *
      * @param n The actual node we are trying to find the "equivalent" of
      * @param lookLeft If true, traverse the tree in the left direction. If
@@ -207,7 +224,7 @@ public class HtmlDomTreeWalker {
     }
 
     /**
-     * Returns whether the node is visible by the TreeWalker.
+     * Returns whether the specified node is visible to this tree walker.
      */
     private boolean isNodeVisible(final Node n) {
         if (acceptNode(n) == NodeFilter.FILTER_ACCEPT) {
@@ -246,34 +263,21 @@ public class HtmlDomTreeWalker {
      * @return the whatToShow constant for the type of specified node
      */
     public static int getFlagForNode(final Node node) {
-        switch (node.getNodeType()) {
-            case Node.ELEMENT_NODE:
-                return NodeFilter.SHOW_ELEMENT;
-            case Node.ATTRIBUTE_NODE:
-                return NodeFilter.SHOW_ATTRIBUTE;
-            case Node.TEXT_NODE:
-                return NodeFilter.SHOW_TEXT;
-            case Node.CDATA_SECTION_NODE:
-                return NodeFilter.SHOW_CDATA_SECTION;
-            case Node.ENTITY_REFERENCE_NODE:
-                return NodeFilter.SHOW_ENTITY_REFERENCE;
-            case Node.ENTITY_NODE:
-                return NodeFilter.SHOW_ENTITY;
-            case Node.PROCESSING_INSTRUCTION_NODE:
-                return NodeFilter.SHOW_PROCESSING_INSTRUCTION;
-            case Node.COMMENT_NODE:
-                return NodeFilter.SHOW_COMMENT;
-            case Node.DOCUMENT_NODE:
-                return NodeFilter.SHOW_DOCUMENT;
-            case Node.DOCUMENT_TYPE_NODE:
-                return NodeFilter.SHOW_DOCUMENT_TYPE;
-            case Node.DOCUMENT_FRAGMENT_NODE:
-                return NodeFilter.SHOW_DOCUMENT_FRAGMENT;
-            case Node.NOTATION_NODE:
-                return NodeFilter.SHOW_NOTATION;
-            default:
-                return 0;
-        }
+        return switch (node.getNodeType()) {
+            case Node.ELEMENT_NODE -> NodeFilter.SHOW_ELEMENT;
+            case Node.ATTRIBUTE_NODE -> NodeFilter.SHOW_ATTRIBUTE;
+            case Node.TEXT_NODE -> NodeFilter.SHOW_TEXT;
+            case Node.CDATA_SECTION_NODE -> NodeFilter.SHOW_CDATA_SECTION;
+            case Node.ENTITY_REFERENCE_NODE -> NodeFilter.SHOW_ENTITY_REFERENCE;
+            case Node.ENTITY_NODE -> NodeFilter.SHOW_ENTITY;
+            case Node.PROCESSING_INSTRUCTION_NODE -> NodeFilter.SHOW_PROCESSING_INSTRUCTION;
+            case Node.COMMENT_NODE -> NodeFilter.SHOW_COMMENT;
+            case Node.DOCUMENT_NODE -> NodeFilter.SHOW_DOCUMENT;
+            case Node.DOCUMENT_TYPE_NODE -> NodeFilter.SHOW_DOCUMENT_TYPE;
+            case Node.DOCUMENT_FRAGMENT_NODE -> NodeFilter.SHOW_DOCUMENT_FRAGMENT;
+            case Node.NOTATION_NODE -> NodeFilter.SHOW_NOTATION;
+            default -> 0;
+        };
     }
 
     /* Returns whether the node is skipped by the TreeWalker. */
@@ -323,6 +327,8 @@ public class HtmlDomTreeWalker {
     }
 
     /**
+     * Returns the next sibling of the current node.
+     *
      * @see org.w3c.dom.traversal.TreeWalker#nextSibling()
      * @return the next sibling node
      */
@@ -341,6 +347,8 @@ public class HtmlDomTreeWalker {
     }
 
     /**
+     * Returns the parent of the current node.
+     *
      * @see org.w3c.dom.traversal.TreeWalker#parentNode()
      * @return the parent node
      */
@@ -364,6 +372,8 @@ public class HtmlDomTreeWalker {
     }
 
     /**
+     * Returns the previous sibling of the current node.
+     *
      * @see org.w3c.dom.traversal.TreeWalker#previousSibling()
      * @return the previous sibling node
      */
@@ -382,6 +392,8 @@ public class HtmlDomTreeWalker {
     }
 
     /**
+     * Returns the last child of the current node.
+     *
      * @see org.w3c.dom.traversal.TreeWalker#lastChild()
      * @return the last child node
      */
@@ -396,6 +408,8 @@ public class HtmlDomTreeWalker {
     }
 
     /**
+     * Returns the previous node in document order.
+     *
      * @see org.w3c.dom.traversal.TreeWalker#previousNode()
      * @return the previous node
      */
@@ -410,8 +424,7 @@ public class HtmlDomTreeWalker {
     }
 
     /**
-     * Helper method to get the previous node in document order (preorder
-     * traversal) from the given node.
+     * Returns the previous node in document order from the specified node.
      */
     private DomNode getPreviousNode(final DomNode n) {
         if (n == root_) {
@@ -442,6 +455,8 @@ public class HtmlDomTreeWalker {
     }
 
     /**
+     * Returns the first child of the current node.
+     *
      * @see org.w3c.dom.traversal.TreeWalker#firstChild()
      * @return the first child node
      */

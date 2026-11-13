@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,28 +14,22 @@
  */
 package org.htmlunit.javascript.host.event;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
-
-import org.htmlunit.html.DomNode;
-import org.htmlunit.javascript.configuration.JsxClass;
-import org.htmlunit.javascript.configuration.JsxConstructor;
-import org.htmlunit.javascript.configuration.JsxFunction;
-import org.htmlunit.javascript.configuration.JsxGetter;
-
 import org.htmlunit.corejs.javascript.Context;
 import org.htmlunit.corejs.javascript.Function;
 import org.htmlunit.corejs.javascript.NativeObject;
 import org.htmlunit.corejs.javascript.Scriptable;
 import org.htmlunit.corejs.javascript.ScriptableObject;
+import org.htmlunit.corejs.javascript.VarScope;
+import org.htmlunit.html.DomNode;
+import org.htmlunit.javascript.JavaScriptEngine;
+import org.htmlunit.javascript.configuration.JsxClass;
+import org.htmlunit.javascript.configuration.JsxConstructor;
+import org.htmlunit.javascript.configuration.JsxGetter;
 
 /**
  * JavaScript object representing a {@code PointerEvent}.
  * @see <a href="http://www.w3.org/TR/pointerevents/">W3C Spec</a>
- * @see <a href="http://msdn.microsoft.com/en-us/library/ie/hh772103.aspx">MSDN</a>
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/PointerEvent">MDN</a>
  *
  * @author Frank Danek
  * @author Ahmed Ashour
@@ -50,6 +44,8 @@ public class PointerEvent extends MouseEvent {
     private double pressure_;
     private int tiltX_;
     private int tiltY_;
+    private double altitudeAngle_;
+    private double azimuthAngle_;
     private String pointerType_ = "";
     private boolean isPrimary_;
 
@@ -57,25 +53,30 @@ public class PointerEvent extends MouseEvent {
      * Default constructor.
      */
     public PointerEvent() {
+        super();
     }
 
     /**
      * JavaScript constructor.
      * @param cx the current context
+     * @param scope the scope
      * @param args the arguments to the WebSocket constructor
      * @param ctorObj the function object
      * @param inNewExpr Is new or not
      * @return the java object to allow JavaScript to access
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public static Scriptable jsConstructor(
-            final Context cx, final Object[] args, final Function ctorObj,
-            final boolean inNewExpr) {
+    @JsxConstructor
+    public static Scriptable jsConstructor(final Context cx, final VarScope scope,
+            final Object[] args, final Function ctorObj, final boolean inNewExpr) {
         final PointerEvent event = new PointerEvent();
+
+        event.setBubbles(false);
+        event.setCancelable(false);
+
+        event.altitudeAngle_ = Math.PI / 2d;
+
         if (args.length != 0) {
-            event.setType(Context.toString(args[0]));
-            event.setBubbles(false);
-            event.setCancelable(false);
+            event.setType(JavaScriptEngine.toString(args[0]));
             event.width_ = 1;
             event.height_ = 1;
         }
@@ -83,6 +84,7 @@ public class PointerEvent extends MouseEvent {
         if (args.length > 1) {
             final NativeObject object = (NativeObject) args[1];
             event.setBubbles((boolean) getValue(object, "bubbles", event.isBubbles()));
+
             event.pointerId_ = (int) getValue(object, "pointerId", event.pointerId_);
             event.width_ = (int) getValue(object, "width", event.width_);
             event.height_ = (int) getValue(object, "height", event.height_);
@@ -91,6 +93,11 @@ public class PointerEvent extends MouseEvent {
             event.tiltY_ = (int) getValue(object, "tiltY", event.tiltY_);
             event.pointerType_ = (String) getValue(object, "pointerType", event.pointerType_);
             event.isPrimary_ = (boolean) getValue(object, "isPrimary", event.isPrimary_);
+
+            if (object.has("tiltX", object) || object.has("tiltY", object)) {
+                event.altitudeAngle_ = 1.4105561004354874;
+                event.azimuthAngle_ = 0.8628261898537035;
+            }
         }
         return event;
     }
@@ -105,13 +112,13 @@ public class PointerEvent extends MouseEvent {
                 value = String.valueOf(value);
             }
             else if (defaulValue instanceof Double) {
-                value = Context.toNumber(value);
+                value = JavaScriptEngine.toNumber(value);
             }
             else if (defaulValue instanceof Number) {
-                value = (int) Context.toNumber(value);
+                value = (int) JavaScriptEngine.toNumber(value);
             }
             else {
-                value = Context.toBoolean(value);
+                value = JavaScriptEngine.toBoolean(value);
             }
         }
         return value;
@@ -130,8 +137,7 @@ public class PointerEvent extends MouseEvent {
      */
     public PointerEvent(final DomNode domNode, final String type, final boolean shiftKey,
             final boolean ctrlKey, final boolean altKey, final int button, final int detail) {
-        super(domNode, type, shiftKey, ctrlKey, altKey, button);
-        setDetail(detail);
+        super(domNode, type, shiftKey, ctrlKey, altKey, button, detail);
 
         pointerId_ = 1;
         width_ = 1;
@@ -141,78 +147,9 @@ public class PointerEvent extends MouseEvent {
     }
 
     /**
-     * Used for initializing the pointer event.
+     * Returns the pointer identifier.
      *
-     * @param type the event type
-     * @param bubbles can the event bubble
-     * @param cancelable can the event be canceled
-     * @param view the view to use for this event
-     * @param detail the detail to set for the event
-     * @param screenX the initial value of screenX
-     * @param screenY the initial value of screenY
-     * @param clientX the initial value of clientX
-     * @param clientY the initial value of clientY
-     * @param ctrlKey is the control key pressed
-     * @param altKey is the alt key pressed
-     * @param shiftKey is the shift key pressed
-     * @param metaKey is the meta key pressed
-     * @param button what mouse button is pressed
-     * @param relatedTarget is there a related target for the event
-     * @param offsetX the initial value of offsetX
-     * @param offsetY the initial value of offsetY
-     * @param width the initial value of width
-     * @param height the initial value of height
-     * @param pressure the initial value of pressure
-     * @param rotation the initial value of rotation
-     * @param tiltX the initial value of tiltX
-     * @param tiltY the initial value of tiltY
-     * @param pointerId the pointerId
-     * @param pointerType the pointer type
-     * @param hwTimestamp the initial value of hwTimestamp
-     * @param isPrimary the initial value of isPrimary
-     */
-    @JsxFunction(IE)
-    public void initPointerEvent(final String type,
-            final boolean bubbles,
-            final boolean cancelable,
-            final Object view,
-            final int detail,
-            final int screenX,
-            final int screenY,
-            final int clientX,
-            final int clientY,
-            final boolean ctrlKey,
-            final boolean altKey,
-            final boolean shiftKey,
-            final boolean metaKey,
-            final int button,
-            final Object relatedTarget,
-            final int offsetX,
-            final int offsetY,
-            final int width,
-            final int height,
-            final Double pressure,
-            final int rotation,
-            final int tiltX,
-            final int tiltY,
-            final int pointerId,
-            final String pointerType,
-            final int hwTimestamp,
-            final boolean isPrimary) {
-        super.initMouseEvent(type, bubbles, cancelable, view, detail, screenX, screenY, clientX, clientY, ctrlKey,
-            altKey, shiftKey, metaKey, button, relatedTarget);
-        width_ = width;
-        height_ = height;
-        pressure_ = pressure.doubleValue();
-        tiltX_ = tiltX;
-        tiltY_ = tiltY;
-        pointerId_ = pointerId;
-        pointerType_ = pointerType;
-        isPrimary_ = isPrimary;
-    }
-
-    /**
-     * @return the pointerId
+     * @return the pointer identifier
      */
     @JsxGetter
     public long getPointerId() {
@@ -220,7 +157,9 @@ public class PointerEvent extends MouseEvent {
     }
 
     /**
-     * @return the width
+     * Returns the pointer contact width.
+     *
+     * @return the pointer contact width
      */
     @JsxGetter
     public long getWidth() {
@@ -228,7 +167,9 @@ public class PointerEvent extends MouseEvent {
     }
 
     /**
-     * @return the height
+     * Returns the pointer contact height.
+     *
+     * @return the pointer contact height
      */
     @JsxGetter
     public long getHeight() {
@@ -236,7 +177,9 @@ public class PointerEvent extends MouseEvent {
     }
 
     /**
-     * @return the pressure
+     * Returns the normalized pointer pressure.
+     *
+     * @return the normalized pointer pressure
      */
     @JsxGetter
     public double getPressure() {
@@ -244,7 +187,9 @@ public class PointerEvent extends MouseEvent {
     }
 
     /**
-     * @return the tiltX
+     * Returns the pointer tilt along the X axis.
+     *
+     * @return the pointer tilt along the X axis
      */
     @JsxGetter
     public long getTiltX() {
@@ -252,7 +197,9 @@ public class PointerEvent extends MouseEvent {
     }
 
     /**
-     * @return the tiltY
+     * Returns the pointer tilt along the Y axis.
+     *
+     * @return the pointer tilt along the Y axis
      */
     @JsxGetter
     public long getTiltY() {
@@ -260,7 +207,9 @@ public class PointerEvent extends MouseEvent {
     }
 
     /**
-     * @return the pointerType
+     * Returns the pointer type.
+     *
+     * @return the pointer type
      */
     @JsxGetter
     public String getPointerType() {
@@ -268,7 +217,9 @@ public class PointerEvent extends MouseEvent {
     }
 
     /**
-     * @return the isPrimary
+     * Returns whether this is the primary pointer.
+     *
+     * @return whether this is the primary pointer
      */
     @JsxGetter(propertyName = "isPrimary")
     public boolean isPrimary_js() {
@@ -276,18 +227,35 @@ public class PointerEvent extends MouseEvent {
     }
 
     /**
-     * @return the pointerType
+     * Returns the pointer altitude angle.
+     *
+     * @return the pointer altitude angle
      */
-    @JsxGetter({CHROME, EDGE})
+    @JsxGetter
+    @SuppressWarnings("PMD.UseUnderscoresInNumericLiterals")
     public double getAltitudeAngle() {
-        return 1.5707963267948966;
+        return altitudeAngle_;
     }
 
     /**
-     * @return the pointerType
+     * Returns the pointer azimuth angle.
+     *
+     * @return the pointer azimuth angle
      */
-    @JsxGetter({CHROME, EDGE})
+    @JsxGetter
     public double getAzimuthAngle() {
+        return azimuthAngle_;
+    }
+
+    /**
+     * Returns the persistent device identifier.
+     *
+     * @return the persistent device identifier
+     */
+    @JsxGetter
+    public double getPersistentDeviceId() {
+        // dummy but valid regarding the spec
+        // https://w3c.github.io/pointerevents/#dom-pointerevent-persistentdeviceid
         return 0d;
     }
 }

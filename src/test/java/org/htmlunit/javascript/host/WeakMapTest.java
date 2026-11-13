@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,9 @@
  */
 package org.htmlunit.javascript.host;
 
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.IE;
-
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for WeakMap.
@@ -30,19 +24,16 @@ import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
  * @author Ahmed Ashour
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class WeakMapTest extends WebDriverTestCase {
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"true", "one"},
-            IE = {"false", "undefined"})
-    @NotYetImplemented(IE)
+    @Alerts({"true", "one"})
     public void constructorArray() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -62,12 +53,10 @@ public class WeakMapTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "exception",
-            IE = "false")
-    @NotYetImplemented(IE)
+    @Alerts("TypeError")
     public void constructorSetParam() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -75,7 +64,7 @@ public class WeakMapTest extends WebDriverTestCase {
             + "    var myMap = new WeakMap(new Set('test'));\n"
             + "    log(myMap.has('test'));\n"
             + "  } catch(e) {\n"
-            + "    log('exception');\n"
+            + "    logEx(e);\n"
             + "  }\n"
             + "}\n"
             + "</script></head><body onload='test()'>\n"
@@ -88,12 +77,10 @@ public class WeakMapTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "true",
-            IE = "false")
-    @NotYetImplemented(IE)
+    @Alerts("true")
     public void constructorMapParam() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -104,7 +91,7 @@ public class WeakMapTest extends WebDriverTestCase {
             + "    var myMap = new WeakMap(testMap);\n"
             + "    log(myMap.has(foo));\n"
             + "  } catch(e) {\n"
-            + "    log('exception');\n"
+            + "    logEx(e);\n"
             + "  }\n"
             + "}\n"
             + "</script></head><body onload='test()'>\n"
@@ -117,11 +104,10 @@ public class WeakMapTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "true",
-            IE = {})
+    @Alerts("true")
     public void constructorIteratorParam() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -145,7 +131,7 @@ public class WeakMapTest extends WebDriverTestCase {
             + "      var myMap = new WeakMap(myIterable);\n"
             + "      log(myMap.has(foo));\n"
             + "    } catch(e) {\n"
-            + "      log('exception');\n"
+            + "      logEx(e);\n"
             + "    }\n"
             + "  }"
             + "}\n"
@@ -160,11 +146,10 @@ public class WeakMapTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"undefined", "value2"},
-            IE = {"undefined", "undefined"})
-    @NotYetImplemented(IE)
+    @Alerts({"undefined", "value2"})
     public void get() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -182,9 +167,10 @@ public class WeakMapTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("exception")
+    @Alerts("TypeError")
     public void setNonObject() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -193,7 +179,7 @@ public class WeakMapTest extends WebDriverTestCase {
             + "      var myMap = new WeakMap(kvArray);\n"
             + "      try {\n"
             + "        myMap.set(1, 2);\n"
-            + "      } catch(e) {log('exception')}\n"
+            + "      } catch(e) { logEx(e) }\n"
             + "    }\n"
             + "  }\n"
             + "</script></head><body onload='test()'>\n"

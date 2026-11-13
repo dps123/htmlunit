@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,9 +29,10 @@ import org.apache.http.auth.NTCredentials;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
 import org.htmlunit.httpclient.HtmlUnitUsernamePasswordCredentials;
+import org.htmlunit.util.SerializableLock;
 
 /**
- * Default HtmlUnit implementation of the <code>CredentialsProvider</code> interface. Provides
+ * Default HtmlUnit implementation of the {@code CredentialsProvider} interface. Provides
  * credentials for both web servers and proxies. Supports Digest
  * authentication, Socks authentication and Basic HTTP authentication.
  *
@@ -47,7 +48,7 @@ public class DefaultCredentialsProvider implements CredentialsProvider, Serializ
     /** The {@code null} value represents any host. */
     public static final String ANY_HOST = null;
 
-    /**The {@code -1} value represents any port. */
+    /** The {@code -1} value represents any port. */
     public static final int ANY_PORT = -1;
 
     /** The {@code null} value represents any realm. */
@@ -56,10 +57,16 @@ public class DefaultCredentialsProvider implements CredentialsProvider, Serializ
     /** The {@code null} value represents any authentication scheme. */
     public static final String ANY_SCHEME = null;
 
-    private static SocksProxyAuthenticator SocksAuthenticator_;
+    // volatile: written only inside initSocksAuthenticatorIfNeeded (guarded by SOCKS_AUTHENTICATOR_LOCK),
+    // but declared volatile to guard against unsynchronized reads in future refactors.
+    private static volatile SocksProxyAuthenticator SocksAuthenticator_;
+    private static final Object SOCKS_AUTHENTICATOR_LOCK = new Object();
+
+    /** Guards the {@link #credentialsMap_}. */
+    private final SerializableLock lock_ = new SerializableLock();
     private final Map<AuthScopeProxy, Credentials> credentialsMap_ = new HashMap<>();
 
-    // Because this is used for the whole JVM i try to make it as less invasive as possible.
+    // Because this is used for the whole JVM I try to make it as less invasive as possible.
     // But in general this might disturb other application running on the same JVM.
     private static final class SocksProxyAuthenticator extends Authenticator {
         private CredentialsProvider credentialsProvider_;
@@ -91,10 +98,12 @@ public class DefaultCredentialsProvider implements CredentialsProvider, Serializ
      * HTTP authentication. If you are using sensitive username/password information, please do
      * NOT use this method. If you add credentials using this method, any server that requires
      * authentication may receive the specified username and password.
+     *
      * @param username the username for the new credentials
      * @param password the password for the new credentials
+     * @see #addCredentials(String, char[], String, int, String)
      */
-    public void addCredentials(final String username, final String password) {
+    public void addCredentials(final String username, final char[] password) {
         addCredentials(username, password, ANY_HOST, ANY_PORT, ANY_REALM);
     }
 
@@ -102,88 +111,108 @@ public class DefaultCredentialsProvider implements CredentialsProvider, Serializ
      * Adds credentials for the specified username/password on the specified host/port for the
      * specified realm. The credentials may be for any authentication scheme, including NTLM,
      * digest and basic HTTP authentication.
+     *
      * @param username the username for the new credentials
      * @param password the password for the new credentials
      * @param host the host to which to the new credentials apply ({@code null} if applicable to any host)
      * @param port the port to which to the new credentials apply (negative if applicable to any port)
      * @param realm the realm to which to the new credentials apply ({@code null} if applicable to any realm)
      */
-    public void addCredentials(final String username, final String password, final String host,
+    public void addCredentials(final String username, final char[] password, final String host,
             final int port, final String realm) {
         final AuthScope authscope = new AuthScope(host, port, realm, ANY_SCHEME);
-        final Credentials credentials = new HtmlUnitUsernamePasswordCredentials(username, password);
+        final HtmlUnitUsernamePasswordCredentials credentials =
+                    new HtmlUnitUsernamePasswordCredentials(username, password);
         setCredentials(authscope, credentials);
     }
 
     /**
      * Adds NTLM credentials for the specified username/password on the specified host/port.
+     *
+     * <p>Note: due to a limitation of the underlying {@link NTCredentials} class, the password
+     * is converted to a {@link String} internally and cannot be zeroed from memory after use.
+     * </p>
+     *
      * @param username the username for the new credentials; should not include the domain to authenticate with;
-     *        for example: <code>"user"</code> is correct whereas <code>"DOMAIN\\user"</code> is not
+     *        for example: {@code "user"} is correct whereas {@code "DOMAIN\\user"} is not
      * @param password the password for the new credentials
      * @param host the host to which to the new credentials apply ({@code null} if applicable to any host)
      * @param port the port to which to the new credentials apply (negative if applicable to any port)
-     * @param workstation The workstation the authentication request is originating from.
-     *        Essentially, the computer name for this machine.
+     * @param workstation the workstation the authentication request is originating from;
+     *        essentially, the computer name for this machine
      * @param domain the domain to authenticate within
      */
-    public void addNTLMCredentials(final String username, final String password, final String host,
+    public void addNTLMCredentials(final String username, final char[] password, final String host,
             final int port, final String workstation, final String domain) {
         final AuthScope authscope = new AuthScope(host, port, ANY_REALM, ANY_SCHEME);
-        final Credentials credentials = new NTCredentials(username, password, workstation, domain);
+        final NTCredentials credentials = new NTCredentials(username, String.valueOf(password), workstation, domain);
         setCredentials(authscope, credentials);
     }
 
     /**
      * Adds Socks credentials for the specified username/password on the specified host/port.
+     *
+     * <p>Note: the SOCKS authenticator is a JVM-wide singleton. If multiple
+     * {@link DefaultCredentialsProvider} instances add SOCKS credentials, only the first
+     * instance's credentials will be used for SOCKS authentication.
+     * </p>
+     *
      * @param username the username for the new credentials
      * @param password the password for the new credentials
      * @param host the host to which to the new credentials apply ({@code null} if applicable to any host)
      * @param port the port to which to the new credentials apply (negative if applicable to any port)
      */
-    public void addSocksCredentials(final String username, final String password, final String host,
+    public void addSocksCredentials(final String username, final char[] password, final String host,
             final int port) {
         final AuthScope authscope = new AuthScope(host, port, ANY_REALM, ANY_SCHEME);
-        final Credentials credentials = new HtmlUnitUsernamePasswordCredentials(username, password);
+        final HtmlUnitUsernamePasswordCredentials credentials =
+                    new HtmlUnitUsernamePasswordCredentials(username, password);
         setCredentials(authscope, credentials);
 
         initSocksAuthenticatorIfNeeded(this);
     }
 
-    private static synchronized void initSocksAuthenticatorIfNeeded(final CredentialsProvider provider) {
-        if (SocksAuthenticator_ == null) {
-            SocksAuthenticator_ = new SocksProxyAuthenticator();
-            SocksAuthenticator_.credentialsProvider_ = provider;
+    private static void initSocksAuthenticatorIfNeeded(final CredentialsProvider provider) {
+        synchronized (SOCKS_AUTHENTICATOR_LOCK) {
+            if (SocksAuthenticator_ == null) {
+                SocksAuthenticator_ = new SocksProxyAuthenticator();
+                SocksAuthenticator_.credentialsProvider_ = provider;
 
-            Authenticator.setDefault(SocksAuthenticator_);
+                Authenticator.setDefault(SocksAuthenticator_);
+            }
         }
     }
 
     /**
      * {@inheritDoc}
+     *
+     * @throws IllegalArgumentException if {@code authscope} is {@code null}, if {@code credentials}
+     *         is {@code null}, or if the credentials type is not one of
+     *         {@link UsernamePasswordCredentials}, {@link HtmlUnitUsernamePasswordCredentials},
+     *         or {@link NTCredentials}
      */
     @Override
-    public synchronized void setCredentials(final AuthScope authscope, final Credentials credentials) {
+    public void setCredentials(final AuthScope authscope, final Credentials credentials) {
         if (authscope == null) {
             throw new IllegalArgumentException("Authentication scope may not be null");
         }
+        if (credentials == null) {
+            throw new IllegalArgumentException("Credentials may not be null");
+        }
 
-        if ((credentials instanceof UsernamePasswordCredentials)
-                || (credentials instanceof HtmlUnitUsernamePasswordCredentials)
-                || (credentials instanceof NTCredentials)) {
-            credentialsMap_.put(new AuthScopeProxy(authscope), credentials);
+        if (credentials instanceof UsernamePasswordCredentials
+                || credentials instanceof HtmlUnitUsernamePasswordCredentials
+                || credentials instanceof NTCredentials) {
+            synchronized (lock_) {
+                credentialsMap_.put(new AuthScopeProxy(authscope), credentials);
+            }
             return;
         }
 
         throw new IllegalArgumentException("Unsupported Credential type: " + credentials.getClass().getName());
     }
 
-    /**
-     * Find matching {@link Credentials credentials} for the given authentication scope.
-     *
-     * @param map the credentials hash map
-     * @param authscope the {@link AuthScope authentication scope}
-     * @return the credentials
-     */
+    // Callers must hold the lock_ of the enclosing DefaultCredentialsProvider instance.
     private static Credentials matchCredentials(final Map<AuthScopeProxy, Credentials> map, final AuthScope authscope) {
         Credentials creds = map.get(new AuthScopeProxy(authscope));
         if (creds == null) {
@@ -208,33 +237,49 @@ public class DefaultCredentialsProvider implements CredentialsProvider, Serializ
      * {@inheritDoc}
      */
     @Override
-    public synchronized Credentials getCredentials(final AuthScope authscope) {
+    public Credentials getCredentials(final AuthScope authscope) {
         if (authscope == null) {
             throw new IllegalArgumentException("Authentication scope may not be null");
         }
-        return matchCredentials(credentialsMap_, authscope);
+        synchronized (lock_) {
+            return matchCredentials(credentialsMap_, authscope);
+        }
     }
 
     /**
-     * Removes the credentials from the AuthScope.
-     * @param authscope the AuthScope to remove the credentials of
-     * @return whether it was removed or not
+     * Removes the credentials that best match the given {@link AuthScope}.
+     * An exact scope match is preferred over a fuzzy best-match, consistent
+     * with the resolution strategy used by {@link #getCredentials(AuthScope)}.
+     *
+     * @param authscope the {@link AuthScope} whose credentials should be removed;
+     *        must not be {@code null}
+     * @return {@code true} if credentials were removed; {@code false} if no match was found
      */
-    public synchronized boolean removeCredentials(final AuthScope authscope) {
+    public boolean removeCredentials(final AuthScope authscope) {
         if (authscope == null) {
             throw new IllegalArgumentException("Authentication scope may not be null");
         }
-        int bestMatchFactor = -1;
-        AuthScopeProxy bestMatch = null;
-        for (final AuthScopeProxy proxy : credentialsMap_.keySet()) {
-            final AuthScope current = proxy.getAuthScope();
-            final int factor = authscope.match(current);
-            if (factor > bestMatchFactor) {
-                bestMatchFactor = factor;
-                bestMatch = proxy;
+
+        synchronized (lock_) {
+            // try exact match first, consistent with matchCredentials
+            final AuthScopeProxy exactKey = new AuthScopeProxy(authscope);
+            if (credentialsMap_.remove(exactKey) != null) {
+                return true;
             }
+
+            // fall back to best-match scoring
+            int bestMatchFactor = -1;
+            AuthScopeProxy bestMatch = null;
+            for (final AuthScopeProxy proxy : credentialsMap_.keySet()) {
+                final AuthScope current = proxy.getAuthScope();
+                final int factor = authscope.match(current);
+                if (factor > bestMatchFactor) {
+                    bestMatchFactor = factor;
+                    bestMatch = proxy;
+                }
+            }
+            return credentialsMap_.remove(bestMatch) != null;
         }
-        return credentialsMap_.remove(bestMatch) != null;
     }
 
     /**
@@ -242,20 +287,24 @@ public class DefaultCredentialsProvider implements CredentialsProvider, Serializ
      */
     @Override
     public String toString() {
-        return credentialsMap_.toString();
+        synchronized (lock_) {
+            return credentialsMap_.toString();
+        }
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public synchronized void clear() {
-        credentialsMap_.clear();
+    public void clear() {
+        synchronized (lock_) {
+            credentialsMap_.clear();
+        }
     }
 
     /**
-     * We have to wrap {@link AuthScope} instances in a serializable proxy so that the
-     * {@link DefaultCredentialsProvider} class can be serialized correctly.
+     * Serialization proxy for {@link AuthScope}, which is not itself {@link Serializable}.
+     * Required to allow {@link DefaultCredentialsProvider} to be serialized correctly.
      */
     private static class AuthScopeProxy implements Serializable {
         private AuthScope authScope_;
@@ -290,7 +339,7 @@ public class DefaultCredentialsProvider implements CredentialsProvider, Serializ
 
         @Override
         public boolean equals(final Object obj) {
-            return obj instanceof AuthScopeProxy && authScope_.equals(((AuthScopeProxy) obj).getAuthScope());
+            return obj instanceof AuthScopeProxy asp && authScope_.equals(asp.getAuthScope());
         }
     }
 }

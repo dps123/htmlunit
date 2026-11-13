@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,14 @@
  */
 package org.htmlunit.javascript.host.css;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.openqa.selenium.WebDriver;
+import java.nio.charset.StandardCharsets;
 
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.html.HtmlPageTest;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.HtmlUnitNYI;
 import org.htmlunit.util.UrlUtils;
+import org.junit.jupiter.api.Test;
+import org.openqa.selenium.WebDriver;
 
 /**
  * Tests for CSS selectors.
@@ -33,7 +31,6 @@ import org.htmlunit.util.UrlUtils;
  * @author Ahmed Ashour
  * @author Frank Danek
  */
-@RunWith(BrowserRunner.class)
 public class CSSSelectorTest extends WebDriverTestCase {
 
     /**
@@ -42,8 +39,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"0", "0"})
     public void querySelectorAll_nullUndefined() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -66,19 +63,19 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts({"exception", "exception"})
+    @Alerts({"SyntaxError/DOMException", "SyntaxError/DOMException"})
     public void querySelectorAll_emptyString() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  try {\n"
             + "    log(document.querySelectorAll(''));\n"
-            + "  } catch(e) {log('exception')}\n"
+            + "  } catch(e) { logEx(e) }\n"
             + "  try {\n"
             + "    log(document.querySelectorAll('  '));\n"
-            + "  } catch(e) {log('exception')}\n"
+            + "  } catch(e) { logEx(e) }\n"
             + "}\n"
             + "</script></head>\n"
             + "<body onload='test()'>\n"
@@ -100,8 +97,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"li2", "li1", "li2", "li1", "li3", "li1", "2", "li1", "li2"})
     public void nth_child() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -134,8 +131,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"1", "li2", "2", "li1", "li3"})
     public void nth_child_even_odd() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -163,8 +160,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"1", "[object HTMLBodyElement]", "1", "0"})
     public void childSelector_html_body() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -188,15 +185,15 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts("exception")
+    @Alerts("SyntaxError/DOMException")
     public void nth_child_no_argument() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_ + "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  try {\n"
             + "    log(document.querySelectorAll('li:nth-child()'));\n"
-            + "  } catch (e) {log('exception')}\n"
+            + "  } catch(e) { logEx(e) }\n"
             + "}\n"
             + "</script></head>\n"
             + "<body onload='test()'>\n"
@@ -216,8 +213,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"li1", "li4", "li7", "li10"})
     public void nth_child_equation() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_ + "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  var list = document.querySelectorAll('li:nth-child(3n+1)');\n"
@@ -250,15 +247,15 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts("exception")
+    @Alerts("SyntaxError/DOMException")
     public void invalid() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  try {\n"
             + "    log(document.querySelectorAll('td:gt(4)').length);\n"
-            + "  } catch(e) {log('exception')}\n"
+            + "  } catch(e) { logEx(e) }\n"
             + "}\n"
             + "</script></head>\n"
             + "<body onload='test()'>\n"
@@ -273,8 +270,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"1", "ul2"})
     public void directAdjacentSelector() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -299,8 +296,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"1", "thing1"})
     public void prefixAttribute() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -324,11 +321,10 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"2", "thing1", "tHIng2"},
-            IE = {})
-    @HtmlUnitNYI(IE = {"2", "thing1", "tHIng2"})
+    @Alerts({"2", "thing1", "tHIng2"})
     public void prefixAttributeCaseInSensitive() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -355,8 +351,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts("0")
     public void prefixAttributeEmpty() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -383,8 +379,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"1", "something"})
     public void suffixAttribute() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -408,11 +404,10 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"2", "something", "AnyThinG"},
-            IE = {})
-    @HtmlUnitNYI(IE = {"2", "something", "AnyThinG"})
+    @Alerts({"2", "something", "AnyThinG"})
     public void suffixAttributeCaseInSensitive() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -439,8 +434,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts("0")
     public void suffixAttributeEmpty() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -467,8 +462,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"2", "something", "thing2"})
     public void substringAttribute() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -492,11 +487,10 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"2", "sometHIng", "thinG2"},
-            IE = {})
-    @HtmlUnitNYI(IE = {"2", "sometHIng", "thinG2"})
+    @Alerts({"2", "sometHIng", "thinG2"})
     public void substringAttributeInSensitive() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -522,8 +516,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts("0")
     public void substringAttributeEmpty() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -550,8 +544,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"2", "id1", "id2"})
     public void oneOfAttribute() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -575,12 +569,10 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"2", "id1", "id2"},
-            IE = {})
-    @HtmlUnitNYI(IE = {"2", "id1", "id2"})
+    @Alerts({"2", "id1", "id2"})
     public void oneOfAttributeInSensitive() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -606,8 +598,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts("0")
     public void oneOfAttributeEmpty() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -631,8 +623,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"2", "id2", "id3"})
     public void hasAttribute() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -659,8 +651,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"5", "id1", "id2", "id5", "id6", "id7"})
     public void hyphenSeparatedAttributeValue() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -693,12 +685,10 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"5", "id1", "id2", "id5", "id6", "id7"},
-            IE = {})
-    @HtmlUnitNYI(IE = {"5", "id1", "id2", "id5", "id6", "id7"})
+    @Alerts({"5", "id1", "id2", "id5", "id6", "id7"})
     public void hyphenSeparatedAttributeValueInSensitive() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -733,8 +723,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"2", "id1", "id4"})
     public void hyphenSeparatedAttributeValueHyphenInSelector() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -762,8 +752,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"2", "id2", "id6"})
     public void hyphenSeparatedAttributeValueEmpty() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -794,8 +784,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"1", "id3"})
     public void emptyAttributeValue() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -822,8 +812,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"2", "ul2", "ul3"})
     public void generalAdjacentSelector() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -850,8 +840,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"li3", "2", "li1", "li3"})
     public void nth_last_child() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -878,8 +868,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"2", "div1", "div3", "2", "div1", "div3", "2", "div1", "div3", "0"})
     public void nth_last_child2() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -920,8 +910,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts("id3")
     public void nth_of_type() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -945,8 +935,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts("id3")
     public void nth_last_of_type() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -969,8 +959,7 @@ public class CSSSelectorTest extends WebDriverTestCase {
      */
     @Test
     public void pseudoAfter() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -997,8 +986,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"1", "checkbox2", "1", "checkbox2"})
     public void pseudoCheckboxChecked() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -1027,8 +1016,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"1", "radio2", "1", "radio2"})
     public void pseudoRadioChecked() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -1057,14 +1046,10 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"theform", "id3"},
-            IE = "id3") //minLength and maxLength not supported in IE
-    @HtmlUnitNYI(CHROME = "id3",
-            EDGE = "id3",
-            FF = "id3",
-            FF_ESR = "id3")
+    @Alerts({"theform", "id3"})
     public void pseudoInvalid() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
                 + "function test() {\n"
@@ -1096,13 +1081,9 @@ public class CSSSelectorTest extends WebDriverTestCase {
      */
     @Test
     @Alerts({"id1", "id2", "id4", "id5", "id6"})
-    @HtmlUnitNYI(CHROME = {"", "", "", "", "theform", "id1", "id2", "id4", "id5", "id6", "id7"},
-            EDGE = {"", "", "", "", "theform", "id1", "id2", "id4", "id5", "id6", "id7"},
-            FF = {"", "", "", "", "theform", "id1", "id2", "id4", "id5", "id6", "id7"},
-            FF_ESR = {"", "", "", "", "theform", "id1", "id2", "id4", "id5", "id6", "id7"},
-            IE = {"", "", "", "", "theform", "id1", "id2", "id4", "id5", "id6", "id7"})
     public void pseudoValid() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
                 + "function test() {\n"
@@ -1133,8 +1114,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts("li1")
     public void first_child() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -1158,8 +1139,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts("li3")
     public void last_child() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -1183,8 +1164,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts("id2")
     public void first_of_type() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -1211,12 +1192,10 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"2", "link_2", "link_3"},
-            IE = "exception")
-    @HtmlUnitNYI(IE = {"2", "link_2", "link_3"})
+    @Alerts({"2", "link_2", "link_3"})
     public void invalid_not() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -1225,7 +1204,7 @@ public class CSSSelectorTest extends WebDriverTestCase {
             + "    log(found.length);\n"
             + "    log(found[0].id);\n"
             + "    log(found[1].id);\n"
-            + "  } catch(e) {log('exception')}\n"
+            + "  } catch(e) { logEx(e) }\n"
             + "}\n"
             + "</script></head>\n"
             + "<body onload='test()'>\n"
@@ -1247,8 +1226,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts("id4")
     public void last_of_type() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -1274,8 +1253,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts("id3")
     public void only_child() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -1301,8 +1280,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts("id3")
     public void only_of_type() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -1328,8 +1307,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"id2", "span1"})
     public void empty() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -1353,8 +1332,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts("id2")
     public void not() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -1373,18 +1352,17 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "id2",
-            IE = "exception")
-    @HtmlUnitNYI(IE = "id2")
+    @Alerts("id2")
     public void notWithFirstOfType() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  try {\n"
             + "    log(document.querySelectorAll('div:not(div:first-of-type)')[0].id);\n"
-            + "  } catch(e) {log('exception')}\n"
+            + "  } catch(e) { logEx(e) }\n"
             + "}\n"
             + "</script></head>\n"
             + "<body onload='test()'>\n"
@@ -1400,12 +1378,11 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"2", "id2", "id3", "2", "id1", "id3", "2", "id1", "id2",
-                       "3", "id1", "id2", "id3"},
-            IE = "exception")
-    @HtmlUnitNYI(IE = {"2", "id2", "id3", "2", "id1", "id3", "2", "id1", "id2", "3", "id1", "id2", "id3"})
+    @Alerts({"2", "id2", "id3", "2", "id1", "id3", "2", "id1", "id2",
+             "3", "id1", "id2", "id3"})
     public void notWithNthOfType() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -1431,7 +1408,7 @@ public class CSSSelectorTest extends WebDriverTestCase {
             + "    log(res[0].id);\n"
             + "    log(res[1].id);\n"
             + "    log(res[2].id);\n"
-            + "  } catch(e) {log('exception')}\n"
+            + "  } catch(e) { logEx(e) }\n"
             + "}\n"
             + "</script></head>\n"
             + "<body onload='test()'>\n"
@@ -1447,18 +1424,17 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "id2",
-            IE = "exception")
-    @HtmlUnitNYI(IE = "id2")
+    @Alerts("id2")
     public void notWithLastOfType() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  try {\n"
             + "    log(document.querySelectorAll('div:not(div:last-of-type)')[1].id);\n"
-            + "  } catch(e) {log('exception')}\n"
+            + "  } catch(e) { logEx(e) }\n"
             + "}\n"
             + "</script></head>\n"
             + "<body onload='test()'>\n"
@@ -1474,12 +1450,11 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"2", "id1", "id2", "2", "id1", "id3", "2", "id2", "id3",
-                       "3", "id1", "id2", "id3"},
-            IE = "exception")
-    @HtmlUnitNYI(IE = {"2", "id1", "id2", "2", "id1", "id3", "2", "id2", "id3", "3", "id1", "id2", "id3"})
+    @Alerts({"2", "id1", "id2", "2", "id1", "id3", "2", "id2", "id3",
+             "3", "id1", "id2", "id3"})
     public void notWithNthLastOfType() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -1505,7 +1480,7 @@ public class CSSSelectorTest extends WebDriverTestCase {
             + "    log(res[0].id);\n"
             + "    log(res[1].id);\n"
             + "    log(res[2].id);\n"
-            + "  } catch(e) {log('exception')}\n"
+            + "  } catch(e) { logEx(e) }\n"
             + "}\n"
             + "</script></head>\n"
             + "<body onload='test()'>\n"
@@ -1523,8 +1498,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"2", "item_2", "item_3"})
     public void childNot() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=9'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -1551,8 +1526,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"1", "item_2"})
     public void childNotNot() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=9'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -1576,11 +1551,10 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"0", "undefined", "1", "[object HTMLInputElement]", "id2"},
-            IE = {"1", "[object HTMLBodyElement]", "1", "[object HTMLInputElement]", "id2"})
+    @Alerts({"0", "undefined", "1", "[object HTMLInputElement]", "id2"})
     public void focus() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -1611,14 +1585,13 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"0", "undefined",
-                       "4", "[object HTMLHtmlElement]", "[object HTMLBodyElement]",
-                       "[object HTMLFormElement]", "id0",
-                       "[object HTMLInputElement]", "id2"},
-            IE = {})
+    @Alerts({"0", "undefined",
+             "4", "[object HTMLHtmlElement]", "[object HTMLBodyElement]",
+             "[object HTMLFormElement]", "id0",
+             "[object HTMLInputElement]", "id2"})
     public void focusWithin() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -1653,11 +1626,10 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"0", "undefined", "1", "[object HTMLInputElement]", "id2"},
-            IE = {})
+    @Alerts({"0", "undefined", "1", "[object HTMLInputElement]", "id2"})
     public void focusVisible() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -1690,8 +1662,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"5", "cb1", "rd1", "sl1", "ml1", "ml3"})
     public void checked() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -1728,8 +1700,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"2", "cb1", "rd1", "2", "cb2", "rd2"})
     public void checkedChanged() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -1762,8 +1734,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"2", "cb1", "rd1", "2", "cb1", "rd1"})
     public void checkedAttribute() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -1796,8 +1768,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"1", "1-iy", "1-iy", "2", "1-iy", "1-iz"})
     public void selectedChecked() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -1832,8 +1804,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"2", "id1", "id3"})
     public void enabled() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -1857,8 +1829,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"1", "id2"})
     public void disabled() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -1880,17 +1852,72 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
+    @Alerts({"1", "fs"})
+    public void disabledFieldset() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  found = document.querySelectorAll('fieldset[disabled]');\n"
+            + "  log(found.length);\n"
+            + "  for (var i = 0; i < found.length; i++) { log(found[i].id); }\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input name='foo' value='bar'/>\n"
+            + "    <fieldset id='fs' disabled>\n"
+            + "      <input name='do' value='rey'/>\n"
+            + "    </fieldset>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"2", "fs", "i2"})
+    public void disabledFieldsetDisables() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  found = document.querySelectorAll(':disabled');\n"
+            + "  log(found.length);\n"
+            + "  for (var i = 0; i < found.length; i++) { log(found[i].id); }\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input id='i1' name='foo' value='bar'/>\n"
+            + "    <fieldset id='fs' disabled>\n"
+            + "      <input id='i2' name='do' value='rey'/>\n"
+            + "    </fieldset>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
     @Alerts({"1", "id2"})
     public void target() throws Exception {
-        final String html =
-            HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  found = document.querySelectorAll(':target');\n"
-            + "  alert(found.length);\n"
-            + "  if (found.length > 0) { alert(found[0].id); }\n"
+            + "  log(found.length);\n"
+            + "  if (found.length > 0) { log(found[0].id); }\n"
             + "}\n"
             + "</script></head>\n"
             + "<body onload='test()'>\n"
@@ -1899,7 +1926,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
             + "</body></html>";
 
         getMockWebConnection().setDefaultResponse(html);
-        loadPageWithAlerts2(UrlUtils.getUrlWithNewRef(URL_FIRST, "id2"));
+        final WebDriver driver = loadPage2(UrlUtils.getUrlWithNewRef(URL_FIRST, "id2"), StandardCharsets.UTF_8);
+        verifyTitle2(driver, getExpectedAlerts());
     }
 
     /**
@@ -1908,8 +1936,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts("0")
     public void targetNoHash() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -1931,12 +1959,13 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts("0")
     public void targetUnknown() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
+            + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  found = document.querySelectorAll(':target');\n"
-            + "  alert(found.length);\n"
+            + "  log(found.length);\n"
             + "}\n"
             + "</script></head>\n"
             + "<body onload='test()'>\n"
@@ -1945,7 +1974,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
             + "</body></html>";
 
         getMockWebConnection().setDefaultResponse(html);
-        loadPageWithAlerts2(UrlUtils.getUrlWithNewRef(URL_FIRST, "id3"));
+        final WebDriver driver = loadPage2(UrlUtils.getUrlWithNewRef(URL_FIRST, "id3"), StandardCharsets.UTF_8);
+        verifyTitle2(driver, getExpectedAlerts());
     }
 
     /**
@@ -1954,8 +1984,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"1", "[object HTMLHtmlElement]"})
     public void root() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -1974,15 +2004,10 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"1", "[object HTMLHeadingElement]"},
-            FF = "exception",
-            FF_ESR = "exception",
-            IE = "exception")
-    @HtmlUnitNYI(CHROME = "exception",
-            EDGE = "exception")
+    @Alerts({"1", "[object HTMLHeadingElement]"})
     public void has() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -1990,7 +2015,7 @@ public class CSSSelectorTest extends WebDriverTestCase {
             + "    var list = document.querySelectorAll('h1:has(p)');\n"
             + "    log(list.length);\n"
             + "    log(list[0]);\n"
-            + "  } catch(e) {log('exception')}\n"
+            + "  } catch(e) { logEx(e) }\n"
             + "}\n"
             + "</script></head>\n"
             + "<body onload='test()'>\n"
@@ -2007,8 +2032,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"first", "second"})
     public void escapedAttributeValue() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "</head><body>\n"
             + "  <input id='first' name='foo[bar]'>\n"
             + "  <input id='second' name='foo.bar'>\n"
@@ -2033,8 +2058,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"6", "3"})
     public void differentWhitespaceClassName() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "</head><body>\n"
             + "  <input id='first' class='foo'>\n"
             + "  <input id='first' class='\tfoo\n'>\n"
@@ -2051,7 +2076,7 @@ public class CSSSelectorTest extends WebDriverTestCase {
             + "try {\n"
             + "  log(document.querySelectorAll('.foo').length);\n"
             + "  log(document.querySelectorAll('.bar').length);\n"
-            + "} catch(e) {log('exception')}\n"
+            + "} catch(e) { logEx(e) }\n"
             + "</script></body></html>";
 
         loadPageVerifyTitle2(html);
@@ -2063,8 +2088,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"first", "second", "third"})
     public void escapedClassName() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "</head><body>\n"
             + "  <input id='first' class='foo[bar]'>\n"
             + "  <input id='second' class='foo.bar'>\n"
@@ -2075,7 +2100,7 @@ public class CSSSelectorTest extends WebDriverTestCase {
             + "  log(document.querySelectorAll('.foo\\\\[bar\\\\]')[0].id);\n"
             + "  log(document.querySelectorAll('.foo\\\\.bar')[0].id);\n"
             + "  log(document.querySelectorAll('.foo\\\\:bar')[0].id);\n"
-            + "} catch(e) {log('exception')}\n"
+            + "} catch(e) { logEx(e) }\n"
             + "</script></body></html>";
 
         loadPageVerifyTitle2(html);
@@ -2087,8 +2112,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"silly:id::with:colons", "silly:id::with:colons", "silly~id", "silly~id"})
     public void escapedId() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "</head><body>\n"
             + "  <input id='silly:id::with:colons'>\n"
             + "  <input id='silly~id'>\n"
@@ -2100,7 +2125,7 @@ public class CSSSelectorTest extends WebDriverTestCase {
 
             + "  log(document.querySelectorAll('#silly\\\\~id')[0].id);\n"
             + "  log(document.querySelectorAll(\"#silly\\\\~id\")[0].id);\n"
-            + "} catch(e) {log('exception ' + e)}\n"
+            + "} catch(e) { logEx(e); }\n"
             + "</script></body></html>";
 
         loadPageVerifyTitle2(html);
@@ -2110,10 +2135,9 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts("exception")
+    @Alerts("SyntaxError/DOMException")
     public void invalidSelectors() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -2121,7 +2145,7 @@ public class CSSSelectorTest extends WebDriverTestCase {
             + "  try {\n"
             + "    var list = document.querySelectorAll('li:foo() ~ li');\n"
             + "    log(list.length);\n"
-            + "  } catch(e) {log('exception')}\n"
+            + "  } catch(e) { logEx(e) }\n"
             + "}\n"
             + "</script></head>\n"
             + "<body onload='test()'>\n"
@@ -2148,8 +2172,7 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"null", "null", "null"},
-            IE = {"null", "exception", "null"})
+    @Alerts({"null", "null", "null"})
     public void checkedEmptyDetached() throws Exception {
         emptyAndDetached("*:checked");
         emptyAndDetached(":checked");
@@ -2159,8 +2182,7 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"null", "null", "null"},
-            IE = {"null", "exception", "null"})
+    @Alerts({"null", "null", "null"})
     public void disabledEmptyDetached() throws Exception {
         emptyAndDetached("*:disabled");
         emptyAndDetached(":disabled");
@@ -2170,8 +2192,7 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"null", "null", "[object HTMLSpanElement]"},
-            IE = {"null", "exception", "[object HTMLSpanElement]"})
+    @Alerts({"null", "null", "[object HTMLSpanElement]"})
     public void emptyEmptyDetached() throws Exception {
         emptyAndDetached("*:empty");
         emptyAndDetached(":empty");
@@ -2181,8 +2202,7 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"null", "null", "null"},
-            IE = {"null", "exception", "null"})
+    @Alerts({"null", "null", "null"})
     public void enabledEmptyDetached() throws Exception {
         emptyAndDetached("*:enabled");
         emptyAndDetached(":enabled");
@@ -2202,8 +2222,7 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"null", "null", "[object HTMLSpanElement]"},
-            IE = {"null", "exception", "[object HTMLSpanElement]"})
+    @Alerts({"null", "null", "[object HTMLSpanElement]"})
     public void firstoftypeEmptyDetached() throws Exception {
         emptyAndDetached("*:first-of-type");
         emptyAndDetached(":first-of-type");
@@ -2223,9 +2242,7 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"null", "null", "null"},
-            IE = {"exception", "exception", "exception"})
-    @HtmlUnitNYI(IE = {"null", "exception", "null"})
+    @Alerts({"null", "null", "null"})
     public void focusWithinEmptyDetached() throws Exception {
         emptyAndDetached("*:focus-within");
         emptyAndDetached(":focus-within");
@@ -2235,9 +2252,7 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"null", "null", "null"},
-            IE = {"exception", "exception", "exception"})
-    @HtmlUnitNYI(IE = {"null", "exception", "null"})
+    @Alerts({"null", "null", "null"})
     public void focusVisibleEmptyDetached() throws Exception {
         emptyAndDetached("*:focus-visible");
         emptyAndDetached(":focus-visible");
@@ -2257,8 +2272,7 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"null", "null", "[object HTMLSpanElement]"},
-            IE = {"null", "exception", "[object HTMLSpanElement]"})
+    @Alerts({"null", "null", "[object HTMLSpanElement]"})
     public void lastchildEmptyDetached() throws Exception {
         emptyAndDetached("*:last-child");
         emptyAndDetached(":last-child");
@@ -2268,8 +2282,7 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"null", "null", "[object HTMLSpanElement]"},
-            IE = {"null", "exception", "[object HTMLSpanElement]"})
+    @Alerts({"null", "null", "[object HTMLSpanElement]"})
     public void lastoftypeEmptyDetached() throws Exception {
         emptyAndDetached("*:last-of-type");
         emptyAndDetached(":last-of-type");
@@ -2289,9 +2302,7 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"null", "null", "[object HTMLSpanElement]"},
-            IE = {"null", "exception", "[object HTMLSpanElement]"})
-    @HtmlUnitNYI(IE = {"null", "null", "[object HTMLSpanElement]"})
+    @Alerts({"null", "null", "[object HTMLSpanElement]"})
     public void notEmptyDetached() throws Exception {
         emptyAndDetached("*:not(p)");
         emptyAndDetached(":not(p)");
@@ -2301,8 +2312,7 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"null", "null", "null"},
-            IE = {"null", "exception", "null"})
+    @Alerts({"null", "null", "null"})
     public void nthchildEmptyDetached() throws Exception {
         emptyAndDetached("*:nth-child(2n)");
         emptyAndDetached(":nth-child(2n)");
@@ -2312,8 +2322,7 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"null", "null", "null"},
-            IE = {"null", "exception", "null"})
+    @Alerts({"null", "null", "null"})
     public void nthlastchildEmptyDetached() throws Exception {
         emptyAndDetached("*:nth-last-child(2n)");
         emptyAndDetached(":nth-last-child(2n)");
@@ -2323,8 +2332,7 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"null", "null", "null"},
-            IE = {"null", "exception", "null"})
+    @Alerts({"null", "null", "null"})
     public void nthoftypeEmptyDetached() throws Exception {
         emptyAndDetached("*:nth-of-type(2n)");
         emptyAndDetached(":nth-of-type(2n)");
@@ -2334,8 +2342,7 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"null", "null", "[object HTMLSpanElement]"},
-            IE = {"null", "exception", "[object HTMLSpanElement]"})
+    @Alerts({"null", "null", "[object HTMLSpanElement]"})
     public void onlychildEmptyDetached() throws Exception {
         emptyAndDetached("*:only-child");
         emptyAndDetached(":only-child");
@@ -2345,8 +2352,7 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"null", "null", "[object HTMLSpanElement]"},
-            IE = {"null", "exception", "[object HTMLSpanElement]"})
+    @Alerts({"null", "null", "[object HTMLSpanElement]"})
     public void onlyoftypeEmptyDetached() throws Exception {
         emptyAndDetached("*:only-of-type");
         emptyAndDetached(":only-of-type");
@@ -2356,8 +2362,7 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"null", "null", "null"},
-            IE = {"null", "exception", "null"})
+    @Alerts({"null", "null", "null"})
     public void rootEmptyDetached() throws Exception {
         emptyAndDetached("*:root");
         emptyAndDetached(":root");
@@ -2374,10 +2379,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     }
 
     private void emptyAndDetached(final String selector) throws Exception {
-        final String html =
-            HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -2385,20 +2388,20 @@ public class CSSSelectorTest extends WebDriverTestCase {
             + "  try {\n"
             + "    found = div.querySelector('" + selector + "');\n"
             + "    log(found);\n"
-            + "  } catch(e) {log('exception')}\n"
+            + "  } catch(e) { logEx(e) }\n"
 
             + "  div = document.createElement('div');\n"
             + "  try {\n"
             + "    found = div.querySelector('" + selector + "');\n"
             + "    log(found);\n"
-            + "  } catch(e) {log('exception')}\n"
+            + "  } catch(e) { logEx(e) }\n"
 
             + "  var input = document.createElement('span');\n"
             + "  div.appendChild(input);\n"
             + "  try {\n"
             + "    found = div.querySelector('" + selector + "');\n"
             + "    log(found);\n"
-            + "  } catch(e) {log('exception')}\n"
+            + "  } catch(e) { logEx(e) }\n"
             + "}\n"
             + "</script></head>\n"
             + "<body onload='test()'>\n"
@@ -2412,13 +2415,11 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"2", "<nested>Three</nested>", "Four",
-                       "1", "Two", "0", "0"},
-            IE = {"2", "undefined", "undefined",
-                  "1", "undefined", "0", "0"})
+    @Alerts({"2", "<nested>Three</nested>", "Four",
+             "1", "Two", "0", "0"})
     public void xmlTagName() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "</head><body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -2430,14 +2431,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
             + "                 '<result>Four</result>',\n"
             + "                 '</ResultSet>'\n"
             + "                ].join('');\n"
-            + "  if (window.DOMParser) {\n"
-            + "    var parser = new DOMParser();\n"
-            + "    xml = parser.parseFromString(xmlString, 'text/xml');\n"
-            + "  } else { // IE\n"
-            + "    var parser = new ActiveXObject('Microsoft.XMLDOM');\n"
-            + "    parser.async = 'false';\n"
-            + "    parser.loadXML(xmlString);\n"
-            + "  }\n"
+            + "  var parser = new DOMParser();\n"
+            + "  xml = parser.parseFromString(xmlString, 'text/xml');\n"
             + "  var xmlDoc = parser.parseFromString(xmlString, 'text/xml');\n"
             + "  var de = xmlDoc.documentElement;\n"
             + "  try {\n"
@@ -2456,7 +2451,7 @@ public class CSSSelectorTest extends WebDriverTestCase {
 
             + "    res = de.querySelectorAll('rEsulT');\n"
             + "    log(res.length);\n"
-            + "  } catch(e) {log('exception ' + e)}\n"
+            + "  } catch(e) { logEx(e); }\n"
             + "</script></body></html>";
 
         loadPageVerifyTitle2(html);
@@ -2466,19 +2461,14 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"2", "ONE", "<CHILD>Two</CHILD>",
-                       "0",
-                       "2", "ONE", "<CHILD>Two</CHILD>",
-                       "1", "ONE",
-                       "1", "Two"},
-            IE = {"2", "undefined", "undefined",
-                  "0",
-                  "2", "undefined", "undefined",
-                  "1", "undefined",
-                  "1", "undefined"})
+    @Alerts({"2", "ONE", "<CHILD>Two</CHILD>",
+             "0",
+             "2", "ONE", "<CHILD>Two</CHILD>",
+             "1", "ONE",
+             "1", "Two"})
     public void xmlAttribute() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "</head><body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -2488,14 +2478,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
             + "                 '<RESULT thinger=\"gadzooks\"><CHILD>Two</CHILD></RESULT>',\n"
             + "                 '</ResultSet>'\n"
             + "                ].join('');\n"
-            + "  if (window.DOMParser) {\n"
-            + "    var parser = new DOMParser();\n"
-            + "    xml = parser.parseFromString(xmlString, 'text/xml');\n"
-            + "  } else { // IE\n"
-            + "    var parser = new ActiveXObject('Microsoft.XMLDOM');\n"
-            + "    parser.async = 'false';\n"
-            + "    parser.loadXML(xmlString);\n"
-            + "  }\n"
+            + "  var parser = new DOMParser();\n"
+            + "  xml = parser.parseFromString(xmlString, 'text/xml');\n"
             + "  var xmlDoc = parser.parseFromString(xmlString, 'text/xml');\n"
             + "  var de = xmlDoc.documentElement;\n"
             + "  try {\n"
@@ -2521,7 +2505,7 @@ public class CSSSelectorTest extends WebDriverTestCase {
             + "    log(res.length);\n"
             + "    log(res[0].innerHTML);\n"
 
-            + "  } catch(e) {log('exception ' + e)}\n"
+            + "  } catch(e) { logEx(e); }\n"
             + "</script></body></html>";
 
         loadPageVerifyTitle2(html);
@@ -2531,18 +2515,19 @@ public class CSSSelectorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts({"exception", "exception"})
+    @Alerts({"SyntaxError/DOMException", "SyntaxError/DOMException"})
     public void querySelector_invalid() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  try {\n"
             + "    log(document.querySelectorAll('#foo > :not(:first)'));\n"
-            + "  } catch(e) {log('exception')}\n"
+            + "  } catch(e) { logEx(e) }\n"
             + "  try {\n"
             + "    log(document.querySelector('#foo > :not(:first)'));\n"
-            + "  } catch(e) {log('exception')}\n"
+            + "  } catch(e) { logEx(e) }\n"
             + "}\n"
             + "</script></head>\n"
             + "<body onload='test()'>\n"
@@ -2565,7 +2550,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
              "2", "S1", "S2",
              "2", "S1", "S2"})
     public void typeSubmit() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -2607,7 +2593,8 @@ public class CSSSelectorTest extends WebDriverTestCase {
     @Test
     @Alerts({"1", "I1"})
     public void buttonTypeInvalid() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -2622,6 +2609,2101 @@ public class CSSSelectorTest extends WebDriverTestCase {
             + "  <button type=''>Empty</button>\n"
             + "  <button type='submit'>S1</button>\n"
             + "  <button type='invalid'>I1</button>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Baseline: a default (type='submit') button with no custom validity issue
+     * matches :valid and not :invalid.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"true", "false"})
+    public void cssValidMatchesSubmitButtonWithNoError() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var b = document.getElementById('b');\n"
+            + "    log(b.matches(':valid'));\n"
+            + "    log(b.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <button id='b' type='submit'>btn</button>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * A default (type='submit') button with a custom validity message matches
+     * :invalid and not :valid.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "true"})
+    public void cssInvalidMatchesSubmitButtonWithCustomValidity() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var b = document.getElementById('b');\n"
+            + "    b.setCustomValidity('some error');\n"
+            + "    log(b.matches(':valid'));\n"
+            + "    log(b.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <button id='b' type='submit'>btn</button>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * A type='button' element is barred from constraint validation --
+     * it must match NEITHER :valid NOR :invalid, even with no custom validity
+     * issue at all.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "false"})
+    public void cssNeitherMatchesPlainButtonType() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var b = document.getElementById('b');\n"
+            + "    log(b.matches(':valid'));\n"
+            + "    log(b.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <button id='b' type='button'>btn</button>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Same as above, but ALSO with a custom validity message set -- the barring
+     * must take priority over the (otherwise would-be-invalid) custom error;
+     * neither pseudo-class should match.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "false"})
+    public void cssNeitherMatchesPlainButtonTypeEvenWithCustomValidity() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var b = document.getElementById('b');\n"
+            + "    b.setCustomValidity('some error');\n"
+            + "    log(b.matches(':valid'));\n"
+            + "    log(b.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <button id='b' type='button'>btn</button>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * A type='reset' is barred the same way as type='button' -- neither
+     * pseudo-class should match, custom validity or not.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "false"})
+    public void cssNeitherMatchesResetButtonType() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var b = document.getElementById('b');\n"
+            + "    b.setCustomValidity('some error');\n"
+            + "    log(b.matches(':valid'));\n"
+            + "    log(b.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <button id='b' type='reset'>btn</button>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * A DISABLED submit button is also barred from constraint
+     * validation -- neither pseudo-class should match, even with a custom
+     * validity message set.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "false"})
+    public void cssNeitherMatchesDisabledSubmitButton() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var b = document.getElementById('b');\n"
+            + "    b.setCustomValidity('some error');\n"
+            + "    log(b.matches(':valid'));\n"
+            + "    log(b.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <button id='b' type='submit' disabled>btn</button>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Redundant-barring sanity check: type='button' AND disabled AND a custom
+     * validity message all at once -- still neither pseudo-class should match.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "false"})
+    public void cssNeitherMatchesDisabledPlainButtonWithCustomValidity() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var b = document.getElementById('b');\n"
+            + "    b.setCustomValidity('some error');\n"
+            + "    log(b.matches(':valid'));\n"
+            + "    log(b.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <button id='b' type='button' disabled>btn</button>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Dynamic transition: a button barred via type='button' (with a leftover
+     * custom validity message set while barred) is switched to type='submit' at
+     * runtime. It must now correctly participate in validation and show
+     * :invalid -- confirms the barred/not-barred state is evaluated fresh each
+     * time, not cached from whatever it was when setCustomValidity() was
+     * originally called.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "false", "false", "true"})
+    public void cssMatchingUpdatesWhenTypeChangesFromButtonToSubmit() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var b = document.getElementById('b');\n"
+            + "    b.setCustomValidity('some error');\n"
+            + "    log(b.matches(':valid'));\n"
+            + "    log(b.matches(':invalid'));\n"
+
+            + "    b.type = 'submit';\n"
+            + "    log(b.matches(':valid'));\n"
+            + "    log(b.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <button id='b' type='button'>btn</button>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Dynamic transition, the other direction: an initially-valid submit button
+     * is switched to type='button' at runtime -- it must stop matching :valid
+     * (or :invalid) entirely once barred, even though it was clean before the
+     * change.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"true", "false", "false", "false"})
+    public void cssMatchingUpdatesWhenTypeChangesFromSubmitToButton() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var b = document.getElementById('b');\n"
+            + "    log(b.matches(':valid'));\n"
+            + "    log(b.matches(':invalid'));\n"
+
+            + "    b.type = 'button';\n"
+            + "    log(b.matches(':valid'));\n"
+            + "    log(b.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <button id='b' type='submit'>btn</button>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * A textarea with no 'required' and no custom validity issue
+     * matches :valid and not :invalid.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"true", "false"})
+    public void cssValidMatchesTextareaWithNoError() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var t = document.getElementById('t');\n"
+            + "    log(t.matches(':valid'));\n"
+            + "    log(t.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <textarea id='t'>content</textarea>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * A textarea with a custom validity message matches :invalid and not
+     * :valid.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "true"})
+    public void cssInvalidMatchesTextareaWithCustomValidity() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var t = document.getElementById('t');\n"
+            + "    t.setCustomValidity('some error');\n"
+            + "    log(t.matches(':valid'));\n"
+            + "    log(t.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <textarea id='t'>content</textarea>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * A required, empty textarea matches :invalid (valueMissing).
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "true"})
+    public void cssInvalidMatchesRequiredEmptyTextarea() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var t = document.getElementById('t');\n"
+            + "    log(t.matches(':valid'));\n"
+            + "    log(t.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <textarea id='t' required></textarea>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * A required, non-empty textarea matches :valid.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"true", "false"})
+    public void cssValidMatchesRequiredNonEmptyTextarea() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var t = document.getElementById('t');\n"
+            + "    log(t.matches(':valid'));\n"
+            + "    log(t.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <textarea id='t' required>content</textarea>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * A DISABLED, required,
+     * empty textarea must match NEITHER :valid NOR :invalid -- disabled bars it
+     * from constraint validation entirely, regardless of the would-be
+     * valueMissing violation.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "false"})
+    public void cssNeitherMatchesDisabledRequiredEmptyTextarea() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var t = document.getElementById('t');\n"
+            + "    log(t.matches(':valid'));\n"
+            + "    log(t.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <textarea id='t' required disabled></textarea>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * A READONLY, required, empty textarea. Per spec, readonly bars an element
+     * from constraint validation the same way disabled does.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "false"})
+    public void cssNeitherMatchesReadonlyRequiredEmptyTextarea() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var t = document.getElementById('t');\n"
+            + "    log(t.matches(':valid'));\n"
+            + "    log(t.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <textarea id='t' required readonly></textarea>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Same as above but with a custom validity message set as well -- readonly
+     * barring must take priority over the custom error too, same as disabled
+     * does.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "false"})
+    public void cssNeitherMatchesReadonlyTextareaEvenWithCustomValidity() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var t = document.getElementById('t');\n"
+            + "    t.setCustomValidity('some error');\n"
+            + "    log(t.matches(':valid'));\n"
+            + "    log(t.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <textarea id='t' readonly>content</textarea>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Redundant-barring sanity check: disabled AND readonly AND required AND a
+     * custom validity message, all at once -- still neither pseudo-class should
+     * match.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "false"})
+    public void cssNeitherMatchesDisabledAndReadonlyTextarea() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var t = document.getElementById('t');\n"
+            + "    t.setCustomValidity('some error');\n"
+            + "    log(t.matches(':valid'));\n"
+            + "    log(t.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <textarea id='t' required disabled readonly></textarea>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Dynamic transition: a required, empty textarea starts out correctly
+     * :invalid, then is made readonly at runtime -- must stop matching
+     * :invalid (or :valid) once barred, confirming the barred state is
+     * evaluated fresh rather than cached from page load.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "true", "false", "false", "false", "true"})
+    public void cssMatchingUpdatesWhenReadonlyToggledAtRuntime() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var t = document.getElementById('t');\n"
+            + "    log(t.matches(':valid'));\n"
+            + "    log(t.matches(':invalid'));\n"
+
+            + "    t.readOnly = true;\n"
+            + "    log(t.matches(':valid'));\n"
+            + "    log(t.matches(':invalid'));\n"
+
+            + "    t.readOnly = false;\n"
+            + "    log(t.matches(':valid'));\n"
+            + "    log(t.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <textarea id='t' required></textarea>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Dynamic transition, disabled variant: same idea as above but toggling
+     * disabled instead of readonly.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "true", "false", "false", "false", "true"})
+    public void cssMatchingUpdatesWhenDisabledToggledAtRuntime() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var t = document.getElementById('t');\n"
+            + "    log(t.matches(':valid'));\n"
+            + "    log(t.matches(':invalid'));\n"
+
+            + "    t.disabled = true;\n"
+            + "    log(t.matches(':valid'));\n"
+            + "    log(t.matches(':invalid'));\n"
+
+            + "    t.disabled = false;\n"
+            + "    log(t.matches(':valid'));\n"
+            + "    log(t.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <textarea id='t' required></textarea>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Disabled propagated via an enclosing &lt;fieldset disabled&gt; must bar
+     * the textarea from validation the same way an own 'disabled' attribute
+     * does -- exercises the isDisabled() parent-chain walk in combination with
+     * CSS matching, not just the element's own attribute.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "false"})
+    public void cssNeitherMatchesTextareaInDisabledFieldset() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var t = document.getElementById('t');\n"
+            + "    log(t.matches(':valid'));\n"
+            + "    log(t.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <fieldset disabled>\n"
+            + "      <textarea id='t' required></textarea>\n"
+            + "    </fieldset>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * A text input with no 'required' and no custom validity issue
+     * matches :valid and not :invalid.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"true", "false"})
+    public void cssValidMatchesInputTextWithNoError() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var t = document.getElementById('t');\n"
+            + "    log(t.matches(':valid'));\n"
+            + "    log(t.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input type='text' id='t' value='content'>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * A text input with a custom validity message matches :invalid and not
+     * :valid.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "true"})
+    public void cssInvalidMatchesInputTextWithCustomValidity() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var t = document.getElementById('t');\n"
+            + "    t.setCustomValidity('some error');\n"
+            + "    log(t.matches(':valid'));\n"
+            + "    log(t.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input type='text' id='t' value='content'>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * A required, empty text input matches :invalid (valueMissing).
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "true"})
+    public void cssInvalidMatchesRequiredEmptyInputText() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var t = document.getElementById('t');\n"
+            + "    log(t.matches(':valid'));\n"
+            + "    log(t.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input type='text' id='t' required>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * A required, non-empty text input matches :valid.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"true", "false"})
+    public void cssValidMatchesRequiredNonEmptyInputText() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var t = document.getElementById('t');\n"
+            + "    log(t.matches(':valid'));\n"
+            + "    log(t.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input type='text' id='t' required value='content'>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * A DISABLED, required,
+     * empty text input must match NEITHER :valid NOR :invalid -- disabled bars it
+     * from constraint validation entirely, regardless of the would-be
+     * valueMissing violation.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "false"})
+    public void cssNeitherMatchesDisabledRequiredEmptyInputText() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var t = document.getElementById('t');\n"
+            + "    log(t.matches(':valid'));\n"
+            + "    log(t.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input type='text' id='t' required disabled>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * A READONLY, required, empty text input. Per spec, readonly bars an element
+     * from constraint validation the same way disabled does.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "false"})
+    public void cssNeitherMatchesReadonlyRequiredEmptyInputText() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var t = document.getElementById('t');\n"
+            + "    log(t.matches(':valid'));\n"
+            + "    log(t.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input type='text' id='t' required readonly>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Same as above but with a custom validity message set as well -- readonly
+     * barring must take priority over the custom error too, same as disabled
+     * does.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "false"})
+    public void cssNeitherMatchesReadonlyInputTextEvenWithCustomValidity() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var t = document.getElementById('t');\n"
+            + "    t.setCustomValidity('some error');\n"
+            + "    log(t.matches(':valid'));\n"
+            + "    log(t.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input type='text' id='t' readonly>content\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Redundant-barring sanity check: disabled AND readonly AND required AND a
+     * custom validity message, all at once -- still neither pseudo-class should
+     * match.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "false"})
+    public void cssNeitherMatchesDisabledAndReadonlyInputText() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var t = document.getElementById('t');\n"
+            + "    t.setCustomValidity('some error');\n"
+            + "    log(t.matches(':valid'));\n"
+            + "    log(t.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input type='text' id='t' required disabled readonly>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Dynamic transition: a required, empty text starts out correctly
+     * :invalid, then is made readonly at runtime -- must stop matching
+     * :invalid (or :valid) once barred, confirming the barred state is
+     * evaluated fresh rather than cached from page load.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "true", "false", "false", "false", "true"})
+    public void cssMatchingUpdatesInputTestWhenReadonlyToggledAtRuntime() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var t = document.getElementById('t');\n"
+            + "    log(t.matches(':valid'));\n"
+            + "    log(t.matches(':invalid'));\n"
+
+            + "    t.readOnly = true;\n"
+            + "    log(t.matches(':valid'));\n"
+            + "    log(t.matches(':invalid'));\n"
+
+            + "    t.readOnly = false;\n"
+            + "    log(t.matches(':valid'));\n"
+            + "    log(t.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input type='text' id='t' required>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Dynamic transition, disabled variant: same idea as above but toggling
+     * disabled instead of readonly.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "true", "false", "false", "false", "true"})
+    public void cssMatchingInputTextUpdatesWhenDisabledToggledAtRuntime() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var t = document.getElementById('t');\n"
+            + "    log(t.matches(':valid'));\n"
+            + "    log(t.matches(':invalid'));\n"
+
+            + "    t.disabled = true;\n"
+            + "    log(t.matches(':valid'));\n"
+            + "    log(t.matches(':invalid'));\n"
+
+            + "    t.disabled = false;\n"
+            + "    log(t.matches(':valid'));\n"
+            + "    log(t.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <input type='text' id='t' required>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Disabled propagated via an enclosing &lt;fieldset disabled&gt; must bar
+     * the text input from validation the same way an own 'disabled' attribute
+     * does -- exercises the isDisabled() parent-chain walk in combination with
+     * CSS matching, not just the element's own attribute.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "false"})
+    public void cssNeitherMatchesInputTextInDisabledFieldset() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var t = document.getElementById('t');\n"
+            + "    log(t.matches(':valid'));\n"
+            + "    log(t.matches(':invalid'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form>\n"
+            + "    <fieldset disabled>\n"
+            + "      <input type='text' id='t' required>\n"
+            + "    </fieldset>\n"
+            + "  </form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"1", "[object HTMLHtmlElement]"})
+    public void scopeDocumentQuery() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var list = document.querySelectorAll(':scope');\n"
+            + "  log(list.length);\n"
+            + "  log(list[0]);\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"1", "container"})
+    public void scopeElementQuery() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var body = document.body;\n"
+            + "  var list = body.querySelectorAll(':scope > #container');\n"
+            + "  log(list.length);\n"
+            + "  log(list[0].id);\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <div id='container'></div>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"2", "child1", "child2"})
+    public void scopeChildCombinator() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var container = document.getElementById('container');\n"
+            + "  var list = container.querySelectorAll(':scope > .target');\n"
+            + "  log(list.length);\n"
+            + "  for (var i = 0; i < list.length; i++) {\n"
+            + "    log(list[i].id);\n"
+            + "  }\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <div id='container'>\n"
+            + "    <div id='child1' class='target'></div>\n"
+            + "    <div>\n"
+            + "      <div id='grandchild' class='target'></div>\n"
+            + "    </div>\n"
+            + "    <div id='child2' class='target'></div>\n"
+            + "  </div>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "true"})
+    public void scopeMatchesMethod() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var container = document.getElementById('container');\n"
+            + "  var other = document.getElementById('other');\n"
+            + "  log(container.matches(':scope'));\n"
+            + "  log(other.matches(':scope'));\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <div id='container'>\n"
+            + "    <div id='other'></div>\n"
+            + "  </div>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"1", "[object HTMLHtmlElement]"})
+    public void scopeDocumentFallbackQuery() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var list = document.querySelectorAll(':scope');\n"
+            + "  log(list.length);\n"
+            + "  log(list[0]);\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts("true")
+    public void scopeDetachedFragment() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var fragment = document.createDocumentFragment();\n"
+            + "  var div = document.createElement('div');\n"
+            + "  div.id = 'child';\n"
+            + "  fragment.appendChild(div);\n"
+            + "  log(div.matches(':scope'));\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "true"})
+    public void scopeDocumentDefaultIsRoot() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var htmlEl = document.documentElement;\n"
+            + "  log(document.querySelector(':scope') === htmlEl);\n"
+            + "  log(document.querySelectorAll(':scope')[0] === htmlEl);\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"middle", "deep"})
+    public void scopeNestedContexts() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var outer = document.getElementById('outer');\n"
+            + "  var inner = document.getElementById('inner');\n"
+            + "  log(outer.querySelector(':scope > div').id);\n"
+            + "  log(inner.querySelector(':scope > div').id);\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <div id='outer'>\n"
+            + "    <div id='middle'>\n"
+            + "      <div id='inner'>\n"
+            + "        <div id='deep'></div>\n"
+            + "      </div>\n"
+            + "    </div>\n"
+            + "  </div>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"child1", "null"})
+    public void scopeQuerySelector() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var container = document.getElementById('container');\n"
+            + "  log(container.querySelector(':scope > .target').id);\n"
+            + "  log(container.querySelector(':scope > .missing'));\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <div id='container'>\n"
+            + "    <div id='child1' class='target'></div>\n"
+            + "    <div>\n"
+            + "      <div id='grandchild' class='target'></div>\n"
+            + "    </div>\n"
+            + "    <div id='child2' class='target'></div>\n"
+            + "  </div>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * The scoping element itself is never part of the result of an element query.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"0", "null"})
+    public void scopeAloneInElementQuery() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var container = document.getElementById('container');\n"
+            + "  log(container.querySelectorAll(':scope').length);\n"
+            + "  log(container.querySelector(':scope'));\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <div id='container'>\n"
+            + "    <div id='child'></div>\n"
+            + "  </div>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"3", "child1", "grandchild", "child2", "3", "4"})
+    public void scopeDescendantCombinator() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var container = document.getElementById('container');\n"
+            + "  var list = container.querySelectorAll(':scope .target');\n"
+            + "  log(list.length);\n"
+            + "  for (var i = 0; i < list.length; i++) {\n"
+            + "    log(list[i].id);\n"
+            + "  }\n"
+            + "  log(container.querySelectorAll(':scope > *').length);\n"
+            + "  log(container.querySelectorAll(':scope *').length);\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <div id='container'>\n"
+            + "    <div id='child1' class='target'></div>\n"
+            + "    <div>\n"
+            + "      <div id='grandchild' class='target'></div>\n"
+            + "    </div>\n"
+            + "    <div id='child2' class='target'></div>\n"
+            + "  </div>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"b", "b,c", "a", "c", "b", "a,c"})
+    public void scopeSiblingCombinatorsAndPseudoClasses() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function ids(list) {\n"
+            + "  var result = [];\n"
+            + "  for (var i = 0; i < list.length; i++) {\n"
+            + "    result.push(list[i].id);\n"
+            + "  }\n"
+            + "  return result.join(',');\n"
+            + "}\n"
+            + "function test() {\n"
+            + "  var container = document.getElementById('container');\n"
+            + "  log(ids(container.querySelectorAll(':scope > #a + .item')));\n"
+            + "  log(ids(container.querySelectorAll(':scope > #a ~ .item')));\n"
+            + "  log(ids(container.querySelectorAll(':scope > .item:first-child')));\n"
+            + "  log(ids(container.querySelectorAll(':scope > .item:last-child')));\n"
+            + "  log(ids(container.querySelectorAll(':scope > .item:nth-child(2)')));\n"
+            + "  log(ids(container.querySelectorAll(':scope > :not(#b)')));\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <div id='container'>\n"
+            + "    <div id='a' class='item'></div>\n"
+            + "    <div id='b' class='item'></div>\n"
+            + "    <div id='c' class='item'></div>\n"
+            + "  </div>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"a,c", "a,inner"})
+    public void scopeSelectorList() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function ids(list) {\n"
+            + "  var result = [];\n"
+            + "  for (var i = 0; i < list.length; i++) {\n"
+            + "    result.push(list[i].id);\n"
+            + "  }\n"
+            + "  return result.join(',');\n"
+            + "}\n"
+            + "function test() {\n"
+            + "  var container = document.getElementById('container');\n"
+            + "  log(ids(container.querySelectorAll(':scope > #a, :scope > #c')));\n"
+            // the result is in document order, not in the order of the selector list
+            + "  log(ids(container.querySelectorAll('#inner, :scope > #a')));\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <div id='container'>\n"
+            + "    <div id='a'></div>\n"
+            + "    <div id='b'>\n"
+            + "      <div id='inner'></div>\n"
+            + "    </div>\n"
+            + "    <div id='c'></div>\n"
+            + "  </div>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Siblings of the scoping element are not descendants and therefore never found by an element query.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"0", "0", "1"})
+    public void scopeSiblingOfContextIsNotFound() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var container = document.getElementById('container');\n"
+            + "  log(container.querySelectorAll(':scope + div').length);\n"
+            + "  log(container.querySelectorAll(':scope ~ div').length);\n"
+            + "  log(document.body.querySelectorAll(':scope > #container + #next').length);\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <div id='container'>\n"
+            + "    <div id='child'></div>\n"
+            + "  </div>\n"
+            + "  <div id='next'></div>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "0", "true"})
+    public void scopeInsideNot() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var container = document.getElementById('container');\n"
+            + "  log(document.querySelectorAll(':not(:scope)').length == document.querySelectorAll('*').length - 1);\n"
+            + "  log(document.querySelectorAll('html:not(:scope)').length);\n"
+            + "  log(container.querySelectorAll('div:not(:scope)').length == container.querySelectorAll('div').length);\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <div id='container'>\n"
+            + "    <div id='child1'></div>\n"
+            + "    <div id='child2'></div>\n"
+            + "  </div>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"2", "2"})
+    public void scopeCaseInsensitive() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var container = document.getElementById('container');\n"
+            + "  log(container.querySelectorAll(':SCOPE > .target').length);\n"
+            + "  log(container.querySelectorAll(':Scope > .target').length);\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <div id='container'>\n"
+            + "    <div id='child1' class='target'></div>\n"
+            + "    <div>\n"
+            + "      <div id='grandchild' class='target'></div>\n"
+            + "    </div>\n"
+            + "    <div id='child2' class='target'></div>\n"
+            + "  </div>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"SyntaxError/DOMException", "SyntaxError/DOMException", "SyntaxError/DOMException"})
+    @HtmlUnitNYI(
+            CHROME = {"SyntaxError/DOMException", "[object NodeList]", "SyntaxError/DOMException"},
+            EDGE = {"SyntaxError/DOMException", "[object NodeList]", "SyntaxError/DOMException"},
+            FF = {"SyntaxError/DOMException", "[object NodeList]", "SyntaxError/DOMException"},
+            FF_ESR = {"SyntaxError/DOMException", "[object NodeList]", "SyntaxError/DOMException"})
+    public void scopeInvalidForms() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  try {\n"
+            + "    log(document.querySelectorAll(':scope()'));\n"
+            + "  } catch(e) { logEx(e) }\n"
+            + "  try {\n"
+            + "    log(document.querySelectorAll('::scope'));\n"
+            + "  } catch(e) { logEx(e) }\n"
+            + "  try {\n"
+            + "    log(document.querySelectorAll(':scopes'));\n"
+            + "  } catch(e) { logEx(e) }\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * For matches() the element itself is the scoping element.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"false", "false", "true", "true", "true", "false", "true", "true"})
+    public void scopeMatchesWithCombinators() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var other = document.getElementById('other');\n"
+            + "  log(other.matches(':scope > div'));\n"
+            + "  log(other.matches(':scope div'));\n"
+            + "  log(other.matches('div:scope'));\n"
+            + "  log(other.matches(':scope.inner'));\n"
+            + "  log(other.matches(':scope, .nope'));\n"
+            + "  log(other.matches(':not(:scope)'));\n"
+            + "  log(other.matches('#container > :scope'));\n"
+            + "  log(other.matches('#container :scope'));\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <div id='container' class='outer'>\n"
+            + "    <div id='other' class='inner'></div>\n"
+            + "  </div>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "true"})
+    public void scopeClosest() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var other = document.getElementById('other');\n"
+            + "  log(other.closest(':scope') === other);\n"
+            + "  log(other.closest('#container > :scope') === other);\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <div id='container'>\n"
+            + "    <div id='other'></div>\n"
+            + "  </div>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"2", "3", "p2", "true"})
+    public void scopeDetachedElement() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var div = document.createElement('div');\n"
+            + "  div.innerHTML = '<p id=\"p1\"></p><div><p id=\"p2\"></p></div><p id=\"p3\"></p>';\n"
+            + "  log(div.querySelectorAll(':scope > p').length);\n"
+            + "  log(div.querySelectorAll(':scope p').length);\n"
+            + "  log(div.querySelector(':scope > div > p').id);\n"
+            + "  log(div.matches(':scope'));\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * For a document query the scoping element is the root element.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"1", "2", "true", "0", "1", "1"})
+    public void scopeDocumentChildCombinator() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  log(document.querySelectorAll(':scope > body').length);\n"
+            + "  log(document.querySelectorAll(':scope > head, :scope > body').length);\n"
+            + "  log(document.querySelector(':scope > body') === document.body);\n"
+            + "  log(document.querySelectorAll(':scope > div').length);\n"
+            + "  log(document.querySelectorAll(':scope body').length);\n"
+            + "  log(document.documentElement.querySelectorAll(':scope > body').length);\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <div id='container'></div>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Inside of a style sheet there is no scoping element, :scope matches the root element.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"rgb(255, 0, 0)", "rgb(0, 0, 255)", "rgb(255, 0, 0)"})
+    public void scopeInStyleSheet() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<style>\n"
+            + "  :scope { color: red; }\n"
+            + "  :scope > body { background-color: blue; }\n"
+            + "</style>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  log(getComputedStyle(document.documentElement).color);\n"
+            + "  log(getComputedStyle(document.body).backgroundColor);\n"
+            + "  log(getComputedStyle(document.body).color);\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * The scoping element of a document query is the root element of this very document,
+     * not the one of the current page.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"1", "true", "false", "1"})
+    public void scopeCreatedDocument() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var doc = document.implementation.createHTMLDocument('test');\n"
+            + "  log(doc.querySelectorAll(':scope').length);\n"
+            + "  log(doc.querySelector(':scope') === doc.documentElement);\n"
+            + "  log(doc.querySelector(':scope') === document.documentElement);\n"
+            + "  log(doc.querySelectorAll(':scope > body').length);\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "false", "1"})
+    public void scopeIframeDocument() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var frameDoc = document.getElementById('frame').contentDocument;\n"
+            + "  log(frameDoc.querySelector(':scope') === frameDoc.documentElement);\n"
+            + "  log(frameDoc.querySelector(':scope') === document.documentElement);\n"
+            + "  log(frameDoc.querySelectorAll(':scope > body').length);\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <iframe id='frame'></iframe>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * The root element is looked up for every query.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"1", "newRoot", "1"})
+    public void scopeReplacedRootElement() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var html = document.createElement('html');\n"
+            + "  html.id = 'newRoot';\n"
+            // logging uses the document title, this requires a head
+            + "  html.appendChild(document.createElement('head'));\n"
+            + "  html.appendChild(document.createElement('body'));\n"
+            + "  document.replaceChild(html, document.documentElement);\n"
+            + "  log(document.querySelectorAll(':scope').length);\n"
+            + "  log(document.querySelector(':scope').id);\n"
+            + "  log(document.querySelectorAll(':scope > body').length);\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Without a root element there is nothing the document query can match.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"0", "null"})
+    public void scopeWithoutRootElement() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var results = [];\n"
+            + "  document.removeChild(document.documentElement);\n"
+            + "  results.push(document.querySelectorAll(':scope').length);\n"
+            + "  results.push(String(document.querySelector(':scope')));\n"
+            // logging uses the document title, this requires a root element with a head
+            + "  var html = document.createElement('html');\n"
+            + "  html.appendChild(document.createElement('head'));\n"
+            + "  document.appendChild(html);\n"
+            + "  for (var i = 0; i < results.length; i++) {\n"
+            + "    log(results[i]);\n"
+            + "  }\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * :scope has the specificity of a pseudo-class, like :root.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"rgb(255, 0, 0)", "rgb(0, 128, 0)"})
+    public void scopeInStyleSheetSpecificity() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<style>\n"
+            // the pseudo-class wins against the type selector, even if it is defined first
+            + "  :scope { color: red; }\n"
+            + "  html { color: blue; }\n"
+            // same specificity, the later rule wins
+            + "  :root { background-color: blue; }\n"
+            + "  :scope { background-color: green; }\n"
+            + "</style>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var style = getComputedStyle(document.documentElement);\n"
+            + "  log(style.color);\n"
+            + "  log(style.backgroundColor);\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * The names of pseudo classes (and the keywords inside of the arguments) are ASCII case insensitive.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"li1", "li3", "li2", "li3", "li1,li3", "li1,li3", "li2", "c", "t", "empty", "true"})
+    public void pseudoClassNamesAreCaseInsensitive() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function ids(list) {\n"
+            + "  var result = [];\n"
+            + "  for (var i = 0; i < list.length; i++) {\n"
+            + "    result.push(list[i].id);\n"
+            + "  }\n"
+            + "  return result.join(',');\n"
+            + "}\n"
+            + "function test() {\n"
+            + "  log(ids(document.querySelectorAll('li:FIRST-CHILD')));\n"
+            + "  log(ids(document.querySelectorAll('li:Last-Child')));\n"
+            + "  log(ids(document.querySelectorAll('li:NTH-CHILD(2)')));\n"
+            + "  log(ids(document.querySelectorAll('li:Nth-Last-Child(1)')));\n"
+            + "  log(ids(document.querySelectorAll('li:nth-child(2N+1)')));\n"
+            + "  log(ids(document.querySelectorAll('li:nth-child(ODD)')));\n"
+            + "  log(ids(document.querySelectorAll('li:NOT(.a)')));\n"
+            + "  log(ids(document.querySelectorAll('input:CHECKED')));\n"
+            + "  log(ids(document.querySelectorAll('input:Disabled')));\n"
+            + "  log(ids(document.querySelectorAll('p:EMPTY')));\n"
+            + "  log(document.querySelector(':ROOT') === document.documentElement);\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "  <ul id='list'>\n"
+            + "    <li id='li1' class='a'></li>\n"
+            + "    <li id='li2'></li>\n"
+            + "    <li id='li3' class='a'></li>\n"
+            + "  </ul>\n"
+            + "  <input id='c' type='checkbox' checked>\n"
+            + "  <input id='t' type='text' disabled>\n"
+            + "  <p id='empty'></p>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * :nth-child(An+B of S) counts only the siblings matching S.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts(DEFAULT = {"li1", "li3", "li1,li4,li7", "li3,li6", "li1,li4,li7", "li1,li3", "li2", "li1", "li4", "",
+                       "li7", "", "SyntaxError/DOMException"},
+            FF = {"li1", "li3", "li1,li4,li7", "li3,li6", "li1,li4,li7", "li1,li3", "li2", "li1", "li4", "",
+                  "li7", "", "li1"},
+            FF_ESR = {"li1", "li3", "li1,li4,li7", "li3,li6", "li1,li4,li7", "li1,li3", "li2", "li1", "li4", "",
+                      "li7", "", "li1"})
+    @HtmlUnitNYI(
+            CHROME = {"li1", "li3", "li1,li4,li7", "li3,li6", "li1,li4,li7", "li1,li3", "li2", "li1", "li4", "",
+                      "li7", "", "li1"},
+            EDGE = {"li1", "li3", "li1,li4,li7", "li3,li6", "li1,li4,li7", "li1,li3", "li2", "li1", "li4", "",
+                    "li7", "", "li1"})
+    public void nth_child_of() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function ids(list) {\n"
+            + "  var result = [];\n"
+            + "  for (var i = 0; i < list.length; i++) {\n"
+            + "    result.push(list[i].id);\n"
+            + "  }\n"
+            + "  return result.join(',');\n"
+            + "}\n"
+            + "function q(selector) {\n"
+            + "  try { log(ids(document.querySelectorAll(selector))); } catch(e) { logEx(e); }\n"
+            + "}\n"
+            + "function test() {\n"
+            + "  q(\'li:nth-child(1 of .x)\');\n"
+            + "  q(\'li:nth-child(2 of .x)\');\n"
+            + "  q(\'li:nth-child(odd of .x)\');\n"
+            + "  q(\'li:nth-child(even of .x)\');\n"
+            + "  q(\'li:nth-child(2n+1 of .x)\');\n"
+            + "  q(\'li:nth-child(-n+2 of .x)\');\n"
+            + "  q(\'li:nth-child(1 of .y, li:not(.x))\');\n"
+            + "  q(\'li:nth-child(1 of li)\');\n"
+            + "  q(\':nth-child(3 of .x)\');\n"
+            + "  q(\'li:nth-child(2 of .x):not(#li3)\');\n"
+            + "  q(\'li.y:nth-child(5 of .x)\');\n"
+            + "  q(\'li:nth-child(1 of .unknown)\');\n"
+            + "  q(\'li:NTH-CHILD(1 OF .x)\');\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "<ul>\n"
+            + "  <li id='li1' class='x'></li>\n"
+            + "  <li id='li2'></li>\n"
+            + "  <li id='li3' class='x'></li>\n"
+            + "  <li id='li4' class='x'></li>\n"
+            + "  <li id='li5'></li>\n"
+            + "  <li id='li6' class='x'></li>\n"
+            + "  <li id='li7' class='x y'></li>\n"
+            + "</ul>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * :nth-last-child(An+B of S) counts only the siblings matching S.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"li7", "li6", "li1,li4,li7", "li6,li7", "li5"})
+    public void nth_last_child_of() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function ids(list) {\n"
+            + "  var result = [];\n"
+            + "  for (var i = 0; i < list.length; i++) {\n"
+            + "    result.push(list[i].id);\n"
+            + "  }\n"
+            + "  return result.join(',');\n"
+            + "}\n"
+            + "function q(selector) {\n"
+            + "  try { log(ids(document.querySelectorAll(selector))); } catch(e) { logEx(e); }\n"
+            + "}\n"
+            + "function test() {\n"
+            + "  q(\'li:nth-last-child(1 of .x)\');\n"
+            + "  q(\'li:nth-last-child(2 of .x)\');\n"
+            + "  q(\'li:nth-last-child(odd of .x)\');\n"
+            + "  q(\'li:nth-last-child(-n+2 of .x)\');\n"
+            + "  q(\'li:nth-last-child(1 of :not(.x))\');\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "<ul>\n"
+            + "  <li id='li1' class='x'></li>\n"
+            + "  <li id='li2'></li>\n"
+            + "  <li id='li3' class='x'></li>\n"
+            + "  <li id='li4' class='x'></li>\n"
+            + "  <li id='li5'></li>\n"
+            + "  <li id='li6' class='x'></li>\n"
+            + "  <li id='li7' class='x y'></li>\n"
+            + "</ul>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Whitespace inside of :nth-child(An+B of S).
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"li1,li4,li7", "li1,li3,li6", "li1,li4,li7"})
+    public void nth_child_of_spaces() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function ids(list) {\n"
+            + "  var result = [];\n"
+            + "  for (var i = 0; i < list.length; i++) {\n"
+            + "    result.push(list[i].id);\n"
+            + "  }\n"
+            + "  return result.join(',');\n"
+            + "}\n"
+            + "function q(selector) {\n"
+            + "  try { log(ids(document.querySelectorAll(selector))); } catch(e) { logEx(e); }\n"
+            + "}\n"
+            + "function test() {\n"
+            + "  q(\'li:nth-child( 2n + 1 of .x )\');\n"
+            + "  q(\'li:nth-child(2n+1   of   .x,   #li2)\');\n"
+            + "  q(\'li:nth-child(  odd  of  .x  )\');\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "<ul>\n"
+            + "  <li id='li1' class='x'></li>\n"
+            + "  <li id='li2'></li>\n"
+            + "  <li id='li3' class='x'></li>\n"
+            + "  <li id='li4' class='x'></li>\n"
+            + "  <li id='li5'></li>\n"
+            + "  <li id='li6' class='x'></li>\n"
+            + "  <li id='li7' class='x y'></li>\n"
+            + "</ul>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Invalid usages of the 'of S' syntax.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts(DEFAULT = {"SyntaxError/DOMException", "SyntaxError/DOMException", "SyntaxError/DOMException",
+                       "SyntaxError/DOMException", "SyntaxError/DOMException", "",
+                       "SyntaxError/DOMException", "SyntaxError/DOMException", "SyntaxError/DOMException"},
+            FF = {"SyntaxError/DOMException", "SyntaxError/DOMException", "SyntaxError/DOMException",
+                  "SyntaxError/DOMException", "SyntaxError/DOMException", "SyntaxError/DOMException",
+                  "SyntaxError/DOMException", "SyntaxError/DOMException", "SyntaxError/DOMException"},
+            FF_ESR = {"SyntaxError/DOMException", "SyntaxError/DOMException", "SyntaxError/DOMException",
+                      "SyntaxError/DOMException", "SyntaxError/DOMException", "SyntaxError/DOMException",
+                      "SyntaxError/DOMException", "SyntaxError/DOMException", "SyntaxError/DOMException"})
+    @HtmlUnitNYI(
+            FF = {"SyntaxError/DOMException", "SyntaxError/DOMException", "SyntaxError/DOMException",
+                  "SyntaxError/DOMException", "SyntaxError/DOMException", "",
+                  "SyntaxError/DOMException", "SyntaxError/DOMException", "SyntaxError/DOMException"},
+            FF_ESR = {"SyntaxError/DOMException", "SyntaxError/DOMException", "SyntaxError/DOMException",
+                      "SyntaxError/DOMException", "SyntaxError/DOMException", "",
+                      "SyntaxError/DOMException", "SyntaxError/DOMException", "SyntaxError/DOMException"})
+    public void nth_child_of_invalid() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function ids(list) {\n"
+            + "  var result = [];\n"
+            + "  for (var i = 0; i < list.length; i++) {\n"
+            + "    result.push(list[i].id);\n"
+            + "  }\n"
+            + "  return result.join(',');\n"
+            + "}\n"
+            + "function q(selector) {\n"
+            + "  try { log(ids(document.querySelectorAll(selector))); } catch(e) { logEx(e); }\n"
+            + "}\n"
+            + "function test() {\n"
+            + "  q(\'li:nth-of-type(1 of .x)\');\n"
+            + "  q(\'li:nth-last-of-type(1 of .x)\');\n"
+            + "  q(\'li:nth-child(of .x)\');\n"
+            + "  q(\'li:nth-child(1 of)\');\n"
+            + "  q(\'li:nth-child(1 of .x,)\');\n"
+            + "  q(\'li:nth-child(1 of ::before)\');\n"
+            + "  q(\'li:nth-child(1 of :unknown)\');\n"
+            + "  q(\'li:nth-child(1 .x)\');\n"
+            + "  q(\'li:nth-child(1of .x)\');\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "<ul>\n"
+            + "  <li id='li1' class='x'></li>\n"
+            + "  <li id='li2'></li>\n"
+            + "  <li id='li3' class='x'></li>\n"
+            + "  <li id='li4' class='x'></li>\n"
+            + "  <li id='li5'></li>\n"
+            + "  <li id='li6' class='x'></li>\n"
+            + "  <li id='li7' class='x y'></li>\n"
+            + "</ul>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * The whitespace rules of the An+B microsyntax.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"li1,li3,li5,li7", "li1,li3,li5,li7", "li1,li3,li5,li7", "li1,li2,li3", "li6,li7", "li5", "", "li2",
+             "SyntaxError/DOMException", "SyntaxError/DOMException", "SyntaxError/DOMException",
+             "SyntaxError/DOMException", "li6,li7", "li2,li5"})
+    public void nth_child_anb() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function ids(list) {\n"
+            + "  var result = [];\n"
+            + "  for (var i = 0; i < list.length; i++) {\n"
+            + "    result.push(list[i].id);\n"
+            + "  }\n"
+            + "  return result.join(',');\n"
+            + "}\n"
+            + "function q(selector) {\n"
+            + "  try { log(ids(document.querySelectorAll(selector))); } catch(e) { logEx(e); }\n"
+            + "}\n"
+            + "function test() {\n"
+            + "  q(\'li:nth-child(2n + 1)\');\n"
+            + "  q(\'li:nth-child(2n- 1)\');\n"
+            + "  q(\'li:nth-child(2n -1)\');\n"
+            + "  q(\'li:nth-child(-n + 3)\');\n"
+            + "  q(\'li:nth-child(+n+6)\');\n"
+            + "  q(\'li:nth-child(+5)\');\n"
+            + "  q(\'li:nth-child(-1)\');\n"
+            + "  q(\'li:nth-child(0n+2)\');\n"
+            + "  q(\'li:nth-child(+ 2n)\');\n"
+            + "  q(\'li:nth-child(2 n)\');\n"
+            + "  q(\'li:nth-child(2n + + 1)\');\n"
+            + "  q(\'li:nth-child(2n+ -1)\');\n"
+            + "  q(\'li:nth-last-child( -n + 2 )\');\n"
+            + "  q(\'li:nth-of-type( 3n - 1 )\');\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "<ul>\n"
+            + "  <li id='li1' class='x'></li>\n"
+            + "  <li id='li2'></li>\n"
+            + "  <li id='li3' class='x'></li>\n"
+            + "  <li id='li4' class='x'></li>\n"
+            + "  <li id='li5'></li>\n"
+            + "  <li id='li6' class='x'></li>\n"
+            + "  <li id='li7' class='x y'></li>\n"
+            + "</ul>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * :nth-child(An+B of S) and matches() / closest().
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"true", "false", "true", "UL"})
+    public void nth_child_of_matchesClosest() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function ids(list) {\n"
+            + "  var result = [];\n"
+            + "  for (var i = 0; i < list.length; i++) {\n"
+            + "    result.push(list[i].id);\n"
+            + "  }\n"
+            + "  return result.join(',');\n"
+            + "}\n"
+            + "function q(selector) {\n"
+            + "  try { log(ids(document.querySelectorAll(selector))); } catch(e) { logEx(e); }\n"
+            + "}\n"
+            + "function test() {\n"
+            + "  var li4 = document.getElementById('li4');\n"
+            + "  log(li4.matches(':nth-child(3 of .x)'));\n"
+            + "  log(li4.matches(':nth-child(2 of .x)'));\n"
+            + "  log(li4.matches(':nth-last-child(3 of .x)'));\n"
+            + "  log(li4.closest(':nth-child(1 of ul)').tagName);\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "<ul>\n"
+            + "  <li id='li1' class='x'></li>\n"
+            + "  <li id='li2'></li>\n"
+            + "  <li id='li3' class='x'></li>\n"
+            + "  <li id='li4' class='x'></li>\n"
+            + "  <li id='li5'></li>\n"
+            + "  <li id='li6' class='x'></li>\n"
+            + "  <li id='li7' class='x y'></li>\n"
+            + "</ul>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * The specificity of :nth-child(An+B of S) is the one of the pseudo-class plus S.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"rgb(255, 0, 0)", "rgb(0, 128, 0)", "rgb(255, 0, 0)", "rgb(0, 0, 255)"})
+    public void nth_child_of_style() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function ids(list) {\n"
+            + "  var result = [];\n"
+            + "  for (var i = 0; i < list.length; i++) {\n"
+            + "    result.push(list[i].id);\n"
+            + "  }\n"
+            + "  return result.join(',');\n"
+            + "}\n"
+            + "function q(selector) {\n"
+            + "  try { log(ids(document.querySelectorAll(selector))); } catch(e) { logEx(e); }\n"
+            + "}\n"
+            + "function test() {\n"
+            + "  log(getComputedStyle(document.getElementById('li1')).color);\n"
+            + "  log(getComputedStyle(document.getElementById('li3')).color);\n"
+            + "  log(getComputedStyle(document.getElementById('li4')).color);\n"
+            + "  log(getComputedStyle(document.getElementById('li7')).color);\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "<ul>\n"
+            + "  <li id='li1' class='x'></li>\n"
+            + "  <li id='li2'></li>\n"
+            + "  <li id='li3' class='x'></li>\n"
+            + "  <li id='li4' class='x'></li>\n"
+            + "  <li id='li5'></li>\n"
+            + "  <li id='li6' class='x'></li>\n"
+            + "  <li id='li7' class='x y'></li>\n"
+            + "</ul>\n"
+            + "<style>\n"
+            + "  li:nth-child(odd of .x) { color: rgb(255, 0, 0); }\n"
+            + "  li.x { color: rgb(0, 128, 0); }\n"
+            + "  li:nth-last-child(1 of .x) { color: rgb(0, 0, 255); }\n"
+            + "</style>\n"
             + "</body></html>";
 
         loadPageVerifyTitle2(html);

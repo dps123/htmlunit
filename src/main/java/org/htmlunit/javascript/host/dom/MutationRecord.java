@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,24 +14,22 @@
  */
 package org.htmlunit.javascript.host.dom;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
+import java.util.ArrayList;
 
+import org.htmlunit.corejs.javascript.ScriptableObject;
 import org.htmlunit.javascript.HtmlUnitScriptable;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxGetter;
-
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import org.htmlunit.corejs.javascript.ScriptableObject;
+import org.htmlunit.javascript.host.html.HTMLElement;
 
 /**
  * A JavaScript object for {@code MutationRecord}.
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/MutationRecord">MDN Documentation</a>
  */
 @JsxClass
 public class MutationRecord extends HtmlUnitScriptable {
@@ -45,11 +43,13 @@ public class MutationRecord extends HtmlUnitScriptable {
     private NodeList removedNodes_;
     private Node previousSibling_;
     private Node nextSibling_;
+
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public MutationRecord() {
+    @JsxConstructor
+    public void jsConstructor() {
+        // nothing to do
     }
 
     /**
@@ -129,11 +129,18 @@ public class MutationRecord extends HtmlUnitScriptable {
     }
 
     /**
+     * Returns the {@code addedNodes} property.
      * @return the {@code addedNodes} property
      */
     @JsxGetter
-    @SuppressFBWarnings("EI_EXPOSE_REP")
     public NodeList getAddedNodes() {
+        if (addedNodes_ == null && target_ instanceof HTMLElement element) {
+            final NodeList addedNodes = new NodeList(element.getDomNodeOrDie(), new ArrayList<>());
+            addedNodes.setParentScope(getParentScope());
+            addedNodes.setPrototype(getPrototype(addedNodes.getClass()));
+
+            addedNodes_ = addedNodes;
+        }
         return addedNodes_;
     }
 
@@ -146,44 +153,51 @@ public class MutationRecord extends HtmlUnitScriptable {
     }
 
     /**
+     * Returns the {@code removedNodes} property.
      * @return the {@code removedNodes} property
      */
     @JsxGetter
-    @SuppressFBWarnings("EI_EXPOSE_REP")
     public NodeList getRemovedNodes() {
+        if (removedNodes_ == null && target_ instanceof HTMLElement element) {
+            final NodeList removedNodes = new NodeList(element.getDomNodeOrDie(), new ArrayList<>());
+            removedNodes.setParentScope(getParentScope());
+            removedNodes.setPrototype(getPrototype(removedNodes.getClass()));
+
+            removedNodes_ = removedNodes;
+        }
         return removedNodes_;
     }
 
     /**
      * Sets the {@code previousSibling} property.
-     * @param removedNodes the {@code previousSibling} property
+     * @param previousSibling the {@code previousSibling} property
      */
     void setPreviousSibling(final Node previousSibling) {
         previousSibling_ = previousSibling;
     }
 
     /**
+     * Returns the {@code previousSibling} property.
      * @return the {@code previousSibling} property
      */
     @JsxGetter
-    @SuppressFBWarnings("EI_EXPOSE_REP")
     public Node getPreviousSibling() {
         return previousSibling_;
     }
 
     /**
      * Sets the {@code nextSibling} property.
-     * @param removedNodes the {@code nextSibling} property
+     * @param nextSibling the {@code nextSibling} property
      */
     void setNextSibling(final Node nextSibling) {
         nextSibling_ = nextSibling;
     }
 
     /**
+     * Returns the {@code nextSibling} property.
      * @return the {@code nextSibling} property
      */
     @JsxGetter
-    @SuppressFBWarnings("EI_EXPOSE_REP")
     public Node getNextSibling() {
         return nextSibling_;
     }

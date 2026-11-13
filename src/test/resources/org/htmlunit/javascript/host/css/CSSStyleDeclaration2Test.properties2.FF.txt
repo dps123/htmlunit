@@ -7,7 +7,6 @@ MozAnimationIterationCount
 MozAnimationName
 MozAnimationPlayState
 MozAnimationTimingFunction
-MozAppearance
 MozBackfaceVisibility
 MozBorderEnd
 MozBorderEndColor
@@ -30,7 +29,6 @@ MozFontFeatureSettings
 MozFontLanguageOverride
 MozForceBrokenImageIcon
 MozHyphens
-MozImageRegion
 MozMarginEnd
 MozMarginStart
 MozOrient
@@ -48,11 +46,7 @@ MozTransitionDelay
 MozTransitionDuration
 MozTransitionProperty
 MozTransitionTimingFunction
-MozUserFocus
-MozUserInput
-MozUserModify
 MozUserSelect
-MozWindowDragging
 WebkitAlignContent
 WebkitAlignItems
 WebkitAlignSelf
@@ -93,6 +87,7 @@ WebkitFlexFlow
 WebkitFlexGrow
 WebkitFlexShrink
 WebkitFlexWrap
+WebkitFontFeatureSettings
 WebkitJustifyContent
 WebkitLineClamp
 WebkitMask
@@ -109,6 +104,7 @@ WebkitOrder
 WebkitPerspective
 WebkitPerspectiveOrigin
 WebkitTextFillColor
+WebkitTextSecurity
 WebkitTextSizeAdjust
 WebkitTextStroke
 WebkitTextStrokeColor
@@ -126,8 +122,12 @@ accentColor
 alignContent
 alignItems
 alignSelf
+alignmentBaseline
 all
+anchorName
+anchorScope
 animation
+animationComposition
 animationDelay
 animationDirection
 animationDuration
@@ -135,6 +135,10 @@ animationFillMode
 animationIterationCount
 animationName
 animationPlayState
+animationRange
+animationRangeEnd
+animationRangeStart
+animationTimeline
 animationTimingFunction
 appearance
 aspectRatio
@@ -152,6 +156,8 @@ backgroundPositionX
 backgroundPositionY
 backgroundRepeat
 backgroundSize
+baselineShift
+baselineSource
 blockSize
 border
 borderBlock
@@ -252,6 +258,7 @@ container
 containerName
 containerType
 content
+contentVisibility
 counterIncrement
 counterReset
 counterSet
@@ -265,6 +272,7 @@ direction
 display
 dominantBaseline
 emptyCells
+fieldSizing
 fill
 fillOpacity
 fillRule
@@ -291,6 +299,7 @@ fontSizeAdjust
 fontStretch
 fontStyle
 fontSynthesis
+fontSynthesisPosition
 fontSynthesisSmallCaps
 fontSynthesisStyle
 fontSynthesisWeight
@@ -298,11 +307,14 @@ fontVariant
 fontVariantAlternates
 fontVariantCaps
 fontVariantEastAsian
+fontVariantEmoji
 fontVariantLigatures
 fontVariantNumeric
 fontVariantPosition
 fontVariationSettings
 fontWeight
+fontWidth
+forcedColorAdjust
 gap
 grid
 gridArea
@@ -324,6 +336,7 @@ gridTemplateColumns
 gridTemplateRows
 height
 hyphenateCharacter
+hyphenateLimitChars
 hyphens
 imageOrientation
 imageRendering
@@ -376,6 +389,9 @@ maskPositionY
 maskRepeat
 maskSize
 maskType
+mathDepth
+mathShift
+mathStyle
 maxBlockSize
 maxHeight
 maxInlineSize
@@ -391,6 +407,7 @@ offset
 offsetAnchor
 offsetDistance
 offsetPath
+offsetPosition
 offsetRotate
 opacity
 order
@@ -435,6 +452,12 @@ placeItems
 placeSelf
 pointerEvents
 position
+positionAnchor
+positionArea
+positionTry
+positionTryFallbacks
+positionTryOrder
+positionVisibility
 printColorAdjust
 quotes
 r
@@ -473,6 +496,9 @@ scrollPaddingTop
 scrollSnapAlign
 scrollSnapStop
 scrollSnapType
+scrollTimeline
+scrollTimelineAxis
+scrollTimelineName
 scrollbarColor
 scrollbarGutter
 scrollbarWidth
@@ -495,9 +521,14 @@ tableLayout
 textAlign
 textAlignLast
 textAnchor
+textAutospace
+textBox
+textBoxEdge
+textBoxTrim
 textCombineUpright
 textDecoration
 textDecorationColor
+textDecorationInset
 textDecorationLine
 textDecorationSkipInk
 textDecorationStyle
@@ -515,6 +546,10 @@ textShadow
 textTransform
 textUnderlineOffset
 textUnderlinePosition
+textWrap
+textWrapMode
+textWrapStyle
+timelineScope
 top
 touchAction
 transform
@@ -522,6 +557,7 @@ transformBox
 transformOrigin
 transformStyle
 transition
+transitionBehavior
 transitionDelay
 transitionDuration
 transitionProperty
@@ -531,6 +567,12 @@ unicodeBidi
 userSelect
 vectorEffect
 verticalAlign
+viewTimeline
+viewTimelineAxis
+viewTimelineInset
+viewTimelineName
+viewTransitionClass
+viewTransitionName
 visibility
 webkitAlignContent
 webkitAlignItems
@@ -572,6 +614,7 @@ webkitFlexFlow
 webkitFlexGrow
 webkitFlexShrink
 webkitFlexWrap
+webkitFontFeatureSettings
 webkitJustifyContent
 webkitLineClamp
 webkitMask
@@ -588,6 +631,7 @@ webkitOrder
 webkitPerspective
 webkitPerspectiveOrigin
 webkitTextFillColor
+webkitTextSecurity
 webkitTextSizeAdjust
 webkitTextStroke
 webkitTextStrokeColor
@@ -602,6 +646,7 @@ webkitTransitionProperty
 webkitTransitionTimingFunction
 webkitUserSelect
 whiteSpace
+whiteSpaceCollapse
 width
 willChange
 wordBreak
@@ -611,3 +656,4 @@ writingMode
 x
 y
 zIndex
+zoom

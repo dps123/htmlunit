@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,10 @@
  */
 package org.htmlunit.html;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.SimpleWebTestCase;
 import org.htmlunit.javascript.host.event.KeyboardEvent;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link HtmlEmailInput}.
@@ -29,7 +26,6 @@ import org.htmlunit.junit.BrowserRunner.Alerts;
  * @author Anton Demydenko
  * @author Michael Lueck
  */
-@RunWith(BrowserRunner.class)
 public class HtmlEmailInput2Test extends SimpleWebTestCase {
 
     /**
@@ -37,8 +33,8 @@ public class HtmlEmailInput2Test extends SimpleWebTestCase {
      */
     @Test
     public void typingAndClone() throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1'>\n"
@@ -60,8 +56,8 @@ public class HtmlEmailInput2Test extends SimpleWebTestCase {
      */
     @Test
     public void typingAndReset() throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1'>\n"
@@ -86,8 +82,8 @@ public class HtmlEmailInput2Test extends SimpleWebTestCase {
      */
     @Test
     public void typingAndSetValueAttribute() throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1'>\n"
@@ -112,8 +108,8 @@ public class HtmlEmailInput2Test extends SimpleWebTestCase {
      */
     @Test
     public void typingAndSetValue() throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1'>\n"
@@ -138,8 +134,8 @@ public class HtmlEmailInput2Test extends SimpleWebTestCase {
      */
     @Test
     public void patternValidation() throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1'>\n"
@@ -168,8 +164,8 @@ public class HtmlEmailInput2Test extends SimpleWebTestCase {
      */
     @Test
     public void basicValidation() throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1'>\n"
@@ -198,8 +194,8 @@ public class HtmlEmailInput2Test extends SimpleWebTestCase {
     @Test
     @Alerts("bla")
     public void asNormalizedText() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1'>\n"
@@ -217,8 +213,8 @@ public class HtmlEmailInput2Test extends SimpleWebTestCase {
      */
     @Test
     public void typeWhileSelected() throws Exception {
-        final String html =
-              "<html><head></head><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head></head><body>\n"
             + "<input type='email' id='myInput' value='Hello@world.com'><br>\n"
             + "</body></html>";
         final HtmlPage page = loadPage(html);
@@ -234,7 +230,7 @@ public class HtmlEmailInput2Test extends SimpleWebTestCase {
      */
     @Test
     public void typeLeftArrow() throws Exception {
-        final String html = "<html><head></head><body><input type='email' id='t'/></body></html>";
+        final String html = DOCTYPE_HTML + "<html><head></head><body><input type='email' id='t'/></body></html>";
         final HtmlPage page = loadPage(html);
         final HtmlEmailInput t = page.getHtmlElementById("t");
         t.type('t');
@@ -258,7 +254,7 @@ public class HtmlEmailInput2Test extends SimpleWebTestCase {
      */
     @Test
     public void typeDelKey() throws Exception {
-        final String html = "<html><head></head><body><input type='email' id='t'/></body></html>";
+        final String html = DOCTYPE_HTML + "<html><head></head><body><input type='email' id='t'/></body></html>";
         final HtmlPage page = loadPage(html);
         final HtmlEmailInput t = page.getHtmlElementById("t");
         t.type('t');
@@ -282,7 +278,8 @@ public class HtmlEmailInput2Test extends SimpleWebTestCase {
     @Test
     @Alerts({"true", "true", "true", "", "a@b.co"})
     public void maxLengthValidation() throws Exception {
-        final String htmlContent = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1'>\n"
@@ -307,10 +304,10 @@ public class HtmlEmailInput2Test extends SimpleWebTestCase {
      *         if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"true", "false", "true", "", "a@b.com"},
-            IE = {"true", "true", "true", "", "a@b.com"})
+    @Alerts({"true", "false", "true", "", "a@b.com"})
     public void minLengthValidation() throws Exception {
-        final String htmlContent = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1'>\n"

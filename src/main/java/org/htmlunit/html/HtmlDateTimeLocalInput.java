@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,14 @@
  */
 package org.htmlunit.html;
 
-import static org.htmlunit.BrowserVersionFeatures.HTMLINPUT_TYPE_DATETIME_LOCAL_SUPPORTED;
-
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Map;
 
-import org.apache.commons.lang3.StringUtils;
-
+import org.htmlunit.BrowserVersion;
 import org.htmlunit.SgmlPage;
+import org.htmlunit.util.StringUtils;
 
 /**
  * Wrapper for the HTML element "input" where type is "datetime-local".
@@ -31,6 +29,7 @@ import org.htmlunit.SgmlPage;
  * @author Ahmed Ashour
  * @author Frank Danek
  * @author Anton Demydenko
+ * @author Ronald Brill
  */
 public class HtmlDateTimeLocalInput extends HtmlInput implements LabelableElement {
 
@@ -62,13 +61,12 @@ public class HtmlDateTimeLocalInput extends HtmlInput implements LabelableElemen
     @Override
     public void setValue(final String newValue) {
         try {
-            if (hasFeature(HTMLINPUT_TYPE_DATETIME_LOCAL_SUPPORTED)
-                    && StringUtils.isNotEmpty(newValue)) {
+            if (!StringUtils.isEmptyOrNull(newValue)) {
                 FORMATTER_.parse(newValue);
             }
             super.setValue(newValue);
         }
-        catch (final DateTimeParseException e) {
+        catch (final DateTimeParseException ignored) {
             // ignore
         }
     }
@@ -89,14 +87,13 @@ public class HtmlDateTimeLocalInput extends HtmlInput implements LabelableElemen
      * @return if the input element has a valid min value
      */
     private boolean isMinValid() {
-        if (hasFeature(HTMLINPUT_TYPE_DATETIME_LOCAL_SUPPORTED)
-                && !getMin().isEmpty()) {
+        if (!getMin().isEmpty()) {
             try {
                 final LocalDateTime dateValue = LocalDateTime.parse(getRawValue(), FORMATTER_);
                 final LocalDateTime minDate = LocalDateTime.parse(getMin(), FORMATTER_);
                 return minDate.isEqual(dateValue) || minDate.isBefore(dateValue);
             }
-            catch (final DateTimeParseException e) {
+            catch (final DateTimeParseException ignored) {
                 // ignore
             }
         }
@@ -111,17 +108,21 @@ public class HtmlDateTimeLocalInput extends HtmlInput implements LabelableElemen
      * @return if the input element has a valid max value
      */
     private boolean isMaxValid() {
-        if (hasFeature(HTMLINPUT_TYPE_DATETIME_LOCAL_SUPPORTED)
-                && !getMax().isEmpty()) {
+        if (!getMax().isEmpty()) {
             try {
                 final LocalDateTime dateValue = LocalDateTime.parse(getRawValue(), FORMATTER_);
                 final LocalDateTime maxDate = LocalDateTime.parse(getMax(), FORMATTER_);
                 return maxDate.isEqual(dateValue) || maxDate.isAfter(dateValue);
             }
-            catch (final DateTimeParseException e) {
+            catch (final DateTimeParseException ignored) {
                 // ignore
             }
         }
         return true;
+    }
+
+    @Override
+    protected void adjustValueAfterTypeChange(final HtmlInput oldInput, final BrowserVersion browserVersion) {
+        setValue("");
     }
 }

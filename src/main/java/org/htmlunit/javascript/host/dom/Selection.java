@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,31 +14,22 @@
  */
 package org.htmlunit.javascript.host.dom;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
 import java.util.ArrayList;
 import java.util.List;
-
-import org.w3c.dom.ranges.Range;
 
 import org.htmlunit.html.HtmlPage;
 import org.htmlunit.html.impl.SimpleRange;
 import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
 
-import org.htmlunit.corejs.javascript.Context;
-
 /**
  * A JavaScript object for {@code Selection}.
  *
- * @see <a href="http://msdn2.microsoft.com/en-us/library/ms535869.aspx">MSDN Documentation</a>
- * @see <a href="https://developer.mozilla.org/en/DOM/Selection">Gecko DOM Reference</a>
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/Selection">MDN Documentation</a>
  * @author Ahmed Ashour
  * @author Daniel Gredler
  * @author Frank Danek
@@ -53,20 +44,22 @@ public class Selection extends HtmlUnitScriptable {
     private String type_ = TYPE_NONE;
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public Selection() {
+    @JsxConstructor
+    public void jsConstructor() {
+        // nothing to do
     }
 
     /**
-     * @return a string currently being represented by the selection object,
-     * i.e. the currently selected text.
+     * Returns the text represented by this selection.
+     *
+     * @return the currently selected text
      */
     @JsxFunction(functionName = "toString")
     public String jsToString() {
         final StringBuilder sb = new StringBuilder();
-        for (final Range r : getRanges()) {
+        for (final SimpleRange r : getRanges()) {
             sb.append(r.toString());
         }
         return sb.toString();
@@ -89,7 +82,7 @@ public class Selection extends HtmlUnitScriptable {
      */
     @JsxGetter
     public Node getAnchorNode() {
-        final Range last = getLastRange();
+        final SimpleRange last = getLastRange();
         if (last == null) {
             return null;
         }
@@ -102,7 +95,7 @@ public class Selection extends HtmlUnitScriptable {
      */
     @JsxGetter
     public int getAnchorOffset() {
-        final Range last = getLastRange();
+        final SimpleRange last = getLastRange();
         if (last == null) {
             return 0;
         }
@@ -115,7 +108,7 @@ public class Selection extends HtmlUnitScriptable {
      */
     @JsxGetter
     public Node getFocusNode() {
-        final Range last = getLastRange();
+        final SimpleRange last = getLastRange();
         if (last == null) {
             return null;
         }
@@ -128,7 +121,7 @@ public class Selection extends HtmlUnitScriptable {
      */
     @JsxGetter
     public int getFocusOffset() {
-        final Range last = getLastRange();
+        final SimpleRange last = getLastRange();
         if (last == null) {
             return 0;
         }
@@ -141,8 +134,8 @@ public class Selection extends HtmlUnitScriptable {
      */
     @JsxGetter
     public boolean isIsCollapsed() {
-        final List<Range> ranges = getRanges();
-        return ranges.isEmpty() || (ranges.size() == 1 && ranges.get(0).getCollapsed());
+        final List<SimpleRange> ranges = getRanges();
+        return ranges.isEmpty() || (ranges.size() == 1 && ranges.get(0).isCollapsed());
     }
 
     /**
@@ -158,7 +151,7 @@ public class Selection extends HtmlUnitScriptable {
      * Returns the type of selection (IE only).
      * @return the type of selection
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public String getType() {
         return type_;
     }
@@ -168,11 +161,11 @@ public class Selection extends HtmlUnitScriptable {
      * @param range the range to add
      */
     @JsxFunction
-    public void addRange(final org.htmlunit.javascript.host.dom.Range range) {
-        final SimpleRange rg = range.toW3C();
+    public void addRange(final Range range) {
+        final SimpleRange rg = range.getSimpleRange();
         getRanges().add(rg);
 
-        if (TYPE_CARET.equals(type_) && rg.getCollapsed()) {
+        if (TYPE_CARET.equals(type_) && rg.isCollapsed()) {
             return;
         }
         type_ = TYPE_RANGE;
@@ -183,8 +176,8 @@ public class Selection extends HtmlUnitScriptable {
      * @param range the range to remove
      */
     @JsxFunction
-    public void removeRange(final org.htmlunit.javascript.host.dom.Range range) {
-        getRanges().remove(range.toW3C());
+    public void removeRange(final Range range) {
+        getRanges().remove(range.getSimpleRange());
 
         if (getRangeCount() < 1) {
             type_ = TYPE_NONE;
@@ -208,16 +201,16 @@ public class Selection extends HtmlUnitScriptable {
      * @return the range at the specified index
      */
     @JsxFunction
-    public org.htmlunit.javascript.host.dom.Range getRangeAt(final int index) {
-        final List<Range> ranges = getRanges();
+    public Range getRangeAt(final int index) {
+        final List<SimpleRange> ranges = getRanges();
         if (index < 0 || index >= ranges.size()) {
-            throw Context.reportRuntimeError("Invalid range index: " + index);
+            throw JavaScriptEngine.asJavaScriptException(
+                    getWindow(), "Invalid range index: " + index, DOMException.INDEX_SIZE_ERR);
         }
-        final Range range = ranges.get(index);
-        final org.htmlunit.javascript.host.dom.Range jsRange =
-            new org.htmlunit.javascript.host.dom.Range(range);
-        jsRange.setParentScope(getWindow());
-        jsRange.setPrototype(getPrototype(org.htmlunit.javascript.host.dom.Range.class));
+        final SimpleRange range = ranges.get(index);
+        final Range jsRange = new Range(range);
+        jsRange.setParentScope(getParentScope());
+        jsRange.setPrototype(getPrototype(Range.class));
 
         return jsRange;
     }
@@ -229,7 +222,7 @@ public class Selection extends HtmlUnitScriptable {
      */
     @JsxFunction
     public void collapse(final Node parentNode, final int offset) {
-        final List<Range> ranges = getRanges();
+        final List<SimpleRange> ranges = getRanges();
         ranges.clear();
         ranges.add(new SimpleRange(parentNode.getDomNodeOrDie(), offset));
 
@@ -241,9 +234,9 @@ public class Selection extends HtmlUnitScriptable {
      */
     @JsxFunction
     public void collapseToEnd() {
-        final Range last = getLastRange();
+        final SimpleRange last = getLastRange();
         if (last != null) {
-            final List<Range> ranges = getRanges();
+            final List<SimpleRange> ranges = getRanges();
             ranges.clear();
             ranges.add(last);
             last.collapse(false);
@@ -257,9 +250,9 @@ public class Selection extends HtmlUnitScriptable {
      */
     @JsxFunction
     public void collapseToStart() {
-        final Range first = getFirstRange();
+        final SimpleRange first = getFirstRange();
         if (first != null) {
-            final List<Range> ranges = getRanges();
+            final List<SimpleRange> ranges = getRanges();
             ranges.clear();
             ranges.add(first);
             first.collapse(true);
@@ -271,7 +264,7 @@ public class Selection extends HtmlUnitScriptable {
     /**
      * Cancels the current selection, sets the selection type to none.
      */
-    @JsxFunction({CHROME, EDGE, FF, FF_ESR})
+    @JsxFunction
     public void empty() {
         removeAllRanges();
     }
@@ -281,9 +274,9 @@ public class Selection extends HtmlUnitScriptable {
      * @param parentNode the node within which the focus will be moved
      * @param offset the number of characters from the beginning of parentNode's text the focus will be placed
      */
-    @JsxFunction({CHROME, EDGE, FF, FF_ESR})
+    @JsxFunction
     public void extend(final Node parentNode, final int offset) {
-        final Range last = getLastRange();
+        final SimpleRange last = getLastRange();
         if (last != null) {
             last.setEnd(parentNode.getDomNodeOrDie(), offset);
 
@@ -297,12 +290,12 @@ public class Selection extends HtmlUnitScriptable {
      */
     @JsxFunction
     public void selectAllChildren(final Node parentNode) {
-        final List<Range> ranges = getRanges();
+        final List<SimpleRange> ranges = getRanges();
         ranges.clear();
-        final SimpleRange rg = new SimpleRange(parentNode.getDomNodeOrDie());
-        ranges.add(rg);
+        final SimpleRange simpleRange = new SimpleRange(parentNode.getDomNodeOrDie());
+        ranges.add(simpleRange);
 
-        if (rg.getCollapsed()) {
+        if (simpleRange.isCollapsed()) {
             type_ = TYPE_CARET;
         }
         else {
@@ -314,7 +307,7 @@ public class Selection extends HtmlUnitScriptable {
      * Returns the current HtmlUnit DOM selection ranges.
      * @return the current HtmlUnit DOM selection ranges
      */
-    private List<Range> getRanges() {
+    private List<SimpleRange> getRanges() {
         final HtmlPage page = (HtmlPage) getWindow().getDomNodeOrDie();
         return page.getSelectionRanges();
     }
@@ -323,12 +316,12 @@ public class Selection extends HtmlUnitScriptable {
      * Returns the first selection range in the current document, by document position.
      * @return the first selection range in the current document, by document position
      */
-    private Range getFirstRange() {
+    private SimpleRange getFirstRange() {
         // avoid concurrent modification exception
-        final List<Range> ranges = new ArrayList<>(getRanges());
+        final List<SimpleRange> ranges = new ArrayList<>(getRanges());
 
-        Range first = null;
-        for (final Range range : ranges) {
+        SimpleRange first = null;
+        for (final SimpleRange range : ranges) {
             if (first == null) {
                 first = range;
             }
@@ -347,12 +340,12 @@ public class Selection extends HtmlUnitScriptable {
      * Returns the last selection range in the current document, by document position.
      * @return the last selection range in the current document, by document position
      */
-    private Range getLastRange() {
+    private SimpleRange getLastRange() {
         // avoid concurrent modification exception
-        final List<Range> ranges = new ArrayList<>(getRanges());
+        final List<SimpleRange> ranges = new ArrayList<>(getRanges());
 
-        Range last = null;
-        for (final Range range : ranges) {
+        SimpleRange last = null;
+        for (final SimpleRange range : ranges) {
             if (last == null) {
                 last = range;
             }

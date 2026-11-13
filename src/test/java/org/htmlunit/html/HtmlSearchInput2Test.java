@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,9 @@
  */
 package org.htmlunit.html;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.SimpleWebTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link HtmlSearchInput}.
@@ -27,7 +24,6 @@ import org.htmlunit.junit.BrowserRunner.Alerts;
  * @author Anton Demydenko
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class HtmlSearchInput2Test extends SimpleWebTestCase {
 
     /**
@@ -35,8 +31,8 @@ public class HtmlSearchInput2Test extends SimpleWebTestCase {
      */
     @Test
     public void patternValidation() throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1'>\n"
@@ -65,7 +61,8 @@ public class HtmlSearchInput2Test extends SimpleWebTestCase {
     @Test
     @Alerts({"true", "true", "true", "", "foo"})
     public void maxLengthValidation() throws Exception {
-        final String htmlContent = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1'>\n"
@@ -90,10 +87,10 @@ public class HtmlSearchInput2Test extends SimpleWebTestCase {
      *         if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"true", "false", "true", "", "foobar"},
-            IE = {"true", "true", "true", "", "foobar"})
+    @Alerts({"true", "false", "true", "", "foobar"})
     public void minLengthValidation() throws Exception {
-        final String htmlContent = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1'>\n"

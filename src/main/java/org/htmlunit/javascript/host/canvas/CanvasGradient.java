@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,6 @@
  */
 package org.htmlunit.javascript.host.canvas;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
 import org.htmlunit.javascript.HtmlUnitScriptable;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
@@ -29,23 +24,26 @@ import org.htmlunit.javascript.configuration.JsxFunction;
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/CanvasGradient">MDN Documentation</a>
  */
 @JsxClass
 public class CanvasGradient extends HtmlUnitScriptable {
 
     /**
-     * Default constructor.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public CanvasGradient() {
+    @JsxConstructor
+    public void jsConstructor() {
+        // nothing to do
     }
 
     /**
      * Adds a new stop, defined by an offset and a color, to the gradient.
-     * @param offset A number between 0 and 1. An INDEX_SIZE_ERR is raised,
-     * if the number is not in that range.
-     * @param color A CSS color. A SYNTAX_ERR is raised, if the value
-     * can not be parsed as a CSS color value.
+     * @param offset a number between 0 and 1; an {@code INDEX_SIZE_ERR} is raised
+     *        if the number is not in that range
+     * @param color a CSS color; a {@code SYNTAX_ERR} is raised if the value
+     *        cannot be parsed as a CSS color value
      */
     @JsxFunction
     public void addColorStop(final double offset, final String color) {

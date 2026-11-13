@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,40 +14,35 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.BrowserVersionFeatures.HTMLOPTION_REMOVE_SELECTED_ATTRIB_DESELECTS;
 import static org.htmlunit.html.DomElement.ATTRIBUTE_NOT_DEFINED;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
-import org.xml.sax.helpers.AttributesImpl;
 
 import org.htmlunit.SgmlPage;
+import org.htmlunit.html.DomElement;
 import org.htmlunit.html.DomNode;
 import org.htmlunit.html.DomText;
 import org.htmlunit.html.HtmlForm;
 import org.htmlunit.html.HtmlOption;
 import org.htmlunit.html.HtmlOptionGroup;
 import org.htmlunit.html.HtmlSelect;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.configuration.JsxSetter;
-
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.Undefined;
+import org.xml.sax.helpers.AttributesImpl;
 
 /**
- * The JavaScript object that represents an option.
+ * The JavaScript object for {@link HtmlOption}.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author David K. Taylor
  * @author Chris Erskine
  * @author Marc Guillemot
  * @author Ahmed Ashour
  * @author Ronald Brill
  * @author Frank Danek
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLOptionElement">MDN Documentation</a>
  */
 @JsxClass(domClass = HtmlOption.class)
 public class HTMLOptionElement extends HTMLElement {
@@ -56,10 +51,10 @@ public class HTMLOptionElement extends HTMLElement {
      * JavaScript constructor.
      * @param newText the text
      * @param newValue the value
-     * @param defaultSelected Whether the option is initially selected
+     * @param defaultSelected whether the option is initially selected
      * @param selected the current selection state of the option
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
+    @JsxConstructor
     public void jsConstructor(final Object newText, final String newValue,
             final boolean defaultSelected, final boolean selected) {
         final SgmlPage page = (SgmlPage) getWindow().getWebWindow().getEnclosedPage();
@@ -75,8 +70,8 @@ public class HTMLOptionElement extends HTMLElement {
         htmlOption.setSelected(selected);
         setDomNode(htmlOption);
 
-        if (!Undefined.isUndefined(newText)) {
-            final String newTextString = Context.toString(newText);
+        if (!JavaScriptEngine.isUndefined(newText)) {
+            final String newTextString = JavaScriptEngine.toString(newText);
             htmlOption.appendChild(new DomText(page, newTextString));
             htmlOption.setLabelAttribute(newTextString);
         }
@@ -86,13 +81,25 @@ public class HTMLOptionElement extends HTMLElement {
     }
 
     /**
+     * JavaScript constructor.
+     * @param newText the text
+     * @param newValue the value
+     * @param defaultSelected whether the option is initially selected
+     * @param selected the current selection state of the option
+     */
+    public void jsConstructorOption(final Object newText, final String newValue,
+            final boolean defaultSelected, final boolean selected) {
+        jsConstructor(newText, newValue, defaultSelected, selected);
+    }
+
+    /**
      * Returns the value of the {@code value} property.
      * @return the value property
      */
     @JsxGetter
     @Override
     public String getValue() {
-        String value = getDomNodeOrNull().getAttributeDirect("value");
+        String value = getDomNodeOrNull().getAttributeDirect(DomElement.VALUE_ATTRIBUTE);
         if (ATTRIBUTE_NOT_DEFINED == value) {
             value = ((HtmlOption) getDomNodeOrNull()).getText();
         }
@@ -106,8 +113,8 @@ public class HTMLOptionElement extends HTMLElement {
     @JsxSetter
     public void setValue(final String newValue) {
         final DomNode dom = getDomNodeOrNull();
-        if (dom instanceof HtmlOption) {
-            ((HtmlOption) dom).setValueAttribute(newValue);
+        if (dom instanceof HtmlOption option) {
+            option.setValueAttribute(newValue);
         }
     }
 
@@ -118,8 +125,8 @@ public class HTMLOptionElement extends HTMLElement {
     @JsxGetter
     public String getText() {
         final DomNode dom = getDomNodeOrNull();
-        if (dom instanceof HtmlOption) {
-            return ((HtmlOption) dom).getText();
+        if (dom instanceof HtmlOption option) {
+            return option.getText();
         }
         return null;
     }
@@ -131,8 +138,8 @@ public class HTMLOptionElement extends HTMLElement {
     @JsxSetter
     public void setText(final String newText) {
         final DomNode dom = getDomNodeOrNull();
-        if (dom instanceof HtmlOption) {
-            ((HtmlOption) dom).setText(newText);
+        if (dom instanceof HtmlOption option) {
+            option.setText(newText);
 
             if (!hasAttribute("label")) {
                 setLabel(newText);
@@ -142,20 +149,20 @@ public class HTMLOptionElement extends HTMLElement {
 
     /**
      * Returns the value of the {@code selected} property.
-     * @return the text property
+     * @return the selected property
      */
     @JsxGetter
     public boolean isSelected() {
         final DomNode dom = getDomNodeOrNull();
-        if (dom instanceof HtmlOption) {
-            return ((HtmlOption) dom).isSelected();
+        if (dom instanceof HtmlOption option) {
+            return option.isSelected();
         }
         return false;
     }
 
     /**
      * Sets the value of the {@code selected} property.
-     * @param selected the new selected property
+     * @param selected the new value of the {@code selected} property
      */
     @JsxSetter
     public void setSelected(final boolean selected) {
@@ -175,13 +182,13 @@ public class HTMLOptionElement extends HTMLElement {
 
     /**
      * Returns the value of the {@code defaultSelected} property.
-     * @return the text property
+     * @return the defaultSelected property
      */
     @JsxGetter
     public boolean isDefaultSelected() {
         final DomNode dom = getDomNodeOrNull();
-        if (dom instanceof HtmlOption) {
-            return ((HtmlOption) dom).isDefaultSelected();
+        if (dom instanceof HtmlOption option) {
+            return option.isDefaultSelected();
         }
         return false;
     }
@@ -193,21 +200,21 @@ public class HTMLOptionElement extends HTMLElement {
     @JsxGetter
     public String getLabel() {
         final DomNode domNode = getDomNodeOrNull();
-        if (domNode instanceof HtmlOption) {
-            return ((HtmlOption) domNode).getLabelAttribute();
+        if (domNode instanceof HtmlOption option) {
+            return option.getLabelAttribute();
         }
         return ((HtmlOptionGroup) domNode).getLabelAttribute();
     }
 
     /**
      * Sets the value of the {@code label} property.
-     * @param label the new label property
+     * @param label the new value of the {@code label} property
      */
     @JsxSetter
     public void setLabel(final String label) {
         final DomNode domNode = getDomNodeOrNull();
-        if (domNode instanceof HtmlOption) {
-            ((HtmlOption) domNode).setLabelAttribute(label);
+        if (domNode instanceof HtmlOption option) {
+            option.setLabelAttribute(label);
         }
         else {
             ((HtmlOptionGroup) domNode).setLabelAttribute(label);
@@ -265,10 +272,8 @@ public class HTMLOptionElement extends HTMLElement {
     @Override
     public void removeAttribute(final String name) {
         super.removeAttribute(name);
-        if (getBrowserVersion().hasFeature(HTMLOPTION_REMOVE_SELECTED_ATTRIB_DESELECTS)) {
-            if ("selected".equals(name)) {
-                setSelected(false);
-            }
+        if ("selected".equals(name)) {
+            setSelected(false);
         }
     }
 

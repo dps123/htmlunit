@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,11 @@
  */
 package org.htmlunit.javascript.host.event;
 
-import static org.htmlunit.BrowserVersionFeatures.EVENT_ONMESSAGE_DEFAULT_DATA_NULL;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
 import org.htmlunit.HttpHeader;
+import org.htmlunit.corejs.javascript.NativeArray;
+import org.htmlunit.corejs.javascript.Scriptable;
+import org.htmlunit.corejs.javascript.ScriptableObject;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
@@ -28,19 +26,13 @@ import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.host.Window;
 import org.htmlunit.javascript.host.WindowProxy;
 
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.NativeArray;
-import org.htmlunit.corejs.javascript.ScriptRuntime;
-import org.htmlunit.corejs.javascript.Scriptable;
-import org.htmlunit.corejs.javascript.ScriptableObject;
-import org.htmlunit.corejs.javascript.Undefined;
-
 /**
  * A JavaScript object for {@code MessageEvent}.
  * <p>
  * For general information on which properties and functions should be supported, see
  * <a href="http://www.whatwg.org/specs/web-apps/current-work/multipage/comms.html#messageevent">
  * Event definitions</a>.
+ * </p>
  *
  * @see <a href="https://developer.mozilla.org/en/WebSockets/WebSockets_reference/MessageEvent">
  *          Mozilla documentation</a>
@@ -61,10 +53,11 @@ public class MessageEvent extends Event {
      * Default constructor used to build the prototype.
      */
     public MessageEvent() {
+        super();
         setType(TYPE_MESSAGE);
         origin_ = "";
         lastEventId_ = "";
-        data_ = Undefined.instance;
+        data_ = JavaScriptEngine.UNDEFINED;
     }
 
     /**
@@ -83,17 +76,15 @@ public class MessageEvent extends Event {
      * @param details the event details (optional)
      */
     @Override
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
+    @JsxConstructor
     public void jsConstructor(final String type, final ScriptableObject details) {
         super.jsConstructor(type, details);
 
-        if (getBrowserVersion().hasFeature(EVENT_ONMESSAGE_DEFAULT_DATA_NULL)) {
-            data_ = null;
-        }
+        data_ = null;
 
         String origin = "";
         String lastEventId = "";
-        if (details != null && !Undefined.isUndefined(details)) {
+        if (details != null && !JavaScriptEngine.isUndefined(details)) {
             data_ = details.get("data");
 
             final String detailOrigin = (String) details.get(HttpHeader.ORIGIN_LC);
@@ -103,16 +94,16 @@ public class MessageEvent extends Event {
 
             final Object detailLastEventId = details.get("lastEventId");
             if (detailLastEventId != null) {
-                lastEventId = Context.toString(detailLastEventId);
+                lastEventId = JavaScriptEngine.toString(detailLastEventId);
             }
 
             source_ = null;
             final Object detailSource = details.get("source");
-            if (detailSource instanceof Window) {
-                source_ = (Window) detailSource;
+            if (detailSource instanceof Window window) {
+                source_ = window;
             }
-            else if (detailSource instanceof WindowProxy) {
-                source_ = ((WindowProxy) detailSource).getDelegee();
+            else if (detailSource instanceof WindowProxy proxy) {
+                source_ = proxy.getDelegee();
             }
             ports_ = details.get("ports");
         }
@@ -147,13 +138,13 @@ public class MessageEvent extends Event {
         lastEventId_ = lastEventId;
         source_ = source;
 
-        if (Undefined.isUndefined(ports)
+        if (JavaScriptEngine.isUndefined(ports)
             || ports instanceof NativeArray
-            || (ports instanceof Scriptable && ScriptableObject.hasProperty((Scriptable) ports, "length"))) {
+            || (ports instanceof Scriptable scriptable && ScriptableObject.hasProperty(scriptable, "length"))) {
             ports_ = ports;
         }
         else {
-            throw ScriptRuntime.typeError(
+            throw JavaScriptEngine.typeError(
                     "Argument 8 of MessageEvent.initMessageEvent can't be converted to a sequence.");
         }
     }
@@ -188,7 +179,7 @@ public class MessageEvent extends Event {
      * Retrieves the identifier of the last event.
      * @return the identified of the last event
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public String getLastEventId() {
         return lastEventId_;
     }

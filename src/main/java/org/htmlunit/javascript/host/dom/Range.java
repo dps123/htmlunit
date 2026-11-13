@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,33 +14,31 @@
  */
 package org.htmlunit.javascript.host.dom;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
 import java.util.HashSet;
 
 import org.apache.commons.logging.LogFactory;
-
+import org.htmlunit.BrowserVersion;
 import org.htmlunit.SgmlPage;
+import org.htmlunit.WebClient;
+import org.htmlunit.WebWindow;
+import org.htmlunit.css.ComputedCssStyleDeclaration;
+import org.htmlunit.css.StyleAttributes.Definition;
 import org.htmlunit.html.DomDocumentFragment;
+import org.htmlunit.html.DomElement;
 import org.htmlunit.html.DomNode;
+import org.htmlunit.html.DomText;
+import org.htmlunit.html.HtmlElement;
 import org.htmlunit.html.impl.SimpleRange;
 import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstant;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
-import org.htmlunit.javascript.host.ClientRect;
-import org.htmlunit.javascript.host.ClientRectList;
-import org.htmlunit.javascript.host.Window;
+import org.htmlunit.javascript.host.DOMRect;
+import org.htmlunit.javascript.host.DOMRectList;
 import org.htmlunit.javascript.host.html.HTMLElement;
-
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.ScriptableObject;
-import org.htmlunit.corejs.javascript.Undefined;
 
 /**
  * The JavaScript object that represents a Range.
@@ -54,34 +52,38 @@ import org.htmlunit.corejs.javascript.Undefined;
  * @author Ronald Brill
  */
 @JsxClass
-public class Range extends HtmlUnitScriptable {
+public class Range extends AbstractRange {
 
     /** Comparison mode for compareBoundaryPoints. */
     @JsxConstant
-    public static final short START_TO_START = 0;
+    public static final int START_TO_START = 0;
 
     /** Comparison mode for compareBoundaryPoints. */
     @JsxConstant
-    public static final short START_TO_END = 1;
+    public static final int START_TO_END = 1;
 
     /** Comparison mode for compareBoundaryPoints. */
     @JsxConstant
-    public static final short END_TO_END = 2;
+    public static final int END_TO_END = 2;
 
     /** Comparison mode for compareBoundaryPoints. */
     @JsxConstant
-    public static final short END_TO_START = 3;
-
-    private Node startContainer_;
-    private Node endContainer_;
-    private int startOffset_;
-    private int endOffset_;
+    public static final int END_TO_START = 3;
 
     /**
      * Creates an instance.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
     public Range() {
+        super();
+    }
+
+    /**
+     * JavaScript constructor.
+     */
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
@@ -89,73 +91,14 @@ public class Range extends HtmlUnitScriptable {
      * @param document the HTML document creating the range
      */
     public Range(final Document document) {
-        startContainer_ = document;
-        endContainer_ = document;
+        super(document, document, 0, 0);
     }
 
-    Range(final org.w3c.dom.ranges.Range w3cRange) {
-        final DomNode domNodeStartContainer = (DomNode) w3cRange.getStartContainer();
-        startContainer_ = domNodeStartContainer.getScriptableObject();
-        startOffset_ = w3cRange.getStartOffset();
-
-        final DomNode domNodeEndContainer = (DomNode) w3cRange.getEndContainer();
-        endContainer_ = domNodeEndContainer.getScriptableObject();
-        endOffset_ = w3cRange.getEndOffset();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Object getDefaultValue(final Class<?> hint) {
-        if (getPrototype() == null
-                || startContainer_ == null
-                || endContainer_ == null) {
-            return super.getDefaultValue(hint);
-        }
-        return toW3C().toString();
-    }
-
-    /**
-     * Gets the node within which the Range begins.
-     * @return <code>undefined</code> if not initialized
-     */
-    @JsxGetter
-    public Object getStartContainer() {
-        if (startContainer_ == null) {
-            return Undefined.instance;
-        }
-        return startContainer_;
-    }
-
-    /**
-     * Gets the node within which the Range ends.
-     * @return <code>undefined</code> if not initialized
-     */
-    @JsxGetter
-    public Object getEndContainer() {
-        if (endContainer_ == null) {
-            return Undefined.instance;
-        }
-        return endContainer_;
-    }
-
-    /**
-     * Gets the offset within the starting node of the Range.
-     * @return <code>0</code> if not initialized
-     */
-    @JsxGetter
-    public int getStartOffset() {
-        return startOffset_;
-    }
-
-    /**
-     * Gets the offset within the end node of the Range.
-     * @return <code>0</code> if not initialized
-     */
-    @JsxGetter
-    public int getEndOffset() {
-        return endOffset_;
+    Range(final SimpleRange simpleRange) {
+        super(simpleRange.getStartContainer().getScriptableObject(),
+                simpleRange.getEndContainer().getScriptableObject(),
+                simpleRange.getStartOffset(),
+                simpleRange.getEndOffset());
     }
 
     /**
@@ -166,10 +109,10 @@ public class Range extends HtmlUnitScriptable {
     @JsxFunction
     public void setStart(final Node refNode, final int offset) {
         if (refNode == null) {
-            throw Context.reportRuntimeError("It is illegal to call Range.setStart() with a null node.");
+            throw JavaScriptEngine.reportRuntimeError("It is illegal to call Range.setStart() with a null node.");
         }
-        startContainer_ = refNode;
-        startOffset_ = offset;
+        internSetStartContainer(refNode);
+        internSetStartOffset(offset);
     }
 
     /**
@@ -179,10 +122,10 @@ public class Range extends HtmlUnitScriptable {
     @JsxFunction
     public void setStartAfter(final Node refNode) {
         if (refNode == null) {
-            throw Context.reportRuntimeError("It is illegal to call Range.setStartAfter() with a null node.");
+            throw JavaScriptEngine.reportRuntimeError("It is illegal to call Range.setStartAfter() with a null node.");
         }
-        startContainer_ = refNode.getParent();
-        startOffset_ = getPositionInContainer(refNode) + 1;
+        internSetStartContainer(refNode.getParent());
+        internSetStartOffset(getPositionInContainer(refNode) + 1);
     }
 
     /**
@@ -192,10 +135,10 @@ public class Range extends HtmlUnitScriptable {
     @JsxFunction
     public void setStartBefore(final Node refNode) {
         if (refNode == null) {
-            throw Context.reportRuntimeError("It is illegal to call Range.setStartBefore() with a null node.");
+            throw JavaScriptEngine.reportRuntimeError("It is illegal to call Range.setStartBefore() with a null node.");
         }
-        startContainer_ = refNode.getParent();
-        startOffset_ = getPositionInContainer(refNode);
+        internSetStartContainer(refNode.getParent());
+        internSetStartOffset(getPositionInContainer(refNode));
     }
 
     private static int getPositionInContainer(final Node refNode) {
@@ -209,15 +152,6 @@ public class Range extends HtmlUnitScriptable {
     }
 
     /**
-     * Indicates if the range is collapsed.
-     * @return {@code true} if the range is collapsed
-     */
-    @JsxGetter
-    public boolean isCollapsed() {
-        return startContainer_ == endContainer_ && startOffset_ == endOffset_;
-    }
-
-    /**
      * Sets the attributes describing the end of a Range.
      * @param refNode the reference node
      * @param offset the offset value within the node
@@ -225,10 +159,10 @@ public class Range extends HtmlUnitScriptable {
     @JsxFunction
     public void setEnd(final Node refNode, final int offset) {
         if (refNode == null) {
-            throw Context.reportRuntimeError("It is illegal to call Range.setEnd() with a null node.");
+            throw JavaScriptEngine.reportRuntimeError("It is illegal to call Range.setEnd() with a null node.");
         }
-        endContainer_ = refNode;
-        endOffset_ = offset;
+        internSetEndContainer(refNode);
+        internSetEndOffset(offset);
     }
 
     /**
@@ -238,10 +172,10 @@ public class Range extends HtmlUnitScriptable {
     @JsxFunction
     public void setEndAfter(final Node refNode) {
         if (refNode == null) {
-            throw Context.reportRuntimeError("It is illegal to call Range.setEndAfter() with a null node.");
+            throw JavaScriptEngine.reportRuntimeError("It is illegal to call Range.setEndAfter() with a null node.");
         }
-        endContainer_ = refNode.getParent();
-        endOffset_ = getPositionInContainer(refNode) + 1;
+        internSetEndContainer(refNode.getParent());
+        internSetEndOffset(getPositionInContainer(refNode) + 1);
     }
 
     /**
@@ -251,10 +185,10 @@ public class Range extends HtmlUnitScriptable {
     @JsxFunction
     public void setEndBefore(final Node refNode) {
         if (refNode == null) {
-            throw Context.reportRuntimeError("It is illegal to call Range.setEndBefore() with a null node.");
+            throw JavaScriptEngine.reportRuntimeError("It is illegal to call Range.setEndBefore() with a null node.");
         }
-        startContainer_ = refNode.getParent();
-        startOffset_ = getPositionInContainer(refNode);
+        internSetEndContainer(refNode.getParent());
+        internSetEndOffset(getPositionInContainer(refNode));
     }
 
     /**
@@ -263,10 +197,10 @@ public class Range extends HtmlUnitScriptable {
      */
     @JsxFunction
     public void selectNodeContents(final Node refNode) {
-        startContainer_ = refNode;
-        startOffset_ = 0;
-        endContainer_ = refNode;
-        endOffset_ = refNode.getChildNodes().getLength();
+        internSetStartContainer(refNode);
+        internSetStartOffset(0);
+        internSetEndContainer(refNode);
+        internSetEndOffset(refNode.getChildNodes().getLength());
     }
 
     /**
@@ -286,12 +220,12 @@ public class Range extends HtmlUnitScriptable {
     @JsxFunction
     public void collapse(final boolean toStart) {
         if (toStart) {
-            endContainer_ = startContainer_;
-            endOffset_ = startOffset_;
+            internSetEndContainer(internGetStartContainer());
+            internSetEndOffset(internGetStartOffset());
         }
         else {
-            startContainer_ = endContainer_;
-            startOffset_ = endOffset_;
+            internSetStartContainer(internGetEndContainer());
+            internSetStartOffset(internGetEndOffset());
         }
     }
 
@@ -302,13 +236,13 @@ public class Range extends HtmlUnitScriptable {
     @JsxGetter
     public Object getCommonAncestorContainer() {
         final HashSet<Node> startAncestors = new HashSet<>();
-        Node ancestor = startContainer_;
+        Node ancestor = internGetStartContainer();
         while (ancestor != null) {
             startAncestors.add(ancestor);
             ancestor = ancestor.getParent();
         }
 
-        ancestor = endContainer_;
+        ancestor = internGetEndContainer();
         while (ancestor != null) {
             if (startAncestors.contains(ancestor)) {
                 return ancestor;
@@ -316,7 +250,7 @@ public class Range extends HtmlUnitScriptable {
             ancestor = ancestor.getParent();
         }
 
-        return Undefined.instance;
+        return JavaScriptEngine.UNDEFINED;
     }
 
     /**
@@ -324,19 +258,21 @@ public class Range extends HtmlUnitScriptable {
      * @param valueAsString text that contains text and tags to be converted to a document fragment
      * @return a document fragment
      * @see <a href="https://developer.mozilla.org/en-US/docs/DOM/range.createContextualFragment">Mozilla
-     * documentation</a>
+     *     documentation</a>
      */
     @JsxFunction
-    public Object createContextualFragment(final String valueAsString) {
-        final SgmlPage page = startContainer_.getDomNodeOrDie().getPage();
+    public HtmlUnitScriptable createContextualFragment(final String valueAsString) {
+        final SgmlPage page = internGetStartContainer().getDomNodeOrDie().getPage();
         final DomDocumentFragment fragment = new DomDocumentFragment(page);
         try {
-            page.getWebClient().getPageCreator().getHtmlParser()
-                    .parseFragment(fragment, startContainer_.getDomNodeOrDie(), valueAsString, false);
+            final WebClient webClient = page.getWebClient();
+            webClient.getPageCreator().getHtmlParser()
+                    .parseFragment(webClient, fragment,
+                            internGetStartContainer().getDomNodeOrDie(), valueAsString, false);
         }
         catch (final Exception e) {
             LogFactory.getLog(Range.class).error("Unexpected exception occurred in createContextualFragment", e);
-            throw Context.reportRuntimeError("Unexpected exception occurred in createContextualFragment: "
+            throw JavaScriptEngine.reportRuntimeError("Unexpected exception occurred in createContextualFragment: "
                     + e.getMessage());
         }
 
@@ -348,17 +284,13 @@ public class Range extends HtmlUnitScriptable {
      * @return the new document fragment containing the range contents
      */
     @JsxFunction
-    public Object extractContents() {
-        return toW3C().extractContents().getScriptableObject();
-    }
-
-    /**
-     * Returns a W3C {@link org.w3c.dom.ranges.Range} version of this object.
-     * @return a W3C {@link org.w3c.dom.ranges.Range} version of this object
-     */
-    public SimpleRange toW3C() {
-        return new SimpleRange(startContainer_.getDomNodeOrNull(), startOffset_,
-            endContainer_.getDomNodeOrDie(), endOffset_);
+    public HtmlUnitScriptable extractContents() {
+        try {
+            return getSimpleRange().extractContents().getScriptableObject();
+        }
+        catch (final IllegalStateException e) {
+            throw JavaScriptEngine.reportRuntimeError(e.getMessage());
+        }
     }
 
     /**
@@ -366,54 +298,55 @@ public class Range extends HtmlUnitScriptable {
      * @param how a constant describing the comparison method
      * @param sourceRange the Range to compare boundary points with this range
      * @return -1, 0, or 1, indicating whether the corresponding boundary-point of range is respectively before,
-     * equal to, or after the corresponding boundary-point of sourceRange.
+     *         equal to, or after the corresponding boundary-point of sourceRange.
      */
     @JsxFunction
-    public Object compareBoundaryPoints(final int how, final Range sourceRange) {
+    public int compareBoundaryPoints(final int how, final Range sourceRange) {
         final Node nodeForThis;
         final int offsetForThis;
-        final int containingMoficator;
+        final int containingModifier;
         if (START_TO_START == how || END_TO_START == how) {
-            nodeForThis = startContainer_;
-            offsetForThis = startOffset_;
-            containingMoficator = 1;
+            nodeForThis = internGetStartContainer();
+            offsetForThis = internGetStartOffset();
+            containingModifier = 1;
         }
         else {
-            nodeForThis = endContainer_;
-            offsetForThis = endOffset_;
-            containingMoficator = -1;
+            nodeForThis = internGetEndContainer();
+            offsetForThis = internGetEndOffset();
+            containingModifier = -1;
         }
 
         final Node nodeForOther;
         final int offsetForOther;
         if (START_TO_END == how || START_TO_START == how) {
-            nodeForOther = sourceRange.startContainer_;
-            offsetForOther = sourceRange.startOffset_;
+            nodeForOther = sourceRange.internGetStartContainer();
+            offsetForOther = sourceRange.internGetStartOffset();
         }
         else {
-            nodeForOther = sourceRange.endContainer_;
-            offsetForOther = sourceRange.endOffset_;
+            nodeForOther = sourceRange.internGetEndContainer();
+            offsetForOther = sourceRange.internGetEndOffset();
         }
 
         if (nodeForThis == nodeForOther) {
             if (offsetForThis < offsetForOther) {
-                return Integer.valueOf(-1);
+                return -1;
             }
             else if (offsetForThis > offsetForOther) {
-                return Integer.valueOf(1);
+                return 1;
             }
-            return Integer.valueOf(0);
+            return 0;
         }
 
         final byte nodeComparision = (byte) nodeForThis.compareDocumentPosition(nodeForOther);
         if ((nodeComparision & Node.DOCUMENT_POSITION_CONTAINED_BY) != 0) {
-            return Integer.valueOf(-1 * containingMoficator);
+            return -1 * containingModifier;
         }
         else if ((nodeComparision & Node.DOCUMENT_POSITION_PRECEDING) != 0) {
-            return Integer.valueOf(-1);
+            return -1;
         }
-        // TODO: handle other cases!
-        return Integer.valueOf(1);
+
+        // TODO: handle other cases
+        return 1;
     }
 
     /**
@@ -421,8 +354,13 @@ public class Range extends HtmlUnitScriptable {
      * @return a clone
      */
     @JsxFunction
-    public Object cloneContents() {
-        return toW3C().cloneContents().getScriptableObject();
+    public HtmlUnitScriptable cloneContents() {
+        try {
+            return getSimpleRange().cloneContents().getScriptableObject();
+        }
+        catch (final IllegalStateException e) {
+            throw JavaScriptEngine.reportRuntimeError(e.getMessage());
+        }
     }
 
     /**
@@ -430,7 +368,12 @@ public class Range extends HtmlUnitScriptable {
      */
     @JsxFunction
     public void deleteContents() {
-        toW3C().deleteContents();
+        try {
+            getSimpleRange().deleteContents();
+        }
+        catch (final IllegalStateException e) {
+            throw JavaScriptEngine.reportRuntimeError(e.getMessage());
+        }
     }
 
     /**
@@ -440,7 +383,12 @@ public class Range extends HtmlUnitScriptable {
      */
     @JsxFunction
     public void insertNode(final Node newNode) {
-        toW3C().insertNode(newNode.getDomNodeOrDie());
+        try {
+            getSimpleRange().insertNode(newNode.getDomNodeOrDie());
+        }
+        catch (final IllegalStateException e) {
+            throw JavaScriptEngine.reportRuntimeError(e.getMessage());
+        }
     }
 
     /**
@@ -449,7 +397,12 @@ public class Range extends HtmlUnitScriptable {
      */
     @JsxFunction
     public void surroundContents(final Node newNode) {
-        toW3C().surroundContents(newNode.getDomNodeOrDie());
+        try {
+            getSimpleRange().surroundContents(newNode.getDomNodeOrDie());
+        }
+        catch (final IllegalStateException e) {
+            throw JavaScriptEngine.reportRuntimeError(e.getMessage());
+        }
     }
 
     /**
@@ -457,8 +410,13 @@ public class Range extends HtmlUnitScriptable {
      * @return a clone of the range
      */
     @JsxFunction
-    public Object cloneRange() {
-        return new Range(toW3C().cloneRange());
+    public Range cloneRange() {
+        try {
+            return new Range(getSimpleRange().cloneRange());
+        }
+        catch (final IllegalStateException e) {
+            throw JavaScriptEngine.reportRuntimeError(e.getMessage());
+        }
     }
 
     /**
@@ -475,19 +433,12 @@ public class Range extends HtmlUnitScriptable {
      */
     @JsxFunction(functionName = "toString")
     public String jsToString() {
-        return toW3C().toString();
-    }
-
-    @Override
-    protected Object equivalentValues(final Object value) {
-        if (!(value instanceof Range)) {
-            return false;
+        try {
+            return getSimpleRange().toString();
         }
-        final Range other = (Range) value;
-        return startContainer_ == other.startContainer_
-                && endContainer_ == other.endContainer_
-                && startOffset_ == other.startOffset_
-                && endOffset_ == other.endOffset_;
+        catch (final IllegalStateException e) {
+            throw JavaScriptEngine.reportRuntimeError(e.getMessage());
+        }
     }
 
     /**
@@ -496,24 +447,34 @@ public class Range extends HtmlUnitScriptable {
      * @return a collection of rectangles that describes the layout of the contents
      */
     @JsxFunction
-    public ClientRectList getClientRects() {
-        final Window w = getWindow();
-        final ClientRectList rectList = new ClientRectList();
-        rectList.setParentScope(w);
+    public DOMRectList getClientRects() {
+        final DOMRectList rectList = new DOMRectList();
+        rectList.setParentScope(getParentScope());
         rectList.setPrototype(getPrototype(rectList.getClass()));
 
-        // simple impl for now
-        for (final DomNode node : toW3C().containedNodes()) {
-            final ScriptableObject scriptable = node.getScriptableObject();
-            if (scriptable instanceof HTMLElement) {
-                final ClientRect rect = new ClientRect(0, 0, 1, 1);
-                rect.setParentScope(w);
-                rect.setPrototype(getPrototype(rect.getClass()));
-                rectList.add(rect);
+        try {
+            // simple impl for now
+            for (final DomNode node : getSimpleRange().containedNodes()) {
+                final HtmlUnitScriptable scriptable = node.getScriptableObject();
+                if (scriptable instanceof HTMLElement element) {
+                    final DOMRect rect = element.getBoundingClientRect();
+                    rect.setParentScope(getParentScope());
+                    rect.setPrototype(getPrototype(rect.getClass()));
+                    rectList.add(rect);
+                }
+                else if (node instanceof DomText domText) {
+                    final DOMRect rect = getTextNodeRect(domText);
+                    if (rect != null) {
+                        rectList.add(rect);
+                    }
+                }
             }
-        }
 
-        return rectList;
+            return rectList;
+        }
+        catch (final IllegalStateException e) {
+            throw JavaScriptEngine.reportRuntimeError(e.getMessage());
+        }
     }
 
     /**
@@ -522,23 +483,96 @@ public class Range extends HtmlUnitScriptable {
      * @return an object the bounds the contents of the range
      */
     @JsxFunction
-    public ClientRect getBoundingClientRect() {
-        final ClientRect rect = new ClientRect();
-        rect.setParentScope(getWindow());
+    public DOMRect getBoundingClientRect() {
+        final DOMRect rect = new DOMRect(Integer.MAX_VALUE, Integer.MAX_VALUE, 0, 0);
+        rect.setParentScope(getParentScope());
         rect.setPrototype(getPrototype(rect.getClass()));
 
-        // simple impl for now
-        for (final DomNode node : toW3C().containedNodes()) {
-            final ScriptableObject scriptable = node.getScriptableObject();
-            if (scriptable instanceof HTMLElement) {
-                final ClientRect childRect = ((HTMLElement) scriptable).getBoundingClientRect();
-                rect.setTop(Math.min(rect.getTop(), childRect.getTop()));
-                rect.setLeft(Math.min(rect.getLeft(), childRect.getLeft()));
-                rect.setRight(Math.max(rect.getRight(), childRect.getRight()));
-                rect.setBottom(Math.max(rect.getBottom(), childRect.getBottom()));
+        try {
+            // simple impl for now
+            for (final DomNode node : getSimpleRange().containedNodes()) {
+                final HtmlUnitScriptable scriptable = node.getScriptableObject();
+
+                DOMRect childRect = null;
+                if (scriptable instanceof HTMLElement element) {
+                    childRect = element.getBoundingClientRect();
+                }
+                else if (node instanceof DomText domText) {
+                    childRect = getTextNodeRect(domText);
+                }
+
+                if (childRect != null) {
+                    rect.setX(Math.min(rect.getX(), childRect.getX()));
+                    rect.setY(Math.min(rect.getY(), childRect.getY()));
+                    rect.setWidth(Math.max(rect.getWidth(), childRect.getWidth()));
+                    rect.setHeight(Math.max(rect.getHeight(), childRect.getHeight()));
+                }
+            }
+
+            return rect;
+        }
+        catch (final IllegalStateException e) {
+            throw JavaScriptEngine.reportRuntimeError(e.getMessage());
+        }
+    }
+
+    private DOMRect getTextNodeRect(final DomText node) {
+        // Text nodes have no scriptable; use to the parent element for some calculation
+        final DomNode parent = node.getParentNode();
+        if (!(parent instanceof HtmlElement parentHtml)) {
+            return null;
+        }
+
+        final HTMLElement parentScriptable = parentHtml.getScriptableObject();
+        final DOMRect parentRect = parentScriptable.getBoundingClientRect();
+
+        final SgmlPage page = parent.getPage();
+        final WebWindow webWindow = page.getEnclosingWindow();
+        final ComputedCssStyleDeclaration style = webWindow.getComputedStyle((DomElement) parent, null);
+        final BrowserVersion browserVersion = page.getWebClient().getBrowserVersion();
+
+        final String fontSize = style.getStyleAttribute(Definition.FONT_SIZE, true);
+        final int fontHeight = browserVersion.getFontHeight(fontSize);
+
+        // Estimate the x offset of the text node's start within the parent.
+        // Sum the widths of all preceding text/inline siblings to get the base offset.
+        double siblingOffset = 0;
+        for (final DomNode sibling : parent.getChildren()) {
+            if (sibling == node) {
+                break;
+            }
+            if (sibling instanceof DomText sibText) {
+                // skip whitespace-only text nodes — they collapse to nothing in HTML
+                final String visible = sibText.getVisibleText().trim();
+                if (!visible.isEmpty()) {
+                    siblingOffset += browserVersion.getTextWidth(visible, fontSize);
+                }
+            }
+            else if (sibling instanceof HtmlElement siblingElement) {
+                final ComputedCssStyleDeclaration sibStyle =
+                        webWindow.getComputedStyle(siblingElement, null);
+                siblingOffset += sibStyle.getCalculatedWidth(true, true);
             }
         }
 
+        final boolean startIsThisNode = getSimpleRange().getStartContainer() == node;
+        final boolean endIsThisNode   = getSimpleRange().getEndContainer() == node;
+
+        final String visibleText = node.getVisibleText().trim();
+        final int length = visibleText.length();
+
+        final int startChar = startIsThisNode ? Math.min(getSimpleRange().getStartOffset(), length) : 0;
+        final int endChar = endIsThisNode ? Math.min(getSimpleRange().getEndOffset(), length) : length;
+
+        final double rectLeft  = parentRect.getX() + siblingOffset
+                + browserVersion.getTextWidth(visibleText.substring(0, startChar), fontSize);
+        final double rectWidth = endChar > startChar
+                ? browserVersion.getTextWidth(visibleText.substring(startChar, endChar), fontSize)
+                : 0;
+
+        final DOMRect rect = new DOMRect(rectLeft, parentRect.getY(), rectWidth, fontHeight);
+        rect.setParentScope(getParentScope());
+        rect.setPrototype(getPrototype(rect.getClass()));
         return rect;
     }
 }

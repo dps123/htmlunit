@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,36 +14,17 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.BrowserVersionFeatures.HTML_OBJECT_CLASSID;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
+import java.net.MalformedURLException;
 
-import java.applet.Applet;
-import java.lang.reflect.Method;
-import java.util.Map;
-
-import org.htmlunit.WebClient;
-import org.htmlunit.html.DomNode;
+import org.htmlunit.html.DomElement;
 import org.htmlunit.html.HtmlForm;
 import org.htmlunit.html.HtmlObject;
-import org.htmlunit.javascript.HtmlUnitContextFactory;
+import org.htmlunit.html.HtmlPage;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.configuration.JsxSetter;
-import org.htmlunit.javascript.host.ActiveXObjectImpl;
-
-import org.htmlunit.corejs.javascript.BaseFunction;
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.Function;
-import org.htmlunit.corejs.javascript.NativeJavaObject;
-import org.htmlunit.corejs.javascript.Scriptable;
-import org.htmlunit.corejs.javascript.ScriptableObject;
-import org.htmlunit.corejs.javascript.Wrapper;
 
 /**
  * The JavaScript object {@code HTMLObjectElement}.
@@ -51,89 +32,52 @@ import org.htmlunit.corejs.javascript.Wrapper;
  * @author Ahmed Ashour
  * @author Ronald Brill
  * @author Frank Danek
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLObjectElement">MDN Documentation</a>
  */
 @JsxClass(domClass = HtmlObject.class)
-public class HTMLObjectElement extends HTMLElement implements Wrapper {
-
-    private Scriptable wrappedActiveX_;
+public class HTMLObjectElement extends HTMLElement {
 
     /**
-     * Creates an instance.
-     */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public HTMLObjectElement() {
-    }
-
-    /**
-     * {@inheritDoc}
+     * JavaScript constructor.
      */
     @Override
-    public void setDomNode(final DomNode domNode) {
-        super.setDomNode(domNode);
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
+    }
 
-        if (domNode.getPage().getWebClient().getOptions().isAppletEnabled()) {
+    /**
+     * Returns the {@code data} property; the url of the data attribute resolved against the
+     * base url of the page (an empty attribute is resolved to the base url, a missing attribute
+     * returns an empty string).
+     * @return the {@code data} property
+     */
+    @JsxGetter
+    public String getData() {
+        final DomElement element = getDomNodeOrDie();
+        final String data = element.getAttributeDirect("data");
+        if (DomElement.ATTRIBUTE_NOT_DEFINED == data) {
+            return "";
+        }
+        if (element.getPage() instanceof HtmlPage page) {
             try {
-                createAppletMethodAndProperties();
+                return page.getFullyQualifiedUrl(data).toExternalForm();
             }
-            catch (final Exception e) {
-                throw new RuntimeException(e);
+            catch (final MalformedURLException e) {
+                return data;
             }
         }
-    }
-
-    private void createAppletMethodAndProperties() throws Exception {
-        final HtmlObject appletNode = (HtmlObject) getDomNodeOrDie();
-        final Applet applet = appletNode.getApplet();
-        if (applet == null) {
-            return;
-        }
-
-        // Rhino should provide the possibility to declare delegate for Functions as it does for properties!!!
-        for (final Method method : applet.getClass().getMethods()) {
-            final Function f = new BaseFunction() {
-                @Override
-                public Object call(final Context cx, final Scriptable scope,
-                        final Scriptable thisObj, final Object[] args) {
-
-                    final Object[] realArgs = new Object[method.getParameterTypes().length];
-                    for (int i = 0; i < realArgs.length; i++) {
-                        final Object arg;
-                        if (i > args.length) {
-                            arg = null;
-                        }
-                        else {
-                            arg = Context.jsToJava(args[i], method.getParameterTypes()[i]);
-                        }
-                        realArgs[i] = arg;
-                    }
-                    try {
-                        return method.invoke(applet, realArgs);
-                    }
-                    catch (final Exception e) {
-                        throw Context.throwAsScriptRuntimeEx(e);
-                    }
-                }
-            };
-            ScriptableObject.defineProperty(this, method.getName(), f, ScriptableObject.READONLY);
-        }
+        return data;
     }
 
     /**
-     * Returns the value of the {@code alt} property.
-     * @return the value of the {@code alt} property
+     * Sets the {@code data} attribute.
+     * @param data the {@code data} attribute value
      */
-    @JsxGetter(IE)
-    public String getAlt() {
-        return getDomNodeOrDie().getAttributeDirect("alt");
-    }
-
-    /**
-     * Returns the value of the {@code alt} property.
-     * @param alt the value
-     */
-    @JsxSetter(IE)
-    public void setAlt(final String alt) {
-        getDomNodeOrDie().setAttribute("alt", alt);
+    @JsxSetter
+    public void setData(final String data) {
+        getDomNodeOrDie().setAttribute("data", data);
     }
 
     /**
@@ -147,7 +91,7 @@ public class HTMLObjectElement extends HTMLElement implements Wrapper {
 
     /**
      * Sets the {@code border} attribute.
-     * @param border the {@code border} attribute
+     * @param border the {@code border} attribute value
      */
     @JsxSetter
     public void setBorder(final String border) {
@@ -158,113 +102,16 @@ public class HTMLObjectElement extends HTMLElement implements Wrapper {
      * Gets the {@code classid} attribute.
      * @return the {@code classid} attribute
      */
-    @JsxGetter(IE)
     public String getClassid() {
         return getDomNodeOrDie().getAttributeDirect("classid");
     }
 
     /**
      * Sets the {@code classid} attribute.
-     * @param classid the {@code classid} attribute
+     * @param classid the {@code classid} attribute value
      */
-    @JsxSetter(IE)
     public void setClassid(final String classid) {
         getDomNodeOrDie().setAttribute("classid", classid);
-        if (classid.indexOf(':') != -1 && getBrowserVersion().hasFeature(HTML_OBJECT_CLASSID)) {
-            final WebClient webClient = getWindow().getWebWindow().getWebClient();
-            final Map<String, String> map = webClient.getActiveXObjectMap();
-            if (map != null) {
-                final String xClassString = map.get(classid);
-                if (xClassString != null) {
-                    try {
-                        final Class<?> xClass = Class.forName(xClassString);
-                        final Object object = xClass.newInstance();
-                        boolean contextCreated = false;
-                        if (Context.getCurrentContext() == null) {
-                            new HtmlUnitContextFactory(webClient).enterContext();
-                            contextCreated = true;
-                        }
-                        wrappedActiveX_ = Context.toObject(object, getParentScope());
-                        if (contextCreated) {
-                            Context.exit();
-                        }
-                    }
-                    catch (final Exception e) {
-                        throw Context.reportRuntimeError("ActiveXObject Error: failed instantiating class "
-                                + xClassString + " because " + e.getMessage() + ".");
-                    }
-                    return;
-                }
-            }
-            if (webClient.getOptions().isActiveXNative()
-                    && System.getProperty("os.name").contains("Windows")) {
-                try {
-                    wrappedActiveX_ = new ActiveXObjectImpl(classid);
-                    wrappedActiveX_.setParentScope(getParentScope());
-                }
-                catch (final Exception e) {
-                    Context.throwAsScriptRuntimeEx(e);
-                }
-            }
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Object get(final String name, final Scriptable start) {
-        // for java mocks do a bit more, we have handle unknown properties
-        // ourself
-        if (wrappedActiveX_ instanceof NativeJavaObject) {
-            final NativeJavaObject obj = (NativeJavaObject) wrappedActiveX_;
-            final Object result = obj.get(name, start);
-            if (Scriptable.NOT_FOUND != result) {
-                return result;
-            }
-            return super.get(name, start);
-        }
-
-        if (wrappedActiveX_ != null) {
-            return wrappedActiveX_.get(name, start);
-        }
-        return super.get(name, start);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void put(final String name, final Scriptable start, final Object value) {
-        // for java mocks do a bit more, we have handle unknown properties
-        // ourself
-        if (wrappedActiveX_ instanceof NativeJavaObject) {
-            if (wrappedActiveX_.has(name, start)) {
-                wrappedActiveX_.put(name, start, value);
-            }
-            else {
-                super.put(name, start, value);
-            }
-            return;
-        }
-
-        if (wrappedActiveX_ != null) {
-            wrappedActiveX_.put(name, start, value);
-            return;
-        }
-
-        super.put(name, start, value);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Object unwrap() {
-        if (wrappedActiveX_ instanceof Wrapper) {
-            return ((Wrapper) wrappedActiveX_).unwrap();
-        }
-        return wrappedActiveX_;
     }
 
     /**
@@ -328,7 +175,7 @@ public class HTMLObjectElement extends HTMLElement implements Wrapper {
     @JsxGetter
     @Override
     public String getName() {
-        return getDomNodeOrDie().getAttributeDirect("name");
+        return getDomNodeOrDie().getAttributeDirect(DomElement.NAME_ATTRIBUTE);
     }
 
     /**
@@ -338,7 +185,7 @@ public class HTMLObjectElement extends HTMLElement implements Wrapper {
     @JsxSetter
     @Override
     public void setName(final String name) {
-        getDomNodeOrDie().setAttribute("name", name);
+        getDomNodeOrDie().setAttribute(DomElement.NAME_ATTRIBUTE, name);
     }
 
     /**
@@ -358,15 +205,35 @@ public class HTMLObjectElement extends HTMLElement implements Wrapper {
 
     /**
      * Checks whether the element has any constraints and whether it satisfies them.
-     * @return if the element is valid
+     * @return {@code true} if the element is valid
      */
     @JsxFunction
     public boolean checkValidity() {
-        return getDomNodeOrDie().isValid();
+        return ValidatableHTMLElement.doCheckValidity(getDomNodeOrDie());
     }
 
     /**
-     * @return a ValidityState with the validity states that this element is in.
+     * Performs the same validity checking steps as the checkValidity() method.
+     * @return {@code true} if the element is valid
+     */
+    @JsxFunction
+    public boolean reportValidity() {
+        return ValidatableHTMLElement.doReportValidity(getDomNodeOrDie());
+    }
+
+    /**
+     * Returns the message describing why the element's value fails constraint
+     * validation, or "" if it's valid or barred from validation.
+     * @return the validation message
+     */
+    @JsxGetter
+    public String getValidationMessage() {
+        return ValidatableHTMLElement.getValidationMessage(getDomNodeOrDie());
+    }
+
+    /**
+     * Returns a {@link ValidityState} object representing the validity states of this element.
+     * @return a {@link ValidityState} object representing the validity states of this element
      */
     @JsxGetter
     public ValidityState getValidity() {
@@ -378,11 +245,12 @@ public class HTMLObjectElement extends HTMLElement implements Wrapper {
     }
 
     /**
+     * Returns whether the element is a candidate for constraint validation.
      * @return whether the element is a candidate for constraint validation
      */
     @JsxGetter
-    public boolean getWillValidate() {
-        return ((HtmlObject) getDomNodeOrDie()).willValidate();
+    public boolean isWillValidate() {
+        return getDomNodeOrDie().willValidate();
     }
 
     /**
@@ -391,6 +259,14 @@ public class HTMLObjectElement extends HTMLElement implements Wrapper {
      */
     @JsxFunction
     public void setCustomValidity(final String message) {
-        ((HtmlObject) getDomNodeOrDie()).setCustomValidity(message);
+        getDomNodeOrDie().setCustomValidity(message);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public HtmlObject getDomNodeOrDie() {
+        return (HtmlObject) super.getDomNodeOrDie();
     }
 }

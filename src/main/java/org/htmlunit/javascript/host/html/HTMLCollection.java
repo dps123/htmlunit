@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,39 +14,25 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.BrowserVersionFeatures.HTMLCOLLECTION_ITEM_SUPPORTS_DOUBLE_INDEX_ALSO;
-import static org.htmlunit.BrowserVersionFeatures.HTMLCOLLECTION_ITEM_SUPPORTS_ID_SEARCH_ALSO;
 import static org.htmlunit.BrowserVersionFeatures.HTMLCOLLECTION_NAMED_ITEM_ID_FIRST;
-import static org.htmlunit.BrowserVersionFeatures.HTMLCOLLECTION_NULL_IF_NOT_FOUND;
-import static org.htmlunit.BrowserVersionFeatures.HTMLCOLLECTION_SUPPORTS_PARANTHESES;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Supplier;
 
 import org.htmlunit.BrowserVersion;
+import org.htmlunit.corejs.javascript.Scriptable;
 import org.htmlunit.html.DomElement;
 import org.htmlunit.html.DomNode;
 import org.htmlunit.html.HtmlForm;
 import org.htmlunit.html.HtmlInput;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
+import org.htmlunit.javascript.configuration.JsxSymbol;
 import org.htmlunit.javascript.host.dom.AbstractList;
-
-import org.htmlunit.corejs.javascript.Callable;
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.ScriptRuntime;
-import org.htmlunit.corejs.javascript.Scriptable;
-import org.htmlunit.corejs.javascript.Undefined;
 
 /**
  * An array of elements. Used for the element arrays returned by <code>document.all</code>,
@@ -63,22 +49,32 @@ import org.htmlunit.corejs.javascript.Undefined;
  * @author Ahmed Ashour
  * @author Frank Danek
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLCollection">MDN Documentation</a>
  */
 @JsxClass
-public class HTMLCollection extends AbstractList implements Callable {
+public class HTMLCollection extends AbstractList {
 
     /**
      * Creates an instance.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
     public HTMLCollection() {
+        super();
+    }
+
+    /**
+     * JavaScript constructor.
+     */
+    @JsxConstructor
+    public void jsConstructor() {
+        // nothing to do
     }
 
     /**
      * Creates an instance.
-     * @param domNode parent scope
+     * @param domNode the parent scope
      * @param attributeChangeSensitive indicates if the content of the collection may change when an attribute
-     * of a descendant node of parentScope changes (attribute added, modified or removed)
+     *        of a descendant node of domNode changes (attribute added, modified or removed)
      */
     public HTMLCollection(final DomNode domNode, final boolean attributeChangeSensitive) {
         super(domNode, attributeChangeSensitive, null);
@@ -116,6 +112,15 @@ public class HTMLCollection extends AbstractList implements Callable {
     }
 
     /**
+     * Returns the {@code Symbol.iterator} function that allows iterating over this collection.
+     * @return the Iterator symbol
+     */
+    @JsxSymbol
+    public Scriptable iterator() {
+        return JavaScriptEngine.newArrayIteratorTypeValues(getParentScope(), this);
+    }
+
+    /**
      * Returns the length.
      * @return the length
      */
@@ -129,44 +134,13 @@ public class HTMLCollection extends AbstractList implements Callable {
      * {@inheritDoc}
      */
     @Override
-    public Object call(final Context cx, final Scriptable scope, final Scriptable thisObj, final Object[] args) {
-        if (supportsParentheses()) {
-            if (args.length == 0) {
-                throw Context.reportRuntimeError("Zero arguments; need an index or a key.");
-            }
-            final Object object = getIt(args[0]);
-            if (object == NOT_FOUND) {
-                if (getBrowserVersion().hasFeature(HTMLCOLLECTION_NULL_IF_NOT_FOUND)) {
-                    return null;
-                }
-                return Undefined.instance;
-            }
-            return object;
-        }
-
-        throw ScriptRuntime.typeError("HTMLCollection does nont support function like access");
-    }
-
-    /**
-     * Is parentheses supported.
-     *
-     * @return true or false
-     */
-    protected boolean supportsParentheses() {
-        return getBrowserVersion().hasFeature(HTMLCOLLECTION_SUPPORTS_PARANTHESES);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     protected Object getWithPreemptionByName(final String name, final List<DomNode> elements) {
         final List<DomNode> matchingElements = new ArrayList<>();
         final boolean searchName = isGetWithPreemptionSearchName();
         for (final DomNode next : elements) {
-            if (next instanceof DomElement
+            if (next instanceof DomElement element
                     && (searchName || next instanceof HtmlInput || next instanceof HtmlForm)) {
-                final String nodeName = ((DomElement) next).getAttributeDirect("name");
+                final String nodeName = element.getAttributeDirect(DomElement.NAME_ATTRIBUTE);
                 if (name.equals(nodeName)) {
                     matchingElements.add(next);
                 }
@@ -174,15 +148,10 @@ public class HTMLCollection extends AbstractList implements Callable {
         }
 
         if (matchingElements.isEmpty()) {
-            if (getBrowserVersion().hasFeature(HTMLCOLLECTION_ITEM_SUPPORTS_DOUBLE_INDEX_ALSO)) {
-                final double doubleValue = Context.toNumber(name);
-                if (!Double.isNaN(doubleValue)) {
-                    return get((int) doubleValue, this);
-                }
-            }
             return NOT_FOUND;
         }
-        else if (matchingElements.size() == 1) {
+
+        if (matchingElements.size() == 1) {
             return getScriptableForElement(matchingElements.get(0));
         }
 
@@ -205,17 +174,12 @@ public class HTMLCollection extends AbstractList implements Callable {
      * Returns the item or items corresponding to the specified index or key.
      * @param index the index or key corresponding to the element or elements to return
      * @return the element or elements corresponding to the specified index or key
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms536460.aspx">MSDN doc</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLCollection/item">MDN Documentation</a>
      */
     @JsxFunction
     public Object item(final Object index) {
-        if (index instanceof String && getBrowserVersion().hasFeature(HTMLCOLLECTION_ITEM_SUPPORTS_ID_SEARCH_ALSO)) {
-            final String name = (String) index;
-            return namedItem(name);
-        }
-
         int idx = 0;
-        final double doubleValue = Context.toNumber(index);
+        final double doubleValue = JavaScriptEngine.toNumber(index);
         if (!Double.isNaN(doubleValue)) {
             idx = (int) doubleValue;
         }
@@ -230,18 +194,17 @@ public class HTMLCollection extends AbstractList implements Callable {
     /**
      * Retrieves the item or items corresponding to the specified name (checks ids, and if
      * that does not work, then names).
-     * @param name the name or id the element or elements to return
+     * @param name the name or id of the element or elements to return
      * @return the element or elements corresponding to the specified name or id
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms536634.aspx">MSDN doc</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLCollection/namedItem">MDN Documentation</a>
      */
     @JsxFunction
-    public Object namedItem(final String name) {
+    public Scriptable namedItem(final String name) {
         final List<DomNode> elements = getElements();
         final BrowserVersion browserVersion = getBrowserVersion();
         if (browserVersion.hasFeature(HTMLCOLLECTION_NAMED_ITEM_ID_FIRST)) {
             for (final Object next : elements) {
-                if (next instanceof DomElement) {
-                    final DomElement elem = (DomElement) next;
+                if (next instanceof DomElement elem) {
                     final String id = elem.getId();
                     if (name.equals(id)) {
                         return getScriptableForElement(elem);
@@ -250,9 +213,8 @@ public class HTMLCollection extends AbstractList implements Callable {
             }
         }
         for (final Object next : elements) {
-            if (next instanceof DomElement) {
-                final DomElement elem = (DomElement) next;
-                final String nodeName = elem.getAttributeDirect("name");
+            if (next instanceof DomElement elem) {
+                final String nodeName = elem.getAttributeDirect(DomElement.NAME_ATTRIBUTE);
                 if (name.equals(nodeName)) {
                     return getScriptableForElement(elem);
                 }
@@ -264,30 +226,5 @@ public class HTMLCollection extends AbstractList implements Callable {
             }
         }
         return null;
-    }
-
-    /**
-     * Returns all the elements in this element array that have the specified tag name.
-     * This method returns an empty element array if there are no elements with the
-     * specified tag name.
-     * @param tagName the name of the tag of the elements to return
-     * @return all the elements in this element array that have the specified tag name
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms536776.aspx">MSDN doc</a>
-     */
-    @JsxFunction(IE)
-    public Object tags(final String tagName) {
-        final HTMLCollection tags = new HTMLCollection(getDomNodeOrDie(), false);
-        tags.setElementsSupplier(
-                (Supplier<List<DomNode>> & Serializable)
-                () -> {
-                    final List<DomNode> list = new ArrayList<>();
-                    for (final DomNode elem : this.getElements()) {
-                        if (tagName.equalsIgnoreCase(elem.getLocalName())) {
-                            list.add(elem);
-                        }
-                    }
-                    return list;
-                });
-        return tags;
     }
 }

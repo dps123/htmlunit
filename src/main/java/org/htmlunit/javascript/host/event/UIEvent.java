@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,24 +14,18 @@
  */
 package org.htmlunit.javascript.host.event;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
 import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
 import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
 
+import org.htmlunit.corejs.javascript.ScriptableObject;
 import org.htmlunit.html.DomNode;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstant;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.host.Window;
-
-import org.htmlunit.corejs.javascript.ScriptRuntime;
-import org.htmlunit.corejs.javascript.Scriptable;
-import org.htmlunit.corejs.javascript.ScriptableObject;
-import org.htmlunit.corejs.javascript.Undefined;
 
 /**
  * JavaScript object representing a UI event. For general information on which properties and functions should be
@@ -51,7 +45,7 @@ public class UIEvent extends Event {
 
     /** Constant. */
     @JsxConstant({FF, FF_ESR})
-    public static final short SCROLL_PAGE_UP = 0xFFFF8000;
+    public static final int SCROLL_PAGE_UP = 0xFFFF8000;
 
     /** Specifies some detail information about the event. */
     private long detail_;
@@ -64,6 +58,7 @@ public class UIEvent extends Event {
      * Creates a new UI event instance.
      */
     public UIEvent() {
+        super();
     }
 
     /**
@@ -72,19 +67,19 @@ public class UIEvent extends Event {
      * @param type the event type
      * @param details the event details (optional)
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
+    @JsxConstructor
     @Override
     public void jsConstructor(final String type, final ScriptableObject details) {
         super.jsConstructor(type, details);
 
         view_ = NO_VIEW;
-        if (details != null && !Undefined.isUndefined(details)) {
+        if (details != null && !JavaScriptEngine.isUndefined(details)) {
             final Object view = details.get("view", details);
             if (view instanceof Window) {
                 view_ = view;
             }
-            else if (view != Scriptable.NOT_FOUND) {
-                throw ScriptRuntime.typeError("View must be a window.");
+            else if (NOT_FOUND != view) {
+                throw JavaScriptEngine.typeError("View must be a window.");
             }
         }
     }
@@ -135,12 +130,12 @@ public class UIEvent extends Event {
      * @return the view from which the event was generated
      */
     @JsxGetter
-    public Object getView() {
+    public Window getView() {
         if (view_ == NO_VIEW) {
             return null;
         }
         if (view_ != null) {
-            return view_;
+            return (Window) view_;
         }
         return getWindow();
     }
@@ -154,7 +149,7 @@ public class UIEvent extends Event {
      * @param view the view to use for this event
      * @param detail the detail to set for the event
      */
-    @JsxFunction({CHROME, EDGE, FF, FF_ESR, IE})
+    @JsxFunction
     public void initUIEvent(
             final String type,
             final boolean bubbles,
@@ -164,5 +159,42 @@ public class UIEvent extends Event {
         initEvent(type, bubbles, cancelable);
         // Ignore the view parameter; we always use the window.
         setDetail(detail);
+    }
+
+    /**
+     * Returns the button or key associated with this event.
+     *
+     * @return the mouse button that was pressed, or the numeric {@code keyCode}
+     *         or character {@code charCode} of the key that was pressed
+     */
+    @JsxGetter
+    public int getWhich() {
+        return 0;
+    }
+
+    /**
+     * Implements {@code getModifierState()} of {@link KeyboardEvent} and {@link MouseEvent}.
+     *
+     * @param event the event the function is called for
+     * @param args the arguments of the call
+     * @param shiftKey whether the shift key is pressed
+     * @param ctrlKey whether the control key is pressed
+     * @param altKey whether the alt key is pressed
+     * @param metaKey whether the meta key is pressed
+     * @return {@code true} if the requested modifier is active
+     */
+    static boolean getModifierState(final String event, final Object[] args,
+            final boolean shiftKey, final boolean ctrlKey, final boolean altKey, final boolean metaKey) {
+        if (args.length < 1) {
+            throw JavaScriptEngine.typeError("Failed to execute 'getModifierState' on '" + event
+                    + "': 1 argument required, but only 0 present.");
+        }
+        return switch (JavaScriptEngine.toString(args[0])) {
+            case "Shift" -> shiftKey;
+            case "Control" -> ctrlKey;
+            case "Alt" -> altKey;
+            case "Meta" -> metaKey;
+            default -> false;
+        };
     }
 }

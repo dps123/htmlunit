@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,9 @@
  */
 package org.htmlunit.javascript.host.css;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link CSSRuleList}.
@@ -28,8 +25,27 @@ import org.htmlunit.junit.BrowserRunner.Alerts;
  * @author Frank Danek
  * @author Ahmed Ashour
  */
-@RunWith(BrowserRunner.class)
 public class CSSRuleListTest extends WebDriverTestCase {
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts("TypeError")
+    public void ctor() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
+            + LOG_TEXTAREA
+            + "<script>\n"
+            + LOG_TEXTAREA_FUNCTION
+            + "try {\n"
+            + "  var rule = new CSSRuleList();\n"
+            + "  log(rule);\n"
+            + "} catch(e) { logEx(e); }\n"
+            + "</script></body></html>";
+
+        loadPageVerifyTextArea2(html);
+    }
 
     /**
      * @throws Exception on test failure
@@ -37,7 +53,8 @@ public class CSSRuleListTest extends WebDriverTestCase {
     @Test
     @Alerts({"1", "[object CSSStyleRule]"})
     public void ruleList() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "<style>\n"
                 + "  BODY { font-size: 1234px; }\n"
                 + "</style>\n"
@@ -60,7 +77,8 @@ public class CSSRuleListTest extends WebDriverTestCase {
     @Test
     @Alerts("undefined")
     public void wrongRuleListAccess() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "<style>\n"
                 + "  BODY { font-size: 1234px; }\n"
                 + "</style>\n"
@@ -83,7 +101,8 @@ public class CSSRuleListTest extends WebDriverTestCase {
     @Test
     @Alerts("true")
     public void has() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "<style>\n"
                 + "  BODY { font-size: 1234px; }\n"
                 + "</style>\n"
@@ -105,7 +124,8 @@ public class CSSRuleListTest extends WebDriverTestCase {
     @Test
     @Alerts({"0", "undefined"})
     public void ruleListUnknownAtRule() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "<style>\n"
                 + "  @UnknownAtRule valo-animate-in-fade {0 {opacity: 0;}}\n"
                 + "</style>\n"
@@ -128,7 +148,8 @@ public class CSSRuleListTest extends WebDriverTestCase {
     @Test
     @Alerts({"1", "[object CSSKeyframesRule]"})
     public void ruleListKeyframes() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "<style>\n"
                 + "  @keyframes mymove {from {top: 0px;} to {top: 200px;}}\n"
                 + "</style>\n"
@@ -151,7 +172,8 @@ public class CSSRuleListTest extends WebDriverTestCase {
     @Test
     @Alerts({"1", "false", "true", "false", "false"})
     public void in() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "<style>\n"
                 + "  BODY { font-size: 1234px; }\n"
                 + "</style>\n"
@@ -176,8 +198,55 @@ public class CSSRuleListTest extends WebDriverTestCase {
      */
     @Test
     @Alerts("[object CSSStyleRule]")
+    public void index() throws Exception {
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
+                + "<style>\n"
+                + "  BODY { font-size: 1234px; }\n"
+                + "</style>\n"
+                + "<script>\n"
+                + LOG_TITLE_FUNCTION
+                + "  function test() {\n"
+                + "    var rules = document.styleSheets[0].cssRules;\n"
+                + "    log(rules[0]);\n"
+                + "  }\n"
+                + "</script>\n"
+                + "</head><body onload='test()'>\n"
+                + "</body></html>";
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("undefined")
+    public void indexNotFound() throws Exception {
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
+                + "<style>\n"
+                + "  BODY { font-size: 1234px; }\n"
+                + "</style>\n"
+                + "<script>\n"
+                + LOG_TITLE_FUNCTION
+                + "  function test() {\n"
+                + "    var rules = document.styleSheets[0].cssRules;\n"
+                + "    log(rules[17]);\n"
+                + "  }\n"
+                + "</script>\n"
+                + "</head><body onload='test()'>\n"
+                + "</body></html>";
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("[object CSSStyleRule]")
     public void item() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "<style>\n"
                 + "  BODY { font-size: 1234px; }\n"
                 + "</style>\n"
@@ -186,6 +255,29 @@ public class CSSRuleListTest extends WebDriverTestCase {
                 + "  function test() {\n"
                 + "    var rules = document.styleSheets[0].cssRules;\n"
                 + "    log(rules.item(0));\n"
+                + "  }\n"
+                + "</script>\n"
+                + "</head><body onload='test()'>\n"
+                + "</body></html>";
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("null")
+    public void itemNotFound() throws Exception {
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
+                + "<style>\n"
+                + "  BODY { font-size: 1234px; }\n"
+                + "</style>\n"
+                + "<script>\n"
+                + LOG_TITLE_FUNCTION
+                + "  function test() {\n"
+                + "    var rules = document.styleSheets[0].cssRules;\n"
+                + "    log(rules.item(17));\n"
                 + "  }\n"
                 + "</script>\n"
                 + "</head><body onload='test()'>\n"

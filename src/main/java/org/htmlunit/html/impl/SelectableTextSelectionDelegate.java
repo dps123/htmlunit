@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,13 @@
  */
 package org.htmlunit.html.impl;
 
-import static org.htmlunit.BrowserVersionFeatures.JS_INPUT_IGNORE_NEGATIVE_SELECTION_START;
-
-import org.w3c.dom.ranges.Range;
+import org.htmlunit.html.DomNode;
 
 /**
  * Contains standard selection-related functionality used by various input elements.
  *
  * <p>From <a href="http://www.whatwg.org/specs/web-apps/current-work/#selection">the HTML5 spec</a>:
- *
+ * </p>
  * <blockquote>Mostly for historical reasons, in addition to the browsing context's selection, each
  * textarea and input element has an independent selection. These are the text field selections.</blockquote>
  *
@@ -36,7 +34,7 @@ public class SelectableTextSelectionDelegate implements SelectionDelegate {
     private final SelectableTextInput element_;
 
     /** The field selection, which is independent of the browsing context's selection. */
-    private final Range selection_;
+    private final SimpleRange selection_;
 
     /**
      * Creates a new instance for the specified element.
@@ -44,7 +42,7 @@ public class SelectableTextSelectionDelegate implements SelectionDelegate {
      */
     public SelectableTextSelectionDelegate(final SelectableTextInput element) {
         element_ = element;
-        selection_ = new SimpleRange(element, 0);
+        selection_ = new SimpleRange((DomNode) element, 0);
     }
 
     /**
@@ -76,18 +74,16 @@ public class SelectableTextSelectionDelegate implements SelectionDelegate {
      * {@inheritDoc}
      */
     @Override
-    public void setSelectionStart(int selectionStart) {
-        if (selectionStart < 0
-                && element_.getPage().getEnclosingWindow().getWebClient()
-                    .getBrowserVersion().hasFeature(JS_INPUT_IGNORE_NEGATIVE_SELECTION_START)) {
+    public void setSelectionStart(final int selectionStart) {
+        if (selectionStart < 0) {
             return;
         }
 
         final int length = element_.getText().length();
-        selectionStart = Math.max(0, Math.min(selectionStart, length));
-        selection_.setStart(element_, selectionStart);
-        if (selection_.getEndOffset() < selectionStart) {
-            selection_.setEnd(element_, selectionStart);
+        final int start = Math.min(selectionStart, length);
+        selection_.setStart((DomNode) element_, start);
+        if (selection_.getEndOffset() < start) {
+            selection_.setEnd((DomNode) element_, start);
         }
     }
 
@@ -103,12 +99,12 @@ public class SelectableTextSelectionDelegate implements SelectionDelegate {
      * {@inheritDoc}
      */
     @Override
-    public void setSelectionEnd(int selectionEnd) {
+    public void setSelectionEnd(final int selectionEnd) {
         final int length = element_.getText().length();
-        selectionEnd = Math.min(length, Math.max(selectionEnd, 0));
-        selection_.setEnd(element_, selectionEnd);
-        if (selection_.getStartOffset() > selectionEnd) {
-            selection_.setStart(element_, selectionEnd);
+        final int end = Math.min(length, Math.max(selectionEnd, 0));
+        selection_.setEnd((DomNode) element_, end);
+        if (selection_.getStartOffset() > end) {
+            selection_.setStart((DomNode) element_, end);
         }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,15 @@ package org.htmlunit.javascript.host;
 
 import java.util.List;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.htmlunit.WebDriverTestCase;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.BuggyWebDriver;
+import org.junit.jupiter.api.Test;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.logging.LogEntries;
 import org.openqa.selenium.logging.LogEntry;
 import org.openqa.selenium.logging.LogType;
 import org.openqa.selenium.logging.Logs;
-
-import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.BuggyWebDriver;
-import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
 
 /**
  * Tests for Console.
@@ -37,7 +33,6 @@ import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
  * @author Marc Guillemot
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class ConsoleTest extends WebDriverTestCase {
 
     /**
@@ -46,8 +41,8 @@ public class ConsoleTest extends WebDriverTestCase {
     @Test
     @Alerts({"false", "object", "true"})
     public void prototype() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -55,7 +50,7 @@ public class ConsoleTest extends WebDriverTestCase {
             + "    log(window.console == undefined);\n"
             + "    log(typeof window.console);\n"
             + "    log('console' in window);\n"
-            + "  } catch(e) { log('exception');}\n"
+            + "  } catch(e) { logEx(e);}\n"
             + "</script>\n"
             + "</body></html>";
 
@@ -66,11 +61,10 @@ public class ConsoleTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"true", "undefined", "false"},
-            IE = {"false", "object", "true"})
+    @Alerts({"true", "undefined", "false"})
     public void prototypeUppercase() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -78,7 +72,7 @@ public class ConsoleTest extends WebDriverTestCase {
             + "    log(window.Console == undefined);\n"
             + "    log(typeof window.Console);\n"
             + "    log('Console' in window);\n"
-            + "  } catch(e) { log('exception');}\n"
+            + "  } catch(e) { logEx(e);}\n"
             + "</script>\n"
             + "</body></html>";
 
@@ -89,11 +83,10 @@ public class ConsoleTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {},
-            IE = "window.console.timeStamp not available")
+    @Alerts({})
     public void timeStamp() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -111,20 +104,32 @@ public class ConsoleTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"function", "function", "function", "function", "function", "function"},
-            IE = {"function", "function", "function", "function", "function", "undefined"})
+    @Alerts({"function", "function", "function", "function", "function", "function",
+             "function", "function", "function", "function", "function", "function",
+             "function"})
     public void methods() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  log(typeof console.log);\n"
+            + "  log(typeof console.trace);\n"
             + "  log(typeof console.info);\n"
             + "  log(typeof console.warn);\n"
             + "  log(typeof console.error);\n"
             + "  log(typeof console.debug);\n"
+
+            + "  log(typeof console.assert);\n"
+
+            + "  log(typeof console.time);\n"
+            + "  log(typeof console.timeLog);\n"
+            + "  log(typeof console.timeEnd);\n"
             + "  log(typeof console.timeStamp);\n"
+
+            + "  log(typeof console.count);\n"
+            + "  log(typeof console.countReset);\n"
+
             + "</script>\n"
             + "</body></html>";
 
@@ -135,19 +140,17 @@ public class ConsoleTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "true",
-            IE = "false")
-    @HtmlUnitNYI(IE = "true")
+    @Alerts("true")
     public void windowProperty() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  try {\n"
             + "    var x = Object.getOwnPropertyNames(window).indexOf('console');\n"
             + "    log(x >= 0);\n"
-            + "  } catch(e) {log('exception')}\n"
+            + "  } catch(e) { logEx(e) }\n"
             + "</script>\n"
             + "</body></html>";
 
@@ -158,20 +161,115 @@ public class ConsoleTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "success",
-            IE = "exception")
-    @HtmlUnitNYI(IE = "success")
-    public void fromWindow() throws Exception {
-        final String html
-            = "<html>\n"
+    @Alerts("success")
+    public void logFromWindow() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  try {\n"
-            + "    var x = console.error;\n"
+            + "    let x = console.log;\n"
             + "    x('hello');\n"
+
+            + "    x = console.trace;\n"
+            + "    x('hello');\n"
+
+            + "    x = console.info;\n"
+            + "    x('hello');\n"
+
+            + "    x = console.warn;\n"
+            + "    x('hello');\n"
+
+            + "    x = console.error;\n"
+            + "    x('hello');\n"
+
+            + "    x = console.debug;\n"
+            + "    x('hello');\n"
+
             + "    log('success');\n"
-            + "  } catch(e) {log('exception')}\n"
+            + "  } catch(e) { logEx(e) }\n"
+            + "</script>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("success")
+    public void timeFromWindow() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<body>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  try {\n"
+            + "    let x = console.time;\n"
+            + "    x('hello');\n"
+
+            + "    x = console.timeLog;\n"
+            + "    x('hello');\n"
+
+            + "    x = console.timeEnd;\n"
+            + "    x('hello');\n"
+
+            + "    x = console.timeStamp;\n"
+            + "    x('hello');\n"
+
+            + "    log('success');\n"
+            + "  } catch(e) { logEx(e) }\n"
+            + "</script>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("success")
+    public void assertFromWindow() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<body>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  try {\n"
+            + "    let x = console.assert;\n"
+            + "    x(true, 'hello');\n"
+
+            + "    log('success');\n"
+            + "  } catch(e) { logEx(e) }\n"
+            + "</script>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("success")
+    public void countFromWindow() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<body>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  try {\n"
+            + "    let x = console.count;\n"
+            + "    x('hello');\n"
+
+            + "    x = console.countReset;\n"
+            + "    x('hello');\n"
+
+            + "    log('success');\n"
+            + "  } catch(e) { logEx(e) }\n"
             + "</script>\n"
             + "</body></html>";
 
@@ -184,8 +282,8 @@ public class ConsoleTest extends WebDriverTestCase {
     @Test
     @BuggyWebDriver
     public void simpleString() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "<script>\n"
             + "  for (i = 0; i < 4; i++) {\n"
@@ -218,8 +316,8 @@ public class ConsoleTest extends WebDriverTestCase {
     @Test
     @BuggyWebDriver
     public void assertOnly() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "<script>\n"
             + "  number = 1;\n"
@@ -245,8 +343,8 @@ public class ConsoleTest extends WebDriverTestCase {
     @Test
     @BuggyWebDriver
     public void assertString() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "<script>\n"
             + "  number = 1;\n"
@@ -272,8 +370,8 @@ public class ConsoleTest extends WebDriverTestCase {
     @Test
     @BuggyWebDriver
     public void assertObject() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "<script>\n"
             + "  var number = 1;\n"
@@ -300,8 +398,8 @@ public class ConsoleTest extends WebDriverTestCase {
     @Test
     @BuggyWebDriver
     public void assertObjects() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "<script>\n"
             + "  number = 1;\n"
@@ -328,8 +426,8 @@ public class ConsoleTest extends WebDriverTestCase {
     @Test
     @BuggyWebDriver
     public void assertParams() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "<script>\n"
             + "  console.assert(false, 'the word is %s', 'foo');\n"
@@ -391,8 +489,8 @@ public class ConsoleTest extends WebDriverTestCase {
     @Test
     @BuggyWebDriver
     public void errorCall() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "<script>\n"
             + "  function foo() {\n"

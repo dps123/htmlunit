@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,30 +14,26 @@
  */
 package org.htmlunit.javascript.host.media;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.HtmlUnitNYI;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link OfflineAudioContext}.
  *
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class OfflineAudioContextTest extends WebDriverTestCase {
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "true",
-            IE = "false")
+    @Alerts("true")
     public void inWindow() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION
@@ -57,11 +53,10 @@ public class OfflineAudioContextTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"function", "error", "[object OfflineAudioContext]"},
-            IE = "OfflineAudioContext not available")
+    @Alerts({"function", "TypeError", "[object OfflineAudioContext]"})
     public void ctor() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
             + LOG_TEXTAREA_FUNCTION
@@ -75,7 +70,7 @@ public class OfflineAudioContextTest extends WebDriverTestCase {
             + "      log(typeof OfflineAudioContext);\n"
             + "      try {\n"
             + "        log(new OfflineAudioContext());\n"
-            + "      } catch(e) { log('error'); }\n"
+            + "      } catch(e) { logEx(e); }\n"
             + "      log(new OfflineAudioContext({length: 44100 * 1, sampleRate: 44100}));\n"
             + "    }\n"
             + "  </script>\n"
@@ -92,11 +87,10 @@ public class OfflineAudioContextTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "[object AudioBufferSourceNode]",
-            IE = "OfflineAudioContext not available")
+    @Alerts("[object AudioBufferSourceNode]")
     public void createBufferSource() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION
@@ -123,11 +117,18 @@ public class OfflineAudioContextTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"OfflineAudioContext prep done", "Error with decoding audio data"},
-            IE = "OfflineAudioContext not available")
+    @Alerts({"OfflineAudioContext prep done", "Error with decoding audio data", "EncodingError/DOMException"})
+    @HtmlUnitNYI(CHROME = {"OfflineAudioContext prep done", "Error with decoding audio data",
+                           "NotSupportedError/DOMException"},
+            EDGE = {"OfflineAudioContext prep done", "Error with decoding audio data",
+                    "NotSupportedError/DOMException"},
+            FF = {"OfflineAudioContext prep done", "Error with decoding audio data",
+                  "NotSupportedError/DOMException"},
+            FF_ESR = {"OfflineAudioContext prep done", "Error with decoding audio data",
+                      "NotSupportedError/DOMException"})
     public void decodeAudioData() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
             + LOG_TEXTAREA_FUNCTION
@@ -142,7 +143,7 @@ public class OfflineAudioContextTest extends WebDriverTestCase {
             + "      var audioData = new ArrayBuffer(0);\n"
             + "      audioCtx.decodeAudioData(audioData,\n"
             + "             function(buffer) { log('Decoding audio data done'); },\n"
-            + "             function(e) { log('Error with decoding audio data'); }\n"
+            + "             function(e) { log('Error with decoding audio data'); logEx(e); }\n"
             + "           );\n"
             + "      log('OfflineAudioContext prep done');\n"
             + "    }\n"
@@ -160,11 +161,18 @@ public class OfflineAudioContextTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"OfflineAudioContext prep done", "Error with decoding audio data"},
-            IE = "OfflineAudioContext not available")
+    @Alerts({"OfflineAudioContext prep done", "Error with decoding audio data", "EncodingError/DOMException"})
+    @HtmlUnitNYI(CHROME = {"OfflineAudioContext prep done", "Error with decoding audio data",
+                           "NotSupportedError/DOMException"},
+            EDGE = {"OfflineAudioContext prep done", "Error with decoding audio data",
+                    "NotSupportedError/DOMException"},
+            FF = {"OfflineAudioContext prep done", "Error with decoding audio data",
+                  "NotSupportedError/DOMException"},
+            FF_ESR = {"OfflineAudioContext prep done", "Error with decoding audio data",
+                      "NotSupportedError/DOMException"})
     public void decodeAudioData2() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
             + LOG_TEXTAREA_FUNCTION
@@ -179,7 +187,7 @@ public class OfflineAudioContextTest extends WebDriverTestCase {
             + "      var audioData = new ArrayBuffer(0);\n"
             + "      audioCtx.decodeAudioData(audioData).then(\n"
             + "             function(buffer) { log('Decoding audio data done'); },\n"
-            + "             function(e) { log('Error with decoding audio data'); }\n"
+            + "             function(e) { log('Error with decoding audio data'); logEx(e); }\n"
             + "           );\n"
             + "      log('OfflineAudioContext prep done');\n"
             + "    }\n"
@@ -197,11 +205,10 @@ public class OfflineAudioContextTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "-3.4028234663852886e+38", "3.4028234663852886e+38", "1", "0.5"},
-            IE = "OfflineAudioContext not available")
+    @Alerts({"1", "-3.4028234663852886e+38", "3.4028234663852886e+38", "1", "0.5"})
     public void createGain() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
             + LOG_TEXTAREA_FUNCTION
@@ -236,11 +243,10 @@ public class OfflineAudioContextTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function startRendering() { [native code] }",
-            IE = "OfflineAudioContext not available")
+    @Alerts("function startRendering() { [native code] }")
     public void startRendering() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION

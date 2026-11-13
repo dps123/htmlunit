@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,12 +21,13 @@ import org.htmlunit.SgmlPage;
 /**
  * Wrapper for the HTML element "title".
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
- * @author <a href="mailto:cse@dynabean.de">Christian Sell</a>
+ * @author Mike Bowler
+ * @author Christian Sell
  * @author Chris Erskine
  * @author Marc Guillemot
  * @author Ahmed Ashour
  * @author Frank Danek
+ * @author Ronald Brill
  */
 public class HtmlTitle extends HtmlElement {
 
@@ -56,8 +57,8 @@ public class HtmlTitle extends HtmlElement {
             final DomNode textNode = new DomText(getPage(), message);
             appendChild(textNode);
         }
-        else if (child instanceof DomText) {
-            ((DomText) child).setData(message);
+        else if (child instanceof DomText text) {
+            text.setData(message);
         }
         else {
             throw new IllegalStateException("For title tag, this should be a text node");
@@ -65,9 +66,7 @@ public class HtmlTitle extends HtmlElement {
     }
 
     /**
-     * Indicates if a node without children should be written in expanded form as XML
-     * (i.e. with closing tag rather than with "/&gt;").
-     * @return {@code true} as required by Internet Explorer
+     * {@inheritDoc}
      */
     @Override
     protected boolean isEmptyXmlTagExpanded() {
@@ -80,5 +79,38 @@ public class HtmlTitle extends HtmlElement {
     @Override
     public DisplayStyle getDefaultStyleDisplay() {
         return DisplayStyle.NONE;
+    }
+
+    /**
+     * The child text content: the concatenation of the data of all text node children,
+     * elements and comments are skipped (CDATA sections are text nodes).
+     *
+     * @return the {@code text} attribute
+     */
+    public String getText() {
+        final DomNode firstChild = getFirstChild();
+        if (firstChild == null) {
+            return "";
+        }
+
+        final StringBuilder sb = new StringBuilder();
+        for (final DomNode child : getChildren()) {
+            if (child instanceof DomText text) {
+                sb.append(text.getData());
+            }
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Sets the {@code text} attribute: all children are replaced by a single text node;
+     * an empty string leaves the title without children.
+     * @param text the {@code text} attribute
+     */
+    public void setText(final String text) {
+        removeAllChildren();
+        if (text != null && !text.isEmpty()) {
+            appendChild(new DomText(getPage(), text));
+        }
     }
 }

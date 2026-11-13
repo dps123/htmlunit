@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,45 +14,36 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.FF;
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.FF_ESR;
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.IE;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.io.IOUtils;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.htmlunit.MockWebConnection;
+import org.htmlunit.WebDriverTestCase;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.BuggyWebDriver;
+import org.htmlunit.junit.annotation.HtmlUnitNYI;
+import org.htmlunit.util.MimeType;
+import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 
-import org.htmlunit.MockWebConnection;
-import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.html.HtmlPageTest;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
-import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
-import org.htmlunit.util.MimeType;
-import org.htmlunit.util.NameValuePair;
-
 /**
  * Tests for {@link HTMLImageElement}.
  *
- * @author <a href="mailto:george@murnock.com">George Murnock</a>
+ * @author George Murnock
  * @author Marc Guillemot
  * @author Ronald Brill
  * @author Frank Danek
  * @author Ahmed Ashour
  */
-@RunWith(BrowserRunner.class)
 public class HTMLImageElementTest extends WebDriverTestCase {
 
     /**
@@ -61,7 +52,8 @@ public class HTMLImageElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"[object HTMLImageElement]", "[object HTMLImageElement]"})
     public void simpleScriptable() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -83,7 +75,8 @@ public class HTMLImageElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"IMG", "IMG"})
     public void nodeName() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -105,7 +98,8 @@ public class HTMLImageElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"IMG", "IMG"})
     public void tagName() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -130,11 +124,10 @@ public class HTMLImageElementTest extends WebDriverTestCase {
             FF = {"[object HTMLImageElement]", "[object HTMLElement]", "IMG", "IMAGE",
                   "[object HTMLImageElement]", "[object HTMLImageElement]", "IMG", "IMG"},
             FF_ESR = {"[object HTMLImageElement]", "[object HTMLElement]", "IMG", "IMAGE",
-                      "[object HTMLImageElement]", "[object HTMLImageElement]", "IMG", "IMG"},
-            IE = {"[object HTMLImageElement]", "[object HTMLImageElement]", "IMG", "IMG",
-                  "[object HTMLImageElement]", "[object HTMLImageElement]", "IMG", "IMG"})
+                      "[object HTMLImageElement]", "[object HTMLImageElement]", "IMG", "IMG"})
     public void image() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_ + "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -160,10 +153,10 @@ public class HTMLImageElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"", "undefined", "", ""},
-            IE = {"", "", "", ""})
+    @Alerts({"", "undefined", "", ""})
     public void src() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -188,8 +181,8 @@ public class HTMLImageElementTest extends WebDriverTestCase {
     @Test
     @Alerts("§§URL§§foo.gif")
     public void getSrc() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
@@ -210,8 +203,8 @@ public class HTMLImageElementTest extends WebDriverTestCase {
     @Test
     @Alerts("")
     public void getSrc_newImage_srcNotSet() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
@@ -231,8 +224,8 @@ public class HTMLImageElementTest extends WebDriverTestCase {
      */
     @Test
     public void setSrc() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + "function doTest() {\n"
             + "  document.getElementById('anImage').src = 'bar.gif';\n"
             + "}\n"
@@ -260,8 +253,8 @@ public class HTMLImageElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"onLoad", "§§URL§§bar.gif"})
     public void setSrc_newImage() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
@@ -284,8 +277,8 @@ public class HTMLImageElementTest extends WebDriverTestCase {
     @Test
     @Alerts("foo")
     public void attributeName() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -306,7 +299,8 @@ public class HTMLImageElementTest extends WebDriverTestCase {
      */
     @Test
     public void onLoad_BadUrl() throws Exception {
-        final String html = "<html><body><img src='http:// [/url]http://x.com/a/b' onload='alert(1)'/></body></html>";
+        final String html = DOCTYPE_HTML
+                + "<html><body><img src='http:// [/url]http://x.com/a/b' onload='alert(1)'/></body></html>";
         loadPageWithAlerts2(html);
     }
 
@@ -316,8 +310,8 @@ public class HTMLImageElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"true", "relative", "", ""})
     public void newImage() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
@@ -338,18 +332,11 @@ public class HTMLImageElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"left", "right", "center", "justify", "bottom", "middle",
-                       "top", "absbottom", "absmiddle", "baseline", "texttop", "wrong", ""},
-            FF = {"left", "right", "middle", "justify", "bottom", "middle",
-                  "top", "absbottom", "absmiddle", "bottom", "texttop", "wrong", ""},
-            FF_ESR = {"left", "right", "middle", "justify", "bottom", "middle",
-                      "top", "absbottom", "absmiddle", "bottom", "texttop", "wrong", ""},
-            IE = {"left", "right", "center", "", "bottom", "middle",
-                  "top", "absBottom", "absMiddle", "baseline", "textTop", "", ""})
-    @NotYetImplemented({FF, FF_ESR})
+    @Alerts({"left", "right", "center", "justify", "bottom", "middle",
+             "top", "absbottom", "absmiddle", "baseline", "texttop", "wrong", ""})
     public void getAlign() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "  <img id='i1' align='left' />\n"
             + "  <img id='i2' align='right' />\n"
             + "  <img id='i3' align='center' />\n"
@@ -379,19 +366,11 @@ public class HTMLImageElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"CenTer", "8", "foo", "left", "right", "center", "justify",
-                       "bottom", "middle", "top", "absbottom", "absmiddle", "baseline", "texttop"},
-            FF = {"CenTer", "8", "foo", "left", "right", "middle", "justify",
-                  "bottom", "middle", "top", "absbottom", "absmiddle", "bottom", "texttop"},
-            FF_ESR = {"CenTer", "8", "foo", "left", "right", "middle", "justify",
-                      "bottom", "middle", "top", "absbottom", "absmiddle", "bottom", "texttop"},
-            IE = {"center", "error", "center", "error", "center", "left", "right",
-                  "center", "error", "center", "bottom", "middle", "top", "absBottom",
-                  "absMiddle", "baseline", "textTop"})
-    @NotYetImplemented({FF, FF_ESR})
+    @Alerts({"CenTer", "8", "foo", "left", "right", "center", "justify",
+             "bottom", "middle", "top", "absbottom", "absmiddle", "baseline", "texttop"})
     public void setAlign() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "  <img id='i1' align='left' />\n"
 
             + "<script>\n"
@@ -399,7 +378,7 @@ public class HTMLImageElementTest extends WebDriverTestCase {
             + "  function setAlign(elem, value) {\n"
             + "    try {\n"
             + "      elem.align = value;\n"
-            + "    } catch (e) { log('error'); }\n"
+            + "    } catch(e) { logEx(e); }\n"
             + "    log(elem.align);\n"
             + "  }\n"
 
@@ -432,10 +411,10 @@ public class HTMLImageElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"number: 300", "number: 200", "number: 0", "number: 0", "number: 0", "number: 0"},
-            IE = {"number: 300", "number: 200", "number: 28", "number: 30", "number: 28", "number: 30"})
+    @Alerts({"number: 300", "number: 200", "number: 0", "number: 0", "number: 0", "number: 0"})
     public void widthHeightWithoutSource() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function showInfo(imageId) {\n"
@@ -467,7 +446,8 @@ public class HTMLImageElementTest extends WebDriverTestCase {
     public void widthHeightWithSource() throws Exception {
         getMockWebConnection().setDefaultResponse("");
 
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function showInfo(imageId) {\n"
@@ -492,24 +472,23 @@ public class HTMLImageElementTest extends WebDriverTestCase {
             final byte[] directBytes = IOUtils.toByteArray(fis);
 
             final MockWebConnection webConnection = getMockWebConnection();
-            final List<NameValuePair> emptyList = Collections.emptyList();
-            webConnection.setResponse(URL_SECOND, directBytes, 200, "ok", "image/jpg", emptyList);
+            webConnection.setResponse(URL_SECOND, directBytes, 200, "ok", "image/jpg", Collections.emptyList());
         }
 
         loadPageVerifyTitle2(html);
     }
 
     /**
-      * Test that image's width and height are numbers.
-      * @throws Exception if the test fails
-      */
+     * Test that image's width and height are numbers.
+     * @throws Exception if the test fails
+     */
     @Test
-    @Alerts(DEFAULT = {"number: 300", "number: 200", "number: 0", "number: 0", "number: 0", "number: 0"},
-            IE = {"number: 300", "number: 200", "number: 28", "number: 30", "number: 28", "number: 30"})
+    @Alerts({"number: 300", "number: 200", "number: 0", "number: 0", "number: 0", "number: 0"})
     public void widthHeightEmptySource() throws Exception {
         getMockWebConnection().setDefaultResponse("");
 
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function showInfo(imageId) {\n"
@@ -533,26 +512,25 @@ public class HTMLImageElementTest extends WebDriverTestCase {
         try (FileInputStream fis = new FileInputStream(new File(url.toURI()))) {
             final byte[] directBytes = IOUtils.toByteArray(fis);
             final MockWebConnection webConnection = getMockWebConnection();
-            final List<NameValuePair> emptyList = Collections.emptyList();
-            webConnection.setResponse(URL_SECOND, directBytes, 200, "ok", "image/jpg", emptyList);
+            webConnection.setResponse(URL_SECOND, directBytes, 200, "ok", "image/jpg", Collections.emptyList());
         }
 
         loadPageVerifyTitle2(html);
     }
 
     /**
-      * Test that image's width and height are numbers.
-      * @throws Exception if the test fails
-      */
+     * Test that image's width and height are numbers.
+     * @throws Exception if the test fails
+     */
     @Test
     @Alerts(DEFAULT = {"number: 300", "number: 200", "number: 24", "number: 24", "number: 24", "number: 24"},
             CHROME = {"number: 300", "number: 200", "number: 0", "number: 0", "number: 0", "number: 0"},
-            EDGE = {"number: 300", "number: 200", "number: 0", "number: 0", "number: 0", "number: 0"},
-            IE = {"number: 300", "number: 200", "number: 28", "number: 30", "number: 28", "number: 30"})
+            EDGE = {"number: 300", "number: 200", "number: 0", "number: 0", "number: 0", "number: 0"})
     public void widthHeightBlankSource() throws Exception {
         getMockWebConnection().setDefaultResponse("");
 
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function showInfo(imageId) {\n"
@@ -576,8 +554,7 @@ public class HTMLImageElementTest extends WebDriverTestCase {
         try (FileInputStream fis = new FileInputStream(new File(url.toURI()))) {
             final byte[] directBytes = IOUtils.toByteArray(fis);
             final MockWebConnection webConnection = getMockWebConnection();
-            final List<NameValuePair> emptyList = Collections.emptyList();
-            webConnection.setResponse(URL_SECOND, directBytes, 200, "ok", "image/jpg", emptyList);
+            webConnection.setResponse(URL_SECOND, directBytes, 200, "ok", "image/jpg", Collections.emptyList());
         }
 
         loadPageVerifyTitle2(html);
@@ -590,12 +567,12 @@ public class HTMLImageElementTest extends WebDriverTestCase {
     @Test
     @Alerts(DEFAULT = {"number: 300", "number: 200", "number: 24", "number: 24", "number: 24", "number: 24"},
             CHROME = {"number: 300", "number: 200", "number: 16", "number: 16", "number: 16", "number: 16"},
-            EDGE = {"number: 300", "number: 200", "number: 16", "number: 16", "number: 16", "number: 16"},
-            IE = {"number: 300", "number: 200", "number: 28", "number: 30", "number: 28", "number: 30"})
+            EDGE = {"number: 300", "number: 200", "number: 16", "number: 16", "number: 16", "number: 16"})
     public void widthHeightInvalidSource() throws Exception {
         getMockWebConnection().setDefaultResponse("");
 
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function showInfo(imageId) {\n"
@@ -616,27 +593,24 @@ public class HTMLImageElementTest extends WebDriverTestCase {
             + "</body></html>";
 
         loadPageVerifyTitle2(html);
-
-        shutDownRealIE();
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"true", "true", "true", "true"},
-            IE = {"false", "false", "false", "true"})
+    @Alerts({"true", "true", "true", "true"})
     public void complete() throws Exception {
         try (InputStream is = getClass().getClassLoader().getResourceAsStream("testfiles/tiny-jpg.img")) {
             final byte[] directBytes = IOUtils.toByteArray(is);
 
             final URL urlImage = new URL(URL_SECOND, "img.jpg");
-            final List<NameValuePair> emptyList = Collections.emptyList();
-            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "image/jpg", emptyList);
+            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "image/jpg", Collections.emptyList());
             getMockWebConnection().setDefaultResponse("Test");
         }
 
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function showInfo(imageId) {\n"
@@ -675,20 +649,20 @@ public class HTMLImageElementTest extends WebDriverTestCase {
     @HtmlUnitNYI(CHROME = {"error2;error3;load4;load5;", "3"},
             EDGE = {"error2;error3;load4;load5;", "3"},
             FF = {"error2;load3;load4;load5;", "4"},
-            FF_ESR = {"error2;load3;load4;load5;", "4"},
-            IE = {"error2;error3;load4;load5;", "3"})
+            FF_ESR = {"error2;load3;load4;load5;", "4"})
     public void onload() throws Exception {
         try (InputStream is = getClass().getClassLoader().getResourceAsStream("testfiles/tiny-jpg.img")) {
             final byte[] directBytes = IOUtils.toByteArray(is);
 
             final URL urlImage = new URL(URL_SECOND, "img.jpg");
-            final List<NameValuePair> emptyList = Collections.emptyList();
-            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "image/jpg", emptyList);
-            getMockWebConnection().setResponse(URL_SECOND, "Test", 200, "OK", MimeType.TEXT_HTML, emptyList);
+            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "image/jpg", Collections.emptyList());
+            getMockWebConnection().setResponse(URL_SECOND, "Test", 200, "OK",
+                    MimeType.TEXT_HTML, Collections.emptyList());
             getMockWebConnection().setDefaultResponse("Error: not found", 404, "Not Found", MimeType.TEXT_HTML);
         }
 
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + "  function showInfo(text) {\n"
             + "    document.title += text + ';';\n"
@@ -725,12 +699,12 @@ public class HTMLImageElementTest extends WebDriverTestCase {
             final byte[] directBytes = IOUtils.toByteArray(is);
 
             final URL urlImage = new URL(URL_SECOND, "img.jpg");
-            final List<NameValuePair> emptyList = Collections.emptyList();
-            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "", emptyList);
+            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "", Collections.emptyList());
             getMockWebConnection().setDefaultResponse("Test");
         }
 
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + "  function showInfo(text) {\n"
             + "    document.title += text + ';';\n"
@@ -762,12 +736,12 @@ public class HTMLImageElementTest extends WebDriverTestCase {
             final byte[] directBytes = IOUtils.toByteArray(is);
 
             final URL urlImage = new URL(URL_SECOND, "img.jpg");
-            final List<NameValuePair> emptyList = Collections.emptyList();
-            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "text/html", emptyList);
+            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "text/html", Collections.emptyList());
             getMockWebConnection().setDefaultResponse("Test");
         }
 
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + "  function showInfo(text) {\n"
             + "    document.title += text + ';';\n"
@@ -795,8 +769,8 @@ public class HTMLImageElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"test", "string", "hui", "", "null", "false", "true", ""})
     public void alt() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION
@@ -837,7 +811,8 @@ public class HTMLImageElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"myImage clicked", "myImageNone clicked"})
     public void click() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -861,11 +836,10 @@ public class HTMLImageElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "myImageWithMap clicked",
-            IE = "a0 clicked")
-    @NotYetImplemented(IE)
+    @Alerts("myImageWithMap clicked")
     public void clickWithMap() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -895,11 +869,11 @@ public class HTMLImageElementTest extends WebDriverTestCase {
         try (InputStream is = getClass().getClassLoader().getResourceAsStream("testfiles/tiny-jpg.img")) {
             final byte[] directBytes = IOUtils.toByteArray(is);
             final URL urlImage = new URL(URL_FIRST, "img.jpg");
-            final List<NameValuePair> emptyList = Collections.emptyList();
-            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "image/jpg", emptyList);
+            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "image/jpg", Collections.emptyList());
         }
 
-        final String html = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<script>\n"
             + "  var i = new Image();\n"
             + "  i.src = 'img.jpg';\n"
@@ -927,11 +901,11 @@ public class HTMLImageElementTest extends WebDriverTestCase {
         try (InputStream is = getClass().getClassLoader().getResourceAsStream("testfiles/tiny-jpg.img")) {
             final byte[] directBytes = IOUtils.toByteArray(is);
             final URL urlImage = new URL(URL_FIRST, "img.jpg");
-            final List<NameValuePair> emptyList = Collections.emptyList();
-            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "image/jpg", emptyList);
+            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "image/jpg", Collections.emptyList());
         }
 
-        final String html = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<script>\n"
             + "  var i = new Image();\n"
             + "  i.onload = function() { document.title += 'onload;'; };\n"
@@ -960,11 +934,11 @@ public class HTMLImageElementTest extends WebDriverTestCase {
         try (InputStream is = getClass().getClassLoader().getResourceAsStream("testfiles/tiny-jpg.img")) {
             final byte[] directBytes = IOUtils.toByteArray(is);
             final URL urlImage = new URL(URL_FIRST, "img.jpg");
-            final List<NameValuePair> emptyList = Collections.emptyList();
-            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "image/jpg", emptyList);
+            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "image/jpg", Collections.emptyList());
         }
 
-        final String html = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<script>\n"
             + "  var i = new Image();\n"
             + "  i.src = 'img.jpg';\n"
@@ -999,14 +973,14 @@ public class HTMLImageElementTest extends WebDriverTestCase {
             final byte[] directBytes = IOUtils.toByteArray(is);
 
             URL urlImage = new URL(URL_FIRST, "img.jpg");
-            final List<NameValuePair> emptyList = Collections.emptyList();
-            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "image/jpg", emptyList);
+            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "image/jpg", Collections.emptyList());
 
             urlImage = new URL(URL_FIRST, "img2.jpg");
-            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "image/jpg", emptyList);
+            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "image/jpg", Collections.emptyList());
         }
 
-        final String html = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<script>\n"
             + "  var i = new Image();\n"
             + "  i.src = 'img.jpg';\n"
@@ -1042,14 +1016,14 @@ public class HTMLImageElementTest extends WebDriverTestCase {
             final byte[] directBytes = IOUtils.toByteArray(is);
 
             URL urlImage = new URL(URL_FIRST, "img.jpg");
-            final List<NameValuePair> emptyList = Collections.emptyList();
-            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "image/jpg", emptyList);
+            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "image/jpg", Collections.emptyList());
 
             urlImage = new URL(URL_FIRST, "img2.jpg");
-            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "image/jpg", emptyList);
+            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "image/jpg", Collections.emptyList());
         }
 
-        final String html = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<script>\n"
             + "  var i = new Image();\n"
             + "  i.onload = function() { document.title += 'onload;'; };\n"
@@ -1082,14 +1056,14 @@ public class HTMLImageElementTest extends WebDriverTestCase {
             final byte[] directBytes = IOUtils.toByteArray(is);
 
             URL urlImage = new URL(URL_FIRST, "img.jpg");
-            final List<NameValuePair> emptyList = Collections.emptyList();
-            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "image/jpg", emptyList);
+            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "image/jpg", Collections.emptyList());
 
             urlImage = new URL(URL_FIRST, "img2.jpg");
-            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "image/jpg", emptyList);
+            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "image/jpg", Collections.emptyList());
         }
 
-        final String html = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><body>\n"
                 + "<script>\n"
                 + "  var i = new Image();\n"
                 + "  i.src = 'img.jpg';\n"
@@ -1128,15 +1102,14 @@ public class HTMLImageElementTest extends WebDriverTestCase {
             final byte[] directBytes = IOUtils.toByteArray(is);
 
             URL urlImage = new URL(URL_FIRST, "img.jpg");
-            final List<NameValuePair> emptyList = Collections.emptyList();
-            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "image/jpg", emptyList);
+            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "image/jpg", Collections.emptyList());
 
             urlImage = new URL(URL_FIRST, "img2.jpg");
-            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "image/jpg", emptyList);
+            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", "image/jpg", Collections.emptyList());
         }
 
-        final String html
-                = "<html><body><img id='img' name='img'/><script>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><body><img id='img' name='img'/><script>\n"
                 + "  var i = new Image();\n"
                 + "  i.onload = function() {\n"
                 + "    document.title += 'image one;';\n"
@@ -1171,8 +1144,8 @@ public class HTMLImageElementTest extends WebDriverTestCase {
     @Test
     @Alerts("[object HTMLImageElement]")
     public void ctorImage() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION
@@ -1193,10 +1166,10 @@ public class HTMLImageElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts("error")
+    @Alerts("TypeError")
     public void ctorHTMLImageElement() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION
@@ -1204,7 +1177,7 @@ public class HTMLImageElementTest extends WebDriverTestCase {
             + "        try {\n"
             + "          var htmlImageElement = new HTMLImageElement(1, 1);"
             + "          log('' + htmlImageElement);\n"
-            + "        } catch (e) { log('error'); }\n"
+            + "        } catch(e) { logEx(e); }\n"
             + "      }\n"
             + "    </script>\n"
             + "  </head>\n"
@@ -1221,8 +1194,8 @@ public class HTMLImageElementTest extends WebDriverTestCase {
     @Test
     @Alerts("{\"enumerable\":true,\"configurable\":true}")
     public void imagePrototype() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION
@@ -1237,5 +1210,321 @@ public class HTMLImageElementTest extends WebDriverTestCase {
             + "</html>";
 
         loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Verifies that if an image has an <tt>onload</tt> attribute, it gets downloaded
+     * and the <tt>onload</tt> handler gets invoked.
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"0", "1"})
+    public void onLoad_calledWhenImageDownloaded_static() throws Exception {
+        final URL urlImage = new URL(URL_FIRST, "img.jpg");
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream("testfiles/tiny-jpg.img")) {
+            final byte[] directBytes = IOUtils.toByteArray(is);
+
+            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok",
+                    MimeType.IMAGE_JPEG, Collections.emptyList());
+        }
+
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
+                + "<body>\n"
+                + "  <img src='img.jpg' onload='test()'>\n"
+                + LOG_TEXTAREA
+
+                + "  <script>\n"
+                + LOG_TEXTAREA_FUNCTION
+                    // first script to be sure that img onload doesn't get executed after first JS execution
+                + "    log(0);\n"
+                + "  </script>\n"
+                + "  <script>\n"
+                + "    function test() {\n"
+                + "      log(1);\n"
+                + "    }\n"
+                + "  </script>\n"
+                + "</body></html>";
+
+        loadPageVerifyTextArea2(html);
+        assertEquals(urlImage, getMockWebConnection().getLastWebRequest().getUrl());
+    }
+
+    /**
+     * Verifies that if an image has an <tt>onload</tt> attribute, it gets downloaded
+     * and the <tt>onload</tt> handler gets invoked.
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts("1")
+    public void onLoad_calledWhenImageDownloaded_dynamic() throws Exception {
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream("testfiles/tiny-jpg.img")) {
+            final byte[] directBytes = IOUtils.toByteArray(is);
+
+            getMockWebConnection().setResponse(URL_SECOND, directBytes, 200, "ok",
+                    MimeType.IMAGE_JPEG, Collections.emptyList());
+            getMockWebConnection().setResponse(URL_THIRD, directBytes, 200, "ok",
+                    MimeType.IMAGE_JPEG, Collections.emptyList());
+        }
+
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
+            + LOG_TEXTAREA
+            + "<script>\n"
+            + LOG_TEXTAREA_FUNCTION
+            + "  var i = document.createElement('img');\n"
+            + "  i.src = '" + URL_SECOND + "';\n"
+            + "  i.src = '" + URL_THIRD + "';\n"
+            + "  i.onload = function() { log(1); };\n"
+            + "</script></body></html>";
+
+        loadPageVerifyTextArea2(html);
+        assertEquals(URL_THIRD, getMockWebConnection().getLastWebRequest().getUrl());
+    }
+
+    /**
+     * Verifies that if an image has an <tt>onload</tt> attribute, it gets downloaded
+     * and the <tt>onload</tt> handler gets invoked.
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts("1")
+    public void onLoad_calledWhenImageDownloaded_dynamic_onLoad_already_set() throws Exception {
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream("testfiles/tiny-jpg.img")) {
+            final byte[] directBytes = IOUtils.toByteArray(is);
+
+            getMockWebConnection().setResponse(URL_SECOND, directBytes, 200, "ok",
+                    MimeType.IMAGE_JPEG, Collections.emptyList());
+        }
+
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
+            + LOG_TEXTAREA
+            + "<script>\n"
+            + LOG_TEXTAREA_FUNCTION
+            + "  var i = document.createElement('img');\n"
+            + "  i.onload = function() { log(1); };\n"
+            + "  i.src = '" + URL_SECOND + "';\n"
+            + "</script></body></html>";
+
+        loadPageVerifyTextArea2(html);
+        assertEquals(URL_SECOND, getMockWebConnection().getLastWebRequest().getUrl());
+    }
+
+    /**
+     * Verifies that if an image is created if the page is already
+     * finished, the onload handler is called.
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"1", "2"})
+    public void onLoad_calledWhenImageDownloaded_dynamic_twoSteps() throws Exception {
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream("testfiles/tiny-jpg.img")) {
+            final byte[] directBytes = IOUtils.toByteArray(is);
+
+            getMockWebConnection().setResponse(URL_SECOND, directBytes, 200, "ok",
+                    MimeType.IMAGE_JPEG, Collections.emptyList());
+            getMockWebConnection().setResponse(URL_THIRD, directBytes, 200, "ok",
+                    MimeType.IMAGE_JPEG, Collections.emptyList());
+        }
+
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
+            + LOG_TEXTAREA
+            + "<script>\n"
+            + LOG_TEXTAREA_FUNCTION
+            + "  var i = document.createElement('img');\n"
+            + "  i.src = '" + URL_SECOND + "';\n"
+            + "  i.onload = function() {\n"
+            + "    log(1);\n"
+            + "    var i2 = document.createElement('img');\n"
+            + "    i2.src = '" + URL_THIRD + "';\n"
+            + "    i2.onload = function() {\n"
+            + "      log(2);\n"
+            + "    };\n"
+            + "  };\n"
+            + "</script></body></html>";
+
+        loadPageVerifyTextArea2(html);
+        assertEquals(URL_THIRD, getMockWebConnection().getLastWebRequest().getUrl());
+    }
+
+    /**
+     * Verifies that if an image has an <tt>onload</tt> attribute set from a script, it gets downloaded
+     * and the <tt>onload</tt> handler gets invoked.
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"image one", "image two"})
+    public void onLoad_calledWhenImageDownloaded_mixed() throws Exception {
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream("testfiles/tiny-jpg.img")) {
+            final byte[] directBytes = IOUtils.toByteArray(is);
+
+            getMockWebConnection().setResponse(URL_SECOND, directBytes, 200, "ok",
+                    MimeType.IMAGE_JPEG, Collections.emptyList());
+            getMockWebConnection().setResponse(URL_THIRD, directBytes, 200, "ok",
+                    MimeType.IMAGE_JPEG, Collections.emptyList());
+        }
+
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
+            + LOG_TEXTAREA
+            + "<img id='img' name='img'/>\n"
+            + "<script>\n"
+            + LOG_TEXTAREA_FUNCTION
+            + "  var i = document.getElementById('img');\n"
+            + "  i.onload = function() {\n"
+            + "    log('image one');\n"
+            + "    i.onload = function() {\n"
+            + "      log('image two');\n"
+            + "    };\n"
+            + "    i.src = '" + URL_THIRD + "';\n"
+            + "  };\n"
+            + "  i.setAttribute('src','" + URL_SECOND + "');\n"
+            + "  var t = setTimeout(function() {clearTimeout(t);}, 500);\n"
+            + "</script></body></html>";
+
+        loadPageVerifyTextArea2(html);
+
+        final List<String> requestedUrls = getMockWebConnection().getRequestedUrls(URL_FIRST);
+        assertEquals(requestedUrls.size(), 3);
+        assertEquals("", requestedUrls.get(0));
+        assertEquals("second/", requestedUrls.get(1));
+        assertEquals(URL_THIRD.toString(), requestedUrls.get(2));
+        assertEquals(URL_THIRD, getMockWebConnection().getLastWebRequest().getUrl());
+    }
+
+    /**
+     * Verifies that if an image has an <tt>onload</tt> attribute, the <tt>onload</tt> handler
+     * does not get invoked if we can't download the image.
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void onLoad_notCalledWhenImageNotDownloaded() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
+            + LOG_TEXTAREA
+            + "<script>\n"
+            + LOG_TEXTAREA_FUNCTION
+            + "</script>\n"
+            + "<img src='" + URL_SECOND + "' onload='log(1)'>\n"
+            + "</body></html>";
+
+        final MockWebConnection conn = getMockWebConnection();
+        conn.setResponse(URL_SECOND, "foo", 404, "Not Found", MimeType.TEXT_HTML, new ArrayList<>());
+
+        loadPageVerifyTextArea2(html);
+        assertEquals(URL_SECOND, conn.getLastWebRequest().getUrl());
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"0", "2", "1"})
+    public void onLoad_order() throws Exception {
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream("testfiles/tiny-jpg.img")) {
+            final byte[] directBytes = IOUtils.toByteArray(is);
+
+            getMockWebConnection().setResponse(URL_SECOND, directBytes, 200, "ok",
+                    MimeType.IMAGE_JPEG, Collections.emptyList());
+        }
+
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
+            + LOG_TEXTAREA
+            + "<script>\n"
+            + LOG_TEXTAREA_FUNCTION
+            + "  log('0');"
+            + "  var i = document.createElement('img');\n"
+            + "  i.onload = function() {\n"
+            + "    log(1);\n"
+            + "  };\n"
+            + "  i.src = '" + URL_SECOND + "';\n"
+            + "  log('2');"
+            + "</script></body></html>";
+
+        loadPageVerifyTextArea2(html);
+        assertEquals(URL_SECOND, getMockWebConnection().getLastWebRequest().getUrl());
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"0", "2", "1"})
+    public void onLoad_orderNotAttached() throws Exception {
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream("testfiles/tiny-jpg.img")) {
+            final byte[] directBytes = IOUtils.toByteArray(is);
+
+            getMockWebConnection().setResponse(URL_SECOND, directBytes, 200, "ok",
+                    MimeType.IMAGE_JPEG, Collections.emptyList());
+        }
+
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
+            + LOG_TEXTAREA
+            + "<script>\n"
+            + LOG_TEXTAREA_FUNCTION
+            + "  log('0');"
+            + "  var i = new Image();\n"
+            + "  i.onload = function() {\n"
+            + "    log(1);\n"
+            + "  };\n"
+            + "  i.src = '" + URL_SECOND + "';\n"
+            + "  log('2');"
+            + "</script></body></html>";
+
+        loadPageVerifyTextArea2(html);
+        assertEquals(URL_SECOND, getMockWebConnection().getLastWebRequest().getUrl());
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts({"in", "out", "Image.onload(0)",
+             "mousedown", "in", "out", "Image.onload(1)",
+             "mouseup", "in", "out",
+             "click", "in", "out", "Image.onload(2)", "Image.onload(3)"})
+    @BuggyWebDriver({"in", "out", "Image.onload(0)",
+        "mousedown", "in", "out",
+        "mouseup", "in", "out",
+        "click", "in", "out", "Image.onload(1)", "Image.onload(2)", "Image.onload(3)"})
+    public void onload_complex() throws Exception {
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream("testfiles/tiny-jpg.img")) {
+            final byte[] directBytes = IOUtils.toByteArray(is);
+
+            getMockWebConnection().setResponse(URL_SECOND, directBytes, 200, "ok",
+                    MimeType.IMAGE_JPEG, Collections.emptyList());
+        }
+
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
+                + "<head>\n"
+                + "<script>\n"
+                + LOG_TEXTAREA_FUNCTION
+
+                + "  function test(i) {\n"
+                + "    log('in');\n"
+                + "    var image = new Image();\n"
+                + "    image.onload = function () { log(\"Image.onload(\" + i + \")\") };\n"
+                + "    image.src = '" + URL_SECOND + "';\n"
+                + "    log('out');\n"
+                + "  }\n"
+                + "</script>\n"
+                + "</head>\n"
+                + "<body onload=\"test(0)\">\n"
+                + "<button id='myId'"
+                +           "onmousedown=\"log('mousedown'); test(1)\" "
+                +           "onmouseup=\"log('mouseup'); test(2)\" "
+                +           "onclick=\"log('click'); test(3)\"></button>\n"
+                + LOG_TEXTAREA
+                + "</body>\n"
+                + "</html>\n";
+
+        final WebDriver driver = loadPage2(html);
+        driver.findElement(By.id("myId")).click();
+        verifyTextArea2(driver, getExpectedAlerts());
     }
 }

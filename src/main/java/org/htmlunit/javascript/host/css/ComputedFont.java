@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,9 @@
  */
 package org.htmlunit.javascript.host.css;
 
-import static org.htmlunit.BrowserVersionFeatures.CSS_SET_NULL_THROWS;
 import static org.htmlunit.javascript.host.css.CSSStyleDeclaration.isLength;
 
-import org.htmlunit.BrowserVersion;
+import org.htmlunit.util.StringUtils;
 
 /**
  * A helper class for handling font attributes of {@link ComputedCSSStyleDeclaration}.
@@ -35,16 +34,12 @@ final class ComputedFont {
     static final int LINE_HEIGHT_INDEX = 4;
     static final int FONT_FAMILY_INDEX = 5;
 
-    static String[] getDetails(final String font, final BrowserVersion browserVersion) {
+    static String[] getDetails(final String font) {
         String fontName = font;
         while (fontName.contains("  ")) {
             fontName = fontName.replace("  ", " ");
         }
-        if (browserVersion.hasFeature(CSS_SET_NULL_THROWS)
-                && fontName.contains("/ ")) {
-            return null;
-        }
-        final String[] tokens = fontName.split(" ");
+        final String[] tokens = StringUtils.splitAtBlank(fontName);
         if (tokens.length > 1) {
             final String[] fontSizeDetails = getFontSizeDetails(tokens[tokens.length - 2]);
             if (fontSizeDetails == null) {
@@ -60,7 +55,11 @@ final class ComputedFont {
     }
 
     /**
-     * @return an array of {@code fontSize} and {@code lineHeight}, or {@code null} if invalid
+     * Parses the specified font-size value into its font size and line height components.
+     *
+     * @param fontSize the font-size value to parse
+     * @return an array containing the font size and line height, or {@code null}
+     *         if the value is invalid
      */
     private static String[] getFontSizeDetails(final String fontSize) {
         final int slash = fontSize.indexOf('/');
@@ -84,6 +83,7 @@ final class ComputedFont {
     }
 
     private ComputedFont() {
+        // util class
     }
 
 }

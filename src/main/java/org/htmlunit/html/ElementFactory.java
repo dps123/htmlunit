@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,15 @@
  */
 package org.htmlunit.html;
 
-import org.xml.sax.Attributes;
-
 import org.htmlunit.SgmlPage;
+import org.xml.sax.Attributes;
 
 /**
  * Specification of a factory capable of creating {@link DomElement} objects.
  *
- * @author <a href="mailto:cse@dynabean.de">Christian Sell</a>
+ * @author Christian Sell
  * @author Ahmed Ashour
+ * @author Ronald Brill
  */
 public interface ElementFactory {
 
@@ -51,19 +51,4 @@ public interface ElementFactory {
      * @return the newly created and initialized element
      */
     DomElement createElementNS(SgmlPage page, String namespaceURI, String qualifiedName, Attributes attributes);
-
-    /**
-     * Creates an element according to this factory's specification. Note that even though this method
-     * takes a page parameter, the element is <em>not</em> automatically added to the page's DOM tree.
-     *
-     * @param page the enclosing page for the new element
-     * @param namespaceURI the URI that identifies an XML namespace
-     * @param qualifiedName the qualified name of the element type to instantiate
-     * @param attributes the attributes encountered during XML/HTML parsing (possibly {@code null}
-     *        if no attributes specified
-     * @param checkBrowserCompatibility if true and the page doesn't support this element, return null
-     * @return the newly created and initialized element
-     */
-    DomElement createElementNS(SgmlPage page, String namespaceURI, String qualifiedName, Attributes attributes,
-            boolean checkBrowserCompatibility);
 }

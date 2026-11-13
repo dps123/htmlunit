@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +14,14 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.htmlunit.WebDriverTestCase;
+import org.htmlunit.html.HtmlUnorderedList;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.htmlunit.HtmlUnitDriver;
-
-import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.html.HtmlUnorderedList;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
 
 /**
  * Unit tests for {@link HTMLUListElement}.
@@ -34,7 +31,6 @@ import org.htmlunit.junit.BrowserRunner.Alerts;
  * @author Ronald Brill
  * @author Frank Danek
  */
-@RunWith(BrowserRunner.class)
 public class HTMLUListElementTest extends WebDriverTestCase {
 
     /**
@@ -43,7 +39,8 @@ public class HTMLUListElementTest extends WebDriverTestCase {
     @Test
     @Alerts("[object HTMLUListElement]")
     public void simpleScriptable() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -68,8 +65,8 @@ public class HTMLUListElementTest extends WebDriverTestCase {
     @Alerts({"false", "true", "true", "true", "null", "", "blah", "2",
              "true", "false", "true", "false", "", "null", "", "null"})
     public void compact() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION
@@ -113,11 +110,10 @@ public class HTMLUListElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"", "", "blah", "A", "null", "", "blah", "A", "1", "a", "A", "i", "I", "u"},
-            IE = {"", "", "", "A", "null", "", "blah", "A", "1", "a", "A", "i", "I", "exception", "I"})
+    @Alerts({"", "", "blah", "A", "null", "", "blah", "A", "1", "a", "A", "i", "I", "u"})
     public void type() throws Exception {
-        final String html =
-                "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "  <head>\n"
                 + "    <script>\n"
                 + LOG_TITLE_FUNCTION
@@ -146,7 +142,7 @@ public class HTMLUListElementTest extends WebDriverTestCase {
                 + "        document.getElementById('u1').type = 'I';\n"
                 + "        log(document.getElementById('u1').type);\n"
 
-                + "        try { document.getElementById('u1').type = 'u' } catch(e) {log('exception');}\n"
+                + "        try { document.getElementById('u1').type = 'u' } catch(e) {logEx(e);}\n"
                 + "        log(document.getElementById('u1').type);\n"
                 + "      }\n"
                 + "    </script>\n"

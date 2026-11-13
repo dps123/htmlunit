@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document xmlns="http://maven.apache.org/XDOC/2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="https://maven.apache.org/XDOC/2.0 https://maven.apache.org/xsd/xdoc-2.0.xsd">
+
+    <properties>
+        <title>HtmlUnit Development</title>
+        <author>RBRi</author>
+    </properties>
+
+    <body>
+
+        <macro name="toc"/>
+
+        <section name="HtmlUnit Development Guide" id="development">
+
+            <subsection name="Prerequisites" id="prerequisites">
+                <p>Before starting, ensure you have the following installed:</p>
+                <ul>
+                    <li><strong>Java Development Kit (JDK 17)</strong></li>
+                    <li><strong>Eclipse IDE</strong></li>
+                    <li><strong>Maven 3</strong></li>
+                    <li><strong>Git</strong> (use your favorite Git client)</li>
+                    <li><strong>Web Browser</strong> (Chrome / Firefox / Edge to check compatibility)</li>
+                </ul>
+            </subsection>
+
+            <subsection name="Repository Setup and Initial Build" id="repository_setup">
+                <p><strong>Clone the HtmlUnit repository from GitHub:</strong></p>
+                <source><![CDATA[git clone https://github.com/HtmlUnit/htmlunit.git
+cd htmlunit]]></source>
+
+                <p><strong>Compile the project to ensure everything is working correctly:</strong></p>
+                <source><![CDATA[mvn clean compile]]></source>
+
+                <p><strong>Run selective unit tests:</strong></p>
+                <p>Do not run the whole test suite as it takes a significant amount of time.</p>
+                <source><![CDATA[mvn test -Dtest=org.htmlunit.javascript.host.dom.*Test]]></source>
+            </subsection>
+
+            <subsection name="Eclipse IDE Setup" id="eclipse_setup">
+                <p><strong>Generate Eclipse project files:</strong></p>
+                <p>Use the Maven Eclipse Plugin to generate project files with source downloads:</p>
+                <source><![CDATA[mvn eclipse:eclipse -DdownloadSources=true]]></source>
+                <p>Then import the project into Eclipse:</p>
+                <p><code>File → Import → Existing Projects into Workspace</code></p>
+
+                <p><strong>Running Tests from Eclipse:</strong></p>
+                <p>Usually you would run only select tests from Eclipse. Refer to the section on real browser testing below for details.</p> 
+            </subsection>
+
+            <subsection name="IntelliJ IDEA Project Setup" id="intellij_setup">
+                <p>
+                    IntelliJ IDEA has built-in Maven support and can directly import the HtmlUnit project.
+                </p>
+
+                <p><strong>Import Steps:</strong></p>
+                <ol>
+                    <li>Open IntelliJ IDEA</li>
+                    <li>Select <code>File → Open</code></li>
+                    <li>Navigate to the cloned HtmlUnit directory</li>
+                    <li>Select the <code>pom.xml</code> file and click <code>Open</code></li>
+                    <li>Choose <code>Open as Project</code> when prompted</li>
+                    <li>IntelliJ will automatically detect the Maven project and import it</li>
+                </ol>
+            </subsection>
+
+            <subsection name="Running Tests via Maven" id="maven_tests">
+                <p>Running the full test suite requires significant time and resources. Several profiles are defined to run distinct test sets:</p>
+
+                <p><strong>Run Core Test Suite:</strong></p>
+                <p>Fast core test suite (~25 min; excludes library and heavy tests):</p>
+                <source><![CDATA[mvn test -P without-library-and-huge-tests -Dgpg.skip -Djava.awt.headless=true]]></source>
+
+                <p><strong>Run Library Test Suite:</strong></p>
+                <p>Runs test suites from various JavaScript libraries (jQuery, Prototype, etc.):</p>
+                <source><![CDATA[mvn test -P only-library-tests -Dgpg.skip -Djava.awt.headless=true]]></source>
+
+                <p><strong>Test Port Configuration:</strong></p>
+                <p>
+                    Tests assume port <code>12345</code> is available. If you encounter 
+                    <code>java.net.BindException: Address already in use</code>, override the test port:
+                </p>
+                <source><![CDATA[mvn test ... -Dhtmlunit.test.port=10101]]></source>
+            </subsection>
+
+            <subsection name="Host Name Setup" id="hosts_setup">
+                <p>
+                    Some tests require more host names than <code>localhost</code> (e.g. cookie domain tests,
+                    same site checks or hosts that are not loopback hosts). These names have to be resolved
+                    to <code>127.0.0.1</code>; add the following lines to the hosts file of your machine
+                    (Linux/macOS: <code>/etc/hosts</code>,
+                    Windows: <code>C:\Windows\System32\drivers\etc\hosts</code>):
+                </p>
+<source><![CDATA[127.0.0.1       host1.htmlunit-dev.org
+127.0.0.1       host2.htmlunit-dev.org
+127.0.0.1       htmlunit-dev.org
+127.0.0.1       htmlunit-dev]]></source>
+                <p>
+                    The tests are using the constants <code>HOSTS_DOMAIN</code>, <code>HOST1</code>,
+                    <code>URL_HOST1</code>... of <code>org.htmlunit.WebTestCase</code>;
+                    <code>WebTestCase.assertHostsConfigured()</code> checks the setup.
+                </p>
+            </subsection>
+
+            <subsection name="Running Tests with Real Browsers" id="real_browser_tests">
+                <p>
+                    The primary goal of HtmlUnit is providing accurate browser simulation. 
+                    Almost all tests can be executed against real browsers using Selenium WebDriver.
+                </p>
+
+                <p>
+                    This is managed via <code>org.htmlunit.WebDriverTestCase</code>. 
+                    To configure real browser runs, create a <code>test.properties</code> file in the HtmlUnit root directory:
+                </p>
+
+<source><![CDATA[browsers=hu
+#browsers=hu-ff
+#browsers=hu-ff, hu-chrome
+#browsers=ff, chrome, edge
+
+# Unix/Linux paths
+ff.bin=/usr/bin/firefox
+ff-esr.bin=/usr/bin/firefox-esr
+geckodriver.bin=/usr/bin/driver/geckodriver
+chrome.bin=/path/to/chromedriver
+edge.bin=/path/to/chromedriver
+
+# Windows paths
+geckodriver.bin=C:\\path\\to\\geckodriver.exe
+ff.bin=C:\\path\\to\\Mozilla Firefox\\firefox.exe
+ff-esr.bin=C:\\path\\to\\Mozilla Firefox ESR\\firefox.exe
+chrome.bin=C:\\path\\to\\chromedriver.exe
+edge.bin=C:\\path\\to\\msedgedriver.exe
+
+# optional
+autofix=false]]></source>
+
+                <p><strong>Test Properties Reference:</strong></p>
+
+                <p><strong>browsers:</strong> Comma-separated combination of target environments:</p>
+                <ul>
+                    <li><code>hu</code> (HtmlUnit all browser versions)</li>
+                    <li><code>hu-ff</code>, <code>hu-ff-esr</code>, <code>hu-chrome</code>, <code>hu-edge</code></li>
+                    <li><code>ff</code>, <code>ff-esr</code>, <code>chrome</code>, <code>edge</code> (Real browsers via WebDriver)</li>
+                </ul>
+
+                <p><strong>Browser Driver &amp; Binary Paths:</strong></p>
+                <ul>
+                    <li><code>chrome.bin</code>: Path to ChromeDriver executable</li>
+                    <li><code>geckodriver.bin</code>: Path to GeckoDriver executable</li>
+                    <li><code>ff.bin</code> / <code>ff-esr.bin</code>: Optional Firefox binaries</li>
+                    <li><code>edge.bin</code>: Path to Edge WebDriver binary</li>
+                </ul>
+
+                <p><strong>Additional Options:</strong></p>
+                <ul>
+                    <li><code>autofix</code>: Automatically update expectations or <code>@NotYetImplemented</code> annotations.</li>
+                </ul>
+            </subsection>
+
+        </section>
+    </body>
+</document>

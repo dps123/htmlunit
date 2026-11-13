@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,10 @@
  */
 package org.htmlunit.javascript.host.dom;
 
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.IE;
-
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.HtmlUnitNYI;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link Range}.
@@ -33,10 +28,10 @@ import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
  * @author Frank Danek
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class RangeTest extends WebDriverTestCase {
 
-    private static final String contentStart = "<html><head><title></title>\n"
+    private static final String CONTENT_START = DOCTYPE_HTML
+        + "<html><head><title></title>\n"
         + "<script>\n"
         + LOG_TITLE_FUNCTION
         + "function safeTagName(o) {\n"
@@ -53,7 +48,7 @@ public class RangeTest extends WebDriverTestCase {
         + "function test() {\n"
         + "  var r = document.createRange();\n";
 
-    private static final String contentEnd = "\n}\n</script></head>\n"
+    private static final String CONTENT_END = "\n}\n</script></head>\n"
         + "<body onload='test()'>\n"
         + "<div id='theDiv'>Hello, <span id='theSpan'>this is a test for"
         + "<a id='theA' href='http://htmlunit.sf.net'>HtmlUnit</a> support"
@@ -67,7 +62,7 @@ public class RangeTest extends WebDriverTestCase {
     @Test
     @Alerts({"true", "[object HTMLDocument]", "[object HTMLDocument]", "0", "[object HTMLDocument]", "0"})
     public void emptyRange() throws Exception {
-        loadPageVerifyTitle2(contentStart + "alertRange(r);" + contentEnd);
+        loadPageVerifyTitle2(CONTENT_START + "alertRange(r);" + CONTENT_END);
     }
 
     /**
@@ -79,7 +74,7 @@ public class RangeTest extends WebDriverTestCase {
         final String script = "r.selectNode(document.getElementById('theDiv'));"
             + "alertRange(r);";
 
-        loadPageVerifyTitle2(contentStart + script + contentEnd);
+        loadPageVerifyTitle2(CONTENT_START + script + CONTENT_END);
     }
 
     /**
@@ -91,7 +86,7 @@ public class RangeTest extends WebDriverTestCase {
         final String script = "r.selectNodeContents(document.getElementById('theDiv'));"
             + "alertRange(r);";
 
-        loadPageVerifyTitle2(contentStart + script + contentEnd);
+        loadPageVerifyTitle2(CONTENT_START + script + CONTENT_END);
     }
 
     /**
@@ -100,7 +95,8 @@ public class RangeTest extends WebDriverTestCase {
     @Test
     @Alerts("<div id=\"myDiv2\"></div><div>harhar</div><div id=\"myDiv3\"></div>")
     public void createContextualFragment() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -125,7 +121,8 @@ public class RangeTest extends WebDriverTestCase {
     @Test
     @Alerts({"[object Text]", "[object HTMLTableRowElement]"})
     public void createContextualFragment2() throws Exception {
-        final String html = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<div id ='d'></div>\n"
             + "<table><tr id='t'><td>old</td></tr></table>\n"
             + "<script>\n"
@@ -141,8 +138,33 @@ public class RangeTest extends WebDriverTestCase {
             + "try {\n"
             + "  test('d');\n"
             + "  test('t');\n"
-            + "} catch (e) { log('exception'); }\n"
+            + "} catch(e) { logEx(e); }\n"
             + "</script>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("<div id=\"myDiv2\"></div>hello:<div id=\"myDiv3\"></div>")
+    public void createContextualStrangeCode() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var element = document.getElementById('myDiv2');\n"
+            + "    var range = element.ownerDocument.createRange();\n"
+            + "    range.setStartAfter(element);\n"
+            + "    var fragment = range.createContextualFragment('hello:<world');\n"
+            + "    element.parentNode.insertBefore(fragment, element.nextSibling);\n"
+            + "    log(element.parentNode.innerHTML);\n"
+            + "  }\n"
+            + "</script></head><body onload='test()'>\n"
+            + "  <div id='myDiv'><div id='myDiv2'></div><div id='myDiv3'></div></div>\n"
             + "</body></html>";
 
         loadPageVerifyTitle2(html);
@@ -155,8 +177,8 @@ public class RangeTest extends WebDriverTestCase {
     @Alerts({"qwerty", "tyxy", "[object DocumentFragment]", "[object HTMLSpanElement] [object Text]", "qwer",
              "[object HTMLSpanElement]"})
     public void extractContents() throws Exception {
-        final String html =
-              "<html><body><div id='d'>abc<span id='s'>qwerty</span>xyz</div>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body><div id='d'>abc<span id='s'>qwerty</span>xyz</div>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  var d = document.getElementById('d');\n"
@@ -187,8 +209,8 @@ public class RangeTest extends WebDriverTestCase {
              "6 1: [object HTMLParagraphElement]: <b id=\"b\"><span id=\"s\"></span>text2</b>",
              "7 <p><b id=\"b\"><span id=\"s\">inner</span></b></p>"})
     public void extractContents2() throws Exception {
-        final String html =
-            "<html><body><div id='d'><p><b id='b'>text1<span id='s'>inner</span>text2</b></p></div>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body><div id='d'><p><b id='b'>text1<span id='s'>inner</span>text2</b></p></div>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  var d = document.getElementById('d');\n"
@@ -219,8 +241,8 @@ public class RangeTest extends WebDriverTestCase {
     @Test
     @Alerts({"0", "1", "2", "3"})
     public void constants() throws Exception {
-        final String html =
-              "<html><body>\n"
+        final String html = DOCTYPE_HTML
+              + "<html><body>\n"
               + "<script>\n"
               + LOG_TITLE_FUNCTION
             + "  log(Range.START_TO_START);\n"
@@ -237,7 +259,8 @@ public class RangeTest extends WebDriverTestCase {
     @Test
     @Alerts({"-1", "1", "1", "-1", "0"})
     public void compareBoundaryPoints() throws Exception {
-        final String html = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<div id='d1'><div id='d2'></div></div>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -260,8 +283,8 @@ public class RangeTest extends WebDriverTestCase {
     @Test
     @Alerts({"abcd", "bc", "null", "null", "ad", "bc"})
     public void extractContents3() throws Exception {
-        final String html =
-            "<html><body><div id='d'><span id='a'>a</span><span id='b'>b</span>"
+        final String html = DOCTYPE_HTML
+            + "<html><body><div id='d'><span id='a'>a</span><span id='b'>b</span>"
             + "<span id='c'>c</span><span id='d'>d</span></div>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -288,8 +311,8 @@ public class RangeTest extends WebDriverTestCase {
     @Alerts({"qwerty", "tyxy", "[object DocumentFragment]", "[object HTMLSpanElement] [object Text]",
              "qwerty", "[object HTMLSpanElement]"})
     public void cloneContents() throws Exception {
-        final String html =
-            "<html><body><div id='d'>abc<span id='s'>qwerty</span>xyz</div>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body><div id='d'>abc<span id='s'>qwerty</span>xyz</div>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  var d = document.getElementById('d');\n"
@@ -314,8 +337,8 @@ public class RangeTest extends WebDriverTestCase {
     @Test
     @Alerts({"qwerty", "bcqwertyxy", "null", "az"})
     public void deleteContents() throws Exception {
-        final String html =
-            "<html><body><div id='d'>abc<span id='s'>qwerty</span>xyz</div>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body><div id='d'>abc<span id='s'>qwerty</span>xyz</div>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  var d = document.getElementById('d');\n"
@@ -338,8 +361,8 @@ public class RangeTest extends WebDriverTestCase {
     @Test
     @Alerts({"abcd", "bc", "null", "null", "ad"})
     public void deleteContents2() throws Exception {
-        final String html =
-            "<html><body><div id='d'><span id='a'>a</span><span id='b'>b</span><span id='c'>c</span>"
+        final String html = DOCTYPE_HTML
+            + "<html><body><div id='d'><span id='a'>a</span><span id='b'>b</span><span id='c'>c</span>"
             + "<span id='d'>d</span></div>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -364,8 +387,8 @@ public class RangeTest extends WebDriverTestCase {
     @Test
     @Alerts("0")
     public void getClientRectsEmpty() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <div id='d'>a</div>\n"
             + "<script>\n"
@@ -383,12 +406,30 @@ public class RangeTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "true",
-            IE = "false")
-    @NotYetImplemented(IE)
+    @Alerts(
+            DEFAULT = {"4",
+                       "x=15.109375 y=8 w=8 h=17",
+                       "x=15.109375 y=8 w=8 h=17",
+                       "x=23.109375 y=8 w=7.109375 h=17",
+                       "x=23.109375 y=8 w=7.109375 h=17"},
+            FF = {"4",
+                  "x=15.100006103515625 y=8.5 w=8 h=17",
+                  "x=15.100006103515625 y=8.5 w=8 h=17",
+                  "x=23.100006103515625 y=8.5 w=7.0999908447265625 h=17",
+                  "x=23.100006103515625 y=8.5 w=7.0999908447265625 h=17"},
+            FF_ESR = {"4",
+                      "x=15.100006103515625 y=8.5 w=8 h=17",
+                      "x=15.100006103515625 y=8.5 w=8 h=17",
+                      "x=23.100006103515625 y=8.5 w=7.0999908447265625 h=17",
+                      "x=23.100006103515625 y=8.5 w=7.0999908447265625 h=17"})
+    @HtmlUnitNYI(
+            CHROME = {"4", "x=15 y=8 w=8 h=18", "x=15 y=8 w=8 h=18", "x=23 y=8 w=7 h=18", "x=23 y=8 w=7.104 h=18"},
+            EDGE = {"4", "x=15 y=8 w=8 h=18", "x=15 y=8 w=8 h=18", "x=23 y=8 w=7 h=18", "x=23 y=8 w=7.104 h=18"},
+            FF = {"4", "x=15 y=8 w=8 h=18", "x=15 y=8 w=8 h=18", "x=23 y=8 w=7 h=18", "x=23 y=8 w=7.104 h=18"},
+            FF_ESR = {"4", "x=15 y=8 w=8 h=18", "x=15 y=8 w=8 h=18", "x=23 y=8 w=7 h=18", "x=23 y=8 w=7.104 h=18"})
     public void getClientRectsMany() throws Exception {
-        final String html =
-            "<html><body><div id='d'><span id='a'>a</span><span id='b'>b</span><span id='c'>c</span>"
+        final String html = DOCTYPE_HTML
+            + "<html><body><div id='d'><span id='a'>a</span><span id='b'>b</span><span id='c'>c</span>"
             + "<span id='d'>d</span></div>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -397,7 +438,48 @@ public class RangeTest extends WebDriverTestCase {
             + "  var r = document.createRange();\n"
             + "  r.setStart(d, 1);\n"
             + "  r.setEnd(d, 3);\n"
-            + "  log(r.getClientRects().length > 1);\n"
+
+            + "  log(r.getClientRects().length);\n"
+            + "  let rect = r.getClientRects()[0];\n"
+            + "  log('x=' + rect.x + ' y=' + rect.y + ' w=' + rect.width + ' h=' + rect.height);\n"
+            + "  rect = r.getClientRects()[1];\n"
+            + "  log('x=' + rect.x + ' y=' + rect.y + ' w=' + rect.width + ' h=' + rect.height);\n"
+            + "  rect = r.getClientRects()[2];\n"
+            + "  log('x=' + rect.x + ' y=' + rect.y + ' w=' + rect.width + ' h=' + rect.height);\n"
+            + "  rect = r.getClientRects()[3];\n"
+            + "  log('x=' + rect.x + ' y=' + rect.y + ' w=' + rect.width + ' h=' + rect.height);\n"
+            + ""
+
+            + "</script></body></html>";
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Tests getClientRects() for a range over a text node (setStart/setEnd with char offsets).
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts(
+            DEFAULT = {"1", "x=8 y=8 w=35.546875 h=17"},
+            FF = {"1", "x=8 y=8.5 w=35.55000305175781 h=17"},
+            FF_ESR = {"1", "x=8 y=8.5 w=35.55000305175781 h=17"})
+    @HtmlUnitNYI(CHROME = {"1", "x=8 y=8 w=35.552 h=18"},
+            EDGE = {"1", "x=8 y=8 w=35.552 h=18"},
+            FF = {"1", "x=8 y=8 w=35.552 h=18"},
+            FF_ESR = {"1", "x=8 y=8 w=35.552 h=18"})
+    public void getClientRectsOnTextNode() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
+            + "  <div id='d'>Hello World</div>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  var textNode = document.getElementById('d').firstChild;\n"
+            + "  var r = document.createRange();\n"
+            + "  r.setStart(textNode, 0);\n"
+            + "  r.setEnd(textNode, 5);\n"
+            + "  log(r.getClientRects().length);\n"
+            + "  let rect = r.getClientRects()[0];\n"
+            + "  log('x=' + rect.x + ' y=' + rect.y + ' w=' + rect.width + ' h=' + rect.height);\n"
             + "</script></body></html>";
         loadPageVerifyTitle2(html);
     }
@@ -410,8 +492,8 @@ public class RangeTest extends WebDriverTestCase {
     @Test
     @Alerts("[object HTMLBodyElement]")
     public void getBoundingClientRectDoesNotChangeTheParent() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
@@ -441,8 +523,8 @@ public class RangeTest extends WebDriverTestCase {
     @Test
     @Alerts("[object HTMLBodyElement]")
     public void getClientRectsDoesNotChangeTheParent() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
@@ -470,8 +552,8 @@ public class RangeTest extends WebDriverTestCase {
     @Test
     @Alerts({"tyxy", "tyxy", "tyxy"})
     public void testToString() throws Exception {
-        final String html =
-              "<html><body><div id='d'>abc<span id='s'>qwerty</span>xyz</div>\n"
+        final String html = DOCTYPE_HTML
+              + "<html><body><div id='d'>abc<span id='s'>qwerty</span>xyz</div>\n"
               + "<script>\n"
               + LOG_TITLE_FUNCTION
               + "  var d = document.getElementById('d');\n"
@@ -483,6 +565,438 @@ public class RangeTest extends WebDriverTestCase {
               + "  log('' + r);\n"
               + "  log(r.toString());\n"
               + "</script></body></html>";
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Test that getClientRects does not mutate the text content of the DOM.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"Hello World", "Hello World"})
+    public void getClientRectsDoesNotMutateTextContent() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body><div id='d'>Hello World</div>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  var d = document.getElementById('d');\n"
+            + "  var textNode = d.firstChild;\n"
+            + "  var r = document.createRange();\n"
+            + "  r.setStart(textNode, 0);\n"
+            + "  r.setEnd(textNode, 5);\n"
+            + "  log(d.textContent);\n"
+            + "  r.getClientRects();\n"
+            + "  log(d.textContent);\n"  // must be unchanged
+            + "</script></body></html>";
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Test getBoundingClientRect for a range over a text node.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts(DEFAULT = "x=8 y=8 w=78.859375 h=17",
+            FF = "x=8 y=8.5 w=79.14999389648438 h=17",
+            FF_ESR = "x=8 y=8.5 w=79.14999389648438 h=17")
+    @HtmlUnitNYI(CHROME = "x=8 y=8 w=80.432 h=18",
+            EDGE = "x=8 y=8 w=80.432 h=18",
+            FF = "x=8 y=8 w=80.432 h=18",
+            FF_ESR = "x=8 y=8 w=80.432 h=18")
+    public void getBoundingClientRect() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body><div id='d'>Hello World</div>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  var d = document.getElementById('d');\n"
+            + "  var r = document.createRange();\n"
+            + "  r.setStart(d, 0);\n"
+            + "  r.setEnd(d, 1);\n"
+            + "  var rect = r.getBoundingClientRect();\n"
+            + "  log('x=' + rect.x + ' y=' + rect.y + ' w=' + rect.width + ' h=' + rect.height);\n"
+            + "</script></body></html>";
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Test getBoundingClientRect for a range over a text node.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts("true")
+    public void getBoundingClientRectOnTextNode() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body><div id='d'>Hello World</div>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  var d = document.getElementById('d');\n"
+            + "  var textNode = d.firstChild;\n"
+            + "  var r = document.createRange();\n"
+            + "  r.setStart(textNode, 0);\n"
+            + "  r.setEnd(textNode, 5);\n"
+            + "  var rect = r.getBoundingClientRect();\n"
+            + "  log(rect.width > 0 && rect.height > 0);\n"
+            + "</script></body></html>";
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Test that getBoundingClientRect does not mutate text content of the DOM.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"Hello World", "Hello World"})
+    public void getBoundingClientRectDoesNotMutateTextContent() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body><div id='d'>Hello World</div>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  var d = document.getElementById('d');\n"
+            + "  var textNode = d.firstChild;\n"
+            + "  var r = document.createRange();\n"
+            + "  r.setStart(textNode, 0);\n"
+            + "  r.setEnd(textNode, 5);\n"
+            + "  log(d.textContent);\n"
+            + "  r.getBoundingClientRect();\n"
+            + "  log(d.textContent);\n"  // must be unchanged
+            + "</script></body></html>";
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Test getClientRects for a mid-string text range (non-zero start offset).
+     * Verifies containedNodes() handles same-node text ranges at any offset.
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts("1")
+    public void getClientRectsOnTextNodeMidString() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body><div id='d'>Hello World</div>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  var d = document.getElementById('d');\n"
+            + "  var textNode = d.firstChild;\n"
+            + "  var r = document.createRange();\n"
+            + "  r.setStart(textNode, 3);\n"
+            + "  r.setEnd(textNode, 8);\n"
+            + "  log(r.getClientRects().length);\n"
+            + "</script></body></html>";
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Tests all six boundary-point setters: setStart, setStartBefore, setStartAfter,
+     * setEnd, setEndBefore, setEndAfter.
+     * Verifies that each method sets the correct boundary (start vs end) and the
+     * correct container/offset. In particular, setEndBefore was bugged: it called
+     * internSetStartContainer/internSetStartOffset instead of the End variants.
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({
+        // setStart(b, 1) -> startContainer=DIV, startOffset=1
+        "setStart: DIV 1 DIV 4",
+        // setStartBefore(b) -> startContainer=DIV, startOffset=1 (b is at index 1)
+        "setStartBefore: DIV 1 DIV 4",
+        // setStartAfter(b) -> startContainer=DIV, startOffset=2 (after b = index 2)
+        "setStartAfter: DIV 2 DIV 4",
+        // setEnd(c, 2) -> endContainer=DIV, endOffset=2
+        "setEnd: DIV 0 DIV 2",
+        // setEndBefore(c) -> endContainer=DIV, endOffset=2 (c is at index 2)
+        "setEndBefore: DIV 0 DIV 2",
+        // setEndAfter(c) -> endContainer=DIV, endOffset=3 (after c = index 3)
+        "setEndAfter: DIV 0 DIV 3"
+    })
+    public void setBoundaryPoints() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
+            + "  <div id='d'>"
+            +      "<span id='a'>a</span>"
+            +      "<span id='b'>b</span>"
+            +      "<span id='c'>c</span>"
+            +      "<span id='e'>e</span>"
+            + "</div>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function rangeInfo(label, r) {\n"
+            + "  var sc = r.startContainer.nodeName;\n"
+            + "  var ec = r.endContainer.nodeName;\n"
+            + "  log(label + ': ' + sc + ' ' + r.startOffset + ' ' + ec + ' ' + r.endOffset);\n"
+            + "}\n"
+            + "var d = document.getElementById('d');\n"
+            + "var a = document.getElementById('a');\n"
+            + "var b = document.getElementById('b');\n"
+            + "var c = document.getElementById('c');\n"
+
+            // setStart: sets startContainer=d, startOffset=1; end untouched (stays at d,3 after selectNodeContents)
+            + "var r = document.createRange();\n"
+            + "r.selectNodeContents(d);\n"          // start=d/0, end=d/4
+            + "r.setStart(d, 1);\n"
+            + "rangeInfo('setStart', r);\n"
+
+            // setStartBefore(b): b is child index 1 of d -> startContainer=d, startOffset=1
+            + "r = document.createRange();\n"
+            + "r.selectNodeContents(d);\n"
+            + "r.setStartBefore(b);\n"
+            + "rangeInfo('setStartBefore', r);\n"
+
+            // setStartAfter(b): b is child index 1, so after = offset 2 -> startContainer=d, startOffset=2
+            + "r = document.createRange();\n"
+            + "r.selectNodeContents(d);\n"
+            + "r.setStartAfter(b);\n"
+            + "rangeInfo('setStartAfter', r);\n"
+
+            // setEnd: sets endContainer=d, endOffset=2; start untouched (stays at d,0)
+            + "r = document.createRange();\n"
+            + "r.selectNodeContents(d);\n"
+            + "r.setEnd(d, 2);\n"
+            + "rangeInfo('setEnd', r);\n"
+
+            // setEndBefore(c): c is child index 2 -> endContainer=d, endOffset=2; start must stay at d,0
+            // BUG: setEndBefore was calling internSetStartContainer instead of internSetEndContainer
+            + "r = document.createRange();\n"
+            + "r.selectNodeContents(d);\n"
+            + "r.setEndBefore(c);\n"
+            + "rangeInfo('setEndBefore', r);\n"
+
+            // setEndAfter(c): c is child index 2, so after = offset 3 -> endContainer=d, endOffset=3; start stays at d,0
+            + "r = document.createRange();\n"
+            + "r.selectNodeContents(d);\n"
+            + "r.setEndAfter(c);\n"
+            + "rangeInfo('setEndAfter', r);\n"
+
+            + "</script></body></html>";
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"ello", "Hello World"})
+    public void cloneContentsSameTextNode() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body><div id='d'>Hello World</div>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  var d = document.getElementById('d');\n"
+            + "  var textNode = d.firstChild;\n"
+            + "  var r = document.createRange();\n"
+            + "  r.setStart(textNode, 1);\n"   // 'e' in Hello
+            + "  r.setEnd(textNode, 5);\n"     // up to space -> "ello"
+            + "  var fragment = r.cloneContents();\n"
+            + "  log(fragment.textContent);\n"       // must be "ello"
+            + "  log(d.textContent);\n"              // must be unchanged
+            + "</script></body></html>";
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts(DEFAULT = {"text: x=8 y=8 w=35.546875 h=17",
+                       "element: x=43.546875 y=8 w=39.59375 h=17"},
+            FF = {"text: x=8 y=8.5 w=35.55000305175781 h=17",
+                  "element: x=43.55000305175781 y=8.5 w=39.59999084472656 h=17"},
+            FF_ESR = {"text: x=8 y=8.5 w=35.55000305175781 h=17",
+                      "element: x=43.55000305175781 y=8.5 w=39.59999084472656 h=17"})
+    @HtmlUnitNYI(CHROME = {"text: x=8 y=8 w=35.552 h=18", "element: x=44 y=8 w=41 h=18"},
+            EDGE = {"text: x=8 y=8 w=35.552 h=18", "element: x=44 y=8 w=41 h=18"},
+            FF = {"text: x=8 y=8 w=35.552 h=18", "element: x=44 y=8 w=41 h=18"},
+            FF_ESR = {"text: x=8 y=8 w=35.552 h=18", "element: x=44 y=8 w=41 h=18"})
+    public void getClientRectsCoordinates() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
+            + "  <div id='d'>Hello<span id='s'>World</span></div>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  var d = document.getElementById('d');\n"
+            + "  var s = document.getElementById('s');\n"
+
+            // text node range
+            + "  var r1 = document.createRange();\n"
+            + "  r1.setStart(d.firstChild, 0);\n"
+            + "  r1.setEnd(d.firstChild, 5);\n"
+            + "  var rect1 = r1.getClientRects()[0];\n"
+            + "  log('text: x=' + rect1.x + ' y=' + rect1.y + ' w=' + rect1.width + ' h=' + rect1.height);\n"
+
+            // element range
+            + "  var r2 = document.createRange();\n"
+            + "  r2.setStart(d, 1);\n"
+            + "  r2.setEnd(d, 2);\n"
+            + "  var rect2 = r2.getClientRects()[0];\n"
+            + "  log('element: x=' + rect2.x + ' y=' + rect2.y + ' w=' + rect2.width + ' h=' + rect2.height);\n"
+
+            + "</script></body></html>";
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Tests the coordinates returned by getBoundingClientRect() for a range over a text node.
+     * The rect should match the getClientRects() result since it's the union of a single rect.
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts(DEFAULT = {"x=8 y=8 w=35.546875 h=17"},
+            FF = {"x=8 y=8.5 w=35.55000305175781 h=17"},
+            FF_ESR = {"x=8 y=8.5 w=35.55000305175781 h=17"})
+    @HtmlUnitNYI(CHROME = "x=8 y=8 w=35.552 h=18",
+            EDGE = "x=8 y=8 w=35.552 h=18",
+            FF = "x=8 y=8 w=35.552 h=18",
+            FF_ESR = "x=8 y=8 w=35.552 h=18")
+    public void getBoundingClientRectOnTextNodeCoordinates() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
+            + "  <div id='d'>Hello</div>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  var textNode = document.getElementById('d').firstChild;\n"
+            + "  var r = document.createRange();\n"
+            + "  r.setStart(textNode, 0);\n"
+            + "  r.setEnd(textNode, 5);\n"
+            + "  var rect = r.getBoundingClientRect();\n"
+            + "  log('x=' + rect.x + ' y=' + rect.y + ' w=' + rect.width + ' h=' + rect.height);\n"
+            + "</script></body></html>";
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Tests that getClientRects() x coordinate shifts right for a mid-string start offset.
+     * A range starting at char 5 must have a greater x than one starting at char 0.
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts("true")
+    public void getClientRectsTextNodeXOffsetIncreases() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
+            + "  <div id='d'>Hello World</div>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  var textNode = document.getElementById('d').firstChild;\n"
+            + "  var r1 = document.createRange();\n"
+            + "  r1.setStart(textNode, 0);\n"
+            + "  r1.setEnd(textNode, 5);\n"
+            + "  var r2 = document.createRange();\n"
+            + "  r2.setStart(textNode, 5);\n"
+            + "  r2.setEnd(textNode, 11);\n"
+            + "  log(r2.getClientRects()[0].x > r1.getClientRects()[0].x);\n"
+            + "</script></body></html>";
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Tests that getClientRects() x coordinate of a text node accounts for preceding inline siblings.
+     * The text node after a <span> must have a greater x than the same text as the first child.
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts("true")
+    public void getClientRectsTextNodeXOffsetAfterSibling() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
+            + "  <div id='withSibling'><span>AAA</span>Hello</div>\n"
+            + "  <div id='noSibling'>Hello</div>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function textRect(divId) {\n"
+            + "    var d = document.getElementById(divId);\n"
+            + "    var textNode = d.lastChild;\n"  // the 'Hello' text node in both cases
+            + "    var r = document.createRange();\n"
+            + "    r.setStart(textNode, 0);\n"
+            + "    r.setEnd(textNode, 5);\n"
+            + "    return r.getClientRects()[0];\n"
+            + "  }\n"
+            + "  log(textRect('withSibling').x > textRect('noSibling').x);\n"
+            + "</script></body></html>";
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Tests that getClientRects() width for a partial text range is positive
+     * and less than the full parent element width.
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts("true")
+    public void getClientRectsTextNodeWidthSane() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
+            + "  <div id='d'>Hello World</div>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  var d = document.getElementById('d');\n"
+            + "  var textNode = d.firstChild;\n"
+            + "  var r = document.createRange();\n"
+            + "  r.setStart(textNode, 0);\n"
+            + "  r.setEnd(textNode, 5);\n"
+            + "  var w = r.getClientRects()[0].width;\n"
+            + "  var parentW = d.getBoundingClientRect().width;\n"
+            + "  log(w > 0 && w < parentW);\n"
+            + "</script></body></html>";
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Tests that getClientRects() x coordinate of a text node preceded by
+     * a whitespace-only text node is not shifted by the whitespace width.
+     * Whitespace-only text nodes collapse visually in HTML and must not
+     * contribute to the sibling offset calculation.
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts("true")
+    public void getClientRectsTextNodeWhitespaceOnlySiblingIgnored() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
+            + "  <div id='with'>\n"      // has whitespace-only text node before 'Hello'
+            + "Hello</div>\n"
+            + "  <div id='without'>Hello</div>\n"    // no preceding whitespace text node
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function textX(divId) {\n"
+            + "    var textNode = document.getElementById(divId).lastChild;\n"
+            + "    var r = document.createRange();\n"
+            + "    r.setStart(textNode, 0);\n"
+            + "    r.setEnd(textNode, 5);\n"
+            + "    return r.getClientRects()[0].x;\n"
+            + "  }\n"
+            // both divs are at the same x — whitespace node must not shift the result
+            + "  log(textX('with') === textX('without'));\n"
+            + "</script></body></html>";
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Tests that getClientRects() x coordinate of a text node preceded by
+     * an inline element sibling correctly accounts for that sibling's width.
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts("true")
+    public void getClientRectsTextNodeAfterInlineSiblingShifted() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
+            + "  <div id='with'><span id='s'>AAA</span>Hello</div>\n"
+            + "  <div id='without'>Hello</div>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function textX(divId) {\n"
+            + "    var textNode = document.getElementById(divId).lastChild;\n"
+            + "    var r = document.createRange();\n"
+            + "    r.setStart(textNode, 0);\n"
+            + "    r.setEnd(textNode, 5);\n"
+            + "    return r.getClientRects()[0].x;\n"
+            + "  }\n"
+            // text after a span must be further right than text with no preceding sibling
+            + "  log(textX('with') > textX('without'));\n"
+            + "</script></body></html>";
         loadPageVerifyTitle2(html);
     }
 }

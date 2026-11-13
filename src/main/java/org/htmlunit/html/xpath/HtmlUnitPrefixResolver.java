@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,12 @@ package org.htmlunit.html.xpath;
 
 import java.util.Map;
 
-import org.htmlunit.xpath.xml.utils.PrefixResolverDefault;
-import org.w3c.dom.Node;
-
 import org.htmlunit.html.DomAttr;
 import org.htmlunit.html.DomElement;
 import org.htmlunit.html.DomNode;
 import org.htmlunit.xml.XmlPage;
+import org.htmlunit.xpath.xml.utils.PrefixResolverDefault;
+import org.w3c.dom.Node;
 
 /**
  * Custom {@link PrefixResolverDefault} extension.
@@ -30,13 +29,13 @@ import org.htmlunit.xml.XmlPage;
  * @author Ahmed Ashour
  * @author Ronald Brill
  */
-final class HtmlUnitPrefixResolver extends PrefixResolverDefault {
+public final class HtmlUnitPrefixResolver extends PrefixResolverDefault {
 
     /**
      * Creates a new instance.
      * @param xpathExpressionContext the context from which XPath expression prefixes will be resolved
      */
-    HtmlUnitPrefixResolver(final Node xpathExpressionContext) {
+    public HtmlUnitPrefixResolver(final Node xpathExpressionContext) {
         super(xpathExpressionContext);
     }
 
@@ -47,14 +46,14 @@ final class HtmlUnitPrefixResolver extends PrefixResolverDefault {
     public String getNamespaceForPrefix(final String prefix, final Node namespaceContext) {
         String namespace = super.getNamespaceForPrefix(prefix, namespaceContext);
         if (namespace == null) {
-            if (namespaceContext instanceof XmlPage) {
-                final DomElement documentElement = ((XmlPage) namespaceContext).getDocumentElement();
+            if (namespaceContext instanceof XmlPage page) {
+                final DomElement documentElement = page.getDocumentElement();
                 if (documentElement != null) {
                     namespace = getNamespace(documentElement, prefix);
                 }
             }
-            else if (namespaceContext instanceof DomElement) {
-                namespace = getNamespace((DomElement) namespaceContext, prefix);
+            else if (namespaceContext instanceof DomElement element) {
+                namespace = getNamespace(element, prefix);
             }
         }
         return namespace;
@@ -72,8 +71,8 @@ final class HtmlUnitPrefixResolver extends PrefixResolverDefault {
             }
         }
         for (final DomNode child : element.getChildren()) {
-            if (child instanceof DomElement) {
-                final String namespace = getNamespace((DomElement) child, prefix);
+            if (child instanceof DomElement domElement) {
+                final String namespace = getNamespace(domElement, prefix);
                 if (namespace != null) {
                     return namespace;
                 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,17 @@ package org.htmlunit.html;
 
 import java.util.Map;
 
-import org.apache.commons.lang3.StringUtils;
-
 import org.htmlunit.SgmlPage;
+import org.htmlunit.util.StringUtils;
 
 /**
  * Wrapper for the HTML element "output".
  *
  * @author Ronald Brill
  * @author Frank Danek
+ * @author Lai Quang Duong
  */
-public class HtmlOutput extends HtmlElement implements LabelableElement, ValidatableElement {
+public class HtmlOutput extends HtmlElement implements LabelableElement, ValidatableHtmlElement {
 
     /** The HTML tag represented by this element. */
     public static final String TAG_NAME = "output";
@@ -65,6 +65,14 @@ public class HtmlOutput extends HtmlElement implements LabelableElement, Validat
      * {@inheritDoc}
      */
     @Override
+    public String getCustomValidity() {
+        return customValidity_;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public void setCustomValidity(final String message) {
         customValidity_ = message;
     }
@@ -82,11 +90,12 @@ public class HtmlOutput extends HtmlElement implements LabelableElement, Validat
      */
     @Override
     public boolean isCustomErrorValidityState() {
-        return !StringUtils.isEmpty(customValidity_);
+        return !StringUtils.isEmptyOrNull(customValidity_);
     }
 
     @Override
     public boolean isValidValidityState() {
         return !isCustomErrorValidityState();
     }
+
 }

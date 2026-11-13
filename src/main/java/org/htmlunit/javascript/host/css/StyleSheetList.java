@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,27 +14,20 @@
  */
 package org.htmlunit.javascript.host.css;
 
-import static org.htmlunit.BrowserVersionFeatures.JS_STYLESHEETLIST_ACTIVE_ONLY;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
 import java.io.Serializable;
 import java.util.function.Predicate;
 
-import org.apache.commons.lang3.StringUtils;
-import org.htmlunit.cssparser.dom.MediaListImpl;
-
 import org.htmlunit.WebClient;
 import org.htmlunit.WebWindow;
-import org.htmlunit.css.CssStyleSheet;
+import org.htmlunit.corejs.javascript.Scriptable;
+import org.htmlunit.corejs.javascript.WithScope;
 import org.htmlunit.html.DomNode;
 import org.htmlunit.html.HtmlAttributeChangeEvent;
 import org.htmlunit.html.HtmlElement;
 import org.htmlunit.html.HtmlLink;
 import org.htmlunit.html.HtmlStyle;
 import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
@@ -46,14 +39,11 @@ import org.htmlunit.javascript.host.html.HTMLElement;
 import org.htmlunit.javascript.host.html.HTMLLinkElement;
 import org.htmlunit.javascript.host.html.HTMLStyleElement;
 
-import org.htmlunit.corejs.javascript.Scriptable;
-import org.htmlunit.corejs.javascript.Undefined;
-
 /**
  * <p>An ordered list of stylesheets, accessible via <code>document.styleSheets</code>, as specified by the
  * <a href="http://www.w3.org/TR/DOM-Level-2-Style/stylesheets.html#StyleSheets-StyleSheetList">DOM
- * Level 2 Style spec</a> and the <a href="https://developer.mozilla.org/en-US/docs/DOM/document.styleSheets">Gecko
- * DOM Guide</a>.</p>
+ * Level 2 Style spec</a> and the <a href="https://developer.mozilla.org/en-US/docs/Web/API/Document/styleSheets">MDN
+ * Documentation</a>.</p>
  *
  * <p>If CSS is disabled via {@link org.htmlunit.WebClientOptions#setCssEnabled(boolean)}, instances
  * of this class will always be empty. This allows us to check for CSS enablement/disablement in a single
@@ -74,33 +64,18 @@ public class StyleSheetList extends HtmlUnitScriptable {
     private HTMLCollection nodes_;
 
     /**
-     * Verifies if the provided node is a link node pointing to an active stylesheet.
-     *
-     * @param domNode the mode to check
-     * @return true if the provided node is a stylesheet link
+     * Creates an instance.
      */
-    boolean isActiveStyleSheetLink(final DomNode domNode) {
-        if (domNode instanceof HtmlLink) {
-            final HtmlLink link = (HtmlLink) domNode;
-            if (link.isStyleSheetLink()) {
-                final String media = link.getMediaAttribute();
-                if (StringUtils.isBlank(media)) {
-                    return true;
-                }
-                final WebWindow webWindow = getWindow().getWebWindow();
-                final MediaListImpl mediaList =
-                        CssStyleSheet.parseMedia(webWindow.getWebClient().getCssErrorHandler(), media);
-                return CssStyleSheet.isActive(mediaList, webWindow);
-            }
-        }
-        return false;
+    public StyleSheetList() {
+        super();
     }
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public StyleSheetList() {
+    @JsxConstructor
+    public void jsConstructor() {
+        // nothing to do
     }
 
     /**
@@ -109,13 +84,15 @@ public class StyleSheetList extends HtmlUnitScriptable {
      * @param document the owning document
      */
     public StyleSheetList(final Document document) {
-        setParentScope(document);
+        super();
+
+        final WebWindow webWindow = document.getWindow().getWebWindow();
+        setParentScope(new WithScope(getTopLevelScope(document.getParentScope()), document));
         setPrototype(getPrototype(getClass()));
 
-        final WebClient webClient = getWindow().getWebWindow().getWebClient();
+        final WebClient webClient = webWindow.getWebClient();
 
         if (webClient.getOptions().isCssEnabled()) {
-            final boolean onlyActive = webClient.getBrowserVersion().hasFeature(JS_STYLESHEETLIST_ACTIVE_ONLY);
             nodes_ = new HTMLCollection(document.getDomNodeOrDie(), true);
 
             nodes_.setEffectOnCacheFunction(
@@ -134,10 +111,10 @@ public class StyleSheetList extends HtmlUnitScriptable {
                         if (node instanceof HtmlStyle) {
                             return true;
                         }
-                        if (onlyActive) {
-                            return isActiveStyleSheetLink(node);
+                        if (node instanceof HtmlLink link) {
+                            return link.isActiveStyleSheetLink();
                         }
-                        return node instanceof HtmlLink && ((HtmlLink) node).isStyleSheetLink();
+                        return false;
                     });
         }
         else {
@@ -163,18 +140,11 @@ public class StyleSheetList extends HtmlUnitScriptable {
      */
     @JsxFunction
     public Object item(final int index) {
-        if (nodes_ == null || index < 0 || index >= nodes_.getLength()) {
-            return Undefined.instance;
+        final Object item = get(index, this);
+        if (JavaScriptEngine.UNDEFINED == item) {
+            return null;
         }
-
-        final HTMLElement element = (HTMLElement) nodes_.item(Integer.valueOf(index));
-
-        // <style type="text/css"> ... </style>
-        if (element instanceof HTMLStyleElement) {
-            return ((HTMLStyleElement) element).getSheet();
-        }
-        // <link rel="stylesheet" type="text/css" href="..." />
-        return ((HTMLLinkElement) element).getSheet();
+        return item;
     }
 
     /**
@@ -183,7 +153,18 @@ public class StyleSheetList extends HtmlUnitScriptable {
     @Override
     public Object get(final int index, final Scriptable start) {
         if (this == start) {
-            return item(index);
+            if (nodes_ == null || index < 0 || index >= nodes_.getLength()) {
+                return JavaScriptEngine.UNDEFINED;
+            }
+
+            final HTMLElement element = (HTMLElement) nodes_.item(Integer.valueOf(index));
+
+            // <style type="text/css"> ... </style>
+            if (element instanceof HTMLStyleElement styleElement) {
+                return styleElement.getSheet();
+            }
+            // <link rel="stylesheet" type="text/css" href="..." />
+            return ((HTMLLinkElement) element).getSheet();
         }
         return super.get(index, start);
     }

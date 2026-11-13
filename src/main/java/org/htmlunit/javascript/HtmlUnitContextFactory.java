@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,23 +14,18 @@
  */
 package org.htmlunit.javascript;
 
-import static org.htmlunit.BrowserVersionFeatures.JS_ARGUMENTS_READ_ONLY_ACCESSED_FROM_FUNCTION;
-import static org.htmlunit.BrowserVersionFeatures.JS_IGNORES_LAST_LINE_CONTAINING_UNCOMMENTED;
+import static org.htmlunit.BrowserVersionFeatures.JS_ARRAY_SORT_ACCEPTS_INCONSISTENT_COMPERATOR;
 import static org.htmlunit.BrowserVersionFeatures.JS_PROPERTY_DESCRIPTOR_NAME;
-import static org.htmlunit.BrowserVersionFeatures.JS_PROPERTY_DESCRIPTOR_NEW_LINE;
 
 import java.io.Serializable;
-import java.util.Map;
+import java.util.function.Consumer;
 
 import org.htmlunit.BrowserVersion;
 import org.htmlunit.ScriptException;
 import org.htmlunit.ScriptPreProcessor;
 import org.htmlunit.WebClient;
-import org.htmlunit.html.HtmlElement;
-import org.htmlunit.html.HtmlPage;
-import org.htmlunit.javascript.regexp.HtmlUnitRegExpProxy;
-
 import org.htmlunit.corejs.javascript.Callable;
+import org.htmlunit.corejs.javascript.CompilerEnvirons;
 import org.htmlunit.corejs.javascript.Context;
 import org.htmlunit.corejs.javascript.ContextAction;
 import org.htmlunit.corejs.javascript.ContextFactory;
@@ -40,9 +35,14 @@ import org.htmlunit.corejs.javascript.EvaluatorException;
 import org.htmlunit.corejs.javascript.Function;
 import org.htmlunit.corejs.javascript.Script;
 import org.htmlunit.corejs.javascript.ScriptRuntime;
-import org.htmlunit.corejs.javascript.Scriptable;
-import org.htmlunit.corejs.javascript.WrapFactory;
+import org.htmlunit.corejs.javascript.ScriptStackElement;
+import org.htmlunit.corejs.javascript.ScriptableObject;
+import org.htmlunit.corejs.javascript.VarScope;
 import org.htmlunit.corejs.javascript.debug.Debugger;
+import org.htmlunit.html.HtmlElement;
+import org.htmlunit.html.HtmlPage;
+import org.htmlunit.html.csp.ContentSecurityPolicy;
+import org.htmlunit.javascript.host.Window;
 
 /**
  * ContextFactory that supports termination of scripts if they exceed a timeout. Based on example from
@@ -61,7 +61,6 @@ public class HtmlUnitContextFactory extends ContextFactory {
     private final BrowserVersion browserVersion_;
     private long timeout_;
     private Debugger debugger_;
-    private final WrapFactory wrapFactory_ = new HtmlUnitWrapFactory();
     private boolean deminifyFunctionCode_;
 
     /**
@@ -70,6 +69,7 @@ public class HtmlUnitContextFactory extends ContextFactory {
      * @param webClient the web client using this factory
      */
     public HtmlUnitContextFactory(final WebClient webClient) {
+        super();
         webClient_ = webClient;
         browserVersion_ = webClient.getBrowserVersion();
     }
@@ -99,7 +99,7 @@ public class HtmlUnitContextFactory extends ContextFactory {
      * The HtmlUnit default implementation ({@link DebuggerImpl}, {@link DebugFrameImpl}) may be
      * used, or a custom debugger may be used instead. By default, no debugger is used.
      *
-     * @param debugger the JavaScript debugger to use (may be {@code null})
+     * @param debugger the JavaScript debugger to use (maybe {@code null})
      */
     public void setDebugger(final Debugger debugger) {
         debugger_ = debugger;
@@ -159,15 +159,17 @@ public class HtmlUnitContextFactory extends ContextFactory {
         }
 
         @Override
-        protected Script compileString(String source, final Evaluator compiler,
+        protected Script compileString(final String source, final Evaluator compiler,
                 final ErrorReporter compilationErrorReporter, final String sourceName,
-                final int lineno, final Object securityDomain) {
+                final int lineno, final Object securityDomain,
+                final Consumer<CompilerEnvirons> compilerEnvironsProcessor) {
 
             // this method gets called by Context.compileString and by ScriptRuntime.evalSpecial
             // which is used for window.eval. We have to take care in which case we are.
             final boolean isWindowEval = compiler != null;
 
             // Remove HTML comments around the source if needed
+            String code = source;
             if (!isWindowEval) {
 
                 // **** Memory Optimization ****
@@ -187,59 +189,89 @@ public class HtmlUnitContextFactory extends ContextFactory {
                         && source.charAt(start++) == '!'
                         && source.charAt(start++) == '-'
                         && source.charAt(start++) == '-') {
-                    source = source.replaceFirst("<!--", "// <!--");
-                }
-
-                // IE ignores the last line containing uncommented -->
-                // if (browserVersion_.hasFeature(JS_IGNORES_LAST_LINE_CONTAINING_UNCOMMENTED)
-                //         && sourceCodeTrimmed.endsWith("-->")) {
-                // **** Memory Optimization ****
-                // see above
-                if (browserVersion_.hasFeature(JS_IGNORES_LAST_LINE_CONTAINING_UNCOMMENTED)) {
-                    int end = source.length() - 1;
-                    while ((end > -1) && (source.charAt(end) <= ' ')) {
-                        end--;
-                    }
-                    if (1 < end
-                            && source.charAt(end--) == '>'
-                            && source.charAt(end--) == '-'
-                            && source.charAt(end--) == '-') {
-                        final int lastDoubleSlash = source.lastIndexOf("//");
-                        final int lastNewLine = Math.max(source.lastIndexOf('\n'), source.lastIndexOf('\r'));
-                        if (lastNewLine > lastDoubleSlash) {
-                            source = source.substring(0, lastNewLine);
-                        }
-                    }
+                    code = source.replaceFirst("<!--", "// <!--");
                 }
             }
 
             // Pre process the source code
             final HtmlPage page = (HtmlPage) Context.getCurrentContext()
                 .getThreadLocal(JavaScriptEngine.KEY_STARTING_PAGE);
-            source = preProcess(page, source, sourceName, lineno, null);
+            code = preProcess(page, code, sourceName, lineno, null);
 
-            return super.compileString(source, compiler, compilationErrorReporter,
-                    sourceName, lineno, securityDomain);
+            return super.compileString(code, compiler, compilationErrorReporter,
+                    sourceName, lineno, securityDomain, compilerEnvironsProcessor);
+        }
+
+        /**
+         * Like the browsers, checks the Content-Security-Policy of the realm (page) the
+         * string is compiled for (eval, new Function()).
+         */
+        @Override
+        protected void ensureCanCompileStrings(final VarScope scope, final String source) {
+            ensureEvalAllowed(source, scope);
         }
 
         @Override
-        protected Function compileFunction(final Scriptable scope, String source,
+        protected Function compileFunction(final VarScope scope, final String source,
                 final Evaluator compiler, final ErrorReporter compilationErrorReporter,
                 final String sourceName, final int lineno, final Object securityDomain) {
 
+            String code = source;
             if (deminifyFunctionCode_) {
                 final Function f = super.compileFunction(scope, source, compiler,
                         compilationErrorReporter, sourceName, lineno, securityDomain);
-                source = decompileFunction(f, 4).trim().replace("\n    ", "\n");
+                code = decompileFunction(f, 4).trim().replace("\n    ", "\n");
             }
-            return super.compileFunction(scope, source, compiler,
+            return super.compileFunction(scope, code, compiler,
                     compilationErrorReporter, sourceName, lineno, securityDomain);
         }
     }
 
     /**
+     * Throws an EvalError if the Content-Security-Policy of the page
+     * does not allow the evaluation of strings as code.
+     * Like the browsers, the policy of the realm of the called function is used (e.g. for
+     * {@code frame.contentWindow.eval(...)} or {@code new frame.contentWindow.Function(...)} the
+     * policy of the frame); if the realm has no page the page of the running script is used.
+     *
+     * @param source the source to evaluate
+     * @param scope the scope of the realm
+     */
+    private static void ensureEvalAllowed(final String source, final VarScope scope) {
+        final Context cx = Context.getCurrentContext();
+        if (cx == null) {
+            return;
+        }
+
+        Object page = null;
+        if (scope != null
+                && ScriptableObject.getTopLevelScope(scope).getGlobalThis() instanceof Window window) {
+            page = window.getWebWindow().getEnclosedPage();
+        }
+        if (!(page instanceof HtmlPage)) {
+            page = cx.getThreadLocal(JavaScriptEngine.KEY_RUNNING_PAGE);
+        }
+        if (!(page instanceof HtmlPage)) {
+            page = cx.getThreadLocal(JavaScriptEngine.KEY_STARTING_PAGE);
+        }
+        if (page instanceof HtmlPage htmlPage) {
+            // the line of the code calling eval (the first script frame)
+            int lineNumber = 0;
+            final ScriptStackElement[] stack = new EvaluatorException("eval").getScriptStack();
+            if (stack.length > 0) {
+                lineNumber = Math.max(0, stack[0].lineNumber);
+            }
+            if (!ContentSecurityPolicy.allowsEval(htmlPage, source, lineNumber)) {
+                throw ScriptRuntime.constructError("EvalError",
+                        "Refused to evaluate a string as JavaScript because 'unsafe-eval' is not an allowed "
+                        + "source of script in the Content Security Policy of the page.");
+            }
+        }
+    }
+
+    /**
      * Pre process the specified source code in the context of the given page using the processor specified
-     * in the webclient. This method delegates to the pre processor handler specified in the
+     * in the {@link WebClient}. This method delegates to the pre processor handler specified in the
      * <code>WebClient</code>. If no pre processor handler is defined, the original source code is returned
      * unchanged.
      * @param htmlPage the page
@@ -273,37 +305,26 @@ public class HtmlUnitContextFactory extends ContextFactory {
         final TimeoutContext cx = new TimeoutContext(this);
         cx.setLanguageVersion(Context.VERSION_ES6);
         cx.setLocale(browserVersion_.getBrowserLocale());
+        cx.setTimeZone(browserVersion_.getSystemTimezone());
 
         // make sure no java classes are usable from js
-        cx.setClassShutter(fullClassName -> {
-            final  Map<String, String> activeXObjectMap = webClient_.getActiveXObjectMap();
-            if (activeXObjectMap != null) {
-                for (final String mappedClass : activeXObjectMap.values()) {
-                    if (fullClassName.equals(mappedClass)) {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        });
+        cx.setClassShutter(fullClassName -> false);
 
         // Use pure interpreter mode to get observeInstructionCount() callbacks.
-        cx.setOptimizationLevel(-1);
+        cx.setInterpretedMode(true);
 
         // Set threshold on how often we want to receive the callbacks
         cx.setInstructionObserverThreshold(INSTRUCTION_COUNT_THRESHOLD);
 
         cx.setErrorReporter(new HtmlUnitErrorReporter(webClient_.getJavaScriptErrorListener()));
-        cx.setWrapFactory(wrapFactory_);
+        // We don't want to wrap String & Co.
+        cx.getWrapFactory().setJavaPrimitiveWrap(false);
 
         if (debugger_ != null) {
             cx.setDebugger(debugger_, null);
         }
 
-        // register custom RegExp processing
-        ScriptRuntime.setRegExpProxy(cx, new HtmlUnitRegExpProxy(ScriptRuntime.getRegExpProxy(cx), browserVersion_));
-
-        cx.setMaximumInterpreterStackDepth(10_000);
+        cx.setMaximumInterpreterStackDepth(5_000);
 
         return cx;
     }
@@ -320,6 +341,15 @@ public class HtmlUnitContextFactory extends ContextFactory {
     protected void observeInstructionCount(final Context cx, final int instructionCount) {
         final TimeoutContext tcx = (TimeoutContext) cx;
         tcx.terminateScriptIfNecessary();
+
+        // stop scripts of pages that are no longer the enclosed page
+        // of their window (e.g. a setTimeout function still running
+        // while the window navigates to a new page)
+        final Object runningPage = cx.getThreadLocal(JavaScriptEngine.KEY_RUNNING_PAGE);
+        if (runningPage instanceof HtmlPage page
+                && page != page.getEnclosingWindow().getEnclosedPage()) {
+            throw new PageUnloadedError();
+        }
     }
 
     /**
@@ -327,12 +357,25 @@ public class HtmlUnitContextFactory extends ContextFactory {
      */
     @Override
     protected Object doTopCall(final Callable callable,
-            final Context cx, final Scriptable scope,
-            final Scriptable thisObj, final Object[] args) {
+            final Context cx, final VarScope scope,
+            final Object thisObj, final Object[] args) {
 
         final TimeoutContext tcx = (TimeoutContext) cx;
         tcx.startClock();
         return super.doTopCall(callable, cx, scope, thisObj, args);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected Object doTopCall(final Script script,
+            final Context cx, final VarScope scope,
+            final Object thisObj) {
+
+        final TimeoutContext tcx = (TimeoutContext) cx;
+        tcx.startClock();
+        return super.doTopCall(script, cx, scope, thisObj);
     }
 
     /**
@@ -359,34 +402,19 @@ public class HtmlUnitContextFactory extends ContextFactory {
      */
     @Override
     protected boolean hasFeature(final Context cx, final int featureIndex) {
-        switch (featureIndex) {
-            case Context.FEATURE_RESERVED_KEYWORD_AS_IDENTIFIER:
-                return true;
-            case Context.FEATURE_E4X:
-                return false;
-            case Context.FEATURE_OLD_UNDEF_NULL_THIS:
-                return true;
-            case Context.FEATURE_NON_ECMA_GET_YEAR:
-                return false;
-            case Context.FEATURE_LITTLE_ENDIAN:
-                return true;
-            case Context.FEATURE_LOCATION_INFORMATION_IN_ERROR:
-                return true;
-            case Context.FEATURE_INTL_402:
-                return true;
-            case Context.FEATURE_HTMLUNIT_FN_ARGUMENTS_IS_RO_VIEW:
-                return browserVersion_.hasFeature(JS_ARGUMENTS_READ_ONLY_ACCESSED_FROM_FUNCTION);
-            case Context.FEATURE_HTMLUNIT_FUNCTION_DECLARED_FORWARD_IN_BLOCK:
-                return true;
-            case Context.FEATURE_HTMLUNIT_ENUM_NUMBERS_FIRST:
-                return true;
-            case Context.FEATURE_HTMLUNIT_MEMBERBOX_NAME:
-                return browserVersion_.hasFeature(JS_PROPERTY_DESCRIPTOR_NAME);
-            case Context.FEATURE_HTMLUNIT_MEMBERBOX_NEWLINE:
-                return browserVersion_.hasFeature(JS_PROPERTY_DESCRIPTOR_NEW_LINE);
-            default:
-                return super.hasFeature(cx, featureIndex);
-        }
+        return switch (featureIndex) {
+            case Context.FEATURE_RESERVED_KEYWORD_AS_IDENTIFIER,
+                 Context.FEATURE_OLD_UNDEF_NULL_THIS,
+                 Context.FEATURE_LITTLE_ENDIAN,
+                 Context.FEATURE_LOCATION_INFORMATION_IN_ERROR,
+                 Context.FEATURE_INTL_402,
+                 Context.FEATURE_HTMLUNIT_FN_ARGUMENTS_IS_RO_VIEW -> true;
+            case Context.FEATURE_E4X -> false;
+            case Context.FEATURE_HTMLUNIT_MEMBERBOX_NAME -> browserVersion_.hasFeature(JS_PROPERTY_DESCRIPTOR_NAME);
+            case Context.FEATURE_HTMLUNIT_ARRAY_SORT_COMPERATOR_ACCEPTS_BOOL ->
+                browserVersion_.hasFeature(JS_ARRAY_SORT_ACCEPTS_INCONSISTENT_COMPERATOR);
+            default -> super.hasFeature(cx, featureIndex);
+        };
     }
 
     private static final class HtmlUnitErrorReporter implements ErrorReporter, Serializable {
@@ -431,7 +459,7 @@ public class HtmlUnitContextFactory extends ContextFactory {
         public void error(final String message, final String sourceName, final int line,
                 final String lineSource, final int lineOffset) {
             // no need to log here, this is only used to create the exception
-            // the exception gets logged if not catched later on
+            // gets logged if not catched later on
             throw new EvaluatorException(message, sourceName, line, lineSource, lineOffset);
         }
 
@@ -450,7 +478,7 @@ public class HtmlUnitContextFactory extends ContextFactory {
                 final String message, final String sourceName, final int line,
                 final String lineSource, final int lineOffset) {
             // no need to log here, this is only used to create the exception
-            // the exception gets logged if not catched later on
+            // gets logged if not catched later on
             return new EvaluatorException(message, sourceName, line, lineSource, lineOffset);
         }
     }

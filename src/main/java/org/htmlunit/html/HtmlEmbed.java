@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,11 +23,12 @@ import java.nio.file.Files;
 import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
-
 import org.htmlunit.SgmlPage;
 import org.htmlunit.WebClient;
 import org.htmlunit.WebRequest;
 import org.htmlunit.WebResponse;
+import org.htmlunit.html.csp.ContentSecurityPolicy;
+import org.htmlunit.util.StringUtils;
 
 /**
  * Wrapper for the HTML element "embed".
@@ -51,6 +52,35 @@ public class HtmlEmbed extends HtmlElement {
     HtmlEmbed(final String qualifiedName, final SgmlPage page,
             final Map<String, DomAttr> attributes) {
         super(qualifiedName, page, attributes);
+    }
+
+    /**
+     * {@inheritDoc}
+     * Checks the src url against the Content-Security-Policy (object-src).
+     */
+    @Override
+    protected void onAddedToPage() {
+        super.onAddedToPage();
+        ContentSecurityPolicy.allowsObject(this, getAttributeDirect("src"));
+    }
+
+    /**
+     * {@inheritDoc}
+     * Checks the new src url against the Content-Security-Policy (object-src).
+     */
+    @Override
+    protected void setAttributeNS(final String namespaceURI, final String qualifiedName, final String value,
+            final boolean notifyAttributeChangeListeners, final boolean notifyMutationObservers) {
+        final String qualifiedNameLC = StringUtils.toRootLowerCase(qualifiedName);
+        final boolean changed = "src".equals(qualifiedNameLC)
+                && !getAttributeNS(namespaceURI, qualifiedNameLC).equals(value);
+
+        super.setAttributeNS(namespaceURI, qualifiedName, value,
+                notifyAttributeChangeListeners, notifyMutationObservers);
+
+        if (changed && isAttachedToPage()) {
+            ContentSecurityPolicy.allowsObject(this, value);
+        }
     }
 
     /**

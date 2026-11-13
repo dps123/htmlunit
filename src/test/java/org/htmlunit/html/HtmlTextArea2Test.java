@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,13 @@
  */
 package org.htmlunit.html;
 
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.IE;
-
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.htmlunit.WebDriverTestCase;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.htmlunit.HtmlUnitDriver;
-
-import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
 
 /**
  * Tests for {@link HtmlTextArea}.
@@ -34,7 +28,6 @@ import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
  * @author Ronald Brill
  * @author Ahmed Ashour
  */
-@RunWith(BrowserRunner.class)
 public class HtmlTextArea2Test extends WebDriverTestCase {
 
     /**
@@ -43,7 +36,8 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
     @Test
     @Alerts({"-", "-", "newValue-", "newValue-", "newValue-newDefault", "newValue-newDefault"})
     public void resetByClick() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -82,7 +76,8 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
     @Test
     @Alerts({"-", "-", "newValue-", "newValue-", "newValue-newDefault", "newValue-newDefault"})
     public void resetByJS() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -118,10 +113,9 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"-", "default-default", "some text-default", "some text-newdefault"},
-            IE = {"-", "-default", "some text-default", "some text-newdefault"})
+    @Alerts({"-", "default-default", "some text-default", "some text-newdefault"})
     public void defaultValue() throws Exception {
-        final String html = "<!DOCTYPE HTML>\n"
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -153,8 +147,8 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
     @Test
     @Alerts("\\sfoo\\s\\n\\sbar\\n\\stest\\n\\sa\\s<p>html\\ssnippet</p>\\n")
     public void defaultValue2() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION_NORMALIZE
             + "  function test() {\n"
@@ -175,10 +169,10 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "7",
-            IE = "textLength not available")
+    @Alerts("7")
     public void textLength() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -205,8 +199,8 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
     @Test
     @Alerts("0")
     public void selection() throws Exception {
-        final String html =
-              "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
             + "    log(getSelection(document.getElementById('text1')).length);\n"
@@ -226,8 +220,7 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
      * @throws Exception if test fails
      */
     @Test
-    @Alerts(DEFAULT = {"0,0", "11,11", "3,11", "3,10"},
-            IE = {"0,0", "0,0", "3,3", "3,10"})
+    @Alerts({"0,0", "11,11", "3,11", "3,10"})
     public void selection2_1() throws Exception {
         selection2(3, 10);
     }
@@ -236,8 +229,7 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
      * @throws Exception if test fails
      */
     @Test
-    @Alerts(DEFAULT = {"0,0", "11,11", "11,11", "11,11"},
-            IE = {"0,0", "0,0", "0,0", "0,11"})
+    @Alerts({"0,0", "11,11", "11,11", "11,11"})
     public void selection2_2() throws Exception {
         selection2(-3, 15);
     }
@@ -246,14 +238,14 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
      * @throws Exception if test fails
      */
     @Test
-    @Alerts(DEFAULT = {"0,0", "11,11", "10,11", "5,5"},
-            IE = {"0,0", "0,0", "10,10", "5,5"})
+    @Alerts({"0,0", "11,11", "10,11", "5,5"})
     public void selection2_3() throws Exception {
         selection2(10, 5);
     }
 
     private void selection2(final int selectionStart, final int selectionEnd) throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "<textarea id='myTextInput'>Bonjour</textarea>\n"
             + "<script>\n"
@@ -277,10 +269,10 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
      * @throws Exception if test fails
      */
     @Test
-    @Alerts(DEFAULT = {"0,0", "4,5", "10,10", "4,4", "1,1"},
-            IE = {"0,0", "4,5", "0,0", "0,0", "0,0"})
+    @Alerts({"0,0", "4,5", "10,10", "4,4", "1,1"})
     public void selectionOnUpdate() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "<textarea id='myTextInput'>Hello</textarea>\n"
             + "<script>\n"
@@ -315,8 +307,8 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
     @Test
     @Alerts(" foo \n bar\n test\n a <p>html snippet</p>")
     public void getVisibleText() throws Exception {
-        final String html
-            = "<html><head><title>foo</title></head><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><title>foo</title></head><body>\n"
             + "<form id='form1'>\n"
             + "<textarea id='tester'> foo \n bar\r\n test\r a "
             + "<p>html snippet</p>\n"
@@ -337,12 +329,10 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "Hello World",
-            IE = "Hello WorldHtmlUnit")
-    @NotYetImplemented(IE)
+    @Alerts("Hello World")
     public void getVisibleTextValueChangedWithTyping() throws Exception {
-        final String html
-            = "<html>"
+        final String html = DOCTYPE_HTML
+            + "<html>"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1'>\n"
@@ -366,12 +356,10 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "Hello World",
-            IE = "HtmlUnit")
-    @NotYetImplemented(IE)
+    @Alerts("Hello World")
     public void getVisibleTextValueChangedFromJs() throws Exception {
-        final String html
-            = "<html>"
+        final String html = DOCTYPE_HTML
+            + "<html>"
             + "<head>\n"
             + "<script>\n"
             + "  function test() {\n"
@@ -401,8 +389,8 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
     @Test
     @Alerts("")
     public void getVisibleTextAndVisibility() throws Exception {
-        final String html
-            = "<html><head></head><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head></head><body>\n"
             + "<form id='form1'>\n"
             + "<textarea id='tester' style='visibility:hidden'> foo \n bar "
             + "</textarea>\n"
@@ -423,8 +411,8 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
     @Test
     @Alerts(" foo \n bar <p>html snippet</p>")
     public void parentAsText() throws Exception {
-        final String html
-            = "<html><head><title>foo</title></head><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><title>foo</title></head><body>\n"
             + "<form id='form1'>\n"
             + "<textarea name='textArea1'> foo \n bar "
             + "<p>html snippet</p>\n"
@@ -442,7 +430,8 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
     @Test
     @Alerts({"1", "a", "", "b", "<!--comment-->2", "c", "<!--comment-->", "d"})
     public void textUpdate() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "<textarea id='myText'>1</textarea>\n"
             + "<textarea id='myTextEmpty'></textarea>\n"
@@ -483,7 +472,8 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
     @Test
     @Alerts({"", "xyz", "1", "a", "1"})
     public void textUpdateFromJSText() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "<textarea id='myText'></textarea>\n"
             + "<script>\n"
@@ -510,10 +500,10 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
      * @throws Exception if test fails
      */
     @Test
-    @Alerts(DEFAULT = {"", "", "1", "a", "1"},
-            IE = {"", "123", "1", "a", "1"})
+    @Alerts({"", "", "1", "a", "1"})
     public void textUpdateFromJSSpan() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "<textarea id='myText'></textarea>\n"
             + "<script>\n"
@@ -541,10 +531,10 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
      * @throws Exception if test fails
      */
     @Test
-    @Alerts(DEFAULT = {"", "", "1", "xyz", "2", "a", "2"},
-            IE = {"", "123", "1", "123xyz", "2", "a", "1"})
+    @Alerts({"", "", "1", "xyz", "2", "a", "2"})
     public void textUpdateFromJSSpanAndText() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "<textarea id='myText'></textarea>\n"
             + "<script>\n"
@@ -579,7 +569,8 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
     @Test
     @Alerts({"", "", "1", "a", "1"})
     public void textUpdateFromJSComment() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "<textarea id='myText'></textarea>\n"
             + "<script>\n"
@@ -606,11 +597,10 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"0", "2", "1", "2", "1", "1"},
-            IE = {"undefined", "undefined", "undefined", "undefined", "undefined", "undefined"})
+    @Alerts({"0", "2", "1", "2", "1", "1"})
     public void labels() throws Exception {
-        final String html =
-            "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -644,11 +634,10 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"true", "false", "true", "false", "true"},
-            IE = {"true", "false", "true", "true", "true"})
+    @Alerts({"true", "false", "true", "false", "true"})
     public void willValidate() throws Exception {
-        final String html =
-                "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "  <script>\n"
                 + LOG_TITLE_FUNCTION
                 + "    function test() {\n"
@@ -677,12 +666,9 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"true",
-                       "false-false-false-false-false-false-false-false-false-true-false",
-                       "true"},
-            IE = {"true",
-                  "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                  "true"})
+    @Alerts({"true",
+             "false-false-false-false-false-false-false-false-false-true-false",
+             "true"})
     public void validationEmpty() throws Exception {
         validation("<textarea id='e1'>t1</textarea>\n", "");
     }
@@ -691,12 +677,9 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"false",
-                       "false-true-false-false-false-false-false-false-false-false-false",
-                       "true"},
-            IE = {"false",
-                  "undefined-true-false-false-false-false-false-undefined-false-false-false",
-                  "true"})
+    @Alerts({"false",
+             "false-true-false-false-false-false-false-false-false-false-false",
+             "true"})
     public void validationCustomValidity() throws Exception {
         validation("<textarea id='e1'>t1</textarea>\n", "elem.setCustomValidity('Invalid');");
     }
@@ -705,12 +688,9 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"false",
-                       "false-true-false-false-false-false-false-false-false-false-false",
-                       "true"},
-            IE = {"false",
-                  "undefined-true-false-false-false-false-false-undefined-false-false-false",
-                  "true"})
+    @Alerts({"false",
+             "false-true-false-false-false-false-false-false-false-false-false",
+             "true"})
     public void validationBlankCustomValidity() throws Exception {
         validation("<textarea id='e1'>t1</textarea>\n", "elem.setCustomValidity(' ');\n");
     }
@@ -719,12 +699,9 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"true",
-                       "false-false-false-false-false-false-false-false-false-true-false",
-                       "true"},
-            IE = {"true",
-                  "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                  "true"})
+    @Alerts({"true",
+             "false-false-false-false-false-false-false-false-false-true-false",
+             "true"})
     public void validationResetCustomValidity() throws Exception {
         validation("<textarea id='e1'>t1</textarea>\n",
                 "elem.setCustomValidity('Invalid');elem.setCustomValidity('');");
@@ -734,12 +711,9 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"false",
-                       "false-false-false-false-false-false-false-false-false-false-true",
-                       "true"},
-            IE = {"false",
-                  "undefined-false-false-false-false-false-false-undefined-false-false-true",
-                  "true"})
+    @Alerts({"false",
+             "false-false-false-false-false-false-false-false-false-false-true",
+             "true"})
     public void validationRequired() throws Exception {
         validation("<textarea id='e1' required></textarea>\n", "");
     }
@@ -748,12 +722,9 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"true",
-                       "false-false-false-false-false-false-false-false-false-true-false",
-                       "true"},
-            IE = {"true",
-                  "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                  "true"})
+    @Alerts({"true",
+             "false-false-false-false-false-false-false-false-false-true-false",
+             "true"})
     public void validationRequiredWithText() throws Exception {
         validation("<textarea id='e1' required>HtmlUnit</textarea>\n", "");
     }
@@ -762,12 +733,9 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"true",
-                       "false-false-false-false-false-false-false-false-false-true-false",
-                       "true"},
-            IE = {"true",
-                  "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                  "true"})
+    @Alerts({"true",
+             "false-false-false-false-false-false-false-false-false-true-false",
+             "true"})
     public void validationRequiredValueSet() throws Exception {
         validation("<textarea id='e1' required></textarea>\n", "elem.value='A';");
     }
@@ -776,19 +744,16 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"false",
-                       "false-false-false-false-false-false-false-false-false-false-true",
-                       "true"},
-            IE = {"false",
-                  "undefined-false-false-false-false-false-false-undefined-false-false-true",
-                  "true"})
+    @Alerts({"false",
+             "false-false-false-false-false-false-false-false-false-false-true",
+             "true"})
     public void validationRequiredValueClear() throws Exception {
         validation("<textarea id='e1' required>abc</textarea>\n", "elem.value='';");
     }
 
     private void validation(final String htmlPart, final String jsPart) throws Exception {
-        final String html =
-                "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "  <script>\n"
                 + LOG_TITLE_FUNCTION
                 + "    function logValidityState(s) {\n"
@@ -818,6 +783,62 @@ public class HtmlTextArea2Test extends WebDriverTestCase {
                 + htmlPart
                 + "  </form>\n"
                 + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"true", "true", ""})
+    public void setReadOnly() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var text = document.getElementById('testId');\n"
+            + "    text.readOnly = true;\n"
+            + "    log(text.readOnly);\n"
+            + "    log(text.hasAttribute('readonly'));\n"
+            + "    log(text.getAttribute('readonly'));\n"
+            + "  }\n"
+            + "</script>\n"
+            + "</head><body onload='test()'>\n"
+            + "<form>\n"
+            + "  <textarea id='testId' value='initial'></textarea>\n"
+            + "</form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"true", "false", "false", "null"})
+    public void removeReadOnly() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var text = document.getElementById('testId');\n"
+            + "    log(text.readOnly);\n"
+
+            + "    text.readOnly = false;\n"
+            + "    log(text.readOnly);\n"
+            + "    log(text.hasAttribute('readonly'));\n"
+            + "    log(text.getAttribute('readonly'));\n"
+            + "  }\n"
+            + "</script>\n"
+            + "</head><body onload='test()'>\n"
+            + "<form>\n"
+            + "  <textarea id='testId' value='initial' readonly></textarea>\n"
+            + "</form>\n"
+            + "</body></html>";
 
         loadPageVerifyTitle2(html);
     }

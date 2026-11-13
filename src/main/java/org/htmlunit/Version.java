@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,9 @@ import org.htmlunit.html.HtmlPage;
  * Class to display version information about HtmlUnit. This is the class
  * that will be executed if the JAR file is run.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author Ahmed Ashour
+ * @author Ronald Brill
  */
 public final class Version {
 
@@ -35,6 +36,7 @@ public final class Version {
      * @param args the arguments passed on the command line
      * @throws Exception if an error occurs
      */
+    @SuppressWarnings("PMD.SystemPrintln")
     public static void main(final String[] args) throws Exception {
         if (args.length == 1 && "-SanityCheck".equals(args[0])) {
             runSanityCheck();
@@ -49,9 +51,10 @@ public final class Version {
      * Runs the sanity check.
      * @throws Exception if anything goes wrong
      */
+    @SuppressWarnings("PMD.SystemPrintln")
     private static void runSanityCheck() throws Exception {
         try (WebClient webClient = new WebClient()) {
-            final HtmlPage page = webClient.getPage("http://htmlunit.sourceforge.net/index.html");
+            final HtmlPage page = webClient.getPage("https://www.htmlunit.org/index.html");
             page.executeJavaScript("document.location");
             System.out.println("Sanity check complete.");
         }
@@ -78,6 +81,6 @@ public final class Version {
      * @return the copyright notice
      */
     public static String getCopyright() {
-        return "Copyright (c) 2002-2023 Gargoyle Software Inc. All rights reserved.";
+        return "Copyright (c) 2002-2026 Gargoyle Software Inc. All rights reserved.";
     }
 }

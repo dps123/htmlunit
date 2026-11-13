@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,11 @@
  */
 package org.htmlunit.javascript.host.event;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.SimpleWebTestCase;
 import org.htmlunit.html.HtmlPage;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link KeyboardEvent}.
@@ -31,7 +29,6 @@ import org.htmlunit.junit.BrowserRunner.Alerts;
  * @author Ahmed Ashour
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class KeyboardEvent2Test extends SimpleWebTestCase {
 
     /**
@@ -49,7 +46,8 @@ public class KeyboardEvent2Test extends SimpleWebTestCase {
     }
 
     private HtmlPage getHtmlPage() throws Exception {
-        final String html = "<html><head><title>foo</title><script>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head><title>foo</title><script>\n"
                 + "  function test() {\n"
                 + "    document.onkeydown = checkEvent;\n"
                 + "    document.onkeyup = checkEvent;\n"
@@ -78,10 +76,11 @@ public class KeyboardEvent2Test extends SimpleWebTestCase {
      * Test .type(KeyboardEvent.DOM_VK_A).
      * @throws Exception if the test fails
      */
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void dom_vk_a() throws Exception {
         final HtmlPage page = getHtmlPage();
-        page.getDocumentElement().type(KeyboardEvent.DOM_VK_A);
+        Assertions.assertThrows(IllegalArgumentException.class,
+                () -> page.getDocumentElement().type(KeyboardEvent.DOM_VK_A));
     }
 
     /**
@@ -89,9 +88,7 @@ public class KeyboardEvent2Test extends SimpleWebTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "keydown:113,0,113 keyup:113,0,113",
-            FF = "keydown:113,0,113 keypress:113,0,0 keyup:113,0,113",
-            FF_ESR = "keydown:113,0,113 keypress:113,0,0 keyup:113,0,113")
+    @Alerts("keydown:113,0,113 keyup:113,0,113")
     public void dom_vk_f2() throws Exception {
         final HtmlPage page = getHtmlPage();
         page.getDocumentElement().type(KeyboardEvent.DOM_VK_F2);
@@ -104,9 +101,7 @@ public class KeyboardEvent2Test extends SimpleWebTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "keydown:39,0,39 keyup:39,0,39",
-            FF = "keydown:39,0,39 keypress:39,0,0 keyup:39,0,39",
-            FF_ESR = "keydown:39,0,39 keypress:39,0,0 keyup:39,0,39")
+    @Alerts("keydown:39,0,39 keyup:39,0,39")
     public void dom_vk_right() throws Exception {
         final HtmlPage page = getHtmlPage();
         page.getDocumentElement().type(KeyboardEvent.DOM_VK_RIGHT);

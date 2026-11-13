@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import java.io.Serializable;
 /**
  * {@code Screen}.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author Daniel Gredler
  * @author Chris Erskine
  * @author Ronald Brill
@@ -31,20 +31,27 @@ public class Screen implements Serializable {
     private final int screenHeight_;
     private final int screenWidth_;
 
+    private final int colorDepth_;
+
     /**
      * Creates an instance.
      * @param webClient the client this belongs to
      */
     public Screen(final WebClient webClient) {
+        super();
         screenHeight_ = webClient.getOptions().getScreenHeight();
         screenWidth_ =  webClient.getOptions().getScreenWidth();
+
+        colorDepth_ = 24;
     }
 
     /**
+     * Returns the value of the {@code availHeight} property.
+     *
      * @return the {@code availHeight} property
      */
     public int getAvailHeight() {
-        return 1040;
+        return 1032;
     }
 
     /**
@@ -56,6 +63,8 @@ public class Screen implements Serializable {
     }
 
     /**
+     * Returns the value of the {@code availLeft} property.
+     *
      * @return the {@code availLeft} property
      */
     public int getAvailLeft() {
@@ -71,6 +80,8 @@ public class Screen implements Serializable {
     }
 
     /**
+     * Returns the value of the {@code availTop} property.
+     *
      * @return the {@code availTop} property
      */
     public int getAvailTop() {
@@ -86,6 +97,8 @@ public class Screen implements Serializable {
     }
 
     /**
+     * Returns the value of the {@code availWidth} property.
+     *
      * @return the {@code availWidth} property
      */
     public int getAvailWidth() {
@@ -101,25 +114,12 @@ public class Screen implements Serializable {
     }
 
     /**
-     * @return the {@code bufferDepth} property
-     */
-    public int getBufferDepth() {
-        return 0;
-    }
-
-    /**
-     * Sets the {@code bufferDepth} property.
-     * @param bufferDepth the {@code bufferDepth} property
-     */
-    public void setBufferDepth(final int bufferDepth) {
-        // ignore
-    }
-
-    /**
+     * Returns the value of the {@code colorDepth} property.
+     *
      * @return the {@code colorDepth} property
      */
     public int getColorDepth() {
-        return 24;
+        return colorDepth_;
     }
 
     /**
@@ -131,6 +131,8 @@ public class Screen implements Serializable {
     }
 
     /**
+     * Returns the value of the {@code deviceXDPI} property.
+     *
      * @return the {@code deviceXDPI} property
      */
     public int getDeviceXDPI() {
@@ -146,6 +148,8 @@ public class Screen implements Serializable {
     }
 
     /**
+     * Returns the value of the {@code deviceYDPI} property.
+     *
      * @return the {@code deviceYDPI} property
      */
     public int getDeviceYDPI() {
@@ -161,21 +165,8 @@ public class Screen implements Serializable {
     }
 
     /**
-     * @return the {@code fontSmoothingEnabled} property
-     */
-    public boolean isFontSmoothingEnabled() {
-        return true;
-    }
-
-    /**
-     * Sets the {@code fontSmoothingEnabled} property.
-     * @param fontSmoothingEnabled the {@code fontSmoothingEnabled} property
-     */
-    public void setFontSmoothingEnabled(final boolean fontSmoothingEnabled) {
-        // ignore
-    }
-
-    /**
+     * Returns the value of the {@code height} property.
+     *
      * @return the {@code height} property
      */
     public int getHeight() {
@@ -191,6 +182,8 @@ public class Screen implements Serializable {
     }
 
     /**
+     * Returns the value of the {@code left} property.
+     *
      * @return the {@code left} property
      */
     public int getLeft() {
@@ -206,40 +199,12 @@ public class Screen implements Serializable {
     }
 
     /**
-     * @return the {@code logicalXDPI} property
-     */
-    public int getLogicalXDPI() {
-        return 96;
-    }
-
-    /**
-     * Sets the {@code logicalXDPI} property.
-     * @param logicalXDPI the {@code logicalXDPI} property
-     */
-    public void setLogicalXDPI(final int logicalXDPI) {
-        // ignore
-    }
-
-    /**
-     * @return the {@code logicalYDPI} property
-     */
-    public int getLogicalYDPI() {
-        return 96;
-    }
-
-    /**
-     * Sets the {@code logicalYDPI} property.
-     * @param logicalYDPI the {@code logicalYDPI} property
-     */
-    public void setLogicalYDPI(final int logicalYDPI) {
-        // ignore
-    }
-
-    /**
+     * Returns the value of the {@code pixelDepth} property.
+     *
      * @return the {@code pixelDepth} property
      */
     public int getPixelDepth() {
-        return 24;
+        return colorDepth_;
     }
 
     /**
@@ -251,36 +216,8 @@ public class Screen implements Serializable {
     }
 
     /**
-     * @return the {@code systemXDPI} property
-     */
-    public int getSystemXDPI() {
-        return 96;
-    }
-
-    /**
-     * Sets the {@code systemXDPI} property.
-     * @param systemXDPI the {@code systemXDPI} property
-     */
-    public void setSystemXDPI(final int systemXDPI) {
-        // ignore
-    }
-
-    /**
-     * @return the {@code systemYDPI} property
-     */
-    public int getSystemYDPI() {
-        return 96;
-    }
-
-    /**
-     * Sets the {@code systemYDPI} property.
-     * @param systemYDPI the {@code systemYDPI} property
-     */
-    public void setSystemYDPI(final int systemYDPI) {
-        // ignore
-    }
-
-    /**
+     * Returns the value of the {@code top} property.
+     *
      * @return the {@code top} property
      */
     public int getTop() {
@@ -296,6 +233,8 @@ public class Screen implements Serializable {
     }
 
     /**
+     * Returns the value of the {@code width} property.
+     *
      * @return the {@code width} property
      */
     public int getWidth() {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,16 @@
  */
 package org.htmlunit.javascript.host.dom;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link NodeIterator}.
  *
  * @author Ahmed Ashour
+ * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class NodeIteratorTest extends WebDriverTestCase {
 
     /**
@@ -36,8 +33,8 @@ public class NodeIteratorTest extends WebDriverTestCase {
     @Alerts({"[object HTMLDivElement]", "[object HTMLSpanElement]", "[object HTMLSpanElement]",
              "[object HTMLSpanElement]"})
     public void filterNull() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION
@@ -70,8 +67,8 @@ public class NodeIteratorTest extends WebDriverTestCase {
     @Test
     @Alerts("[object HTMLParagraphElement]")
     public void filterFunction() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION
@@ -107,8 +104,8 @@ public class NodeIteratorTest extends WebDriverTestCase {
     @Test
     @Alerts("def")
     public void filterObject() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION
@@ -146,8 +143,8 @@ public class NodeIteratorTest extends WebDriverTestCase {
     @Test
     @Alerts({"1", "11", "12"})
     public void subroot() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION
@@ -178,6 +175,36 @@ public class NodeIteratorTest extends WebDriverTestCase {
             + "  </tr>\n"
             + "</table>\n"
             + "<div id='after'>after</div>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"4294967295", "4294967295", "1", "5","0", "4294967295", "2147483648", "true"})
+    public void whatToShow() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<head>\n"
+            + "  <script>\n"
+            + LOG_TITLE_FUNCTION
+            + "    function test() {\n"
+            + "      log(document.createNodeIterator(document.body).whatToShow);\n"
+            + "      log(document.createNodeIterator(document.body, NodeFilter.SHOW_ALL).whatToShow);\n"
+            + "      log(document.createNodeIterator(document.body, NodeFilter.SHOW_ELEMENT).whatToShow);\n"
+            + "      log(document.createNodeIterator(document.body,\n"
+            + "            NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT).whatToShow);\n"
+            + "      log(document.createNodeIterator(document.body, 0).whatToShow);\n"
+            + "      log(document.createNodeIterator(document.body, -1).whatToShow);\n"
+            + "      log(document.createNodeIterator(document.body, 0x80000000).whatToShow);\n"
+            + "      log(document.createNodeIterator(document.body).nextNode() === document.body);\n"
+            + "    }\n"
+            + "  </script>\n"
+            + "</head>\n"
+            + "<body onload='test()'>\n"
             + "</body></html>";
 
         loadPageVerifyTitle2(html);

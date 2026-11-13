@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.http.FormattedHeader;
 import org.apache.http.Header;
 import org.apache.http.HeaderElement;
@@ -46,18 +45,18 @@ import org.apache.http.message.BufferedHeader;
 import org.apache.http.message.ParserCursor;
 import org.apache.http.message.TokenParser;
 import org.apache.http.util.CharArrayBuffer;
-
 import org.htmlunit.BrowserVersion;
+import org.htmlunit.util.StringUtils;
 
 /**
  * Customized BrowserCompatSpec for HtmlUnit.
  * <p>
  * Workaround for <a href="https://issues.apache.org/jira/browse/HTTPCLIENT-1006">HttpClient bug 1006</a>:
  * quotes are wrongly removed in cookie's values.
-
+ * </p>
  * Implementation is based on the HttpClient code.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author Noboru Sinohara
  * @author David D. Kilzer
  * @author Marc Guillemot
@@ -104,7 +103,7 @@ public class HtmlUnitBrowserCompatCookieSpec extends CookieSpecBase {
     public HtmlUnitBrowserCompatCookieSpec(final BrowserVersion browserVersion) {
         super(new HtmlUnitVersionAttributeHandler(),
                 new HtmlUnitDomainHandler(browserVersion),
-                new HtmlUnitPathHandler(browserVersion),
+                new HtmlUnitPathHandler(),
                 new HtmlUnitMaxAgeHandler(),
                 new HtmlUnitSecureHandler(),
                 new BasicCommentHandler(),
@@ -114,11 +113,12 @@ public class HtmlUnitBrowserCompatCookieSpec extends CookieSpecBase {
     }
 
     /**
-     * {@inheritDoc}
+     * A hack to support cookies without a name; such cookies get the name {@link #EMPTY_COOKIE_NAME}.
+     *
+     * @param header the cookie header
+     * @return the given header or a new header with the cookie name added
      */
-    @Override
-    public List<Cookie> parse(Header header, final CookieOrigin origin) throws MalformedCookieException {
-        // first a hack to support empty headers
+    private static Header supportEmptyCookieName(final Header header) {
         final String text = header.getValue();
         int endPos = text.indexOf(';');
         if (endPos < 0) {
@@ -134,14 +134,23 @@ public class HtmlUnitBrowserCompatCookieSpec extends CookieSpecBase {
             }
         }
         if (endPos < 0) {
-            header = new BasicHeader(header.getName(), EMPTY_COOKIE_NAME + "=" + header.getValue());
+            return new BasicHeader(header.getName(), EMPTY_COOKIE_NAME + "=" + header.getValue());
         }
-        else if (endPos == 0 || StringUtils.isBlank(text.substring(0, endPos))) {
-            header = new BasicHeader(header.getName(), EMPTY_COOKIE_NAME + header.getValue());
+        if (endPos == 0 || StringUtils.isBlank(text.substring(0, endPos))) {
+            return new BasicHeader(header.getName(), EMPTY_COOKIE_NAME + header.getValue());
         }
+        return header;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<Cookie> parse(final Header rawHeader, final CookieOrigin origin) throws MalformedCookieException {
+        final Header header = supportEmptyCookieName(rawHeader);
 
         final String headername = header.getName();
-        if (!headername.equalsIgnoreCase(SM.SET_COOKIE)) {
+        if (!SM.SET_COOKIE.equalsIgnoreCase(headername)) {
             throw new MalformedCookieException("Unrecognized cookie header '" + header + "'");
         }
         final HeaderElement[] helems = header.getElements();
@@ -162,10 +171,10 @@ public class HtmlUnitBrowserCompatCookieSpec extends CookieSpecBase {
             // support multiple header elements (comma cannot be treated as an element separator)
             final CharArrayBuffer buffer;
             final ParserCursor cursor;
-            if (header instanceof FormattedHeader) {
-                buffer = ((FormattedHeader) header).getBuffer();
+            if (header instanceof FormattedHeader formattedHeader) {
+                buffer = formattedHeader.getBuffer();
                 cursor = new ParserCursor(
-                        ((FormattedHeader) header).getValuePos(),
+                        formattedHeader.getValuePos(),
                         buffer.length());
             }
             else {
@@ -224,7 +233,8 @@ public class HtmlUnitBrowserCompatCookieSpec extends CookieSpecBase {
         final CharArrayBuffer buffer = new CharArrayBuffer(20 * cookies.size());
         buffer.append(SM.COOKIE);
         buffer.append(": ");
-        for (int i = 0; i < cookies.size(); i++) {
+        final int size = cookies.size();
+        for (int i = 0; i < size; i++) {
             final Cookie cookie = cookies.get(i);
             if (i > 0) {
                 buffer.append("; ");
@@ -282,7 +292,7 @@ public class HtmlUnitBrowserCompatCookieSpec extends CookieSpecBase {
         private static final BitSet TOKEN_DELIMS = TokenParser.INIT_BITSET('=', PARAM_DELIMITER);
         private static final BitSet VALUE_DELIMS = TokenParser.INIT_BITSET(PARAM_DELIMITER);
 
-        private final TokenParser tokenParser_ = TokenParser.INSTANCE;
+        private static final TokenParser TOKEN_PARSER = TokenParser.INSTANCE;
 
         HeaderElement parseHeader(final CharArrayBuffer buffer, final ParserCursor cursor) throws ParseException {
             final NameValuePair nvp = parseNameValuePair(buffer, cursor);
@@ -297,7 +307,7 @@ public class HtmlUnitBrowserCompatCookieSpec extends CookieSpecBase {
         }
 
         private NameValuePair parseNameValuePair(final CharArrayBuffer buffer, final ParserCursor cursor) {
-            final String name = tokenParser_.parseToken(buffer, cursor, TOKEN_DELIMS);
+            final String name = TOKEN_PARSER.parseToken(buffer, cursor, TOKEN_DELIMS);
             if (cursor.atEnd()) {
                 return new BasicNameValuePair(name, null);
             }
@@ -308,7 +318,7 @@ public class HtmlUnitBrowserCompatCookieSpec extends CookieSpecBase {
                 return new BasicNameValuePair(name, null);
             }
 
-            final String value = tokenParser_.parseToken(buffer, cursor, VALUE_DELIMS);
+            final String value = TOKEN_PARSER.parseToken(buffer, cursor, VALUE_DELIMS);
             if (!cursor.atEnd()) {
                 cursor.updatePos(cursor.getPos() + 1);
             }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +14,18 @@
  */
 package org.htmlunit;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.openqa.selenium.WebDriver;
-
-import org.htmlunit.junit.BrowserRunner;
 import org.htmlunit.util.MimeType;
 import org.htmlunit.util.NameValuePair;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebDriverException;
 
 /**
  * Tests methods in {@link HttpWebConnection}.
@@ -34,7 +35,6 @@ import org.htmlunit.util.NameValuePair;
  * @author Frank Danek
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class HttpWebConnection2Test extends WebDriverTestCase {
 
     /**
@@ -51,6 +51,17 @@ public class HttpWebConnection2Test extends WebDriverTestCase {
         final MockWebConnection conn = getMockWebConnection();
         conn.setResponse(URL_FIRST, content, 404, "OK", MimeType.TEXT_HTML, headers);
 
+        if (useRealBrowser()) {
+            // browsers refuse to render a response they cannot decode
+            final WebDriverException e = assertThrows(WebDriverException.class,
+                    () -> loadPageWithAlerts2(URL_FIRST));
+            final String msg = e.getMessage();
+            Assertions.assertTrue(msg.contains("contentEncodingError")      // Firefox
+                    || msg.contains("ERR_CONTENT_DECODING_FAILED"), // Chrome / Edge
+                    msg);
+            return;
+        }
+
         // only check that no exception is thrown
         final WebDriver driver = loadPageWithAlerts2(URL_FIRST);
         assertTrue(driver.getPageSource().length() > 100);
@@ -61,7 +72,7 @@ public class HttpWebConnection2Test extends WebDriverTestCase {
      */
     @Test
     public void redirectBrokenGzip() throws Exception {
-        final String html = "<html></html>";
+        final String html = DOCTYPE_HTML + "<html></html>";
 
         final List<NameValuePair> headers = Arrays.asList(new NameValuePair("Location", URL_SECOND.toString()),
                 new NameValuePair("Content-Encoding", "gzip"));
@@ -72,5 +83,4 @@ public class HttpWebConnection2Test extends WebDriverTestCase {
         final WebDriver driver = loadPageWithAlerts2(URL_FIRST);
         assertEquals(URL_SECOND.toString(), driver.getCurrentUrl());
     }
-
 }

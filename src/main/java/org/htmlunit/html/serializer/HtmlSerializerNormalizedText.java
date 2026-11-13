@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,10 @@ package org.htmlunit.html.serializer;
 import static org.htmlunit.css.CssStyleSheet.BLOCK;
 import static org.htmlunit.html.DomElement.ATTRIBUTE_NOT_DEFINED;
 
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
-
-import org.apache.commons.lang3.StringUtils;
+import java.util.Map;
 
 import org.htmlunit.Page;
 import org.htmlunit.SgmlPage;
@@ -29,7 +29,6 @@ import org.htmlunit.html.DomComment;
 import org.htmlunit.html.DomElement;
 import org.htmlunit.html.DomNode;
 import org.htmlunit.html.DomText;
-import org.htmlunit.html.HtmlApplet;
 import org.htmlunit.html.HtmlBody;
 import org.htmlunit.html.HtmlBreak;
 import org.htmlunit.html.HtmlCheckBoxInput;
@@ -67,8 +66,8 @@ import org.htmlunit.html.serializer.HtmlSerializerNormalizedText.HtmlSerializerT
 /**
  * Utility to handle conversion from HTML code to string.
  * This implements HtmlUnit's way of normalization.
- * <p>Note: There conversation done by selenium WebElement#getText()
- * is different.</p>
+ * <p>Note: The conversion done by selenium WebElement#getText()
+ * is different (see {@link HtmlSerializerVisibleText}).</p>
  *
  * @author Marc Guillemot
  * @author Ahmed Ashour
@@ -80,18 +79,25 @@ public class HtmlSerializerNormalizedText {
     private boolean ignoreMaskedElements_ = true;
 
     /**
+     * Cache of the visibility of the nodes processed by the current run;
+     * the dom is not changed while serializing.
+     */
+    private final Map<DomNode, Boolean> visibilityCache_ = new IdentityHashMap<>();
+
+    /**
      * Converts an HTML node to text.
      * @param node a node
      * @return the text representation according to the setting of this serializer
      */
     public String asText(final DomNode node) {
+        visibilityCache_.clear();
         final HtmlSerializerTextBuilder builder = new HtmlSerializerTextBuilder();
         appendNode(builder, node);
         return builder.getText();
     }
 
     /**
-     * Iterate over all Children and call appendNode() for every.
+     * Iterates over all children and calls appendNode() for every child.
      *
      * @param builder the StringBuilder to add to
      * @param node the node to process
@@ -103,25 +109,21 @@ public class HtmlSerializerNormalizedText {
     }
 
     /**
-     * The core distribution method call the different appendXXX
+     * The core distribution method; calls the different appendXXX
      * methods depending on the type of the given node.
      *
      * @param builder the StringBuilder to add to
      * @param node the node to process
      */
     protected void appendNode(final HtmlSerializerTextBuilder builder, final DomNode node) {
-        if (node instanceof DomText) {
-            appendText(builder, (DomText) node);
+        if (node instanceof DomText text1) {
+            appendText(builder, text1);
         }
         else if (node instanceof DomComment) {
             // nothing to do
         }
-        else if (node instanceof HtmlApplet
-                && node.getPage().getWebClient().getOptions().isAppletEnabled()) {
-            // nothing to do
-        }
-        else if (node instanceof HtmlBreak) {
-            appendBreak(builder, (HtmlBreak) node);
+        else if (node instanceof HtmlBreak break1) {
+            appendBreak(builder, break1);
         }
         else if (node instanceof HtmlHiddenInput) {
             // nothing to do
@@ -135,53 +137,53 @@ public class HtmlSerializerNormalizedText {
         else if (node instanceof HtmlNoFrames) {
             // nothing to do
         }
-        else if (node instanceof HtmlTextArea) {
-            appendTextArea(builder, (HtmlTextArea) node);
+        else if (node instanceof HtmlTextArea area) {
+            appendTextArea(builder, area);
         }
-        else if (node instanceof HtmlTitle) {
-            appendTitle(builder, (HtmlTitle) node);
+        else if (node instanceof HtmlTitle title) {
+            appendTitle(builder, title);
         }
-        else if (node instanceof HtmlTableRow) {
-            appendTableRow(builder, (HtmlTableRow) node);
+        else if (node instanceof HtmlTableRow row) {
+            appendTableRow(builder, row);
         }
-        else if (node instanceof HtmlSelect) {
-            appendSelect(builder, (HtmlSelect) node);
+        else if (node instanceof HtmlSelect select) {
+            appendSelect(builder, select);
         }
-        else if (node instanceof HtmlSubmitInput) {
-            appendSubmitInput(builder, (HtmlSubmitInput) node);
+        else if (node instanceof HtmlSubmitInput input5) {
+            appendSubmitInput(builder, input5);
         }
-        else if (node instanceof HtmlResetInput) {
-            appendResetInput(builder, (HtmlResetInput) node);
+        else if (node instanceof HtmlResetInput input4) {
+            appendResetInput(builder, input4);
         }
-        else if (node instanceof HtmlCheckBoxInput) {
-            appendCheckBoxInput(builder, (HtmlCheckBoxInput) node);
+        else if (node instanceof HtmlCheckBoxInput input3) {
+            appendCheckBoxInput(builder, input3);
         }
-        else if (node instanceof HtmlRadioButtonInput) {
-            appendRadioButtonInput(builder, (HtmlRadioButtonInput) node);
+        else if (node instanceof HtmlRadioButtonInput input2) {
+            appendRadioButtonInput(builder, input2);
         }
-        else if (node instanceof HtmlNumberInput) {
-            appendNumberInput(builder, (HtmlNumberInput) node);
+        else if (node instanceof HtmlNumberInput input1) {
+            appendNumberInput(builder, input1);
         }
-        else if (node instanceof HtmlInput) {
-            appendInput(builder, (HtmlInput) node);
+        else if (node instanceof HtmlInput input) {
+            appendInput(builder, input);
         }
-        else if (node instanceof HtmlTable) {
-            appendTable(builder, (HtmlTable) node);
+        else if (node instanceof HtmlTable table) {
+            appendTable(builder, table);
         }
-        else if (node instanceof HtmlOrderedList) {
-            appendOrderedList(builder, (HtmlOrderedList) node);
+        else if (node instanceof HtmlOrderedList list1) {
+            appendOrderedList(builder, list1);
         }
-        else if (node instanceof HtmlUnorderedList) {
-            appendUnorderedList(builder, (HtmlUnorderedList) node);
+        else if (node instanceof HtmlUnorderedList list) {
+            appendUnorderedList(builder, list);
         }
-        else if (node instanceof HtmlPreformattedText) {
-            appendPreformattedText(builder, (HtmlPreformattedText) node);
+        else if (node instanceof HtmlPreformattedText text) {
+            appendPreformattedText(builder, text);
         }
-        else if (node instanceof HtmlInlineFrame) {
-            appendInlineFrame(builder, (HtmlInlineFrame) node);
+        else if (node instanceof HtmlInlineFrame frame) {
+            appendInlineFrame(builder, frame);
         }
-        else if (node instanceof HtmlDetails) {
-            appendDetails(builder, (HtmlDetails) node);
+        else if (node instanceof HtmlDetails details) {
+            appendDetails(builder, details);
         }
         else if (node instanceof HtmlNoScript && node.getPage().getWebClient().isJavaScriptEnabled()) {
             // nothing to do
@@ -192,7 +194,7 @@ public class HtmlSerializerNormalizedText {
     }
 
     /**
-     * Process {@link HtmlHiddenInput}.
+     * Process all other {@link DomNode}s; block elements are surrounded by a block separator.
      *
      * @param builder the StringBuilder to add to
      * @param domNode the target to process
@@ -202,15 +204,14 @@ public class HtmlSerializerNormalizedText {
         if (!(domNode instanceof HtmlBody)) {
             final SgmlPage page = domNode.getPage();
             final WebWindow window = page.getEnclosingWindow();
-            if (page.getWebClient().isJavaScriptEngineEnabled()  // TODO
-                    && window.getWebClient().getOptions().isCssEnabled()) {
-                if (domNode instanceof DomElement) {
-                    final String display = window.getComputedStyle((DomElement) domNode, null).getDisplay();
+            if (window.getWebClient().getOptions().isCssEnabled()) {
+                if (domNode instanceof DomElement element) {
+                    final String display = window.getComputedStyle(element, null).getDisplay();
                     block = BLOCK.equals(display);
                 }
             }
-            else if (domNode instanceof HtmlElement) {
-                block = DisplayStyle.BLOCK == ((HtmlElement) domNode).getDefaultStyleDisplay();
+            else if (domNode instanceof HtmlElement element) {
+                block = DisplayStyle.BLOCK == element.getDefaultStyleDisplay();
             }
         }
 
@@ -286,6 +287,7 @@ public class HtmlSerializerNormalizedText {
 
     /**
      * Process {@link HtmlUnorderedList}.
+     *
      * @param builder the StringBuilder to add to
      * @param htmlUnorderedList the target to process
      */
@@ -305,6 +307,7 @@ public class HtmlSerializerNormalizedText {
 
     /**
      * Process {@link HtmlDetails}.
+     *
      * @param builder the StringBuilder to add to
      * @param htmlDetails the target to process
      */
@@ -317,6 +320,8 @@ public class HtmlSerializerNormalizedText {
 
         for (final DomNode child : htmlDetails.getChildren()) {
             if (child instanceof HtmlSummary) {
+                // only the first summary is the summary of the details
+                // but for the moment i like to have it like this for backward compatibility
                 appendNode(builder, child);
             }
         }
@@ -324,6 +329,7 @@ public class HtmlSerializerNormalizedText {
 
     /**
      * Process {@link HtmlTitle}.
+     *
      * @param builder the StringBuilder to add to
      * @param htmlTitle the target to process
      */
@@ -333,8 +339,8 @@ public class HtmlSerializerNormalizedText {
         // of the containing dom text;
         // this optimization defers the load of the style sheets
         final DomNode child = htmlTitle.getFirstChild();
-        if (child instanceof DomText) {
-            builder.append(((DomText) child).getData(), Mode.NORMALIZE);
+        if (child instanceof DomText text) {
+            builder.append(text.getData(), Mode.NORMALIZE);
             builder.appendBlockSeparator();
         }
     }
@@ -348,13 +354,13 @@ public class HtmlSerializerNormalizedText {
     protected void appendTableRow(final HtmlSerializerTextBuilder builder, final HtmlTableRow htmlTableRow) {
         boolean first = true;
         for (final HtmlTableCell cell : htmlTableRow.getCells()) {
-            if (!first) {
-                builder.appendTab();
-            }
-            else {
+            if (first) {
                 first = false;
             }
-            appendChildren(builder, cell); // trim?
+            else {
+                builder.appendTab();
+            }
+            appendChildren(builder, cell);
         }
     }
 
@@ -410,29 +416,30 @@ public class HtmlSerializerNormalizedText {
     }
 
     /**
-     * Process {@link HtmlTableRow}.
+     * Process the given {@link HtmlTableRow}s; rows are separated by a block separator.
      *
      * @param builder the StringBuilder to add to
      * @param rows the rows
      * @param first if true this is the first one
      * @param skipParent1 skip row if the parent is this
      * @param skipParent2 skip row if the parent is this
-     * @return true if this was the first one
+     * @return true if no row was written so far (the new value of first)
      */
     protected boolean appendTableRows(final HtmlSerializerTextBuilder builder,
-            final List<HtmlTableRow> rows, boolean first, final TableRowGroup skipParent1,
+            final List<HtmlTableRow> rows, final boolean first, final TableRowGroup skipParent1,
             final TableRowGroup skipParent2) {
+        boolean isFirst = first;
         for (final HtmlTableRow row : rows) {
             if (row.getParentNode() == skipParent1 || row.getParentNode() == skipParent2) {
                 continue;
             }
-            if (!first) {
+            if (!isFirst) {
                 builder.appendBlockSeparator();
             }
-            first = false;
+            isFirst = false;
             appendTableRow(builder, row);
         }
-        return first;
+        return isFirst;
     }
 
     /**
@@ -463,6 +470,17 @@ public class HtmlSerializerNormalizedText {
         builder.appendBlockSeparator();
         boolean first = true;
         int i = 1;
+
+        final String start = htmlOrderedList.getStartAttribute();
+        if (ATTRIBUTE_NOT_DEFINED != start) {
+            try {
+                i = (int) Math.round(Double.parseDouble(start));
+            }
+            catch (final Exception e) {
+                // ignore start with 1
+            }
+        }
+
         for (final DomNode item : htmlOrderedList.getChildren()) {
             if (!first) {
                 builder.appendBlockSeparator();
@@ -506,8 +524,8 @@ public class HtmlSerializerNormalizedText {
         if (isVisible(htmlInlineFrame)) {
             builder.appendBlockSeparator();
             final Page page = htmlInlineFrame.getEnclosedPage();
-            if (page instanceof SgmlPage) {
-                builder.append(((SgmlPage) page).asNormalizedText(), Mode.NORMALIZE);
+            if (page instanceof SgmlPage sgmlPage) {
+                builder.append(sgmlPage.asNormalizedText(), Mode.NORMALIZE);
             }
             builder.appendBlockSeparator();
         }
@@ -544,12 +562,7 @@ public class HtmlSerializerNormalizedText {
      */
     protected void appendCheckBoxInput(final HtmlSerializerTextBuilder builder,
                                             final HtmlCheckBoxInput htmlCheckBoxInput) {
-        if (htmlCheckBoxInput.isChecked()) {
-            builder.append("checked", Mode.NORMALIZE);
-        }
-        else {
-            builder.append("unchecked", Mode.NORMALIZE);
-        }
+        appendCheckedState(builder, htmlCheckBoxInput.isChecked());
     }
 
     /**
@@ -560,16 +573,33 @@ public class HtmlSerializerNormalizedText {
      */
     protected void appendRadioButtonInput(final HtmlSerializerTextBuilder builder,
             final HtmlRadioButtonInput htmlRadioButtonInput) {
-        if (htmlRadioButtonInput.isChecked()) {
-            builder.append("checked", Mode.NORMALIZE);
-        }
-        else {
-            builder.append("unchecked", Mode.NORMALIZE);
-        }
+        appendCheckedState(builder, htmlRadioButtonInput.isChecked());
     }
 
+    /**
+     * Appends the state of a checkbox or radio button.
+     *
+     * @param builder the StringBuilder to add to
+     * @param checked the checked state
+     */
+    private static void appendCheckedState(final HtmlSerializerTextBuilder builder, final boolean checked) {
+        builder.append(checked ? "checked " : "unchecked ", Mode.NORMALIZE);
+    }
+
+    /**
+     * Checks if the given node is visible; if masked elements are not ignored
+     * every node is visible. The result is cached for the current run because
+     * {@link DomNode#isDisplayed()} has to check all the ancestors and
+     * this is done for every text node.
+     *
+     * @param node the node to check
+     * @return true if the node is visible
+     */
     private boolean isVisible(final DomNode node) {
-        return !ignoreMaskedElements_ || node.isDisplayed();
+        if (!ignoreMaskedElements_) {
+            return true;
+        }
+        return visibilityCache_.computeIfAbsent(node, DomNode::isDisplayed);
     }
 
     /**
@@ -581,7 +611,11 @@ public class HtmlSerializerNormalizedText {
         ignoreMaskedElements_ = ignore;
     }
 
+    /**
+     * Helper to compose the text for the serializer based on several modes.
+     */
     protected static class HtmlSerializerTextBuilder {
+
         /** Mode. */
         protected enum Mode {
             /** Collapse whitespace. */
@@ -611,25 +645,37 @@ public class HtmlSerializerNormalizedText {
         private final StringBuilder builder_;
         private int trimRightPos_;
 
+        /**
+         * Ctor.
+         */
         public HtmlSerializerTextBuilder() {
             builder_ = new StringBuilder();
             state_ = State.EMPTY;
             trimRightPos_ = builder_.length();
         }
 
+        /**
+         * Append the provided content.
+         *
+         * @param content the content to add
+         * @param mode the {@link Mode}
+         */
         public void append(final String content, final Mode mode) {
+            if (content == null) {
+                return;
+            }
             final int length = content.length();
             if (length == 0) {
                 return;
             }
 
-            String text = content;
-            if (mode == Mode.PRESERVE_BLANK_NEWLINE) {
-                text = StringUtils.stripEnd(text, null);
-            }
+            // Mode.PRESERVE_BLANK_NEWLINE only differs in the handling of tabs;
+            // it is used for textareas
 
             boolean crFound = false;
-            for (final char c : text.toCharArray()) {
+            for (int i = 0; i < length; i++) {
+                final char c = content.charAt(i);
+
                 if (mode == Mode.NORMALIZE) {
                     if (isSpace(c)) {
                         switch (state_) {
@@ -699,11 +745,14 @@ public class HtmlSerializerNormalizedText {
             }
 
             if (mode != Mode.NORMALIZE) {
-                // reset state to empty to restart whitespace normalization afterwards
+                // reset state to empty to restart whitespace normalization afterward
                 state_ = State.TRIM;
             }
         }
 
+        /**
+         * Append a block separator.
+         */
         public void appendBlockSeparator() {
             switch (state_) {
                 case EMPTY:
@@ -749,22 +798,36 @@ public class HtmlSerializerNormalizedText {
             }
         }
 
+        /**
+         * Append a line separator.
+         */
         public void appendNewLine() {
             builder_.append(LINE_SEPARATOR);
             state_ = State.NEWLINE_AT_END;
             trimRightPos_ = builder_.length();
         }
 
+        /**
+         * Append a tab.
+         */
         public void appendTab() {
             builder_.append('\t');
             trimRightPos_ = builder_.length();
         }
 
+        /**
+         * Append a blank.
+         */
         private void appendBlank() {
             builder_.append(' ');
             trimRightPos_ = builder_.length();
         }
 
+        /**
+         * Returns the constructed text.
+         *
+         * @return the constructed text.
+         */
         public String getText() {
             return builder_.substring(0, trimRightPos_);
         }

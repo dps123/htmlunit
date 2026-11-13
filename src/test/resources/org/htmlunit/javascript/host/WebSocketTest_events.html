@@ -25,7 +25,7 @@
 
     var room = {
         init : function() {
-            var location = "ws://" + window.location.hostname + ":" + window.location.port;
+            var location = "ws://" + window.location.hostname + ":" + window.location.port + "/ws";
             this._ws = new WebSocket(location);
             this._ws.binaryType = 'arraybuffer';
 
@@ -80,7 +80,7 @@
                 log(e.source);
             }
             else {
-                log("Unknown message: ", e.data);
+                log("Unknown message: '" + e.data + "' / '" + ab2str(e.data) + "'");
             }
         },
 
@@ -110,7 +110,7 @@
                 room._send('close');
             }
             else {
-                log("Unknown message: ", e.data);
+                log("Unknown message: '" + e.data + "' / '" + ab2str(e.data) + "'");
             }
         },
 

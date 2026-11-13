@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,9 @@
  */
 package org.htmlunit.javascript.host.arrays;
 
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.IE;
-
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for Int32Array.
@@ -31,8 +25,7 @@ import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
  * @author Frank Danek
  * @author Ronald Brill
  * @author Michael Rimov
-*/
-@RunWith(BrowserRunner.class)
+ */
 public class Int32ArrayTest extends WebDriverTestCase {
 
     /**
@@ -41,8 +34,8 @@ public class Int32ArrayTest extends WebDriverTestCase {
     @Test
     @Alerts({"-121", "-42", "18", "0", "-78", "-98", "67", "-1"})
     public void bufferConstructor() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -51,9 +44,7 @@ public class Int32ArrayTest extends WebDriverTestCase {
             + "    var array2 = new Int8Array(array.buffer);\n"
             + "    for (var i = 0; i < array2.length; i++)\n"
             + "      log(array2[i]);\n"
-            + "  } catch(e) {\n"
-            + "    log('exception');\n"
-            + "  }\n"
+            + "  } catch(e) {logEx(e);}\n"
             + "}\n"
             + "</script></head><body onload='test()'>\n"
             + "</body></html>";
@@ -67,8 +58,8 @@ public class Int32ArrayTest extends WebDriverTestCase {
     @Test
     @Alerts({"undefined", "815", "undefined", "undefined"})
     public void index() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -90,8 +81,8 @@ public class Int32ArrayTest extends WebDriverTestCase {
     @Test
     @Alerts({"false", "true", "false", "false"})
     public void in() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -113,8 +104,8 @@ public class Int32ArrayTest extends WebDriverTestCase {
     @Test
     @Alerts({"undefined", "6", "0", "0", "0", "0", "0", "4", "undefined"})
     public void undefinedValueInArray() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -148,8 +139,8 @@ public class Int32ArrayTest extends WebDriverTestCase {
     @Test
     @Alerts({"0", "1", "0", "17"})
     public void specialValueInArray() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -174,21 +165,17 @@ public class Int32ArrayTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "0",
-            IE = "exception")
-    @NotYetImplemented(IE)
+    @Alerts("0")
     public void nullConstructor() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  try {\n"
             + "    var array = new Int32Array(null);\n"
             + "    log(array.length);\n"
-            + "  } catch(e) {\n"
-            + "    log('exception');\n"
-            + "  }\n"
+            + "  } catch(e) {logEx(e);}\n"
             + "}\n"
             + "</script></head><body onload='test()'>\n"
             + "</body></html>";
@@ -200,14 +187,10 @@ public class Int32ArrayTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"", "0", "1", "1,3", "1,3,4,7,11,0,123"},
-            IE = {"[object Int32Array]", "[object Int32Array]",
-                  "[object Int32Array]", "[object Int32Array]",
-                  "[object Int32Array]"})
-    @NotYetImplemented(IE)
+    @Alerts({"", "0", "1", "1,3", "1,3,4,7,11,0,123"})
     public void asString() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -236,12 +219,10 @@ public class Int32ArrayTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "Int32Array",
-            IE = "undefined")
-    @NotYetImplemented(IE)
+    @Alerts("Int32Array")
     public void name() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"

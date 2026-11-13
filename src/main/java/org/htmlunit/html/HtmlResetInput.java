@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,20 +14,18 @@
  */
 package org.htmlunit.html;
 
-import static org.htmlunit.BrowserVersionFeatures.RESETINPUT_DEFAULT_VALUE_IF_VALUE_NOT_DEFINED;
-
 import java.io.IOException;
 import java.util.Map;
 
-import org.htmlunit.BrowserVersion;
 import org.htmlunit.SgmlPage;
+import org.htmlunit.javascript.host.event.KeyboardEvent;
 
 /**
  * Wrapper for the HTML element "input".
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author David K. Taylor
- * @author <a href="mailto:cse@dynabean.de">Christian Sell</a>
+ * @author Christian Sell
  * @author Daniel Gredler
  * @author Ahmed Ashour
  * @author Ronald Brill
@@ -50,13 +48,19 @@ public class HtmlResetInput extends HtmlInput implements LabelableElement {
     HtmlResetInput(final String qualifiedName, final SgmlPage page,
             final Map<String, DomAttr> attributes) {
         super(qualifiedName, page, attributes);
+    }
 
-        if (getAttributeDirect("value") == ATTRIBUTE_NOT_DEFINED) {
-            final BrowserVersion browserVersion = page.getWebClient().getBrowserVersion();
-            if (browserVersion.hasFeature(RESETINPUT_DEFAULT_VALUE_IF_VALUE_NOT_DEFINED)) {
-                setValue(DEFAULT_VALUE);
-            }
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void doType(final int keyCode, final boolean lastType) throws IOException {
+        if (keyCode == KeyboardEvent.DOM_VK_SPACE) {
+            click();
+            return;
         }
+
+        super.doType(keyCode, lastType);
     }
 
     /**
@@ -80,7 +84,7 @@ public class HtmlResetInput extends HtmlInput implements LabelableElement {
      */
     @Override
     public void setValue(final String newValue) {
-        super.setValue(newValue);
+        unmarkValueDirty();
         setDefaultValue(newValue);
     }
 
@@ -105,14 +109,6 @@ public class HtmlResetInput extends HtmlInput implements LabelableElement {
      * {@inheritDoc}
      */
     @Override
-    protected boolean propagateClickStateUpdateToParent() {
-        return true;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     protected boolean isRequiredSupported() {
         return false;
     }
@@ -123,5 +119,13 @@ public class HtmlResetInput extends HtmlInput implements LabelableElement {
     @Override
     public boolean willValidate() {
         return false;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected boolean isCustomValidityValid() {
+        return true;
     }
 }

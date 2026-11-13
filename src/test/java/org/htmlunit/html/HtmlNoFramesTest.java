@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,16 @@
  */
 package org.htmlunit.html;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.SimpleWebTestCase;
-import org.htmlunit.junit.BrowserRunner;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for elements inside {@link HtmlNoFrames}.
  *
  * @author Ahmed Ashour
  * @author Marc Guillemot
+ * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class HtmlNoFramesTest extends SimpleWebTestCase {
 
     /**
@@ -34,8 +31,8 @@ public class HtmlNoFramesTest extends SimpleWebTestCase {
      */
     @Test
     public void preserveInnerXML() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <noframes>\n"
             + "    <b>Some bold text</b>\n"
             + "  </noframes>\n"
@@ -50,8 +47,8 @@ public class HtmlNoFramesTest extends SimpleWebTestCase {
      */
     @Test
     public void asNormalizedText() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <noframes id='it'>\n"
             + "    Some text\n"
             + "  </noframes>\n"

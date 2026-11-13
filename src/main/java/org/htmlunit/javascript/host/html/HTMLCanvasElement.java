@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,13 +15,10 @@
 package org.htmlunit.javascript.host.html;
 
 import static org.htmlunit.BrowserVersionFeatures.JS_CANVAS_DATA_URL_CHROME_PNG;
-import static org.htmlunit.BrowserVersionFeatures.JS_CANVAS_DATA_URL_IE_PNG;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
 
 import org.htmlunit.html.HtmlCanvas;
+import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
@@ -29,15 +26,14 @@ import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.configuration.JsxSetter;
 import org.htmlunit.javascript.host.canvas.CanvasRenderingContext2D;
 
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.Undefined;
-
 /**
  * The JavaScript object {@code HTMLCanvasElement}.
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
  * @author Frank Danek
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement">MDN Documentation</a>
  */
 @JsxClass(domClass = HtmlCanvas.class)
 public class HTMLCanvasElement extends HTMLElement {
@@ -45,10 +41,12 @@ public class HTMLCanvasElement extends HTMLElement {
     private CanvasRenderingContext2D context2d_;
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public HTMLCanvasElement() {
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
@@ -78,7 +76,7 @@ public class HTMLCanvasElement extends HTMLElement {
 
     /**
      * Sets the {@code width} property.
-     * @param width the {@code width} property
+     * @param width the {@code width} property value
      */
     @JsxSetter
     public void setWidth(final int width) {
@@ -101,7 +99,7 @@ public class HTMLCanvasElement extends HTMLElement {
 
     /**
      * Sets the {@code height} property.
-     * @param height the {@code height} property
+     * @param height the {@code height} property value
      */
     @JsxSetter
     public void setHeight(final int height) {
@@ -111,11 +109,11 @@ public class HTMLCanvasElement extends HTMLElement {
     /**
      * Gets the context.
      * @param contextId the context id
-     * @return Returns an object that exposes an API for drawing on the canvas,
-     * or null if the given context ID is not supported
+     * @return an object that exposes an API for drawing on the canvas,
+     *         or null if the given context ID is not supported
      */
     @JsxFunction
-    public Object getContext(final String contextId) {
+    public HtmlUnitScriptable getContext(final String contextId) {
         if ("2d".equals(contextId)) {
             if (context2d_ == null) {
                 final CanvasRenderingContext2D context = new CanvasRenderingContext2D(this);
@@ -129,7 +127,7 @@ public class HTMLCanvasElement extends HTMLElement {
     }
 
     /**
-     * Get the data: URL representation of the Canvas element.
+     * Gets the data: URL representation of the canvas element.
      * Here we return an empty image.
      * @param type the type (optional)
      * @return the data URL
@@ -138,21 +136,13 @@ public class HTMLCanvasElement extends HTMLElement {
     public String toDataURL(final Object type) {
         if (context2d_ != null) {
             final String typeInUse;
-            if (Undefined.isUndefined(type)) {
+            if (JavaScriptEngine.isUndefined(type)) {
                 typeInUse = null;
             }
             else {
-                typeInUse = Context.toString(type);
+                typeInUse = JavaScriptEngine.toString(type);
             }
             return context2d_.toDataURL(typeInUse);
-        }
-
-        if (getBrowserVersion().hasFeature(JS_CANVAS_DATA_URL_IE_PNG)) {
-            return "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAACWCAYAAABkW7XSAAAAAXNSR0IArs4c6QAAAARnQU1BAA"
-                + "Cxjwv8YQUAAADGSURBVHhe7cExAQAAAMKg9U9tCF8gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-                + "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-                + "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAONUAv9QAAcDhjokAAAAASUV"
-                + "ORK5CYII=";
         }
 
         if (getBrowserVersion().hasFeature(JS_CANVAS_DATA_URL_CHROME_PNG)) {

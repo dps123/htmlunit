@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,39 +14,35 @@
  */
 package org.htmlunit.html;
 
-import static org.htmlunit.BrowserVersionFeatures.FRAME_LOCATION_ABOUT_BLANK_FOR_ABOUT_SCHEME;
-import static org.htmlunit.BrowserVersionFeatures.URL_MINIMAL_QUERY_ENCODING;
-
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.Map;
+import java.util.Objects;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.w3c.dom.Attr;
-
 import org.htmlunit.FailingHttpStatusCodeException;
 import org.htmlunit.FrameContentHandler;
 import org.htmlunit.Page;
 import org.htmlunit.SgmlPage;
 import org.htmlunit.WebClient;
-import org.htmlunit.WebClientOptions;
 import org.htmlunit.WebRequest;
 import org.htmlunit.WebWindow;
+import org.htmlunit.html.csp.ContentSecurityPolicy;
 import org.htmlunit.javascript.AbstractJavaScriptEngine;
 import org.htmlunit.javascript.PostponedAction;
 import org.htmlunit.protocol.javascript.JavaScriptURLConnection;
 import org.htmlunit.util.UrlUtils;
+import org.w3c.dom.Attr;
 
 /**
  * Base class for frame and iframe.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author David K. Taylor
- * @author <a href="mailto:cse@dynabean.de">Christian Sell</a>
+ * @author Christian Sell
  * @author Marc Guillemot
  * @author David D. Kilzer
  * @author Stefan Anzinger
@@ -55,6 +51,7 @@ import org.htmlunit.util.UrlUtils;
  * @author Daniel Gredler
  * @author Ronald Brill
  * @author Frank Danek
+ * @author Lai Quang Duong
  */
 public abstract class BaseFrameElement extends HtmlElement {
 
@@ -80,7 +77,10 @@ public abstract class BaseFrameElement extends HtmlElement {
             // if created by the HTMLParser the src attribute is not set via setAttribute() or some other method but is
             // part of the given attributes already.
             final String src = getSrcAttribute();
-            if (ATTRIBUTE_NOT_DEFINED != src && !UrlUtils.ABOUT_BLANK.equals(src)) {
+
+            // src-less IFrame or src='about:blank'
+            // these are loaded sync
+            if (ATTRIBUTE_NOT_DEFINED != src && !UrlUtils.ABOUT_BLANK.equals(src.trim())) {
                 loadSrcWhenAddedToPage_ = true;
             }
         }
@@ -99,7 +99,7 @@ public abstract class BaseFrameElement extends HtmlElement {
                 temporaryPage.setReadyState(READY_STATE_LOADING);
             }
         }
-        catch (final FailingHttpStatusCodeException | IOException e) {
+        catch (final FailingHttpStatusCodeException | IOException ignored) {
             // should never occur
         }
         enclosedWindow_ = enclosedWindow;
@@ -120,10 +120,6 @@ public abstract class BaseFrameElement extends HtmlElement {
         if (source.isEmpty()) {
             source = UrlUtils.ABOUT_BLANK;
         }
-        else if (StringUtils.startsWithIgnoreCase(source, UrlUtils.ABOUT_SCHEME)
-                && hasFeature(FRAME_LOCATION_ABOUT_BLANK_FOR_ABOUT_SCHEME)) {
-            source = UrlUtils.ABOUT_BLANK;
-        }
 
         loadInnerPageIfPossible(source);
 
@@ -135,7 +131,7 @@ public abstract class BaseFrameElement extends HtmlElement {
             if (jsEngine != null && jsEngine.isScriptRunning()) {
                 final PostponedAction action = new PostponedAction(getPage(), "BaseFrame.loadInnerPage") {
                     @Override
-                    public void execute() throws Exception {
+                    public void execute() {
                         htmlPage.setReadyState(READY_STATE_COMPLETE);
                     }
                 };
@@ -166,10 +162,6 @@ public abstract class BaseFrameElement extends HtmlElement {
         contentLoaded_ = true;
     }
 
-    /**
-     * @throws FailingHttpStatusCodeException if the server returns a failing status code AND the property
-     *      {@link WebClientOptions#setThrowExceptionOnFailingStatusCode(boolean)} is set to true
-     */
     private void loadInnerPageIfPossible(final String src) throws FailingHttpStatusCodeException {
         setContentLoaded();
 
@@ -184,26 +176,108 @@ public abstract class BaseFrameElement extends HtmlElement {
         if (!source.isEmpty()) {
             final URL url;
             try {
-                url = ((HtmlPage) page).getFullyQualifiedUrl(source);
+                // upgrade-insecure-requests of the Content-Security-Policy (nested navigation)
+                url = ContentSecurityPolicy.upgradeInsecureRequest((HtmlPage) page,
+                        ((HtmlPage) page).getFullyQualifiedUrl(source));
             }
             catch (final MalformedURLException e) {
                 notifyIncorrectness("Invalid src attribute of " + getTagName() + ": url=[" + source + "]. Ignored.");
                 return;
             }
 
-            final WebRequest request = new WebRequest(url, page.getCharset(), page.getUrl());
+            final URL pageUrl = page.getUrl();
 
-            if (isAlreadyLoadedByAncestor(url, request.getCharset())) {
+            // accessing to local resource is forbidden for security reason
+            if (!"file".equals(pageUrl.getProtocol()) && "file".equals(url.getProtocol())) {
+                notifyIncorrectness("Not allowed to load local resource: " + source);
+                return;
+            }
+
+            final Charset pageCharset = page.getCharset();
+
+            if (isAlreadyLoadedByAncestor(url, pageCharset)) {
                 notifyIncorrectness("Recursive src attribute of " + getTagName() + ": url=[" + source + "]. Ignored.");
                 return;
             }
+
+            final WebRequest webRequest = new WebRequest(url, webClient.getBrowserVersion().getHtmlAcceptHeader(),
+                                                            webClient.getBrowserVersion().getAcceptEncodingHeader());
+            webRequest.setCharset(pageCharset);
+            webRequest.setRefererHeader(pageUrl);
+
+            // Use parent document's charset as container charset if same origin
+            // https://html.spec.whatwg.org/multipage/parsing.html#determining-the-character-encoding
+            if (Objects.equals(pageUrl.getProtocol(), url.getProtocol())
+                    && Objects.equals(pageUrl.getAuthority(), url.getAuthority())) {
+                webRequest.setDefaultResponseContentCharset(pageCharset);
+            }
+
+            // Sec-Fetch-* support (https://www.w3.org/TR/fetch-metadata/): a frame/iframe
+            // load is a navigation initiated by the containing page, but - unlike a click
+            // or form submission - never carries user activation, since there is no
+            // gesture involved in an automatic <iframe>/<frame> load.
+            final WebRequest.FetchDestination fetchDestination = this instanceof HtmlInlineFrame
+                    ? WebRequest.FetchDestination.IFRAME
+                    : WebRequest.FetchDestination.FRAME;
+            webRequest.markAsNavigation(fetchDestination, pageUrl, false);
+
+            // about:blank is not fetched and javascript: urls are checked against script-src;
+            // both are not checked against frame-src
+            final boolean[] redirectBlocked = {false};
+            final String protocol = url.getProtocol();
+            if (!"about".equals(protocol) && !"javascript".equals(protocol)) {
+                final HtmlPage htmlPage = (HtmlPage) page;
+                final boolean allowed = ContentSecurityPolicy.allowsFrame(htmlPage, url);
+                // like the browsers, the violation event (also for report only policies)
+                // is fired before the frame is loaded
+                ContentSecurityPolicy.firePendingViolations();
+                if (!allowed) {
+                    loadDeniedPage(webClient);
+                    return;
+                }
+
+                // like the browsers, redirects are checked (and upgraded) also
+                ContentSecurityPolicy.upgradeInsecureRedirects(htmlPage, webRequest);
+                webRequest.setRedirectFilter(redirectUrl -> {
+                    if (ContentSecurityPolicy.allowsFrame(htmlPage, redirectUrl)) {
+                        return true;
+                    }
+                    redirectBlocked[0] = true;
+                    return false;
+                });
+            }
+
             try {
-                webClient.getPage(enclosedWindow_, request);
+                webClient.getPage(enclosedWindow_, webRequest);
             }
             catch (final IOException e) {
                 if (LOG.isErrorEnabled()) {
                     LOG.error("IOException when getting content for " + getTagName() + ": url=[" + url + "]", e);
                 }
+            }
+
+            if (redirectBlocked[0]) {
+                loadDeniedPage(webClient);
+            }
+        }
+    }
+
+    /**
+     * Loads about:blank into the frame and marks the frame as denied by the
+     * Content-Security-Policy (like the error page shown by the browsers, the content
+     * of the frame is not accessible).
+     *
+     * @param webClient the web client
+     */
+    private void loadDeniedPage(final WebClient webClient) {
+        // like the browsers, the violation event is fired before the load event of the frame
+        ContentSecurityPolicy.firePendingViolations();
+        try {
+            webClient.loadDeniedPageInto(enclosedWindow_, FrameWindow.PageDenied.BY_CONTENT_SECURIRY_POLICY);
+        }
+        catch (final IOException e) {
+            if (LOG.isErrorEnabled()) {
+                LOG.error("IOException when loading about:blank into " + getTagName(), e);
             }
         }
     }
@@ -223,9 +297,7 @@ public abstract class BaseFrameElement extends HtmlElement {
                 return true;
             }
 
-            final URL encUrl = UrlUtils.encodeUrl(url,
-                    window.getWebClient().getBrowserVersion().hasFeature(URL_MINIMAL_QUERY_ENCODING),
-                    charset);
+            final URL encUrl = UrlUtils.encodeUrl(url, charset);
             if (UrlUtils.sameFile(encUrl, window.getEnclosedPage().getUrl())) {
                 return true;
             }
@@ -260,7 +332,7 @@ public abstract class BaseFrameElement extends HtmlElement {
      * @return the value of the attribute {@code name} or an empty string if that attribute isn't defined
      */
     public final String getNameAttribute() {
-        return getAttributeDirect("name");
+        return getAttributeDirect(NAME_ATTRIBUTE);
     }
 
     /**
@@ -269,7 +341,7 @@ public abstract class BaseFrameElement extends HtmlElement {
      * @param name the new window name
      */
     public final void setNameAttribute(final String name) {
-        setAttribute("name", name);
+        setAttribute(NAME_ATTRIBUTE, name);
     }
 
     /**
@@ -379,25 +451,32 @@ public abstract class BaseFrameElement extends HtmlElement {
      * {@inheritDoc}
      */
     @Override
-    protected void setAttributeNS(final String namespaceURI, final String qualifiedName, String attributeValue,
+    protected void setAttributeNS(final String namespaceURI, final String qualifiedName, final String attributeValue,
             final boolean notifyAttributeChangeListeners, final boolean notifyMutationObserver) {
-        if (null != attributeValue && SRC_ATTRIBUTE.equals(qualifiedName)) {
-            attributeValue = attributeValue.trim();
+        final String qualifiedNameLC = org.htmlunit.util.StringUtils.toRootLowerCase(qualifiedName);
+
+        if (null != attributeValue && SRC_ATTRIBUTE.equals(qualifiedNameLC)) {
+            final String attributeValueTrimmed = attributeValue.trim();
+
+            super.setAttributeNS(namespaceURI, qualifiedNameLC, attributeValueTrimmed, notifyAttributeChangeListeners,
+                    notifyMutationObserver);
+
+            // do not use equals() here
+            // see HTMLIFrameElement2Test.documentCreateElement_onLoad_srcAboutBlank()
+            if (UrlUtils.ABOUT_BLANK != attributeValueTrimmed) {
+                if (isAttachedToPage()) {
+                    loadSrc();
+                }
+                else {
+                    loadSrcWhenAddedToPage_ = true;
+                }
+            }
+
+            return;
         }
 
-        super.setAttributeNS(namespaceURI, qualifiedName, attributeValue, notifyAttributeChangeListeners,
+        super.setAttributeNS(namespaceURI, qualifiedNameLC, attributeValue, notifyAttributeChangeListeners,
                 notifyMutationObserver);
-
-        // do not use equals() here
-        // see HTMLIFrameElement2Test.documentCreateElement_onLoad_srcAboutBlank()
-        if (SRC_ATTRIBUTE.equals(qualifiedName) && UrlUtils.ABOUT_BLANK != attributeValue) {
-            if (isAttachedToPage()) {
-                loadSrc();
-            }
-            else {
-                loadSrcWhenAddedToPage_ = true;
-            }
-        }
     }
 
     /**

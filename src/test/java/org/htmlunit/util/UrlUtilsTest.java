@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,13 +15,14 @@
 package org.htmlunit.util;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.InetAddress;
 import java.net.URL;
 
-import org.junit.Test;
-
-import org.htmlunit.SimpleWebTestCase;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link UrlUtils}.
@@ -33,7 +34,7 @@ import org.htmlunit.SimpleWebTestCase;
  * @author Ronald Brill
  * @author Hartmut Arlt
  */
-public class UrlUtilsTest extends SimpleWebTestCase {
+public class UrlUtilsTest {
 
     /**
      * @throws Exception if the test fails
@@ -280,9 +281,10 @@ public class UrlUtilsTest extends SimpleWebTestCase {
     /**
      * Test {@link UrlUtils#resolveUrl(String, String)} with the normal examples taken from
      * <a href="http://www.faqs.org/rfcs/rfc1808.html">RFC1808</a> Section 5.1.
+     * @throws Exception if the test fails
      */
     @Test
-    public void resolveUrlWithNormalExamples() {
+    public void resolveUrlWithNormalExamples() throws Exception {
         final String baseUrl = "http://a/b/c/d;p?q#f";
 
         assertEquals("g:h",                  UrlUtils.resolveUrl(baseUrl, "g:h"));
@@ -312,8 +314,9 @@ public class UrlUtilsTest extends SimpleWebTestCase {
 
         //Following two cases were failing when original implementation was modified to handle
         //the cases given in RFC 1808. Lots of other test cases failed because of that.
-        assertEquals(URL_FIRST + "foo.xml", UrlUtils.resolveUrl(URL_FIRST, "/foo.xml"));
-        assertEquals(URL_FIRST + "foo.xml", UrlUtils.resolveUrl(URL_FIRST, "foo.xml"));
+        final URL url = new URL("http://localhost:12345/");
+        assertEquals(url + "foo.xml", UrlUtils.resolveUrl(url, "/foo.xml"));
+        assertEquals(url + "foo.xml", UrlUtils.resolveUrl(url, "foo.xml"));
     }
 
     /**
@@ -333,7 +336,7 @@ public class UrlUtilsTest extends SimpleWebTestCase {
 //        assertEquals("http://a/../g",        UrlUtils.resolveUrl(baseUrl, "/../g"));
         assertEquals("http://a/g",        UrlUtils.resolveUrl(baseUrl, "../../../g"));
         assertEquals("http://a/g",     UrlUtils.resolveUrl(baseUrl, "../../../../g"));
-        assertEquals("http://a/./g",         UrlUtils.resolveUrl(baseUrl, "/./g"));
+        assertEquals("http://a/g",         UrlUtils.resolveUrl(baseUrl, "/./g"));
         assertEquals("http://a/g",        UrlUtils.resolveUrl(baseUrl, "/../g"));
 
         assertEquals("http://a/g",           UrlUtils.resolveUrl(baseUrl, "/../../g"));
@@ -367,6 +370,8 @@ public class UrlUtilsTest extends SimpleWebTestCase {
 
         assertEquals("http://a/f.html", UrlUtils.resolveUrl("http://a/otherFile.html", "../f.html"));
         assertEquals("http://a/f.html", UrlUtils.resolveUrl("http://a/otherFile.html", "../../f.html"));
+
+        assertEquals("http://a/a/b", UrlUtils.resolveUrl(baseUrl, "/a/./b"));
     }
 
     /**
@@ -448,23 +453,23 @@ public class UrlUtilsTest extends SimpleWebTestCase {
     public void percent() throws Exception {
         URL url = new URL("http://localhost/bug%21.html");
         assertEquals("http://localhost/bug%21.html",
-                UrlUtils.encodeUrl(url, false, ISO_8859_1));
+                UrlUtils.encodeUrl(url, ISO_8859_1).toExternalForm());
 
         url = new URL("http://localhost/bug%0F.html");
         assertEquals("http://localhost/bug%0F.html",
-                UrlUtils.encodeUrl(url, false, ISO_8859_1));
+                UrlUtils.encodeUrl(url, ISO_8859_1).toExternalForm());
 
         url = new URL("http://localhost/bug%ff.html");
         assertEquals("http://localhost/bug%ff.html",
-                UrlUtils.encodeUrl(url, false, ISO_8859_1));
+                UrlUtils.encodeUrl(url, ISO_8859_1).toExternalForm());
 
         url = new URL("http://localhost/bug%AB.html");
         assertEquals("http://localhost/bug%AB.html",
-                UrlUtils.encodeUrl(url, false, ISO_8859_1));
+                UrlUtils.encodeUrl(url, ISO_8859_1).toExternalForm());
 
         url = new URL("http://john.smith:secret@localhost/bug%AB.html");
         assertEquals("http://john.smith:secret@localhost/bug%AB.html",
-                UrlUtils.encodeUrl(url, false, ISO_8859_1));
+                UrlUtils.encodeUrl(url, ISO_8859_1).toExternalForm());
     }
 
     /**
@@ -475,35 +480,35 @@ public class UrlUtilsTest extends SimpleWebTestCase {
     public void percentEncoding() throws Exception {
         URL url = new URL("http://localhost/bug%.html");
         assertEquals("http://localhost/bug%25.html",
-                UrlUtils.encodeUrl(url, false, ISO_8859_1));
+                UrlUtils.encodeUrl(url, ISO_8859_1).toExternalForm());
 
         url = new URL("http://localhost/bug%a.html");
         assertEquals("http://localhost/bug%25a.html",
-                UrlUtils.encodeUrl(url, false, ISO_8859_1));
+                UrlUtils.encodeUrl(url, ISO_8859_1).toExternalForm());
 
         url = new URL("http://localhost/bug%ak.html");
         assertEquals("http://localhost/bug%25ak.html",
-                UrlUtils.encodeUrl(url, false, ISO_8859_1));
+                UrlUtils.encodeUrl(url, ISO_8859_1).toExternalForm());
 
         url = new URL("http://localhost/bug.html?namelist=Woman%2g%20Daily");
         assertEquals("http://localhost/bug.html?namelist=Woman%252g%20Daily",
-                UrlUtils.encodeUrl(url, false, ISO_8859_1));
+                UrlUtils.encodeUrl(url, ISO_8859_1).toExternalForm());
 
         url = new URL("http://localhost/bug.html?namelist=Woman%u2122%20Daily");
         assertEquals("http://localhost/bug.html?namelist=Woman%25u2122%20Daily",
-                UrlUtils.encodeUrl(url, false, ISO_8859_1));
+                UrlUtils.encodeUrl(url, ISO_8859_1).toExternalForm());
 
         url = new URL("http://localhost/bug.html?%");
         assertEquals("http://localhost/bug.html?%25",
-                UrlUtils.encodeUrl(url, false, ISO_8859_1));
+                UrlUtils.encodeUrl(url, ISO_8859_1).toExternalForm());
 
         url = new URL("http://localhost/bug.html?%2");
         assertEquals("http://localhost/bug.html?%252",
-                UrlUtils.encodeUrl(url, false, ISO_8859_1));
+                UrlUtils.encodeUrl(url, ISO_8859_1).toExternalForm());
 
         url = new URL("http://localhost/bug.html?%2x");
         assertEquals("http://localhost/bug.html?%252x",
-                UrlUtils.encodeUrl(url, false, ISO_8859_1));
+                UrlUtils.encodeUrl(url, ISO_8859_1).toExternalForm());
     }
 
     /**
@@ -514,27 +519,27 @@ public class UrlUtilsTest extends SimpleWebTestCase {
     public void percentEncoding2() throws Exception {
         URL url = new URL("http://localhost/foo%%20bar.html");
         assertEquals("http://localhost/foo%25%20bar.html",
-                UrlUtils.encodeUrl(url, false, ISO_8859_1));
+                UrlUtils.encodeUrl(url, ISO_8859_1).toExternalForm());
 
         url = new URL("http://localhost/foo%20bar.html");
         assertEquals("http://localhost/foo%20bar.html",
-                UrlUtils.encodeUrl(url, false, ISO_8859_1));
+                UrlUtils.encodeUrl(url, ISO_8859_1).toExternalForm());
 
         url = new URL("http://localhost/foo%ar.html");
         assertEquals("http://localhost/foo%25ar.html",
-                UrlUtils.encodeUrl(url, false, ISO_8859_1));
+                UrlUtils.encodeUrl(url, ISO_8859_1).toExternalForm());
 
         url = new URL("http://localhost/foo%%xyz.html");
         assertEquals("http://localhost/foo%25%25xyz.html",
-                UrlUtils.encodeUrl(url, false, ISO_8859_1));
+                UrlUtils.encodeUrl(url, ISO_8859_1).toExternalForm());
 
         url = new URL("http://localhost/foo%20%xyz.html");
         assertEquals("http://localhost/foo%20%25xyz.html",
-                UrlUtils.encodeUrl(url, false, ISO_8859_1));
+                UrlUtils.encodeUrl(url, ISO_8859_1).toExternalForm());
 
         url = new URL("http://localhost/foo%2x%bar.html");
         assertEquals("http://localhost/foo%252x%bar.html",
-                UrlUtils.encodeUrl(url, false, ISO_8859_1));
+                UrlUtils.encodeUrl(url, ISO_8859_1).toExternalForm());
     }
 
     /**
@@ -585,8 +590,8 @@ public class UrlUtilsTest extends SimpleWebTestCase {
         // issue #1787
         // final URL u1 = new URL("http://sourceforge.net/");
         // final URL u2 = new URL("http://ch3.sourceforge.net/");
-        final URL u1 = new URL("http://htmlunit.org/");
-        final URL u2 = new URL("http://host1.htmlunit.org/");
+        final URL u1 = new URL("http://htmlunit-dev.org/");
+        final URL u2 = new URL("http://host1.htmlunit-dev.org/");
         assertEquals(InetAddress.getByName(u1.getHost()), InetAddress.getByName(u2.getHost()));
         assertFalse(UrlUtils.sameFile(u1, u2));
     }
@@ -620,5 +625,165 @@ public class UrlUtilsTest extends SimpleWebTestCase {
                     UrlUtils.normalize(new URL("https://localhost:443/bug.html")));
         assertEquals("https://localhost:8443/bug.html",
                     UrlUtils.normalize(new URL("https://localhost:8443/bug.html")));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void sameOriginSameProtocolHostPort() throws Exception {
+        final URL url1 = new URL("http://example.com:8080/path1");
+        final URL url2 = new URL("http://example.com:8080/path2");
+        assertTrue(UrlUtils.isSameOrigin(url1, url2));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void sameOriginDefaultHttpPort() throws Exception {
+        final URL url1 = new URL("http://example.com/path1");
+        final URL url2 = new URL("http://example.com:80/path2");
+        assertTrue(UrlUtils.isSameOrigin(url1, url2));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void sameOriginDefaultHttpsPort() throws Exception {
+        final URL url1 = new URL("https://example.com/path1");
+        final URL url2 = new URL("https://example.com:443/path2");
+        assertTrue(UrlUtils.isSameOrigin(url1, url2));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void differentOriginProtocol() throws Exception {
+        final URL url1 = new URL("http://example.com/path1");
+        final URL url2 = new URL("https://example.com/path2");
+        assertFalse(UrlUtils.isSameOrigin(url1, url2));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void differentOriginHost() throws Exception {
+        final URL url1 = new URL("http://example.com/path1");
+        final URL url2 = new URL("http://other.com/path2");
+        assertFalse(UrlUtils.isSameOrigin(url1, url2));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void differentOriginPort() throws Exception {
+        final URL url1 = new URL("http://example.com:8080/path1");
+        final URL url2 = new URL("http://example.com:9090/path2");
+        assertFalse(UrlUtils.isSameOrigin(url1, url2));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void differentOriginHttpsToHttp() throws Exception {
+        final URL url1 = new URL("https://example.com:443/path1");
+        final URL url2 = new URL("http://example.com:80/path2");
+        assertFalse(UrlUtils.isSameOrigin(url1, url2));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void sameOriginWithQuery() throws Exception {
+        final URL url1 = new URL("http://example.com/path?query1=value1");
+        final URL url2 = new URL("http://example.com/other?query2=value2");
+        assertTrue(UrlUtils.isSameOrigin(url1, url2));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void sameOriginWithFragment() throws Exception {
+        final URL url1 = new URL("http://example.com/path#fragment1");
+        final URL url2 = new URL("http://example.com/path#fragment2");
+        assertTrue(UrlUtils.isSameOrigin(url1, url2));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void sameOriginCaseSensitiveHost() throws Exception {
+        final URL url1 = new URL("http://Example.Com/path1");
+        final URL url2 = new URL("http://example.com/path2");
+        assertTrue(UrlUtils.isSameOrigin(url1, url2));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void sameOriginCaseSensitiveProtocol() throws Exception {
+        final URL url1 = new URL("HTTP://example.com/path1");
+        final URL url2 = new URL("http://example.com/path2");
+        assertTrue(UrlUtils.isSameOrigin(url1, url2));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void differentOriginSubdomain() throws Exception {
+        final URL url1 = new URL("http://example.com/path1");
+        final URL url2 = new URL("http://sub.example.com/path2");
+        assertFalse(UrlUtils.isSameOrigin(url1, url2));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void sameOriginFileProtocol() throws Exception {
+        final URL url1 = new URL("file:///path/to/file1.html");
+        final URL url2 = new URL("file:///path/to/file2.html");
+        assertTrue(UrlUtils.isSameOrigin(url1, url2));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void sameOriginCustomPort() throws Exception {
+        final URL url1 = new URL("http://example.com:3000/api/v1");
+        final URL url2 = new URL("http://example.com:3000/api/v2");
+        assertTrue(UrlUtils.isSameOrigin(url1, url2));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void differentOriginHttpsDefaultVsCustom() throws Exception {
+        final URL url1 = new URL("https://example.com/path1");
+        final URL url2 = new URL("https://example.com:8443/path2");
+        assertFalse(UrlUtils.isSameOrigin(url1, url2));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void sameOriginWithUserInfo() throws Exception {
+        final URL url1 = new URL("http://user1:pass1@example.com/path1");
+        final URL url2 = new URL("http://user2:pass2@example.com/path2");
+        assertTrue(UrlUtils.isSameOrigin(url1, url2));
     }
 }

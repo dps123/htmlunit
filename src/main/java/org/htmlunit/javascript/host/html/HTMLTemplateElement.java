@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,6 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
 import org.htmlunit.html.HtmlTemplate;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
@@ -30,27 +25,36 @@ import org.htmlunit.javascript.host.dom.DocumentFragment;
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLTemplateElement">MDN Documentation</a>
  */
-@JsxClass(domClass = HtmlTemplate.class, value = {CHROME, EDGE, FF, FF_ESR})
+@JsxClass(domClass = HtmlTemplate.class)
 public class HTMLTemplateElement extends HTMLElement {
 
+    private DocumentFragment content_;
+
     /**
-     * Creates a new instance.
+     * JavaScript constructor.
      */
+    @Override
     @JsxConstructor
-    public HTMLTemplateElement() {
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
+     * Returns the value of the {@code content} property.
      * @return the value of the {@code content} property
      */
     @JsxGetter
     public DocumentFragment getContent() {
-        final DocumentFragment result = new DocumentFragment();
-        result.setPrototype(getPrototype(result.getClass()));
-        result.setParentScope(getParentScope());
-        result.setDomNode(((HtmlTemplate) getDomNodeOrDie()).getContent());
-
-        return result;
+        if (content_ == null) {
+            final DocumentFragment result = new DocumentFragment();
+            result.setPrototype(getPrototype(result.getClass()));
+            result.setParentScope(getParentScope());
+            result.setDomNode(((HtmlTemplate) getDomNodeOrDie()).getContent());
+            content_ = result;
+        }
+        return content_;
     }
 }

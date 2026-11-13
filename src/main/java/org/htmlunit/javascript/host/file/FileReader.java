@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,24 +14,20 @@
  */
 package org.htmlunit.javascript.host.file;
 
-import static org.htmlunit.BrowserVersionFeatures.JS_FILEREADER_CONTENT_TYPE;
-import static org.htmlunit.BrowserVersionFeatures.JS_FILEREADER_EMPTY_NULL;
-
 import java.io.IOException;
-import java.net.URLConnection;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.charset.UnsupportedCharsetException;
-import java.nio.file.Files;
+import java.util.Base64;
 import java.util.Locale;
 
-import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.Charsets;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import org.htmlunit.BrowserVersion;
+import org.htmlunit.corejs.javascript.Function;
+import org.htmlunit.corejs.javascript.ScriptableObject;
+import org.htmlunit.corejs.javascript.typedarrays.NativeArrayBuffer;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstant;
 import org.htmlunit.javascript.configuration.JsxConstructor;
@@ -40,20 +36,17 @@ import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.configuration.JsxSetter;
 import org.htmlunit.javascript.host.event.Event;
 import org.htmlunit.javascript.host.event.EventTarget;
+import org.htmlunit.javascript.host.event.ProgressEvent;
 import org.htmlunit.protocol.data.DataURLConnection;
 import org.htmlunit.util.MimeType;
-
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.Function;
-import org.htmlunit.corejs.javascript.ScriptableObject;
-import org.htmlunit.corejs.javascript.Undefined;
-import org.htmlunit.corejs.javascript.typedarrays.NativeArrayBuffer;
+import org.htmlunit.util.StringUtils;
 
 /**
  * A JavaScript object for {@code FileReader}.
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ * @author Lai Quang Duong
  */
 @JsxClass
 public class FileReader extends EventTarget {
@@ -62,24 +55,26 @@ public class FileReader extends EventTarget {
 
     /** No data has been loaded yet. */
     @JsxConstant
-    public static final short EMPTY = 0;
+    public static final int EMPTY = 0;
 
     /** Data is currently being loaded. */
     @JsxConstant
-    public static final short LOADING = 1;
+    public static final int LOADING = 1;
 
     /** The entire read request has been completed. */
     @JsxConstant
-    public static final short DONE = 2;
+    public static final int DONE = 2;
 
     private int readyState_ = EMPTY;
     private Object result_;
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
+    @Override
     @JsxConstructor
-    public FileReader() {
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
@@ -110,80 +105,58 @@ public class FileReader extends EventTarget {
     public void readAsDataURL(final Object object) throws IOException {
         readyState_ = LOADING;
 
+        if (!(object instanceof Blob blob)) {
+            throw JavaScriptEngine.typeError(
+                    "FileReader.readAsDataURL: Argument 1 does not implement interface Blob.");
+        }
+
         result_ = DataURLConnection.DATA_PREFIX;
 
-        final byte[] bytes = ((Blob) object).getBytes();
-        final String value = new String(new Base64().encode(bytes), StandardCharsets.US_ASCII);
-        final BrowserVersion browserVersion = getBrowserVersion();
+        final byte[] bytes = blob.getBytes();
+        fireEvent(new ProgressEvent(this, Event.TYPE_LOAD_START, true, 0, bytes.length));
+        fireEvent(new ProgressEvent(this, Event.TYPE_PROGRESS, true, bytes.length, bytes.length));
 
-        String contentType = ((Blob) object).getType();
-        if (StringUtils.isEmpty(contentType) && !browserVersion.hasFeature(JS_FILEREADER_EMPTY_NULL)) {
+        final String value = new String(Base64.getEncoder().encode(bytes), StandardCharsets.US_ASCII);
+
+        String contentType = blob.getType();
+        if (StringUtils.isEmptyOrNull(contentType)) {
             contentType = MimeType.APPLICATION_OCTET_STREAM;
         }
 
-        if (object instanceof File) {
-            final java.io.File file = ((File) object).getFile();
-            if (value.isEmpty()) {
-                contentType = URLConnection.guessContentTypeFromName(file.getName());
-            }
-            else {
-                contentType = Files.probeContentType(file.toPath());
-                // this is a bit weak, on linux we get different results
-                // e.g. 'application/octet-stream' for a file with random bits
-                // instead of null on windows
-            }
-        }
-
-        if (browserVersion.hasFeature(JS_FILEREADER_EMPTY_NULL)) {
-            if (value.isEmpty()) {
-                result_ = "null";
-            }
-            else {
-                if (contentType != null) {
-                    result_ += contentType;
-                }
-                result_ += ";base64," + value;
-            }
-        }
-        else {
-            final boolean includeConentType = browserVersion.hasFeature(JS_FILEREADER_CONTENT_TYPE);
-            if (!value.isEmpty() || includeConentType) {
-                if (contentType == null) {
-                    contentType = MimeType.APPLICATION_OCTET_STREAM;
-                }
-                result_ += contentType + ";base64," + value;
-            }
-        }
+        result_ += contentType + ";base64," + value;
         readyState_ = DONE;
 
-        final Event event = new Event(this, Event.TYPE_LOAD);
-        fireEvent(event);
+        fireEvent(new ProgressEvent(this, Event.TYPE_LOAD, true, bytes.length, bytes.length));
+        fireEvent(new ProgressEvent(this, Event.TYPE_LOAD_END, true, bytes.length, bytes.length));
     }
 
     /**
      * Reads the contents of the specified {@link Blob} or {@link File}.
      * @param object the {@link Blob} or {@link File} from which to read
-     * @throws IOException if an error occurs
      */
     @JsxFunction
-    public void readAsArrayBuffer(final Object object) throws IOException {
+    public void readAsArrayBuffer(final Object object) {
         readyState_ = LOADING;
 
-        if (object instanceof Blob) {
-            final byte[] bytes = ((Blob) object).getBytes();
-
-            final NativeArrayBuffer buffer = new NativeArrayBuffer(bytes.length);
-            System.arraycopy(bytes, 0, buffer.getBuffer(), 0, bytes.length);
-            buffer.setParentScope(getParentScope());
-            buffer.setPrototype(ScriptableObject.getClassPrototype(getWindow(), buffer.getClassName()));
-
-            result_ = buffer;
+        if (!(object instanceof Blob blob)) {
+            throw JavaScriptEngine.typeError(
+                    "FileReader.readAsArrayBuffer: Argument 1 does not implement interface Blob.");
         }
 
+        final byte[] bytes = blob.getBytes();
+        fireEvent(new ProgressEvent(this, Event.TYPE_LOAD_START, true, 0, bytes.length));
+        fireEvent(new ProgressEvent(this, Event.TYPE_PROGRESS, true, bytes.length, bytes.length));
+
+        final NativeArrayBuffer buffer = new NativeArrayBuffer(bytes.length);
+        buffer.getByteBuffer().put(bytes);
+        buffer.setParentScope(getParentScope());
+        buffer.setPrototype(ScriptableObject.getClassPrototype(getParentScope(), buffer.getClassName()));
+
+        result_ = buffer;
         readyState_ = DONE;
 
-        final Event event = new Event(this, Event.TYPE_LOAD);
-        fireEvent(event);
+        fireEvent(new ProgressEvent(this, Event.TYPE_LOAD, true, bytes.length, bytes.length));
+        fireEvent(new ProgressEvent(this, Event.TYPE_LOAD_END, true, bytes.length, bytes.length));
     }
 
     /**
@@ -193,15 +166,19 @@ public class FileReader extends EventTarget {
      * contents of the file as a text string.
      * @param object the {@link Blob} or {@link File} from which to read
      * @param encoding the encoding
-     * @throws IOException if an error occurs
      */
     @JsxFunction
-    public void readAsText(final Object object, final Object encoding) throws IOException {
+    public void readAsText(final Object object, final Object encoding) {
         readyState_ = LOADING;
 
+        if (!(object instanceof Blob blob)) {
+            throw JavaScriptEngine.typeError(
+                    "FileReader.readAsText: Argument 1 does not implement interface Blob.");
+        }
+
         Charset charset = StandardCharsets.UTF_8;
-        if (encoding != null && !Undefined.isUndefined(encoding)) {
-            final String encAsString = Context.toString(encoding);
+        if (encoding != null && !JavaScriptEngine.isUndefined(encoding)) {
+            final String encAsString = JavaScriptEngine.toString(encoding);
             if (StringUtils.isNotBlank(encAsString)) {
                 try {
                     charset = Charsets.toCharset(encAsString.trim().toLowerCase(Locale.ROOT));
@@ -215,14 +192,51 @@ public class FileReader extends EventTarget {
             }
         }
 
-        if (object instanceof Blob) {
-            result_ = new String(((Blob) object).getBytes(), charset);
-        }
+        final byte[] bytes = blob.getBytes();
+        fireEvent(new ProgressEvent(this, Event.TYPE_LOAD_START, true, 0, bytes.length));
+        fireEvent(new ProgressEvent(this, Event.TYPE_PROGRESS, true, bytes.length, bytes.length));
 
+        result_ = new String(bytes, charset);
         readyState_ = DONE;
 
-        final Event event = new Event(this, Event.TYPE_LOAD);
-        fireEvent(event);
+        fireEvent(new ProgressEvent(this, Event.TYPE_LOAD, true, bytes.length, bytes.length));
+        fireEvent(new ProgressEvent(this, Event.TYPE_LOAD_END, true, bytes.length, bytes.length));
+    }
+
+    /**
+     * Returns the {@code onloadstart} event handler for this {@link FileReader}.
+     * @return the {@code onloadstart} event handler for this {@link FileReader}
+     */
+    @JsxGetter
+    public Function getOnloadstart() {
+        return getEventHandler(Event.TYPE_LOAD_START);
+    }
+
+    /**
+     * Sets the {@code onloadstart} event handler for this {@link FileReader}.
+     * @param onloadstart the {@code onloadstart} event handler for this {@link FileReader}
+     */
+    @JsxSetter
+    public void setOnloadstart(final Object onloadstart) {
+        setEventHandler(Event.TYPE_LOAD_START, onloadstart);
+    }
+
+    /**
+     * Returns the {@code onprogress} event handler for this {@link FileReader}.
+     * @return the {@code onprogress} event handler for this {@link FileReader}
+     */
+    @JsxGetter
+    public Function getOnprogress() {
+        return getEventHandler(Event.TYPE_PROGRESS);
+    }
+
+    /**
+     * Sets the {@code onprogress} event handler for this {@link FileReader}.
+     * @param onprogress the {@code onprogress} event handler for this {@link FileReader}
+     */
+    @JsxSetter
+    public void setOnprogress(final Object onprogress) {
+        setEventHandler(Event.TYPE_PROGRESS, onprogress);
     }
 
     /**
@@ -241,6 +255,24 @@ public class FileReader extends EventTarget {
     @JsxSetter
     public void setOnload(final Object onload) {
         setEventHandler(Event.TYPE_LOAD, onload);
+    }
+
+    /**
+     * Returns the {@code onloadend} event handler for this {@link FileReader}.
+     * @return the {@code onloadend} event handler for this {@link FileReader}
+     */
+    @JsxGetter
+    public Function getOnloadend() {
+        return getEventHandler(Event.TYPE_LOAD_END);
+    }
+
+    /**
+     * Sets the {@code onloadend} event handler for this {@link FileReader}.
+     * @param onloadend the {@code onloadend} event handler for this {@link FileReader}
+     */
+    @JsxSetter
+    public void setOnloadend(final Object onloadend) {
+        setEventHandler(Event.TYPE_LOAD_END, onloadend);
     }
 
     /**

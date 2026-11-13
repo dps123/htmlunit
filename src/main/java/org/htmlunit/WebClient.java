@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,22 +16,16 @@ package org.htmlunit;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.htmlunit.BrowserVersionFeatures.CONTENT_SECURITY_POLICY_IGNORED;
-import static org.htmlunit.BrowserVersionFeatures.DIALOGWINDOW_REFERER;
-import static org.htmlunit.BrowserVersionFeatures.HTTP_HEADER_CH_UA;
-import static org.htmlunit.BrowserVersionFeatures.HTTP_HEADER_SEC_FETCH;
-import static org.htmlunit.BrowserVersionFeatures.HTTP_HEADER_UPGRADE_INSECURE_REQUEST;
-import static org.htmlunit.BrowserVersionFeatures.HTTP_REDIRECT_WITHOUT_HASH;
-import static org.htmlunit.BrowserVersionFeatures.JS_XML_SUPPORT_VIA_ACTIVEXOBJECT;
-import static org.htmlunit.BrowserVersionFeatures.URL_MINIMAL_QUERY_ENCODING;
-import static org.htmlunit.BrowserVersionFeatures.WINDOW_EXECUTE_EVENTS;
 
 import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
+import java.lang.ref.Cleaner;
+import java.lang.ref.Cleaner.Cleanable;
 import java.lang.ref.WeakReference;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -51,68 +45,72 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.function.Predicate;
+import java.util.function.UnaryOperator;
 
-import org.apache.commons.codec.DecoderException;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.http.HttpStatus;
 import org.apache.http.NoHttpResponseException;
 import org.apache.http.client.CredentialsProvider;
-import org.apache.http.cookie.ClientCookie;
-import org.apache.http.cookie.CookieOrigin;
-import org.apache.http.cookie.CookieSpec;
 import org.apache.http.cookie.MalformedCookieException;
-import org.apache.http.message.BufferedHeader;
-import org.apache.http.util.CharArrayBuffer;
-import org.htmlunit.activex.javascript.msxml.MSXMLActiveXObjectFactory;
+import org.htmlunit.attachment.Attachment;
 import org.htmlunit.attachment.AttachmentHandler;
-import org.htmlunit.corejs.javascript.ScriptableObject;
+import org.htmlunit.csp.Policy;
+import org.htmlunit.csp.PolicyList;
+import org.htmlunit.csp.url.URI;
 import org.htmlunit.css.ComputedCssStyleDeclaration;
 import org.htmlunit.cssparser.parser.CSSErrorHandler;
+import org.htmlunit.cssparser.parser.javacc.CSS3Parser;
 import org.htmlunit.html.BaseFrameElement;
 import org.htmlunit.html.DomElement;
 import org.htmlunit.html.DomNode;
 import org.htmlunit.html.FrameWindow;
 import org.htmlunit.html.FrameWindow.PageDenied;
+import org.htmlunit.html.HtmlElement;
 import org.htmlunit.html.HtmlInlineFrame;
 import org.htmlunit.html.HtmlPage;
 import org.htmlunit.html.XHtmlPage;
+import org.htmlunit.html.csp.ContentSecurityPolicyViolation;
+import org.htmlunit.html.csp.ContentSecurityPolicyViolationListener;
 import org.htmlunit.html.parser.HTMLParser;
 import org.htmlunit.html.parser.HTMLParserListener;
-import org.htmlunit.httpclient.HtmlUnitBrowserCompatCookieSpec;
+import org.htmlunit.http.Cookie;
+import org.htmlunit.http.HttpStatus;
+import org.htmlunit.http.HttpUtils;
 import org.htmlunit.httpclient.HttpClientConverter;
 import org.htmlunit.javascript.AbstractJavaScriptEngine;
 import org.htmlunit.javascript.DefaultJavaScriptErrorListener;
+import org.htmlunit.javascript.HtmlUnitScriptable;
 import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.JavaScriptErrorListener;
 import org.htmlunit.javascript.background.JavaScriptJobManager;
-import org.htmlunit.javascript.host.Element;
+import org.htmlunit.javascript.host.BroadcastChannel;
 import org.htmlunit.javascript.host.Location;
 import org.htmlunit.javascript.host.Window;
-import org.htmlunit.javascript.host.css.ComputedCSSStyleDeclaration;
 import org.htmlunit.javascript.host.dom.Node;
 import org.htmlunit.javascript.host.event.Event;
-import org.htmlunit.javascript.host.html.HTMLDocument;
-import org.htmlunit.javascript.host.html.HTMLElement;
+import org.htmlunit.javascript.host.file.Blob;
 import org.htmlunit.javascript.host.html.HTMLIFrameElement;
 import org.htmlunit.protocol.data.DataURLConnection;
-import org.htmlunit.util.Cookie;
 import org.htmlunit.util.HeaderUtils;
 import org.htmlunit.util.MimeType;
 import org.htmlunit.util.NameValuePair;
+import org.htmlunit.util.SerializableLock;
+import org.htmlunit.util.StringUtils;
 import org.htmlunit.util.UrlUtils;
+import org.htmlunit.websocket.JettyWebSocketAdapter.JettyWebSocketAdapterFactory;
+import org.htmlunit.websocket.WebSocketAdapter;
+import org.htmlunit.websocket.WebSocketAdapterFactory;
+import org.htmlunit.websocket.WebSocketListener;
 import org.htmlunit.webstart.WebStartHandler;
-
-import com.shapesecurity.salvation2.Policy;
-import com.shapesecurity.salvation2.URLs.URI;
 
 /**
  * The main starting point in HtmlUnit: this class simulates a web browser.
@@ -131,14 +129,14 @@ import com.shapesecurity.salvation2.URLs.URI;
  * <p>
  * Note: a {@link WebClient} instance is <b>not thread safe</b>. It is intended to be used from a single thread.
  * </p>
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
- * @author <a href="mailto:gudujarlson@sf.net">Mike J. Bresnahan</a>
+ * @author Mike Bowler
+ * @author Mike J. Bresnahan
  * @author Dominique Broeglin
  * @author Noboru Sinohara
- * @author <a href="mailto:chen_jun@users.sourceforge.net">Chen Jun</a>
+ * @author Chen Jun
  * @author David K. Taylor
- * @author <a href="mailto:cse@dynabean.de">Christian Sell</a>
- * @author <a href="mailto:bcurren@esomnie.com">Ben Curren</a>
+ * @author Christian Sell
+ * @author Ben Curren
  * @author Marc Guillemot
  * @author Chris Erskine
  * @author Daniel Gredler
@@ -157,7 +155,12 @@ import com.shapesecurity.salvation2.URLs.URI;
  * @author Anton Demydenko
  * @author Sergio Moreno
  * @author Lai Quang Duong
+ * @author René Schwietzke
+ * @author Sven Strickroth
+ * @author Ashutosh Panda
+ * @author Vidya m
  */
+@SuppressWarnings("PMD.TooManyFields")
 public class WebClient implements Serializable, AutoCloseable {
 
     /** Logging support. */
@@ -168,17 +171,54 @@ public class WebClient implements Serializable, AutoCloseable {
     private static final WebResponseData RESPONSE_DATA_NO_HTTP_RESPONSE = new WebResponseData(
             0, "No HTTP Response", Collections.emptyList());
 
+    static final Cleaner CLEANER = Cleaner.create();
+
+    /**
+     * These response headers are not copied from a 304 response to the cached
+     * response headers. This list is based on Chromium http_response_headers.cc
+     */
+    private static final String[] DISCARDING_304_RESPONSE_HEADER_NAMES = {
+        "connection",
+        "proxy-connection",
+        "keep-alive",
+        "www-authenticate",
+        "proxy-authenticate",
+        "proxy-authorization",
+        "te",
+        "trailer",
+        "transfer-encoding",
+        "upgrade",
+        "content-location",
+        "content-md5",
+        "etag",
+        "content-encoding",
+        "content-range",
+        "content-type",
+        "content-length",
+        "x-frame-options",
+        "x-xss-protection",
+    };
+
+    private static final String[] DISCARDING_304_HEADER_PREFIXES = {
+        "x-content-",
+        "x-webkit-"
+    };
+
     private transient WebConnection webConnection_;
     private CredentialsProvider credentialsProvider_ = new DefaultCredentialsProvider();
     private CookieManager cookieManager_ = new CookieManager();
+    private WebSocketAdapterFactory webSocketAdapterFactory_;
     private transient AbstractJavaScriptEngine<?> scriptEngine_;
     private transient List<LoadJob> loadQueue_;
     private final Map<String, String> requestHeaders_ = Collections.synchronizedMap(new HashMap<>(89));
     private IncorrectnessListener incorrectnessListener_ = new IncorrectnessListenerImpl();
     private WebConsole webConsole_;
     private transient ExecutorService executor_;
+    /** Guards the lazy creation and the shutdown of the {@link #executor_}. */
+    private final SerializableLock executorLock_ = new SerializableLock();
 
     private AlertHandler alertHandler_;
+    private ContentSecurityPolicyViolationListener contentSecurityPolicyViolationListener_;
     private ConfirmHandler confirmHandler_;
     private PromptHandler promptHandler_;
     private StatusHandler statusHandler_;
@@ -187,14 +227,18 @@ public class WebClient implements Serializable, AutoCloseable {
     private PrintHandler printHandler_;
     private WebStartHandler webStartHandler_;
     private FrameContentHandler frameContentHandler_;
-    private AppletConfirmHandler appletConfirmHandler_;
 
     private AjaxController ajaxController_ = new AjaxController();
 
     private final BrowserVersion browserVersion_;
     private PageCreator pageCreator_ = new DefaultPageCreator();
 
+    // we need a separate one to be sure the one is always informed as first
+    // one. Only then we can make sure our state is consistent when the others
+    // are informed.
+    private CurrentWindowTracker currentWindowTracker_;
     private final Set<WebWindowListener> webWindowListeners_ = new HashSet<>(5);
+
     private final List<TopLevelWindow> topLevelWindows_ =
             Collections.synchronizedList(new ArrayList<>()); // top-level windows
     private final List<WebWindow> windows_ = Collections.synchronizedList(new ArrayList<>()); // all windows
@@ -202,10 +246,15 @@ public class WebClient implements Serializable, AutoCloseable {
             Collections.synchronizedList(new ArrayList<>());
     private WebWindow currentWindow_;
 
+    private transient BlobUrlStore blobUrlStore_ = new BlobUrlStore();
+
     private HTMLParserListener htmlParserListener_;
     private CSSErrorHandler cssErrorHandler_ = new DefaultCssErrorHandler();
     private OnbeforeunloadHandler onbeforeunloadHandler_;
     private Cache cache_ = new Cache();
+
+    // mini pool to save resource when parsing CSS
+    private transient CSS3ParserPool css3ParserPool_ = new CSS3ParserPool();
 
     /** target "_blank". */
     public static final String TARGET_BLANK = "_blank";
@@ -220,15 +269,14 @@ public class WebClient implements Serializable, AutoCloseable {
 
     private ScriptPreProcessor scriptPreProcessor_;
 
-    private Map<String, String> activeXObjectMap_ = Collections.emptyMap();
-    private transient MSXMLActiveXObjectFactory msxmlActiveXObjectFactory_;
     private RefreshHandler refreshHandler_ = new NiceRefreshHandler(2);
     private JavaScriptErrorListener javaScriptErrorListener_ = new DefaultJavaScriptErrorListener();
 
     private final WebClientOptions options_ = new WebClientOptions();
     private final boolean javaScriptEngineEnabled_;
-    private final WebClientInternals internals_ = new WebClientInternals();
     private final StorageHolder storageHolder_ = new StorageHolder();
+
+    private transient Set<BroadcastChannel> broadcastChannel_ = new HashSet<>();
 
     /**
      * Creates a web client instance using the browser version returned by
@@ -308,17 +356,11 @@ public class WebClient implements Serializable, AutoCloseable {
         }
         loadQueue_ = new ArrayList<>();
 
+        webSocketAdapterFactory_ = new JettyWebSocketAdapterFactory();
+
         // The window must be constructed AFTER the script engine.
-        addWebWindowListener(new CurrentWindowTracker(this));
+        currentWindowTracker_ = new CurrentWindowTracker(this, true);
         currentWindow_ = new TopLevelWindow("", this);
-
-        if (isJavaScriptEnabled()) {
-            fireWindowOpened(new WebWindowEvent(currentWindow_, WebWindowEvent.OPEN, null, null));
-
-            if (getBrowserVersion().hasFeature(JS_XML_SUPPORT_VIA_ACTIVEXOBJECT)) {
-                initMSXMLActiveX();
-            }
-        }
     }
 
     /**
@@ -338,18 +380,6 @@ public class WebClient implements Serializable, AutoCloseable {
             final Thread thread = baseFactory_.newThread(aRunnable);
             thread.setName("WebClient Thread " + ID_++);
             return thread;
-        }
-    }
-
-    private void initMSXMLActiveX() {
-        msxmlActiveXObjectFactory_ = new MSXMLActiveXObjectFactory();
-        // TODO [IE] initialize in #init or in #initialize?
-        try {
-            msxmlActiveXObjectFactory_.init(getBrowserVersion());
-        }
-        catch (final Exception e) {
-            LOG.error("Exception while initializing MSXML ActiveX for the page", e);
-            throw new ScriptException(null, e); // BUG: null is not useful.
         }
     }
 
@@ -378,10 +408,12 @@ public class WebClient implements Serializable, AutoCloseable {
      * <p>
      * The returned {@link Page} will be created by the {@link PageCreator}
      * configured by {@link #setPageCreator(PageCreator)}, if any.
+     * </p>
      * <p>
      * The {@link DefaultPageCreator} will create a {@link Page} depending on the content type of the HTTP response,
      * basically {@link HtmlPage} for HTML content, {@link org.htmlunit.xml.XmlPage} for XML content,
      * {@link TextPage} for other text content and {@link UnexpectedPage} for anything else.
+     * </p>
      *
      * @param webWindow the WebWindow to load the result of the request into
      * @param webRequest the web request
@@ -406,10 +438,12 @@ public class WebClient implements Serializable, AutoCloseable {
      * <p>
      * The returned {@link Page} will be created by the {@link PageCreator}
      * configured by {@link #setPageCreator(PageCreator)}, if any.
+     * </p>
      * <p>
      * The {@link DefaultPageCreator} will create a {@link Page} depending on the content type of the HTTP response,
      * basically {@link HtmlPage} for HTML content, {@link org.htmlunit.xml.XmlPage} for XML content,
      * {@link TextPage} for other text content and {@link UnexpectedPage} for anything else.
+     * </p>
      *
      * @param webWindow the WebWindow to load the result of the request into
      * @param webRequest the web request
@@ -434,7 +468,7 @@ public class WebClient implements Serializable, AutoCloseable {
             final URL current = webRequest.getUrl();
             if (UrlUtils.sameFile(current, prev)
                         && current.getRef() != null
-                        && !StringUtils.equals(current.getRef(), prev.getRef())) {
+                        && !Objects.equals(current.getRef(), prev.getRef())) {
                 // We're just navigating to an anchor within the current page.
                 page.getWebResponse().getWebRequest().setUrl(current);
                 if (addToHistory) {
@@ -443,8 +477,8 @@ public class WebClient implements Serializable, AutoCloseable {
 
                 // clear the cache because the anchors are now matched by
                 // the target pseudo style
-                if (page instanceof HtmlPage) {
-                    ((HtmlPage) page).clearComputedStyles();
+                if (page instanceof HtmlPage htmlPage) {
+                    htmlPage.clearComputedStyles();
                 }
 
                 final Window window = webWindow.getScriptableObject();
@@ -457,9 +491,7 @@ public class WebClient implements Serializable, AutoCloseable {
             if (page.isHtmlPage()) {
                 final HtmlPage htmlPage = (HtmlPage) page;
                 if (!htmlPage.isOnbeforeunloadAccepted()) {
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug("The registered OnbeforeunloadHandler rejected to load a new page.");
-                    }
+                    LOG.debug("The registered OnbeforeunloadHandler rejected to load a new page.");
                     return (P) page;
                 }
             }
@@ -485,6 +517,11 @@ public class WebClient implements Serializable, AutoCloseable {
             catch (final NoHttpResponseException e) {
                 webResponse = new WebResponse(RESPONSE_DATA_NO_HTTP_RESPONSE, webRequest, 0);
             }
+
+            if (webResponse == null) {
+                // blocked by the redirect filter of the request; the window content is not changed
+                return (P) webWindow.getEnclosedPage();
+            }
         }
 
         printContentIfNecessary(webResponse);
@@ -505,7 +542,8 @@ public class WebClient implements Serializable, AutoCloseable {
     /**
      * Convenient method to build a URL and load it into the current WebWindow as it would be done
      * by {@link #getPage(WebWindow, WebRequest)}.
-     * @param url the URL of the new content
+     * @param url the URL of the new content; in contrast to real browsers plain file url's are not supported.
+     *        You have to use the 'file', 'data', 'blob', 'http' or 'https' protocol.
      * @param <P> the page type
      * @return the new page
      * @throws FailingHttpStatusCodeException if the server returns a failing status code AND the property
@@ -521,7 +559,8 @@ public class WebClient implements Serializable, AutoCloseable {
     /**
      * Convenient method to load a URL into the current top WebWindow as it would be done
      * by {@link #getPage(WebWindow, WebRequest)}.
-     * @param url the URL of the new content
+     * @param url the URL of the new content; in contrast to real browsers plain file url's are not supported.
+     *        You have to use the 'file', 'data', 'blob', 'http' or 'https' protocol.
      * @param <P> the page type
      * @return the new page
      * @throws FailingHttpStatusCodeException if the server returns a failing status code AND the property
@@ -532,7 +571,6 @@ public class WebClient implements Serializable, AutoCloseable {
         final WebRequest request = new WebRequest(url, getBrowserVersion().getHtmlAcceptHeader(),
                                                           getBrowserVersion().getAcceptEncodingHeader());
         request.setCharset(UTF_8);
-
         return getPage(getCurrentWindow().getTopWindow(), request);
     }
 
@@ -570,7 +608,7 @@ public class WebClient implements Serializable, AutoCloseable {
      */
     public Page loadWebResponseInto(final WebResponse webResponse, final WebWindow webWindow)
         throws IOException, FailingHttpStatusCodeException {
-        return loadWebResponseInto(webResponse, webWindow, false);
+        return loadWebResponseInto(webResponse, webWindow, null);
     }
 
     /**
@@ -586,8 +624,8 @@ public class WebClient implements Serializable, AutoCloseable {
      *
      * @param webResponse the response that will be used to create the new page
      * @param webWindow the window that the new page will be placed within
-     * @param forceAttachment handle this as attachment (is set to true if the call was triggered from
-     * anchor with download property set).
+     * @param forceAttachmentWithFilename if not {@code null}, handle this as an attachment with the specified name
+     *        or if an empty string ("") use the filename provided in the response
      * @throws IOException if an IO error occurs
      * @throws FailingHttpStatusCodeException if the server returns a failing status code AND the property
      *         {@link WebClientOptions#setThrowExceptionOnFailingStatusCode(boolean)} is set to true
@@ -595,12 +633,39 @@ public class WebClient implements Serializable, AutoCloseable {
      * @see #setAttachmentHandler(AttachmentHandler)
      */
     public Page loadWebResponseInto(final WebResponse webResponse, final WebWindow webWindow,
-            final boolean forceAttachment)
+            final String forceAttachmentWithFilename)
+            throws IOException, FailingHttpStatusCodeException {
+        return loadWebResponseInto(webResponse, webWindow, forceAttachmentWithFilename, null);
+    }
+
+    /**
+     * <span style="color:red">INTERNAL API - SUBJECT TO CHANGE AT ANY TIME - USE AT YOUR OWN RISK.</span><br>
+     *
+     * Loads about:blank into the given frame window and marks the content as denied
+     * (e.g. if the url of the frame is blocked by the frame-src directive of the
+     * Content-Security-Policy). Like for a page denied by frame-ancestors or X-Frame-Options,
+     * the content of the frame is not accessible and the load event is fired.
+     *
+     * @param frameWindow the frame window
+     * @param pageDenied the reason the page is denied
+     * @throws IOException if an IO error occurs
+     */
+    public void loadDeniedPageInto(final FrameWindow frameWindow, final PageDenied pageDenied)
+            throws IOException {
+        final WebResponse aboutBlank = loadWebResponse(WebRequest.newAboutBlankRequest());
+        loadWebResponseInto(aboutBlank, frameWindow, null, pageDenied);
+        if (scriptEngine_ != null) {
+            scriptEngine_.registerWindowAndMaybeStartEventLoop(frameWindow);
+        }
+    }
+
+    private Page loadWebResponseInto(final WebResponse webResponse, final WebWindow webWindow,
+            final String forceAttachmentWithFilename, final PageDenied forcedPageDenied)
             throws IOException, FailingHttpStatusCodeException {
         WebAssert.notNull("webResponse", webResponse);
         WebAssert.notNull("webWindow", webWindow);
 
-        if (webResponse.getStatusCode() == HttpStatus.SC_NO_CONTENT) {
+        if (webResponse.getStatusCode() == HttpStatus.NO_CONTENT_204) {
             return webWindow.getEnclosedPage();
         }
 
@@ -610,8 +675,19 @@ public class WebClient implements Serializable, AutoCloseable {
         }
 
         if (attachmentHandler_ != null
-                && (forceAttachment || attachmentHandler_.isAttachment(webResponse))) {
-            if (attachmentHandler_.handleAttachment(webResponse)) {
+                && (forceAttachmentWithFilename != null || attachmentHandler_.isAttachment(webResponse))) {
+
+            // check content disposition header for nothing provided
+            String filename = forceAttachmentWithFilename;
+            if (StringUtils.isEmptyOrNull(filename)) {
+                final String disp = webResponse.getResponseHeaderValue(HttpHeader.CONTENT_DISPOSITION);
+                filename = Attachment.getSuggestedFilename(disp);
+            }
+            if (StringUtils.isEmptyOrNull(filename)) {
+                filename = null;
+            }
+
+            if (attachmentHandler_.handleAttachment(webResponse, filename)) {
                 // the handling is done by the attachment handler;
                 // do not open a new window
                 return webWindow.getEnclosedPage();
@@ -619,7 +695,7 @@ public class WebClient implements Serializable, AutoCloseable {
 
             final WebWindow w = openWindow(null, null, webWindow);
             final Page page = pageCreator_.createPage(webResponse, w);
-            attachmentHandler_.handleAttachment(page);
+            attachmentHandler_.handleAttachment(page, filename);
             return page;
         }
 
@@ -631,40 +707,12 @@ public class WebClient implements Serializable, AutoCloseable {
 
         Page newPage = null;
         FrameWindow.PageDenied pageDenied = PageDenied.NONE;
-        if (windows_.contains(webWindow) || getBrowserVersion().hasFeature(WINDOW_EXECUTE_EVENTS)) {
-            if (webWindow instanceof FrameWindow) {
-                final String contentSecurityPolicy =
-                        webResponse.getResponseHeaderValue(HttpHeader.CONTENT_SECURIRY_POLICY);
-                if (StringUtils.isNotBlank(contentSecurityPolicy)
-                        && !getBrowserVersion().hasFeature(CONTENT_SECURITY_POLICY_IGNORED)) {
-                    final URL origin = UrlUtils.getUrlWithoutPathRefQuery(
-                            ((FrameWindow) webWindow).getEnclosingPage().getUrl());
-                    final URL source = UrlUtils.getUrlWithoutPathRefQuery(webResponse.getWebRequest().getUrl());
-                    final Policy policy = Policy.parseSerializedCSP(contentSecurityPolicy,
-                                                    Policy.PolicyErrorConsumer.ignored);
-                    if (!policy.allowsFrameAncestor(
-                            Optional.of(URI.parseURI(source.toExternalForm()).orElse(null)),
-                            Optional.of(URI.parseURI(origin.toExternalForm()).orElse(null)))) {
-                        pageDenied = PageDenied.BY_CONTENT_SECURIRY_POLICY;
-
-                        if (LOG.isWarnEnabled()) {
-                            LOG.warn("Load denied by Content-Security-Policy: '" + contentSecurityPolicy + "' - "
-                                    + webResponse.getWebRequest().getUrl() + "' does not permit framing.");
-                        }
-                    }
-                }
-
-                if (pageDenied == PageDenied.NONE) {
-                    final String xFrameOptions = webResponse.getResponseHeaderValue(HttpHeader.X_FRAME_OPTIONS);
-                    if ("DENY".equalsIgnoreCase(xFrameOptions)) {
-                        pageDenied = PageDenied.BY_X_FRAME_OPTIONS;
-
-                        if (LOG.isWarnEnabled()) {
-                            LOG.warn("Load denied by X-Frame-Options: DENY; - '"
-                                    + webResponse.getWebRequest().getUrl() + "' does not permit framing.");
-                        }
-                    }
-                }
+        if (windows_.contains(webWindow)) {
+            if (forcedPageDenied != null) {
+                pageDenied = forcedPageDenied;
+            }
+            else if (webWindow instanceof FrameWindow window) {
+                pageDenied = getPageDenied(webResponse, window);
             }
 
             if (pageDenied == PageDenied.NONE) {
@@ -678,7 +726,7 @@ public class WebClient implements Serializable, AutoCloseable {
 
                     ((FrameWindow) webWindow).setPageDenied(pageDenied);
                 }
-                catch (final IOException e) {
+                catch (final IOException ignored) {
                     // ignore
                 }
             }
@@ -692,8 +740,7 @@ public class WebClient implements Serializable, AutoCloseable {
                     // hack: onload should be fired the same way for all type of pages
                     // here is a hack to handle non HTML pages
                     if (isJavaScriptEnabled()
-                            && webWindow instanceof FrameWindow && !newPage.isHtmlPage()) {
-                        final FrameWindow fw = (FrameWindow) webWindow;
+                            && webWindow instanceof FrameWindow fw && !newPage.isHtmlPage()) {
                         final BaseFrameElement frame = fw.getFrameElement();
                         if (frame.hasEventHandlers("onload")) {
                             if (LOG.isDebugEnabled()) {
@@ -710,20 +757,175 @@ public class WebClient implements Serializable, AutoCloseable {
     }
 
     /**
+     * Checks if the given response is allowed to be shown in the given frame window.
+     * Like in the browsers
+     * <ul>
+     *   <li>the frame-ancestors directives of all Content-Security-Policy headers
+     *       (each header may contain a comma separated list of policies) have to allow
+     *       all ancestors of the frame (up to the top window)</li>
+     *   <li>the X-Frame-Options header is ignored if one of the policies contains
+     *       a frame-ancestors directive</li>
+     *   <li>X-Frame-Options SAMEORIGIN requires all ancestors to be same origin
+     *       with the response; unknown values (e.g. ALLOW-FROM) are ignored</li>
+     * </ul>
+     *
+     * @param webResponse the response to check
+     * @param window the frame window the response should be loaded into
+     * @return the reason the page is denied or {@link PageDenied#NONE}
+     * @throws MalformedURLException if an URL is invalid
+     */
+    private static PageDenied getPageDenied(final WebResponse webResponse, final FrameWindow window)
+            throws MalformedURLException {
+        final URL url = webResponse.getWebRequest().getUrl();
+
+        final List<Policy> policies = new ArrayList<>();
+        final Set<String> xFrameOptions = new LinkedHashSet<>();
+        for (final NameValuePair header : webResponse.getResponseHeaders()) {
+            final String value = header.getValue();
+            if (StringUtils.isBlank(value)) {
+                continue;
+            }
+
+            if (HttpHeader.CONTENT_SECURIRY_POLICY.equalsIgnoreCase(header.getName())) {
+                policies.addAll(Policy.parseSerializedCSPList(value,
+                        Policy.PolicyListErrorConsumer.ignored).getPolicies());
+            }
+            else if (HttpHeader.X_FRAME_OPTIONS.equalsIgnoreCase(header.getName())) {
+                for (final String option : value.split(",")) {
+                    final String trimmed = option.trim().toLowerCase(Locale.ROOT);
+                    if (!trimmed.isEmpty()) {
+                        xFrameOptions.add(trimmed);
+                    }
+                }
+            }
+        }
+
+        final List<URL> ancestors = getFrameAncestorUrls(window);
+
+        boolean hasFrameAncestors = false;
+        for (final Policy policy : policies) {
+            if (policy.frameAncestors().isPresent()) {
+                hasFrameAncestors = true;
+                break;
+            }
+        }
+
+        if (hasFrameAncestors) {
+            final String origin = UrlUtils.getUrlWithoutPathRefQuery(url).toExternalForm();
+            final PolicyList policyList = new PolicyList(policies);
+            for (final URL ancestor : ancestors) {
+                final String ancestorOrigin = UrlUtils.getUrlWithoutPathRefQuery(ancestor).toExternalForm();
+                if (!policyList.allowsFrameAncestor(URI.parseURI(ancestorOrigin), URI.parseURI(origin))) {
+                    if (LOG.isWarnEnabled()) {
+                        LOG.warn("Load denied by Content-Security-Policy: '" + policyList + "' - '"
+                                + url + "' does not permit framing by '" + ancestorOrigin + "'.");
+                    }
+
+                    final ContentSecurityPolicyViolationListener listener =
+                            window.getWebClient().getContentSecurityPolicyViolationListener();
+                    if (listener != null) {
+                        final ContentSecurityPolicyViolation violation = new ContentSecurityPolicyViolation(
+                                url.toExternalForm(), ancestorOrigin, "frame-ancestors", policyList.toString(),
+                                "", "", 0, 0, webResponse.getStatusCode(), false);
+                        listener.violation(window.getEnclosingPage(), violation);
+                    }
+                    return PageDenied.BY_CONTENT_SECURIRY_POLICY;
+                }
+            }
+
+            // X-Frame-Options is ignored if there is a frame-ancestors directive
+            return PageDenied.NONE;
+        }
+
+        if (xFrameOptions.isEmpty()) {
+            return PageDenied.NONE;
+        }
+
+        if (xFrameOptions.size() > 1) {
+            // conflicting values
+            if (xFrameOptions.contains("deny")
+                    || xFrameOptions.contains("sameorigin")
+                    || xFrameOptions.contains("allowall")) {
+                return logXFrameOptionsDenied(url, xFrameOptions);
+            }
+            return PageDenied.NONE;
+        }
+
+        final String xFrameOption = xFrameOptions.iterator().next();
+        if ("deny".equals(xFrameOption)) {
+            return logXFrameOptionsDenied(url, xFrameOptions);
+        }
+        if ("sameorigin".equals(xFrameOption)) {
+            for (final URL ancestor : ancestors) {
+                if (!UrlUtils.isSameOrigin(ancestor, url)) {
+                    return logXFrameOptionsDenied(url, xFrameOptions);
+                }
+            }
+        }
+        return PageDenied.NONE;
+    }
+
+    private static PageDenied logXFrameOptionsDenied(final URL url, final Set<String> xFrameOptions) {
+        if (LOG.isWarnEnabled()) {
+            LOG.warn("Load denied by X-Frame-Options: " + xFrameOptions + " - '"
+                    + url + "' does not permit framing.");
+        }
+        return PageDenied.BY_X_FRAME_OPTIONS;
+    }
+
+    /**
+     * Returns the urls of all ancestors of the given frame window (starting with the
+     * page containing the frame up to the page of the top window) used as origin when
+     * checking the frame-ancestors directive or the X-Frame-Options header.
+     *
+     * @param window the frame window
+     * @return the urls
+     */
+    private static List<URL> getFrameAncestorUrls(final FrameWindow window) {
+        final List<URL> urls = new ArrayList<>();
+        WebWindow current = window;
+        while (current instanceof FrameWindow frameWindow) {
+            final Page page = frameWindow.getEnclosingPage();
+            urls.add(getFrameAncestorUrl(page));
+            current = page.getEnclosingWindow();
+        }
+        return urls;
+    }
+
+    /**
+     * Returns the url of the given page used as origin when checking the frame-ancestors
+     * directive of a content security policy. Like in the browsers, an about:blank frame
+     * inherits the origin of its parent.
+     *
+     * @param page the page containing the frame
+     * @return the url
+     */
+    private static URL getFrameAncestorUrl(final Page page) {
+        Page current = page;
+        URL url = current.getUrl();
+        while (UrlUtils.ABOUT_BLANK.equals(url.toExternalForm())
+                && current.getEnclosingWindow() instanceof FrameWindow frameWindow) {
+            current = frameWindow.getEnclosingPage();
+            url = current.getUrl();
+        }
+        return url;
+    }
+
+    /**
      * <span style="color:red">INTERNAL API - SUBJECT TO CHANGE AT ANY TIME - USE AT YOUR OWN RISK.</span>
      *
      * <p>Logs the response's content if its status code indicates a request failure and
      * {@link WebClientOptions#isPrintContentOnFailingStatusCode()} returns {@code true}.
+     * </p>
      *
      * @param webResponse the response whose content may be logged
      */
     public void printContentIfNecessary(final WebResponse webResponse) {
-        if (getOptions().isPrintContentOnFailingStatusCode()) {
-            if (!webResponse.isSuccess() && LOG.isInfoEnabled()) {
-                final String contentType = webResponse.getContentType();
-                LOG.info("statusCode=[" + webResponse.getStatusCode() + "] contentType=[" + contentType + "]");
-                LOG.info(webResponse.getContentAsString());
-            }
+        if (getOptions().isPrintContentOnFailingStatusCode()
+                && !webResponse.isSuccess() && LOG.isInfoEnabled()) {
+            final String contentType = webResponse.getContentType();
+            LOG.info("statusCode=[" + webResponse.getStatusCode() + "] contentType=[" + contentType + "]");
+            LOG.info(webResponse.getContentAsString());
         }
     }
 
@@ -732,6 +934,7 @@ public class WebClient implements Serializable, AutoCloseable {
      *
      * <p>Throws a {@link FailingHttpStatusCodeException} if the request's status code indicates a request
      * failure and {@link WebClientOptions#isThrowExceptionOnFailingStatusCode()} returns {@code true}.
+     * </p>
      *
      * @param webResponse the response which may trigger a {@link FailingHttpStatusCodeException}
      */
@@ -844,6 +1047,23 @@ public class WebClient implements Serializable, AutoCloseable {
     }
 
     /**
+     * Sets the listener informed about violations of the Content-Security-Policy of the pages.
+     * @param listener the new listener or null if none is specified
+     * @see ContentSecurityPolicyViolationListener
+     */
+    public void setContentSecurityPolicyViolationListener(final ContentSecurityPolicyViolationListener listener) {
+        contentSecurityPolicyViolationListener_ = listener;
+    }
+
+    /**
+     * Returns the listener informed about violations of the Content-Security-Policy of the pages.
+     * @return the listener or null if one hasn't been set
+     */
+    public ContentSecurityPolicyViolationListener getContentSecurityPolicyViolationListener() {
+        return contentSecurityPolicyViolationListener_;
+    }
+
+    /**
      * Sets the handler that will be executed when the JavaScript method Window.confirm() is called.
      * @param handler the new handler or null if no handler is to be used
      */
@@ -895,15 +1115,17 @@ public class WebClient implements Serializable, AutoCloseable {
      * Returns the executor for this {@link WebClient}.
      * @return the executor
      */
-    public synchronized Executor getExecutor() {
-        if (executor_ == null) {
-            final ThreadPoolExecutor threadPoolExecutor = (ThreadPoolExecutor) Executors.newCachedThreadPool();
-            threadPoolExecutor.setThreadFactory(new ThreadNamingFactory(threadPoolExecutor.getThreadFactory()));
-            // threadPoolExecutor.prestartAllCoreThreads();
-            executor_ = threadPoolExecutor;
-        }
+    public Executor getExecutor() {
+        synchronized (executorLock_) {
+            if (executor_ == null) {
+                final ThreadPoolExecutor threadPoolExecutor = (ThreadPoolExecutor) Executors.newCachedThreadPool();
+                threadPoolExecutor.setThreadFactory(new ThreadNamingFactory(threadPoolExecutor.getThreadFactory()));
+                // threadPoolExecutor.prestartAllCoreThreads();
+                executor_ = threadPoolExecutor;
+            }
 
-        return executor_;
+            return executor_;
+        }
     }
 
     /**
@@ -912,12 +1134,14 @@ public class WebClient implements Serializable, AutoCloseable {
      * an IllegalStateExceptions is thrown.
      * @param executor the new Executor.
      */
-    public synchronized void setExecutor(final ExecutorService executor) {
-        if (executor_ != null) {
-            throw new IllegalStateException("Can't change the executor after first use.");
-        }
+    public void setExecutor(final ExecutorService executor) {
+        synchronized (executorLock_) {
+            if (executor_ != null) {
+                throw new IllegalStateException("Can't change the executor after first use.");
+            }
 
-        executor_ = executor;
+            executor_ = executor;
+        }
     }
 
     /**
@@ -982,23 +1206,28 @@ public class WebClient implements Serializable, AutoCloseable {
         currentWindow_ = window;
 
         // when marking an iframe window as current we have no need to move the focus
-        final boolean isIFrame = currentWindow_ instanceof FrameWindow
-                && ((FrameWindow) currentWindow_).getFrameElement() instanceof HtmlInlineFrame;
+        final boolean isIFrame = currentWindow_ instanceof FrameWindow fw
+                && fw.getFrameElement() instanceof HtmlInlineFrame;
         if (!isIFrame) {
             //1. activeElement becomes focused element for new current window
             //2. onFocus event is triggered for focusedElement of new current window
             final Page enclosedPage = currentWindow_.getEnclosedPage();
             if (enclosedPage != null && enclosedPage.isHtmlPage()) {
-                final Window jsWindow = currentWindow_.getScriptableObject();
-                if (jsWindow != null) {
-                    final HTMLElement activeElement =
-                            ((HTMLDocument) jsWindow.getDocument()).getActiveElement();
-                    if (activeElement != null) {
-                        ((HtmlPage) enclosedPage).setFocusedElement(activeElement.getDomNodeOrDie(), true);
-                    }
+                final HtmlPage enclosedHtmlPage = (HtmlPage) enclosedPage;
+                final HtmlElement activeElement = enclosedHtmlPage.getActiveElement();
+                if (activeElement != null) {
+                    enclosedHtmlPage.setFocusedElement(activeElement, true);
                 }
             }
         }
+    }
+
+    /**
+     * Returns the blob URL store for this client.
+     * @return the {@link BlobUrlStore} for this client
+     */
+    public BlobUrlStore getBlobUrlStore() {
+        return blobUrlStore_;
     }
 
     /**
@@ -1021,20 +1250,39 @@ public class WebClient implements Serializable, AutoCloseable {
     }
 
     private void fireWindowContentChanged(final WebWindowEvent event) {
+        if (currentWindowTracker_ != null) {
+            currentWindowTracker_.webWindowContentChanged(event);
+        }
         for (final WebWindowListener listener : new ArrayList<>(webWindowListeners_)) {
             listener.webWindowContentChanged(event);
         }
+
+        blobUrlStore_.removeForPage(event.getOldPage());
     }
 
     private void fireWindowOpened(final WebWindowEvent event) {
+        if (currentWindowTracker_ != null) {
+            currentWindowTracker_.webWindowOpened(event);
+        }
         for (final WebWindowListener listener : new ArrayList<>(webWindowListeners_)) {
             listener.webWindowOpened(event);
         }
     }
 
     private void fireWindowClosed(final WebWindowEvent event) {
+        if (currentWindowTracker_ != null) {
+            currentWindowTracker_.webWindowClosed(event);
+        }
+
         for (final WebWindowListener listener : new ArrayList<>(webWindowListeners_)) {
             listener.webWindowClosed(event);
+        }
+
+        blobUrlStore_.removeForPage(event.getOldPage());
+
+        // to open a new top level window if all others are gone
+        if (currentWindowTracker_ != null) {
+            currentWindowTracker_.afterWebWindowClosedListenersProcessed(event);
         }
     }
 
@@ -1072,10 +1320,8 @@ public class WebClient implements Serializable, AutoCloseable {
                 request.setCharset(UTF_8);
 
                 final Page openerPage = opener.getEnclosedPage();
-                if (getBrowserVersion().hasFeature(DIALOGWINDOW_REFERER)
-                        && openerPage != null
-                        && openerPage.getUrl() != null) {
-                    request.setRefererlHeader(openerPage.getUrl());
+                if (openerPage != null && openerPage.getUrl() != null) {
+                    request.setRefererHeader(openerPage.getUrl());
                 }
                 getPage(window, request);
             }
@@ -1117,11 +1363,10 @@ public class WebClient implements Serializable, AutoCloseable {
                 windowToOpen = "";
             }
             webWindow = new TopLevelWindow(windowToOpen, this);
-            fireWindowOpened(new WebWindowEvent(webWindow, WebWindowEvent.OPEN, null, null));
         }
 
-        if (webWindow instanceof TopLevelWindow && webWindow != opener.getTopWindow()) {
-            ((TopLevelWindow) webWindow).setOpener(opener);
+        if (webWindow instanceof TopLevelWindow window && webWindow != opener.getTopWindow()) {
+            window.setOpener(opener);
         }
 
         return webWindow;
@@ -1151,13 +1396,13 @@ public class WebClient implements Serializable, AutoCloseable {
             if (page != null && page.isHtmlPage()) {
                 try {
                     final FrameWindow frame = ((HtmlPage) page).getFrameByName(name);
-                    final ScriptableObject scriptable = frame.getFrameElement().getScriptableObject();
-                    if (scriptable instanceof HTMLIFrameElement) {
-                        ((HTMLIFrameElement) scriptable).onRefresh();
+                    final HtmlUnitScriptable scriptable = frame.getFrameElement().getScriptableObject();
+                    if (scriptable instanceof HTMLIFrameElement element) {
+                        element.onRefresh();
                     }
                     return frame;
                 }
-                catch (final ElementNotFoundException e) {
+                catch (final ElementNotFoundException expected) {
                     // Fall through
                 }
             }
@@ -1172,7 +1417,7 @@ public class WebClient implements Serializable, AutoCloseable {
         try {
             return getWebWindowByName(name);
         }
-        catch (final WebWindowNotFoundException e) {
+        catch (final WebWindowNotFoundException expected) {
             // Fall through - a new window will be created below
         }
         return null;
@@ -1195,15 +1440,14 @@ public class WebClient implements Serializable, AutoCloseable {
         WebAssert.notNull("opener", opener);
 
         final DialogWindow window = new DialogWindow(this, dialogArguments);
-        fireWindowOpened(new WebWindowEvent(window, WebWindowEvent.OPEN, null, null));
 
         final HtmlPage openerPage = (HtmlPage) opener.getEnclosedPage();
         final WebRequest request = new WebRequest(url, getBrowserVersion().getHtmlAcceptHeader(),
                                                         getBrowserVersion().getAcceptEncodingHeader());
         request.setCharset(UTF_8);
 
-        if (getBrowserVersion().hasFeature(DIALOGWINDOW_REFERER) && openerPage != null) {
-            request.setRefererlHeader(openerPage.getUrl());
+        if (openerPage != null) {
+            request.setRefererHeader(openerPage.getUrl());
         }
 
         getPage(window, request);
@@ -1293,7 +1537,9 @@ public class WebClient implements Serializable, AutoCloseable {
      */
     public void registerWebWindow(final WebWindow webWindow) {
         WebAssert.notNull("webWindow", webWindow);
-        windows_.add(webWindow);
+        if (windows_.add(webWindow)) {
+            fireWindowOpened(new WebWindowEvent(webWindow, WebWindowEvent.OPEN, webWindow.getEnclosedPage(), null));
+        }
         // register JobManager here but don't deregister in deregisterWebWindow as it can live longer
         jobManagers_.add(new WeakReference<>(webWindow.getJobManager()));
     }
@@ -1310,6 +1556,18 @@ public class WebClient implements Serializable, AutoCloseable {
         if (windows_.remove(webWindow)) {
             fireWindowClosed(new WebWindowEvent(webWindow, WebWindowEvent.CLOSE, webWindow.getEnclosedPage(), null));
         }
+    }
+
+    /**
+     * Registers an object and a cleaning action to run when the object
+     * becomes phantom reachable. This forwards the call to our static {@link Cleaner}.
+     *
+     * @param obj   the object to monitor
+     * @param action a {@code Runnable} to invoke when the object becomes phantom reachable
+     * @return a {@code Cleanable} instance
+     */
+    public static Cleanable registerCleanerAction(final Object obj, final Runnable action) {
+        return CLEANER.register(obj, action);
     }
 
     /**
@@ -1331,21 +1589,23 @@ public class WebClient implements Serializable, AutoCloseable {
 
     private WebResponse makeWebResponseForDataUrl(final WebRequest webRequest) throws IOException {
         final URL url = webRequest.getUrl();
-        final DataURLConnection connection;
-        try {
-            connection = new DataURLConnection(url);
-        }
-        catch (final DecoderException e) {
-            throw new IOException(e.getMessage());
-        }
+
+        final DataURLConnection connection = new DataURLConnection(url);
 
         final List<NameValuePair> responseHeaders = new ArrayList<>();
         responseHeaders.add(new NameValuePair(HttpHeader.CONTENT_TYPE_LC,
             connection.getMediaType() + ";charset=" + connection.getCharset()));
 
+        if (HttpMethod.HEAD.equals(webRequest.getHttpMethod())) {
+            final WebResponseData data = new WebResponseData(200, "OK", responseHeaders);
+            return new WebResponse(data, url, webRequest.getHttpMethod(), 0);
+        }
+
         try (InputStream is = connection.getInputStream()) {
             final DownloadedContent downloadedContent =
-                    HttpWebConnection.downloadContent(is, getOptions().getMaxInMemory());
+                    HttpWebConnection.downloadContent(is,
+                            getOptions().getMaxInMemory(),
+                            getOptions().getTempFileDirectory());
             final WebResponseData data = new WebResponseData(downloadedContent, 200, "OK", responseHeaders);
             return new WebResponse(data, url, webRequest.getHttpMethod(), 0);
         }
@@ -1353,16 +1613,16 @@ public class WebClient implements Serializable, AutoCloseable {
 
     private static WebResponse makeWebResponseForAboutUrl(final WebRequest webRequest) throws MalformedURLException {
         final URL url = webRequest.getUrl();
-        final String urlString = url.toExternalForm();
-        if (UrlUtils.ABOUT_BLANK.equalsIgnoreCase(urlString)) {
-            return new StringWebResponse("", UrlUtils.URL_ABOUT_BLANK);
+        if (UrlUtils.ABOUT.equals(url.getProtocol())) {
+            if ("blank".equalsIgnoreCase(url.getPath())) {
+                if (url.getRef() == null && url.getQuery() == null) {
+                    return new StringWebResponse("", UrlUtils.URL_ABOUT_BLANK);
+                }
+                return new StringWebResponse("", url);
+            }
         }
 
-        final String urlWithoutQuery = StringUtils.substringBefore(urlString, "?");
-        if (!"blank".equalsIgnoreCase(StringUtils.substringAfter(urlWithoutQuery, UrlUtils.ABOUT_SCHEME))) {
-            throw new MalformedURLException(url + " is not supported, only about:blank is supported at the moment.");
-        }
-        return new StringWebResponse("", url);
+        throw new MalformedURLException(url + " is not supported, only about:blank is supported at the moment.");
     }
 
     /**
@@ -1390,7 +1650,7 @@ public class WebClient implements Serializable, AutoCloseable {
         }
 
         String fileUrl = cleanUrl.toExternalForm();
-        fileUrl = URLDecoder.decode(fileUrl, UTF_8.name());
+        fileUrl = URLDecoder.decode(fileUrl, UTF_8);
         final File file = new File(fileUrl.substring(5));
         if (!file.exists()) {
             // construct 404
@@ -1398,7 +1658,7 @@ public class WebClient implements Serializable, AutoCloseable {
             compiledHeaders.add(new NameValuePair(HttpHeader.CONTENT_TYPE, MimeType.TEXT_HTML));
             final WebResponseData responseData =
                 new WebResponseData(
-                        org.htmlunit.util.StringUtils
+                        StringUtils
                             .toByteArray("File: " + file.getAbsolutePath(), UTF_8),
                     404, "Not Found", compiledHeaders);
             return new WebResponse(responseData, webRequest, 0);
@@ -1410,11 +1670,35 @@ public class WebClient implements Serializable, AutoCloseable {
         final List<NameValuePair> compiledHeaders = new ArrayList<>();
         compiledHeaders.add(new NameValuePair(HttpHeader.CONTENT_TYPE, contentType));
         compiledHeaders.add(new NameValuePair(HttpHeader.LAST_MODIFIED,
-                HttpClientConverter.formatDate(new Date(file.lastModified()))));
+                HttpUtils.formatDate(new Date(file.lastModified()))));
         final WebResponseData responseData = new WebResponseData(content, 200, "OK", compiledHeaders);
         final WebResponse webResponse = new WebResponse(responseData, webRequest, 0);
         getCache().cacheIfPossible(webRequest, webResponse, null);
         return webResponse;
+    }
+
+    private WebResponse makeWebResponseForBlobUrl(final WebRequest webRequest) throws IOException {
+        final Blob fileOrBlob = blobUrlStore_.resolve(webRequest.getUrl().toString());
+        if (fileOrBlob == null) {
+            throw new FileNotFoundException("No entry for '" + webRequest.getUrl() + "' in the BlobUrlStore.");
+        }
+
+        final List<NameValuePair> headers = new ArrayList<>();
+        final String type = fileOrBlob.getType();
+        if (!StringUtils.isEmptyOrNull(type)) {
+            headers.add(new NameValuePair(HttpHeader.CONTENT_TYPE, fileOrBlob.getType()));
+        }
+        if (fileOrBlob instanceof org.htmlunit.javascript.host.file.File file) {
+            final String fileName = file.getName();
+            if (!StringUtils.isEmptyOrNull(fileName)) {
+                // https://datatracker.ietf.org/doc/html/rfc6266#autoid-10
+                headers.add(new NameValuePair(HttpHeader.CONTENT_DISPOSITION, "inline; filename=\"" + fileName + "\""));
+            }
+        }
+
+        final DownloadedContent content = new DownloadedContent.InMemory(fileOrBlob.getBytes());
+        final WebResponseData responseData = new WebResponseData(content, 200, "OK", headers);
+        return new WebResponse(responseData, webRequest, 0);
     }
 
     /**
@@ -1427,25 +1711,30 @@ public class WebClient implements Serializable, AutoCloseable {
      */
     public String guessContentType(final File file) {
         final String fileName = file.getName();
-        if (fileName.endsWith(".xhtml")) {
+        final String fileNameLC = fileName.toLowerCase(Locale.ROOT);
+        if (fileNameLC.endsWith(".xhtml")) {
             // Java's mime type map returns application/xml in JDK8.
             return MimeType.APPLICATION_XHTML;
         }
 
         // Java's mime type map does not know these in JDK8.
-        if (fileName.endsWith(".js")) {
-            return MimeType.APPLICATION_JAVASCRIPT;
+        if (fileNameLC.endsWith(".js")) {
+            return MimeType.TEXT_JAVASCRIPT;
         }
-        if (fileName.toLowerCase(Locale.ROOT).endsWith(".css")) {
+
+        if (fileNameLC.endsWith(".css")) {
             return MimeType.TEXT_CSS;
         }
 
-        String contentType = URLConnection.guessContentTypeFromName(fileName);
+        String contentType = null;
+        if (!fileNameLC.endsWith(".php")) {
+            contentType = URLConnection.guessContentTypeFromName(fileName);
+        }
         if (contentType == null) {
             try (InputStream inputStream = new BufferedInputStream(Files.newInputStream(file.toPath()))) {
                 contentType = URLConnection.guessContentTypeFromStream(inputStream);
             }
-            catch (final IOException e) {
+            catch (final IOException ignored) {
                 // Ignore silently.
             }
         }
@@ -1459,14 +1748,13 @@ public class WebClient implements Serializable, AutoCloseable {
         final Charset charset) throws FailingHttpStatusCodeException, IOException {
 
         HtmlPage page = null;
-        if (webWindow instanceof FrameWindow) {
-            final FrameWindow frameWindow = (FrameWindow) webWindow;
+        if (webWindow instanceof FrameWindow frameWindow) {
             page = (HtmlPage) frameWindow.getEnclosedPage();
         }
         else {
             final Page currentPage = webWindow.getEnclosedPage();
-            if (currentPage instanceof HtmlPage) {
-                page = (HtmlPage) currentPage;
+            if (currentPage instanceof HtmlPage htmlPage) {
+                page = htmlPage;
             }
         }
 
@@ -1492,19 +1780,15 @@ public class WebClient implements Serializable, AutoCloseable {
      * @return the WebResponse
      */
     public WebResponse loadWebResponse(final WebRequest webRequest) throws IOException {
-        switch (webRequest.getUrl().getProtocol()) {
-            case UrlUtils.ABOUT:
-                return makeWebResponseForAboutUrl(webRequest);
-
-            case "file":
-                return makeWebResponseForFileUrl(webRequest);
-
-            case "data":
-                return makeWebResponseForDataUrl(webRequest);
-
-            default:
-                return loadWebResponseFromWebConnection(webRequest, ALLOWED_REDIRECTIONS_SAME_URL);
-        }
+        final String protocol = webRequest.getUrl().getProtocol();
+        return switch (protocol) {
+            case UrlUtils.ABOUT -> makeWebResponseForAboutUrl(webRequest);
+            case "file" -> makeWebResponseForFileUrl(webRequest);
+            case "data" -> makeWebResponseForDataUrl(webRequest);
+            case "blob" -> makeWebResponseForBlobUrl(webRequest);
+            case "http", "https" -> loadWebResponseFromWebConnection(webRequest, ALLOWED_REDIRECTIONS_SAME_URL);
+            default -> throw new IOException("Unsupported protocol '" + protocol + "'");
+        };
     }
 
     /**
@@ -1525,8 +1809,7 @@ public class WebClient implements Serializable, AutoCloseable {
         WebAssert.notNull("method", method);
         WebAssert.notNull("parameters", parameters);
 
-        url = UrlUtils.encodeUrl(url, getBrowserVersion().hasFeature(URL_MINIMAL_QUERY_ENCODING),
-                                        webRequest.getCharset());
+        url = UrlUtils.encodeUrl(url, webRequest.getCharset());
         webRequest.setUrl(url);
 
         if (LOG.isDebugEnabled()) {
@@ -1544,7 +1827,7 @@ public class WebClient implements Serializable, AutoCloseable {
                             .getWebResponse().getContentAsString();
                         proxyConfig.setProxyAutoConfigContent(content);
                     }
-                    final String allValue = ProxyAutoConfig.evaluate(content, url);
+                    final String allValue = JavaScriptEngine.evaluateProxyAutoConfig(getBrowserVersion(), content, url);
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("Proxy Auto-Config: value '" + allValue + "' for URL " + url);
                     }
@@ -1583,13 +1866,14 @@ public class WebClient implements Serializable, AutoCloseable {
 
         // Continue according to the HTTP status code.
         final int status = webResponse.getStatusCode();
-        if (status == HttpStatus.SC_USE_PROXY) {
+        if (status == HttpStatus.USE_PROXY_305) {
             getIncorrectnessListener().notify("Ignoring HTTP status code [305] 'Use Proxy'", this);
         }
-        else if (status >= HttpStatus.SC_MOVED_PERMANENTLY
-            && status <= 308
-            && status != HttpStatus.SC_NOT_MODIFIED
-            && getOptions().isRedirectEnabled()) {
+        else if (status >= HttpStatus.MOVED_PERMANENTLY_301
+            && status <= HttpStatus.PERMANENT_REDIRECT_308
+            && status != HttpStatus.NOT_MODIFIED_304
+            && getOptions().isRedirectEnabled()
+            && !webRequest.hasHint(WebRequest.HttpHint.DoNotFollowRedirects)) {
 
             URL newUrl;
             String locationString = null;
@@ -1598,14 +1882,8 @@ public class WebClient implements Serializable, AutoCloseable {
                 if (locationString == null) {
                     return webResponse;
                 }
-                if (!getBrowserVersion().hasFeature(URL_MINIMAL_QUERY_ENCODING)) {
-                    locationString = new String(locationString.getBytes(ISO_8859_1), UTF_8);
-                }
+                locationString = new String(locationString.getBytes(ISO_8859_1), UTF_8);
                 newUrl = expandUrl(url, locationString);
-
-                if (getBrowserVersion().hasFeature(HTTP_REDIRECT_WITHOUT_HASH)) {
-                    newUrl = UrlUtils.getUrlWithNewRef(newUrl, null);
-                }
             }
             catch (final MalformedURLException e) {
                 getIncorrectnessListener().notify("Got a redirect status code [" + status + " "
@@ -1620,13 +1898,28 @@ public class WebClient implements Serializable, AutoCloseable {
             }
 
             if (allowedRedirects == 0) {
-                throw new FailingHttpStatusCodeException("Too much redirect for "
+                throw new FailingHttpStatusCodeException("Too many redirects for "
                     + webResponse.getWebRequest().getUrl(), webResponse);
             }
 
-            if (status == HttpStatus.SC_MOVED_PERMANENTLY
-                    || status == HttpStatus.SC_MOVED_TEMPORARILY
-                    || status == HttpStatus.SC_SEE_OTHER) {
+            final UnaryOperator<URL> redirectUrlMapper = webRequest.getRedirectUrlMapper();
+            if (redirectUrlMapper != null) {
+                newUrl = redirectUrlMapper.apply(newUrl);
+            }
+
+            final Predicate<URL> redirectFilter = webRequest.getRedirectFilter();
+            if (redirectFilter != null && !redirectFilter.test(newUrl)) {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Redirect to [" + newUrl + "] blocked by the redirect filter");
+                }
+                return null;
+            }
+
+            final boolean crossOriginRedirect = !UrlUtils.isSameOrigin(url, newUrl);
+
+            if (status == HttpStatus.MOVED_PERMANENTLY_301
+                    || status == HttpStatus.FOUND_302
+                    || status == HttpStatus.SEE_OTHER_303) {
                 final WebRequest wrs = new WebRequest(newUrl, HttpMethod.GET);
                 wrs.setCharset(webRequest.getCharset());
 
@@ -1636,10 +1929,20 @@ public class WebClient implements Serializable, AutoCloseable {
                 for (final Map.Entry<String, String> entry : webRequest.getAdditionalHeaders().entrySet()) {
                     wrs.setAdditionalHeader(entry.getKey(), entry.getValue());
                 }
+                if (crossOriginRedirect) {
+                    // credentials are not forwarded to another origin
+                    wrs.removeAdditionalHeader("Authorization");
+                }
+                wrs.setFetchDestination(webRequest.getFetchDestination());
+                wrs.setFetchModeOverride(webRequest.getFetchModeOverride());
+                wrs.setRequestingUrl(webRequest.getRequestingUrl());
+                wrs.setRedirectFilter(redirectFilter);
+                wrs.setRedirectUrlMapper(redirectUrlMapper);
+
                 return loadWebResponseFromWebConnection(wrs, allowedRedirects - 1);
             }
-            else if (status == HttpStatus.SC_TEMPORARY_REDIRECT
-                        || status == 308) {
+            else if (status == HttpStatus.TEMPORARY_REDIRECT_307
+                        || status == HttpStatus.PERMANENT_REDIRECT_308) {
                 // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/307
                 // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/308
                 // reuse method and body
@@ -1660,6 +1963,12 @@ public class WebClient implements Serializable, AutoCloseable {
                 for (final Map.Entry<String, String> entry : webRequest.getAdditionalHeaders().entrySet()) {
                     wrs.setAdditionalHeader(entry.getKey(), entry.getValue());
                 }
+                if (crossOriginRedirect) {
+                    // credentials are not forwarded to another origin
+                    wrs.removeAdditionalHeader("Authorization");
+                }
+                wrs.setRedirectFilter(redirectFilter);
+                wrs.setRedirectUrlMapper(redirectUrlMapper);
 
                 return loadWebResponseFromWebConnection(wrs, allowedRedirects - 1);
             }
@@ -1698,11 +2007,11 @@ public class WebClient implements Serializable, AutoCloseable {
 
         final WebResponse webResponse = getWebConnection().getResponse(webRequest);
 
-        if (webResponse.getStatusCode() >= HttpStatus.SC_INTERNAL_SERVER_ERROR) {
+        if (webResponse.getStatusCode() >= HttpStatus.INTERNAL_SERVER_ERROR_500) {
             return new WebResponseFromCache(cached, webRequest);
         }
 
-        if (webResponse.getStatusCode() == HttpStatus.SC_NOT_MODIFIED) {
+        if (webResponse.getStatusCode() == HttpStatus.NOT_MODIFIED_304) {
             final Map<String, NameValuePair> header2NameValuePair = new LinkedHashMap<>();
             for (final NameValuePair pair : cached.getResponseHeaders()) {
                 header2NameValuePair.put(pair.getName(), pair);
@@ -1724,37 +2033,6 @@ public class WebClient implements Serializable, AutoCloseable {
         getCache().cacheIfPossible(webRequest, webResponse, null);
         return webResponse;
     }
-
-    /**
-     * These response headers are not copied from a 304 response to the cached
-     * response headers. This list is based on Chromium http_response_headers.cc
-     */
-    private static final String[] DISCARDING_304_RESPONSE_HEADER_NAMES = {
-        "connection",
-        "proxy-connection",
-        "keep-alive",
-        "www-authenticate",
-        "proxy-authenticate",
-        "proxy-authorization",
-        "te",
-        "trailer",
-        "transfer-encoding",
-        "upgrade",
-        "content-location",
-        "content-md5",
-        "etag",
-        "content-encoding",
-        "content-range",
-        "content-type",
-        "content-length",
-        "x-frame-options",
-        "x-xss-protection",
-    };
-
-    private static final String[] DISCARDING_304_HEADER_PREFIXES = {
-        "x-content-",
-        "x-webkit-"
-    };
 
     /**
      * Returns true if the value of the specified header in a 304 Not Modified response should be
@@ -1792,41 +2070,8 @@ public class WebClient implements Serializable, AutoCloseable {
             wrs.setAdditionalHeader(HttpHeader.ACCEPT_LANGUAGE, getBrowserVersion().getAcceptLanguageHeader());
         }
 
-        if (getBrowserVersion().hasFeature(HTTP_HEADER_SEC_FETCH)
-                && !wrs.isAdditionalHeader(HttpHeader.SEC_FETCH_DEST)) {
-            wrs.setAdditionalHeader(HttpHeader.SEC_FETCH_DEST, "document");
-        }
-        if (getBrowserVersion().hasFeature(HTTP_HEADER_SEC_FETCH)
-                && !wrs.isAdditionalHeader(HttpHeader.SEC_FETCH_MODE)) {
-            wrs.setAdditionalHeader(HttpHeader.SEC_FETCH_MODE, "navigate");
-        }
-        if (getBrowserVersion().hasFeature(HTTP_HEADER_SEC_FETCH)
-                && !wrs.isAdditionalHeader(HttpHeader.SEC_FETCH_SITE)) {
-            wrs.setAdditionalHeader(HttpHeader.SEC_FETCH_SITE, "same-origin");
-        }
-        if (getBrowserVersion().hasFeature(HTTP_HEADER_SEC_FETCH)
-                && !wrs.isAdditionalHeader(HttpHeader.SEC_FETCH_USER)) {
-            wrs.setAdditionalHeader(HttpHeader.SEC_FETCH_USER, "?1");
-        }
-
-        if (getBrowserVersion().hasFeature(HTTP_HEADER_CH_UA)
-                && !wrs.isAdditionalHeader(HttpHeader.SEC_CH_UA)) {
-            wrs.setAdditionalHeader(HttpHeader.SEC_CH_UA, getBrowserVersion().getSecClientHintUserAgentHeader());
-        }
-        if (getBrowserVersion().hasFeature(HTTP_HEADER_CH_UA)
-                && !wrs.isAdditionalHeader(HttpHeader.SEC_CH_UA_MOBILE)) {
-            wrs.setAdditionalHeader(HttpHeader.SEC_CH_UA_MOBILE, "?0");
-        }
-        if (getBrowserVersion().hasFeature(HTTP_HEADER_CH_UA)
-                && !wrs.isAdditionalHeader(HttpHeader.SEC_CH_UA_PLATFORM)) {
-            wrs.setAdditionalHeader(HttpHeader.SEC_CH_UA_PLATFORM,
-                    getBrowserVersion().getSecClientHintUserAgentPlatformHeader());
-        }
-
-        if (getBrowserVersion().hasFeature(HTTP_HEADER_UPGRADE_INSECURE_REQUEST)
-                && !wrs.isAdditionalHeader(HttpHeader.UPGRADE_INSECURE_REQUESTS)) {
-            wrs.setAdditionalHeader(HttpHeader.UPGRADE_INSECURE_REQUESTS, "1");
-        }
+        // the sec- stuff is done later in the HttpWebConnection
+        // this implies that stuff is not visible in the MockWebConnection
     }
 
     /**
@@ -1834,13 +2079,14 @@ public class WebClient implements Serializable, AutoCloseable {
      * This is a snapshot; future changes are not reflected by this list.
      * <p>
      * The list is ordered by age, the oldest one first.
+     * </p>
      *
      * @return an immutable list of open web windows (whether they are top level windows or not)
      * @see #getWebWindowByName(String)
      * @see #getTopLevelWindows()
      */
     public List<WebWindow> getWebWindows() {
-        return Collections.unmodifiableList(new ArrayList<>(windows_));
+        return List.copyOf(windows_);
     }
 
     /**
@@ -1862,13 +2108,14 @@ public class WebClient implements Serializable, AutoCloseable {
      * This is a snapshot; future changes are not reflected by this list.
      * <p>
      * The list is ordered by age, the oldest one first.
+     * </p>
      *
      * @return an immutable list of open top level windows
      * @see #getWebWindowByName(String)
      * @see #getWebWindows()
      */
     public List<TopLevelWindow> getTopLevelWindows() {
-        return Collections.unmodifiableList(new ArrayList<>(topLevelWindows_));
+        return List.copyOf(topLevelWindows_);
     }
 
     /**
@@ -1908,33 +2155,6 @@ public class WebClient implements Serializable, AutoCloseable {
      */
     public ScriptPreProcessor getScriptPreProcessor() {
         return scriptPreProcessor_;
-    }
-
-    /**
-     * Sets the active X object map for this {@link WebClient}. The <code>Map</code> is used to map the
-     * string passed into the <code>ActiveXObject</code> constructor to a java class name. Therefore
-     * you can emulate <code>ActiveXObject</code>s in a web page's JavaScript by mapping the object
-     * name to a java class to emulate the active X object.
-     * @param activeXObjectMap the new preprocessor or null if none is specified
-     */
-    public void setActiveXObjectMap(final Map<String, String> activeXObjectMap) {
-        activeXObjectMap_ = activeXObjectMap;
-    }
-
-    /**
-     * Returns the active X object map for this {@link WebClient}.
-     * @return the active X object map
-     */
-    public Map<String, String> getActiveXObjectMap() {
-        return activeXObjectMap_;
-    }
-
-    /**
-     * Returns the MSXML ActiveX object factory (if supported).
-     * @return the msxmlActiveXObjectFactory
-     */
-    public MSXMLActiveXObjectFactory getMSXMLActiveXObjectFactory() {
-        return msxmlActiveXObjectFactory_;
     }
 
     /**
@@ -2096,7 +2316,7 @@ public class WebClient implements Serializable, AutoCloseable {
     /**
      * Returns the current {@link PrintHandler}.
      * @return the current {@link PrintHandler} or null if print
-     * requests are ignored
+     *         requests are ignored
      */
     public PrintHandler getPrintHandler() {
         return printHandler_;
@@ -2107,26 +2327,10 @@ public class WebClient implements Serializable, AutoCloseable {
      * (<a href="https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#printing">Printing Spec</a>).
      *
      * @param handler the new {@link PrintHandler} or null if you like to
-     * ignore print requests (default is null)
+     *        ignore print requests (default is null)
      */
     public void setPrintHandler(final PrintHandler handler) {
         printHandler_ = handler;
-    }
-
-    /**
-     * Sets the applet confirm handler.
-     * @param handler the new applet confirm handler handler
-     */
-    public void setAppletConfirmHandler(final AppletConfirmHandler handler) {
-        appletConfirmHandler_ = handler;
-    }
-
-    /**
-     * Returns the current applet confirm handler.
-     * @return the current applet confirm handler
-     */
-    public AppletConfirmHandler getAppletConfirmHandler() {
-        return appletConfirmHandler_;
     }
 
     /**
@@ -2185,9 +2389,11 @@ public class WebClient implements Serializable, AutoCloseable {
      */
     private static final class CurrentWindowTracker implements WebWindowListener, Serializable {
         private final WebClient webClient_;
+        private final boolean ensureOneTopLevelWindow_;
 
-        CurrentWindowTracker(final WebClient webClient) {
+        CurrentWindowTracker(final WebClient webClient, final boolean ensureOneTopLevelWindow) {
             webClient_ = webClient;
+            ensureOneTopLevelWindow_ = ensureOneTopLevelWindow;
         }
 
         /**
@@ -2199,13 +2405,7 @@ public class WebClient implements Serializable, AutoCloseable {
             if (window instanceof TopLevelWindow) {
                 webClient_.topLevelWindows_.remove(window);
                 if (window == webClient_.getCurrentWindow()) {
-                    if (webClient_.topLevelWindows_.isEmpty()) {
-                        // Must always have at least window, and there are no top-level windows left; must create one.
-                        final TopLevelWindow newWindow = new TopLevelWindow("", webClient_);
-                        webClient_.topLevelWindows_.add(newWindow);
-                        webClient_.setCurrentWindow(newWindow);
-                    }
-                    else {
+                    if (!webClient_.topLevelWindows_.isEmpty()) {
                         // The current window is now the previous top-level window.
                         webClient_.setCurrentWindow(
                                 webClient_.topLevelWindows_.get(webClient_.topLevelWindows_.size() - 1));
@@ -2225,6 +2425,21 @@ public class WebClient implements Serializable, AutoCloseable {
         }
 
         /**
+         * Postprocessing to make sure we have always one top level window open.
+         */
+        public void afterWebWindowClosedListenersProcessed(final WebWindowEvent event) {
+            if (!ensureOneTopLevelWindow_) {
+                return;
+            }
+
+            if (webClient_.topLevelWindows_.isEmpty()) {
+                // Must always have at least window, and there are no top-level windows left; must create one.
+                final TopLevelWindow newWindow = new TopLevelWindow("", webClient_);
+                webClient_.setCurrentWindow(newWindow);
+            }
+        }
+
+        /**
          * {@inheritDoc}
          */
         @Override
@@ -2237,8 +2452,7 @@ public class WebClient implements Serializable, AutoCloseable {
             else if (window instanceof TopLevelWindow) {
                 use = event.getOldPage() == null;
             }
-            else if (window instanceof FrameWindow) {
-                final FrameWindow fw = (FrameWindow) window;
+            else if (window instanceof FrameWindow fw) {
                 final String enclosingPageState = fw.getEnclosingPage().getDocumentElement().getReadyState();
                 final URL frameUrl = fw.getEnclosedPage().getUrl();
                 if (!DomNode.READY_STATE_COMPLETE.equals(enclosingPageState) || frameUrl == UrlUtils.URL_ABOUT_BLANK) {
@@ -2248,12 +2462,7 @@ public class WebClient implements Serializable, AutoCloseable {
                 // now looks at the visibility of the frame window
                 final BaseFrameElement frameElement = fw.getFrameElement();
                 if (webClient_.isJavaScriptEnabled() && frameElement.isDisplayed()) {
-                    // todo move getCalculatedWidth() and getCalculatedHeight() to ComputedCssStyleDeclaration
-                    final ComputedCssStyleDeclaration computedCssStyleDeclaration =
-                            fw.getComputedStyle(frameElement, null);
-                    final Element elem = frameElement.getScriptableObject();
-                    final ComputedCSSStyleDeclaration style =
-                            new ComputedCSSStyleDeclaration(elem, computedCssStyleDeclaration);
+                    final ComputedCssStyleDeclaration style = fw.getComputedStyle(frameElement, null);
                     use = style.getCalculatedWidth(false, false) != 0
                             && style.getCalculatedHeight(false, false) != 0;
                 }
@@ -2269,8 +2478,7 @@ public class WebClient implements Serializable, AutoCloseable {
         @Override
         public void webWindowOpened(final WebWindowEvent event) {
             final WebWindow window = event.getWebWindow();
-            if (window instanceof TopLevelWindow) {
-                final TopLevelWindow tlw = (TopLevelWindow) window;
+            if (window instanceof TopLevelWindow tlw) {
                 webClient_.topLevelWindows_.add(tlw);
             }
             // Page is not loaded yet, don't set it now as current window.
@@ -2279,49 +2487,105 @@ public class WebClient implements Serializable, AutoCloseable {
 
     /**
      * Closes all opened windows, stopping all background JavaScript processing.
-     * <p>
-     * {@inheritDoc}
+     * The WebClient is not really usable after this - you have to create a new one or
+     * use WebClient.reset() instead.
      */
     @Override
     public void close() {
-        // NB: this implementation is too simple as a new TopLevelWindow may be opened by
-        // some JS script while we are closing the others
-        final List<TopLevelWindow> topWindows = new ArrayList<>(topLevelWindows_);
-        for (final TopLevelWindow topWindow : topWindows) {
-            if (topLevelWindows_.contains(topWindow)) {
+        // avoid attaching new windows to the js engine
+        if (scriptEngine_ != null) {
+            scriptEngine_.prepareShutdown();
+        }
+
+        // stop the CurrentWindowTracker from making sure there is still one window available
+        currentWindowTracker_ = new CurrentWindowTracker(this, false);
+
+        // Hint: a new TopLevelWindow may be opened by some JS script while we are closing the others
+        // but the prepareShutdown() call will prevent the new window form getting js support
+        List<WebWindow> windows = new ArrayList<>(windows_);
+        for (final WebWindow window : windows) {
+            if (window instanceof TopLevelWindow topLevelWindow) {
+
                 try {
-                    topWindow.close(true);
+                    topLevelWindow.close(true);
                 }
                 catch (final Exception e) {
-                    LOG.error("Exception while closing a topLevelWindow", e);
+                    LOG.error("Exception while closing a TopLevelWindow", e);
+                }
+            }
+            else if (window instanceof DialogWindow dialogWindow) {
+
+                try {
+                    dialogWindow.close();
+                }
+                catch (final Exception e) {
+                    LOG.error("Exception while closing a DialogWindow", e);
                 }
             }
         }
 
-        // do this after closing the windows, otherwise some unload event might
-        // start a new window that will start the thread again
+        // second round, none of the remaining windows should be registered to
+        // the js engine because of prepareShutdown()
+        windows = new ArrayList<>(windows_);
+        for (final WebWindow window : windows) {
+            if (window instanceof TopLevelWindow topLevelWindow) {
+
+                try {
+                    topLevelWindow.close(true);
+                }
+                catch (final Exception e) {
+                    LOG.error("Exception while closing a TopLevelWindow", e);
+                }
+            }
+            else if (window instanceof DialogWindow dialogWindow) {
+
+                try {
+                    dialogWindow.close();
+                }
+                catch (final Exception e) {
+                    LOG.error("Exception while closing a DialogWindow", e);
+                }
+            }
+        }
+
+        // now both lists have to be empty
+        if (!topLevelWindows_.isEmpty()) {
+            LOG.error("Sill " + topLevelWindows_.size() + " top level windows are open. Please report this error!");
+            topLevelWindows_.clear();
+        }
+
+        if (!windows_.isEmpty()) {
+            LOG.error("Sill " + windows_.size() + " windows are open. Please report this error!");
+            windows_.clear();
+        }
+        currentWindow_ = null;
+
         ThreadDeath toThrow = null;
         if (scriptEngine_ != null) {
             try {
                 scriptEngine_.shutdown();
             }
-            catch (final ThreadDeath td) {
+            catch (final ThreadDeath ex) {
                 // make sure the following cleanup is performed to avoid resource leaks
-                toThrow = td;
+                toThrow = ex;
             }
             catch (final Exception e) {
                 LOG.error("Exception while shutdown the scriptEngine", e);
             }
         }
+        scriptEngine_ = null;
 
-        try {
-            webConnection_.close();
+        if (webConnection_ != null) {
+            try {
+                webConnection_.close();
+            }
+            catch (final Exception e) {
+                LOG.error("Exception while closing the connection", e);
+            }
         }
-        catch (final Exception e) {
-            LOG.error("Exception while closing the connection", e);
-        }
+        webConnection_ = null;
 
-        synchronized (this) {
+        synchronized (executorLock_) {
             if (executor_ != null) {
                 try {
                     executor_.shutdownNow();
@@ -2330,6 +2594,7 @@ public class WebClient implements Serializable, AutoCloseable {
                     LOG.error("Exception while shutdown the executor service", e);
                 }
             }
+            executor_ = null;
         }
 
         cache_.clear();
@@ -2340,23 +2605,67 @@ public class WebClient implements Serializable, AutoCloseable {
 
     /**
      * <p><span style="color:red">Experimental API: May be changed in next release
-     * and may not yet work perfectly!</span></p>
+     * and may not yet work perfectly!.</span></p>
      *
-     * <p>This method blocks until all background JavaScript tasks have finished executing. Background
-     * JavaScript tasks are JavaScript tasks scheduled for execution via <code>window.setTimeout</code>,
-     * <code>window.setInterval</code> or asynchronous <code>XMLHttpRequest</code>.</p>
+     * <p>This shuts down the whole client and restarts with a new empty window.
+     * Cookies and other states are preserved.
+     * </p>
+     */
+    public void reset() {
+        close();
+
+        // this has to be done after the browser version was set
+        webConnection_ = new HttpWebConnection(this);
+        if (javaScriptEngineEnabled_) {
+            scriptEngine_ = new JavaScriptEngine(this);
+        }
+
+        // The window must be constructed AFTER the script engine.
+        currentWindowTracker_ = new CurrentWindowTracker(this, true);
+        currentWindow_ = new TopLevelWindow("", this);
+    }
+
+    /**
+     * <p>Blocks until all background JavaScript tasks have finished executing or until the specified
+     * timeout is reached, whichever occurs first. Background JavaScript tasks include:</p>
+     * <ul>
+     *   <li>JavaScript scheduled via <code>window.setTimeout()</code></li>
+     *   <li>JavaScript scheduled via <code>window.setInterval()</code></li>
+     *   <li>Asynchronous <code>XMLHttpRequest</code> operations</li>
+     *   <li>Other asynchronous JavaScript operations across all windows managed by this WebClient</li>
+     * </ul>
      *
-     * <p>If a job is scheduled to begin executing after <code>(now + timeoutMillis)</code>, this method will
-     * wait for <code>timeoutMillis</code> milliseconds and then return a value greater than <code>0</code>. This
-     * method will never block longer than <code>timeoutMillis</code> milliseconds.</p>
+     * <p><strong>Timeout Behavior:</strong> If background tasks are scheduled to execute after
+     * <code>(now + timeoutMillis)</code>, this method will wait for the full timeout duration
+     * and then return the number of remaining jobs. The method guarantees it will never block
+     * longer than the specified timeout.</p>
      *
-     * <p>Use this method instead of {@link #waitForBackgroundJavaScriptStartingBefore(long)} if you
-     * don't know when your background JavaScript is supposed to start executing, but you're fairly sure
-     * that you know how long it should take to finish executing.</p>
+     * <p><strong>Use Case:</strong> Use this method when you don't know the exact timing of when
+     * background JavaScript will start, but you have a reasonable estimate of how long all
+     * tasks should take to complete. For scenarios where you know when tasks should start
+     * executing, consider using {@link #waitForBackgroundJavaScriptStartingBefore(long)} instead.</p>
      *
-     * @param timeoutMillis the maximum amount of time to wait (in milliseconds)
-     * @return the number of background JavaScript jobs still executing or waiting to be executed when this
-     *         method returns; will be <code>0</code> if there are no jobs left to execute
+     * <p><strong>Thread Safety:</strong> This method is thread-safe and handles concurrent
+     * modifications to the internal job manager list gracefully.</p>
+     *
+     * <p><strong>Example Usage:</strong></p>
+     * <pre><code>
+     * // Wait up to 5 seconds for all background JavaScript to complete
+     * int remainingJobs = webClient.waitForBackgroundJavaScript(5000);
+     * if (remainingJobs == 0) {
+     *     log("All background JavaScript completed");
+     * } else {
+     *     log("Timeout reached, " + remainingJobs + " jobs still pending");
+     * }
+     * </code></pre>
+     *
+     * @param timeoutMillis the maximum amount of time to wait in milliseconds; must be positive
+     * @return the number of background JavaScript jobs still executing or waiting to be executed
+     *         when this method returns; returns <code>0</code> if all jobs completed successfully
+     *         within the timeout period
+     * @throws IllegalArgumentException if timeoutMillis is negative
+     * @see #waitForBackgroundJavaScriptStartingBefore(long)
+     * @see #waitForBackgroundJavaScriptStartingBefore(long, long)
      */
     public int waitForBackgroundJavaScript(final long timeoutMillis) {
         int count = 0;
@@ -2389,32 +2698,133 @@ public class WebClient implements Serializable, AutoCloseable {
     }
 
     /**
-     * <p><span style="color:red">Experimental API: May be changed in next release
-     * and may not yet work perfectly!</span></p>
+     * <p>Blocks until all background JavaScript tasks scheduled to start executing before
+     * <code>(now + delayMillis)</code> have finished executing. Background JavaScript tasks include:</p>
+     * <ul>
+     *   <li>JavaScript scheduled via <code>window.setTimeout()</code></li>
+     *   <li>JavaScript scheduled via <code>window.setInterval()</code></li>
+     *   <li>Asynchronous <code>XMLHttpRequest</code> operations</li>
+     *   <li>Other asynchronous JavaScript operations across all windows managed by this WebClient</li>
+     * </ul>
      *
-     * <p>This method blocks until all background JavaScript tasks scheduled to start executing before
-     * <code>(now + delayMillis)</code> have finished executing. Background JavaScript tasks are JavaScript
-     * tasks scheduled for execution via <code>window.setTimeout</code>, <code>window.setInterval</code> or
-     * asynchronous <code>XMLHttpRequest</code>.</p>
+     * <p><strong>Method Behavior:</strong></p>
+     * <ul>
+     *   <li>If no background JavaScript tasks are currently executing and none are scheduled
+     *       to start within <code>delayMillis</code>, this method returns immediately</li>
+     *   <li>Tasks scheduled to execute after <code>(now + delayMillis)</code> are ignored
+     *       and do not affect the waiting behavior</li>
+     *   <li>The method waits for tasks to complete execution, not just to start</li>
+     *   <li>This method waits indefinitely for qualifying tasks to complete (no timeout)</li>
+     * </ul>
      *
-     * <p>If there is no background JavaScript task currently executing, and there is no background JavaScript
-     * task scheduled to start executing within the specified time, this method returns immediately -- even
-     * if there are tasks scheduled to be executed after <code>(now + delayMillis)</code>.</p>
+     * <p><strong>Use Case:</strong> This method is ideal when you know approximately when
+     * background JavaScript should start executing but are uncertain about execution duration.
+     * Use this when you don't need a timeout and want to ensure all relevant tasks complete.
+     * For scenarios where you need to wait for all background tasks regardless of timing,
+     * use {@link #waitForBackgroundJavaScript(long)} instead. For timeout control, use
+     * {@link #waitForBackgroundJavaScriptStartingBefore(long, long)} instead.</p>
      *
-     * <p>Note that the total time spent executing a background JavaScript task is never known ahead of
-     * time, so this method makes no guarantees as to how long it will block.</p>
+     * <p><strong>Thread Safety:</strong> This method is thread-safe and handles concurrent
+     * modifications to the internal job manager list gracefully.</p>
      *
-     * <p>Use this method instead of {@link #waitForBackgroundJavaScript(long)} if you know roughly when
-     * your background JavaScript is supposed to start executing, but you're not necessarily sure how long
-     * it will take to execute.</p>
+     * <p><strong>Example Usage:</strong></p>
+     * <pre><code>
+     * // Wait indefinitely for JavaScript tasks starting within 1 second
+     * int remainingJobs = webClient.waitForBackgroundJavaScriptStartingBefore(1000);
+     * if (remainingJobs == 0) {
+     *     log("All relevant background JavaScript completed");
+     * } else {
+     *     log("Some tasks may still be pending: " + remainingJobs + " jobs");
+     * }
      *
-     * @param delayMillis the delay which determines the background tasks to wait for (in milliseconds)
-     * @return the number of background JavaScript jobs still executing or waiting to be executed when this
-     *         method returns; will be <code>0</code> if there are no jobs left to execute
+     * // Common pattern: wait for tasks that should start soon
+     * // (useful after triggering an action that schedules JavaScript)
+     * webClient.waitForBackgroundJavaScriptStartingBefore(500);
+     * </code></pre>
+     *
+     * @param delayMillis the delay which determines the background tasks to wait for (in milliseconds);
+     *                   must be non-negative
+     * @return the number of background JavaScript jobs still executing or waiting to be executed
+     *         when this method returns; returns <code>0</code> if all qualifying jobs completed
+     *         successfully
+     * @see #waitForBackgroundJavaScript(long)
+     * @see #waitForBackgroundJavaScriptStartingBefore(long, long)
      */
     public int waitForBackgroundJavaScriptStartingBefore(final long delayMillis) {
+        return waitForBackgroundJavaScriptStartingBefore(delayMillis, -1);
+    }
+
+    /**
+     * <p>Blocks until all background JavaScript tasks scheduled to start executing before
+     * <code>(now + delayMillis)</code> have finished executing, or until the specified timeout
+     * is reached, whichever occurs first. Background JavaScript tasks include:</p>
+     * <ul>
+     *   <li>JavaScript scheduled via <code>window.setTimeout()</code></li>
+     *   <li>JavaScript scheduled via <code>window.setInterval()</code></li>
+     *   <li>Asynchronous <code>XMLHttpRequest</code> operations</li>
+     *   <li>Other asynchronous JavaScript operations across all windows managed by this WebClient</li>
+     * </ul>
+     *
+     * <p><strong>Method Behavior:</strong></p>
+     * <ul>
+     *   <li>If no background JavaScript tasks are currently executing and none are scheduled
+     *       to start within <code>delayMillis</code>, this method returns immediately</li>
+     *   <li>Tasks scheduled to execute after <code>(now + delayMillis)</code> are ignored
+     *       and do not affect the waiting behavior</li>
+     *   <li>The method waits for tasks to complete execution, not just to start</li>
+     * </ul>
+     *
+     * <p><strong>Timeout Behavior:</strong></p>
+     * <ul>
+     *   <li>If <code>timeoutMillis</code> is negative or less than <code>delayMillis</code>,
+     *       the timeout is ignored and the method waits indefinitely</li>
+     *   <li>When a valid timeout is specified, the method will never block longer than
+     *       <code>timeoutMillis</code> milliseconds</li>
+     *   <li>The timeout applies to the total waiting time, not per task</li>
+     * </ul>
+     *
+     * <p><strong>Use Case:</strong> This method is ideal when you know approximately when
+     * background JavaScript should start executing but are uncertain about execution duration.
+     * For scenarios where you need to wait for all background tasks regardless of timing,
+     * use {@link #waitForBackgroundJavaScript(long)} instead.</p>
+     *
+     * <p><strong>Thread Safety:</strong> This method is thread-safe and handles concurrent
+     * modifications to the internal job manager list gracefully.</p>
+     *
+     * <p><strong>Example Usage:</strong></p>
+     * <pre><code>
+     * // Wait for JavaScript tasks starting within 1 second, with 10 second max timeout
+     * int remainingJobs = webClient.waitForBackgroundJavaScriptStartingBefore(1000, 10000);
+     * if (remainingJobs == 0) {
+     *     log("All relevant background JavaScript completed");
+     * } else {
+     *     log("Timeout reached or tasks still pending: " + remainingJobs + " jobs");
+     * }
+     *
+     * // Wait indefinitely for tasks starting within 500ms (timeout ignored)
+     * webClient.waitForBackgroundJavaScriptStartingBefore(500, 100); // timeout &lt; delay
+     * </code></pre>
+     *
+     * @param delayMillis the delay which determines the background tasks to wait for (in milliseconds);
+     *                   must be non-negative
+     * @param timeoutMillis the maximum amount of time to wait (in milliseconds); if negative or
+     *                     less than <code>delayMillis</code>, the timeout is ignored and the method
+     *                     waits indefinitely for qualifying tasks to complete
+     * @return the number of background JavaScript jobs still executing or waiting to be executed
+     *         when this method returns; returns <code>0</code> if all qualifying jobs completed
+     *         successfully within the specified constraints
+     * @see #waitForBackgroundJavaScript(long)
+     * @see #waitForBackgroundJavaScriptStartingBefore(long)
+     */
+    public int waitForBackgroundJavaScriptStartingBefore(final long delayMillis, final long timeoutMillis) {
         int count = 0;
-        final long endTime = System.currentTimeMillis() + delayMillis;
+        long now = System.currentTimeMillis();
+        final long endTime = now + delayMillis;
+        long endTimeout = now + timeoutMillis;
+        if (timeoutMillis < 0 || timeoutMillis < delayMillis) {
+            endTimeout = -1;
+        }
+
         for (Iterator<WeakReference<JavaScriptJobManager>> i = jobManagers_.iterator(); i.hasNext();) {
             final JavaScriptJobManager jobManager;
             final WeakReference<JavaScriptJobManager> reference;
@@ -2431,12 +2841,16 @@ public class WebClient implements Serializable, AutoCloseable {
                 count = 0;
                 continue;
             }
-            final long newDelay = endTime - System.currentTimeMillis();
-            count += jobManager.waitForJobsStartingBefore(newDelay);
+            now = System.currentTimeMillis();
+            final long newDelay = endTime - now;
+            final long newTimeout = (endTimeout == -1) ? -1 : endTimeout - now;
+            count += jobManager.waitForJobsStartingBefore(newDelay, newTimeout);
         }
         if (count != getAggregateJobCount()) {
-            final long newDelay = endTime - System.currentTimeMillis();
-            return waitForBackgroundJavaScriptStartingBefore(newDelay);
+            now = System.currentTimeMillis();
+            final long newDelay = endTime - now;
+            final long newTimeout = (endTimeout == -1) ? -1 : endTimeout - now;
+            return waitForBackgroundJavaScriptStartingBefore(newDelay, newTimeout);
         }
         return count;
     }
@@ -2482,9 +2896,14 @@ public class WebClient implements Serializable, AutoCloseable {
         scriptEngine_ = new JavaScriptEngine(this);
         jobManagers_ = Collections.synchronizedList(new ArrayList<>());
         loadQueue_ = new ArrayList<>();
+        css3ParserPool_ = new CSS3ParserPool();
+        broadcastChannel_ = new HashSet<>();
+        blobUrlStore_ = new BlobUrlStore();
 
-        if (getBrowserVersion().hasFeature(JS_XML_SUPPORT_VIA_ACTIVEXOBJECT)) {
-            initMSXMLActiveX();
+        // the job managers are not part of the serialized state; register them again
+        // (the event loop is started by the job manager as soon as a new job is added)
+        for (final WebWindow window : new ArrayList<>(windows_)) {
+            jobManagers_.add(new WeakReference<>(window.getJobManager()));
         }
     }
 
@@ -2494,18 +2913,18 @@ public class WebClient implements Serializable, AutoCloseable {
         private final WebResponse response_;
         private final WeakReference<Page> originalPage_;
         private final WebRequest request_;
-        private final boolean forceAttachment_;
+        private final String forceAttachmentWithFilename_;
 
         // we can't us the WebRequest from the WebResponse because
         // we need the original request e.g. after a redirect
         LoadJob(final WebRequest request, final WebResponse response,
-                final WebWindow requestingWindow, final String target, final boolean forceAttachment) {
+                final WebWindow requestingWindow, final String target, final String forceAttachmentWithFilename) {
             request_ = request;
             requestingWindow_ = requestingWindow;
             target_ = target;
             response_ = response;
             originalPage_ = new WeakReference<>(requestingWindow.getEnclosedPage());
-            forceAttachment_ = forceAttachment;
+            forceAttachmentWithFilename_ = forceAttachmentWithFilename;
         }
 
         public boolean isOutdated() {
@@ -2517,11 +2936,7 @@ public class WebClient implements Serializable, AutoCloseable {
                 return true;
             }
 
-            if (requestingWindow_.getEnclosedPage() != originalPage_.get()) {
-                return true;
-            }
-
-            return false;
+            return requestingWindow_.getEnclosedPage() != originalPage_.get();
         }
     }
 
@@ -2535,14 +2950,13 @@ public class WebClient implements Serializable, AutoCloseable {
      * @param target the name of the target window
      * @param request the request to perform
      * @param checkHash if true check for hashChenage
-     * @param forceLoad if true always load the request even if there is already the same in the queue
-     * @param forceAttachment if true the AttachmentHandler isAttachment() method is not called, the
-     * response has to be handled as attachment in any case
+     * @param forceAttachmentWithFilename if not {@code null} the AttachmentHandler isAttachment() method is not called,
+     *        the response has to be handled as attachment in any case
      * @param description information about the origin of the request. Useful for debugging.
      */
     public void download(final WebWindow requestingWindow, final String target,
-        final WebRequest request, final boolean checkHash, final boolean forceLoad,
-        final boolean forceAttachment, final String description) {
+        final WebRequest request, final boolean checkHash,
+        final String forceAttachmentWithFilename, final String description) {
 
         final WebWindow targetWindow = resolveWindow(requestingWindow, target);
         final URL url = request.getUrl();
@@ -2578,12 +2992,10 @@ public class WebClient implements Serializable, AutoCloseable {
                 final WebRequest otherRequest = otherLoadJob.request_;
                 final URL otherUrl = otherRequest.getUrl();
 
-                // TODO: investigate but it seems that IE considers query string too but not FF
-                if (!forceLoad
-                    && url.getPath().equals(otherUrl.getPath()) // fail fast
+                if (url.getPath().equals(otherUrl.getPath()) // fail fast
                     && url.toString().equals(otherUrl.toString())
                     && request.getRequestParameters().equals(otherRequest.getRequestParameters())
-                    && StringUtils.equals(request.getRequestBody(), otherRequest.getRequestBody())) {
+                    && Objects.equals(request.getRequestBody(), otherRequest.getRequestBody())) {
                     return; // skip it;
                 }
             }
@@ -2594,12 +3006,16 @@ public class WebClient implements Serializable, AutoCloseable {
             WebResponse response;
             try {
                 response = loadWebResponse(request);
+                if (response == null) {
+                    // blocked by the redirect filter of the request
+                    return;
+                }
             }
             catch (final NoHttpResponseException e) {
                 LOG.error("NoHttpResponseException while downloading; generating a NoHttpResponse", e);
                 response = new WebResponse(RESPONSE_DATA_NO_HTTP_RESPONSE, request, 0);
             }
-            loadJob = new LoadJob(request, response, requestingWindow, target, forceAttachment);
+            loadJob = new LoadJob(request, response, requestingWindow, target, forceAttachmentWithFilename);
         }
         catch (final IOException e) {
             throw new RuntimeException(e);
@@ -2651,7 +3067,7 @@ public class WebClient implements Serializable, AutoCloseable {
 
             final WebWindow win = openTargetWindow(loadJob.requestingWindow_, loadJob.target_, TARGET_SELF);
             final Page pageBeforeLoad = win.getEnclosedPage();
-            loadWebResponseInto(loadJob.response_, win, loadJob.forceAttachment_);
+            loadWebResponseInto(loadJob.response_, win, loadJob.forceAttachmentWithFilename_);
 
             // start execution here.
             if (scriptEngine_ != null) {
@@ -2695,16 +3111,6 @@ public class WebClient implements Serializable, AutoCloseable {
     }
 
     /**
-     * <span style="color:red">INTERNAL API - SUBJECT TO CHANGE AT ANY TIME - USE AT YOUR OWN RISK.</span><br>
-     *
-     * Returns the internals object of this WebClient.
-     * @return the internals object
-     */
-    public WebClientInternals getInternals() {
-        return internals_;
-    }
-
-    /**
      * Gets the holder for the different storages.
      * <p><span style="color:red">Experimental API: May be changed in next release!</span></p>
      * @return the holder
@@ -2719,14 +3125,14 @@ public class WebClient implements Serializable, AutoCloseable {
      * @param url the URL on which to filter the returned cookies
      * @return the currently configured cookies applicable to the specified URL, in an unmodifiable set
      */
-    public synchronized Set<Cookie> getCookies(final URL url) {
+    public Set<Cookie> getCookies(final URL url) {
         final CookieManager cookieManager = getCookieManager();
 
         if (!cookieManager.isCookiesEnabled()) {
             return Collections.emptySet();
         }
 
-        final URL normalizedUrl = cookieManager.replaceForCookieIfNecessary(url);
+        final URL normalizedUrl = HttpClientConverter.replaceForCookieIfNecessary(url);
 
         final String host = normalizedUrl.getHost();
         // URLs like "about:blank" don't have cookies and we need to catch these
@@ -2735,30 +3141,13 @@ public class WebClient implements Serializable, AutoCloseable {
             return Collections.emptySet();
         }
 
-        final String path = normalizedUrl.getPath();
-        final String protocol = normalizedUrl.getProtocol();
-        final boolean secure = "https".equals(protocol);
-
-        final int port = cookieManager.getPort(normalizedUrl);
-
         // discard expired cookies
         cookieManager.clearExpired(new Date());
 
-        final List<org.apache.http.cookie.Cookie> all = Cookie.toHttpClient(cookieManager.getCookies());
-        final List<org.apache.http.cookie.Cookie> matches = new ArrayList<>();
-
-        if (all.size() > 0) {
-            final CookieOrigin cookieOrigin = new CookieOrigin(host, port, path, secure);
-            final CookieSpec cookieSpec = new HtmlUnitBrowserCompatCookieSpec(getBrowserVersion());
-            for (final org.apache.http.cookie.Cookie cookie : all) {
-                if (cookieSpec.match(cookie, cookieOrigin)) {
-                    matches.add(cookie);
-                }
-            }
-        }
-
-        final Set<Cookie> cookies = new LinkedHashSet<>(Cookie.fromHttpClient(matches));
-        return Collections.unmodifiableSet(cookies);
+        final Set<Cookie> matchingCookies = new LinkedHashSet<>();
+        HttpClientConverter.addMatching(cookieManager.getCookies(), normalizedUrl,
+                getBrowserVersion(), matchingCookies);
+        return Collections.unmodifiableSet(matchingCookies);
     }
 
     /**
@@ -2777,19 +3166,12 @@ public class WebClient implements Serializable, AutoCloseable {
             return;
         }
 
-        final CharArrayBuffer buffer = new CharArrayBuffer(cookieString.length() + 22);
-        buffer.append("Set-Cookie: ");
-        buffer.append(cookieString);
-
-        final CookieSpec cookieSpec = new HtmlUnitBrowserCompatCookieSpec(getBrowserVersion());
-
         try {
-            final List<org.apache.http.cookie.Cookie> cookies =
-                    cookieSpec.parse(new BufferedHeader(buffer), cookieManager.buildCookieOrigin(pageUrl));
+            final List<Cookie> cookies = HttpClientConverter.parseCookie(cookieString, pageUrl, getBrowserVersion());
+            // final List<Cookie> cookies = CookieParser.parseCookie(cookieString, pageUrl, getBrowserVersion());
 
-            for (final org.apache.http.cookie.Cookie cookie : cookies) {
-                final Cookie htmlUnitCookie = new Cookie((ClientCookie) cookie);
-                cookieManager.addCookie(htmlUnitCookie);
+            for (final Cookie cookie : cookies) {
+                cookieManager.addCookie(cookie);
 
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Added cookie: '" + cookieString + "'");
@@ -2798,7 +3180,7 @@ public class WebClient implements Serializable, AutoCloseable {
         }
         catch (final MalformedCookieException e) {
             if (LOG.isDebugEnabled()) {
-                LOG.warn("Adding cookie '" + cookieString + "' failed; reason: '" + e.getMessage() + "'.");
+                LOG.warn("Adding cookie '" + cookieString + "' failed.", e);
             }
             getIncorrectnessListener().notify("Adding cookie '" + cookieString
                         + "' failed; reason: '" + e.getMessage() + "'.", origin);
@@ -2810,6 +3192,7 @@ public class WebClient implements Serializable, AutoCloseable {
      * To disable the javascript support (eg. temporary)
      * you have to use the {@link WebClientOptions#setJavaScriptEnabled(boolean)} setter.
      * @see #isJavaScriptEngineEnabled()
+     * @see WebClientOptions#isJavaScriptEnabled()
      * @return true if the javaScript engine and the javaScript support is enabled.
      */
     public boolean isJavaScriptEnabled() {
@@ -2839,11 +3222,11 @@ public class WebClient implements Serializable, AutoCloseable {
         final WebWindow webWindow = getCurrentWindow();
 
         final StringWebResponse webResponse =
-                new StringWebResponse(htmlCode, new URL("http://htmlunit.sourceforge.net/dummy.html"));
+                new StringWebResponse(htmlCode, new URL("https://www.htmlunit.org/dummy.html"));
         final HtmlPage page = new HtmlPage(webResponse, webWindow);
         webWindow.setEnclosedPage(page);
 
-        htmlParser.parse(webResponse, page, false, false);
+        htmlParser.parse(this, webResponse, page, false, false);
         return page;
     }
 
@@ -2860,11 +3243,167 @@ public class WebClient implements Serializable, AutoCloseable {
         final WebWindow webWindow = getCurrentWindow();
 
         final StringWebResponse webResponse =
-                new StringWebResponse(xhtmlCode, new URL("http://htmlunit.sourceforge.net/dummy.html"));
+                new StringWebResponse(xhtmlCode, new URL("https://www.htmlunit.org/dummy.html"));
         final XHtmlPage page = new XHtmlPage(webResponse, webWindow);
         webWindow.setEnclosedPage(page);
 
-        htmlParser.parse(webResponse, page, true, false);
+        htmlParser.parse(this, webResponse, page, true, false);
         return page;
+    }
+
+    /**
+     * Creates a new {@link WebSocketAdapter}.
+     *
+     * @param webSocketListener the {@link WebSocketListener}
+     * @return a new {@link WebSocketAdapter}
+     */
+    public WebSocketAdapter buildWebSocketAdapter(final WebSocketListener webSocketListener) {
+        return webSocketAdapterFactory_.buildWebSocketAdapter(this, webSocketListener);
+    }
+
+    /**
+     * Defines a new factory method to create a new WebSocketAdapter.
+     *
+     * @param factory a {@link WebSocketAdapterFactory}
+     */
+    public void setWebSocketAdapter(final WebSocketAdapterFactory factory) {
+        webSocketAdapterFactory_ = factory;
+    }
+
+    /**
+     * <span style="color:red">INTERNAL API - SUBJECT TO CHANGE AT ANY TIME - USE AT YOUR OWN RISK.</span><br>
+     *
+     * @return a CSS3Parser that will return to an internal pool for reuse if closed using the
+     *         try-with-resource concept
+     */
+    public PooledCSS3Parser getCSS3Parser() {
+        return this.css3ParserPool_.get();
+    }
+
+    /**
+     * <span style="color:red">INTERNAL API - SUBJECT TO CHANGE AT ANY TIME - USE AT YOUR OWN RISK.</span><br>
+     *
+     * @return the set of known {@link BroadcastChannel}s
+     */
+    public Set<BroadcastChannel> getBroadcastChannels() {
+        return broadcastChannel_;
+    }
+
+    /**
+     * Our pool of CSS3Parsers. If you need a parser, get it from here and use the AutoCloseable
+     * functionality with a try-with-resource block. If you don't want to do that at all, continue
+     * to build CSS3Parsers the old fashioned way.
+     * <p>
+     * Fetching a parser is thread safe. This API is built to minimize synchronization overhead,
+     * hence it is possible to miss a returned parser from another thread under heavy pressure,
+     * but because that is unlikely, we keep it simple and efficient. Caches are not supposed
+     * to give cutting-edge guarantees.
+     * </p>
+     * <p>
+     * This concept avoids a resource leak when someone does not close the fetched
+     * parser because the pool does not know anything about the parser unless
+     * it returns. We are not running a checkout-checkin concept.
+     * </p>
+     * <p>
+     * <span style="color:red">INTERNAL API - SUBJECT TO CHANGE AT ANY TIME - USE AT YOUR OWN RISK.</span><br>
+     * </p>
+     */
+    static class CSS3ParserPool {
+        /*
+         * Our pool. We only hold data when it is available. In addition, synchronization against
+         * this deque is cheap.
+         */
+        private final ConcurrentLinkedDeque<PooledCSS3Parser> parsers_ = new ConcurrentLinkedDeque<>();
+
+        /**
+         * Fetch a new or recycled CSS3parser. Make sure you use the try-with-resource concept
+         * to automatically return it after use because a parser creation is expensive.
+         * We won't get a leak, if you don't do so, but that will remove the advantage.
+         *
+         * @return a parser
+         */
+        public PooledCSS3Parser get() {
+            // see if we have one, LIFO
+            final PooledCSS3Parser parser = parsers_.pollLast();
+
+            // if we don't have one, get us one
+            return parser != null ? parser.markInUse(this) : new PooledCSS3Parser(this);
+        }
+
+        /**
+         * Return a parser. Normally you don't have to use that method explicitly.
+         * Prefer to user the AutoCloseable interface of the PooledParser by
+         * using a try-with-resource statement.
+         *
+         * @param parser the parser to recycle
+         */
+        protected void recycle(final PooledCSS3Parser parser) {
+            parsers_.addLast(parser);
+        }
+    }
+
+    /**
+     * This is a poolable CSS3Parser which can be reused automatically when closed.
+     * A regular CSS3Parser is not thread-safe, hence also our pooled parser
+     * is not thread-safe.
+     * <span style="color:red">INTERNAL API - SUBJECT TO CHANGE AT ANY TIME - USE AT YOUR OWN RISK.</span><br>
+     */
+    public static class PooledCSS3Parser extends CSS3Parser implements AutoCloseable {
+        /**
+         * The pool we want to return us to. Because multiple threads can use this, we
+         * have to ensure that we see the action here.
+         */
+        private CSS3ParserPool pool_;
+
+        /**
+         * Create a new poolable parser.
+         *
+         * @param pool the pool the parser should return to when it is closed
+         */
+        protected PooledCSS3Parser(final CSS3ParserPool pool) {
+            super();
+            this.pool_ = pool;
+        }
+
+        /**
+         * Resets the parser's pool state so it can be safely returned again.
+         *
+         * @param pool the pool the parser should return to when it is closed
+         * @return this parser for fluid programming
+         */
+        protected PooledCSS3Parser markInUse(final CSS3ParserPool pool) {
+            // ensure we detect programming mistakes
+            if (this.pool_ == null) {
+                this.pool_ = pool;
+            }
+            else {
+                throw new IllegalStateException("This PooledParser was not returned to the pool properly");
+            }
+
+            return this;
+        }
+
+        /**
+         * Implements the AutoClosable interface. The return method ensures that
+         * we are notified when we incorrectly close it twice which indicates a
+         * programming flow defect.
+         *
+         * @throws IllegalStateException in case the parser is closed several times
+         */
+        @Override
+        public void close() {
+            if (this.pool_ != null) {
+                final CSS3ParserPool oldPool = this.pool_;
+                // set null first and recycle later to avoid exposing a broken state
+                // volatile guarantees visibility
+                this.pool_ = null;
+
+                // return
+                oldPool.recycle(this);
+            }
+            else {
+                throw new IllegalStateException("This PooledParser was returned already");
+            }
+        }
     }
 }

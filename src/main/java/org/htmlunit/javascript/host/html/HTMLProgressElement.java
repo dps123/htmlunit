@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,7 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
+import org.htmlunit.html.DomElement;
 import org.htmlunit.html.HtmlProgress;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
@@ -32,6 +28,8 @@ import org.htmlunit.javascript.host.dom.NodeList;
  * @author Marc Guillemot
  * @author Ronald Brill
  * @author Frank Danek
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLProgressElement">MDN Documentation</a>
  */
 @JsxClass(domClass = HtmlProgress.class)
 public class HTMLProgressElement extends HTMLElement {
@@ -40,25 +38,27 @@ public class HTMLProgressElement extends HTMLElement {
     private NodeList labels_;
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public HTMLProgressElement() {
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
-     * The getter for the "value" property.
-     * @return the value
+     * Returns the {@code value} property.
+     * @return the {@code value} property
      */
     @JsxGetter
     @Override
     public Double getValue() {
-        return getAttributeAsDouble("value", 0);
+        return getAttributeAsDouble(DomElement.VALUE_ATTRIBUTE, 0);
     }
 
     /**
-     * The getter for the "max" property.
-     * @return the value
+     * Returns the {@code max} property.
+     * @return the {@code max} property
      */
     @JsxGetter
     public double getMax() {
@@ -78,7 +78,7 @@ public class HTMLProgressElement extends HTMLElement {
      * Returns the labels associated with the element.
      * @return the labels associated with the element
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public NodeList getLabels() {
         if (labels_ == null) {
             labels_ = new LabelsNodeList(getDomNodeOrDie());

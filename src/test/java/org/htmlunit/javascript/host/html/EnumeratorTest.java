@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,9 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link Enumerator}.
@@ -28,18 +25,16 @@ import org.htmlunit.junit.BrowserRunner.Alerts;
  * @author Frank Danek
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class EnumeratorTest extends WebDriverTestCase {
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "Enumerator not supported",
-            IE = {"true", "undefined", "undefined", "undefined", "true"})
+    @Alerts("Enumerator not supported")
     public void basicEmptyEnumerator() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  if (typeof(Enumerator) != 'undefined') {\n"
@@ -50,7 +45,7 @@ public class EnumeratorTest extends WebDriverTestCase {
             + "      log(en.moveNext());\n"
             + "      log(en.item());\n"
             + "      log(en.atEnd());\n"
-            + "    } catch(e) { log('exception'); }\n"
+            + "    } catch(e) { logEx(e); }\n"
             + "  } else {\n"
             + "    log('Enumerator not supported');\n"
             + "  }\n"
@@ -67,11 +62,10 @@ public class EnumeratorTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "Enumerator not supported",
-            IE = "exception")
+    @Alerts("Enumerator not supported")
     public void basicEnumerator() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  if (typeof(Enumerator) != 'undefined') {\n"
@@ -82,7 +76,7 @@ public class EnumeratorTest extends WebDriverTestCase {
             + "      log(en.moveNext());\n"
             + "      log(en.item());\n"
             + "      log(en.atEnd());\n"
-            + "    } catch(e) { log('exception'); }\n"
+            + "    } catch(e) { logEx(e); }\n"
             + "  } else {\n"
             + "    log('Enumerator not supported');\n"
             + "  }\n"
@@ -99,17 +93,16 @@ public class EnumeratorTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "Enumerator not supported",
-            IE = "exception")
+    @Alerts("Enumerator not supported")
     public void basicEnumeratorWrongType() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  if (typeof(Enumerator) != 'undefined') {\n"
             + "    try {\n"
             + "      var en = new Enumerator(window);\n"
-            + "    } catch(e) { log('exception'); }\n"
+            + "    } catch(e) { logEx(e); }\n"
             + "  } else {\n"
             + "    log('Enumerator not supported');\n"
             + "  }\n"
@@ -128,11 +121,10 @@ public class EnumeratorTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"f t1 t2", "Enumerator not supported"},
-            IE = {"f t1 t2", "exception"})
+    @Alerts({"f t1 t2", "Enumerator not supported"})
     public void formEnumerator() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <form id='f'>\n"
             + "    <input type='text' name='t1' id='t1' />\n"
@@ -149,7 +141,7 @@ public class EnumeratorTest extends WebDriverTestCase {
             + "      for( ; !e.atEnd(); e.moveNext()) {\n"
             + "        log(e.item().id);\n"
             + "      }\n"
-            + "    } catch(e) { log('exception'); }\n"
+            + "    } catch(e) { logEx(e); }\n"
             + "  } else {\n"
             + "    log('Enumerator not supported');\n"
             + "  }\n"
@@ -163,11 +155,10 @@ public class EnumeratorTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"undefined", "Enumerator not supported"},
-            IE = {"undefined", "exception"})
+    @Alerts({"undefined", "Enumerator not supported"})
     public void item() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -176,7 +167,7 @@ public class EnumeratorTest extends WebDriverTestCase {
             + "  if (typeof(Enumerator) != 'undefined') {\n"
             + "    try {\n"
             + "      log(new Enumerator(form).item().TyPe);\n"
-            + "    } catch(e) { log('exception'); }\n"
+            + "    } catch(e) { logEx(e); }\n"
             + "  } else {\n"
             + "    log('Enumerator not supported');\n"
             + "  }\n"

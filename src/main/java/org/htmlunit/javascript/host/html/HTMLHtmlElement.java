@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,12 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
 import org.htmlunit.html.HtmlHtml;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.configuration.JsxSetter;
-
-import org.htmlunit.corejs.javascript.Context;
 
 /**
  * The JavaScript object {@code HTMLHtmlElement}.
@@ -33,15 +27,19 @@ import org.htmlunit.corejs.javascript.Context;
  * @author Ahmed Ashour
  * @author Marc Guillemot
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLHtmlElement">MDN Documentation</a>
  */
 @JsxClass(domClass = HtmlHtml.class)
 public class HTMLHtmlElement extends HTMLElement {
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public HTMLHtmlElement() {
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /** {@inheritDoc} */
@@ -68,11 +66,11 @@ public class HTMLHtmlElement extends HTMLElement {
      */
     @Override
     public void setOuterHTML(final Object value) {
-        throw Context.reportRuntimeError("outerHTML is read-only for tag 'html'");
+        throw JavaScriptEngine.reportRuntimeError("outerHTML is read-only for tag 'html'");
     }
 
     /**
-     * Returns {@code version} property.
+     * Returns the {@code version} property.
      * @return the {@code version} property
      */
     @JsxGetter
@@ -81,8 +79,8 @@ public class HTMLHtmlElement extends HTMLElement {
     }
 
     /**
-     * Sets {@code version} property.
-     * @param version the {@code version} property
+     * Sets the {@code version} property.
+     * @param version the {@code version} property value
      */
     @JsxSetter
     public void setVersion(final String version) {

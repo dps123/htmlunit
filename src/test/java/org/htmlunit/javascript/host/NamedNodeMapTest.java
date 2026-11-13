@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,11 @@
  */
 package org.htmlunit.javascript.host;
 
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.IE;
-
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.html.HtmlPageTest;
 import org.htmlunit.javascript.host.xml.XMLDocumentTest;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
+import org.htmlunit.junit.annotation.Alerts;
 import org.htmlunit.util.MimeType;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link org.htmlunit.javascript.host.NamedNodeMap}.
@@ -36,19 +29,16 @@ import org.htmlunit.util.MimeType;
  * @author Frank Danek
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class NamedNodeMapTest extends WebDriverTestCase {
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"name=f", "id=f", "foo=bar", "baz=blah"},
-            IE = {"name=f", "id=f", "baz=blah", "foo=bar"})
-    @NotYetImplemented(IE)
+    @Alerts({"name=f", "id=f", "foo=bar", "baz=blah"})
     public void attributes() throws Exception {
-        final String html =
-              "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -76,10 +66,41 @@ public class NamedNodeMapTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
+    @Alerts({"name=f", "id=f", "foo=bar", "baz=blah"})
+    public void attributesForOf() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var f = document.getElementById('f');\n"
+            + "    for (var attr of f.attributes) {\n"
+            + "      if (attr) {\n"
+            + "        log(attr.name + '=' + attr.value);\n"
+            + "      } else {\n"
+            + "        log(i);\n"
+            + "      }\n"
+            + "    }\n"
+            + "  }\n"
+            + "</script>\n"
+            + "</head>\n"
+            + "<body onload='test()'>\n"
+            + "<form name='f' id='f' foo='bar' baz='blah'></form>\n"
+            + "</body>\n"
+            + "</html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
     @Alerts({"name", "f", "name", "f", "name", "f", "name", "f", "null"})
     public void getNamedItem_HTML() throws Exception {
-        final String html =
-              "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -92,11 +113,11 @@ public class NamedNodeMapTest extends WebDriverTestCase {
             + "    try {\n"
             + "      log(f.attributes.name.nodeName);\n"
             + "      log(f.attributes.name.nodeValue);\n"
-            + "    } catch(e) { log('exception'); }\n"
+            + "    } catch(e) { logEx(e); }\n"
             + "    try {\n"
             + "      log(f.attributes.NaMe.nodeName);\n"
             + "      log(f.attributes.nAmE.nodeValue);\n"
-            + "    } catch(e) { log('exception'); }\n"
+            + "    } catch(e) { logEx(e); }\n"
             + "    log(f.attributes.getNamedItem('notExisting'));\n"
             + "  }\n"
             + "</script>\n"
@@ -113,10 +134,10 @@ public class NamedNodeMapTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT =  {"myattr", "myattr2", "myattr", "myattr2", "myattr2"},
-            IE = {"myAttr", "myattr2", "myAttr", "myattr2", "myattr2"})
+    @Alerts({"myattr", "myattr2", "myattr", "myattr2", "myattr2"})
     public void getNamedItem_HTML_Case() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -156,7 +177,8 @@ public class NamedNodeMapTest extends WebDriverTestCase {
     @Test
     @Alerts({"name", "y", "name", "y", "null", "undefined", "null"})
     public void getNamedItem_XML() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -166,7 +188,7 @@ public class NamedNodeMapTest extends WebDriverTestCase {
             + "    try {\n"
             + "      log(doc.documentElement.attributes.name.nodeName);\n"
             + "      log(doc.documentElement.attributes.name.nodeValue);\n"
-            + "    } catch(e) { log('exception'); }\n"
+            + "    } catch(e) { logEx(e); }\n"
             + "    log(doc.documentElement.attributes.getNamedItem('NaMe'));\n"
             + "    log(doc.documentElement.attributes.NaMe);\n"
             + "    log(doc.documentElement.attributes.getNamedItem('nonExistent'));\n"
@@ -187,7 +209,8 @@ public class NamedNodeMapTest extends WebDriverTestCase {
     @Test
     @Alerts("myattr")
     public void setNamedItem_HTML() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -214,7 +237,8 @@ public class NamedNodeMapTest extends WebDriverTestCase {
     @Test
     @Alerts("myAttr")
     public void setNamedItem_XML() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -240,7 +264,8 @@ public class NamedNodeMapTest extends WebDriverTestCase {
     @Test
     @Alerts({"true", "[object Attr]", "true", "[object Attr]"})
     public void has() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_ + "<html ng-app><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html ng-app><body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "var attributes = document.documentElement.attributes;\n"
@@ -260,8 +285,8 @@ public class NamedNodeMapTest extends WebDriverTestCase {
     @Test
     @Alerts({"div1", ""})
     public void removeNamedItem() throws Exception {
-        final String html =
-              "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "<div id='div1' style='background-color:#FFFFC1;'>div1</div>\n"
             + "<script>\n"
@@ -283,8 +308,8 @@ public class NamedNodeMapTest extends WebDriverTestCase {
     @Test
     @Alerts({"undefined", "undefined", "undefined"})
     public void unspecifiedAttributes() throws Exception {
-        final String html =
-              "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -308,8 +333,8 @@ public class NamedNodeMapTest extends WebDriverTestCase {
     @Test
     @Alerts("media=\"screen\"")
     public void changedAttribute() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
 
             + "<style id='myStyle'>my { }</style>\n"
 
@@ -340,8 +365,8 @@ public class NamedNodeMapTest extends WebDriverTestCase {
     @Test
     @Alerts("<input id=\"myinput\" name=\"test_input\">")
     public void readAccessOnlyDefinesNewAttribs() throws Exception {
-        final String html =
-                "<html>\n"
+        final String html = DOCTYPE_HTML
+              + "<html>\n"
               + "<head>\n"
               + "</head>\n"
               + "<body>\n"

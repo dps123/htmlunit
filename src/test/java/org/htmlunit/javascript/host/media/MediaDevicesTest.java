@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,31 +14,26 @@
  */
 package org.htmlunit.javascript.host.media;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.html.HtmlPageTest;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.HtmlUnitNYI;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link MediaDevices}.
  *
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class MediaDevicesTest extends WebDriverTestCase {
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "true",
-            IE = "false")
+    @Alerts("true")
     public void inWindow() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION
@@ -58,10 +53,13 @@ public class MediaDevicesTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"[object MediaDevices]", "err"},
-            IE = "undefined")
+    @Alerts({"[object MediaDevices]", "TypeError"})
+    @HtmlUnitNYI(CHROME = {"[object MediaDevices]", "undefined/DOMException"},
+            EDGE = {"[object MediaDevices]", "undefined/DOMException"},
+            FF = {"[object MediaDevices]", "undefined/DOMException"},
+            FF_ESR = {"[object MediaDevices]", "undefined/DOMException"})
     public void getUserMedia() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -72,7 +70,7 @@ public class MediaDevicesTest extends WebDriverTestCase {
             + "    if (md) {\n"
             + "      md.getUserMedia({})\n"
             + "           .then(function(stream) { log(stream); })\n"
-            + "           .catch(function(err) { log('err'); });"
+            + "           .catch(function(e) { logEx(e); });"
             + "    }\n"
             + "  }\n"
             + "</script>\n"

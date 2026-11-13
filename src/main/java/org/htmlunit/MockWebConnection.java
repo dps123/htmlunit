@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,9 @@ package org.htmlunit;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -24,49 +27,51 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
+import org.htmlunit.util.ArrayUtils;
 import org.htmlunit.util.MimeType;
 import org.htmlunit.util.NameValuePair;
 
 /**
  * A fake {@link WebConnection} designed to mock out the actual HTTP connections.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author Noboru Sinohara
  * @author Marc Guillemot
  * @author Brad Clarke
  * @author Ahmed Ashour
  * @author Ronald Brill
  */
-public class MockWebConnection implements WebConnection {
+public class MockWebConnection implements WebConnection, Serializable {
 
     private static final Log LOG = LogFactory.getLog(MockWebConnection.class);
 
     private final Map<String, IOException> throwableMap_ = new HashMap<>();
     private final Map<String, RawResponseData> responseMap_ = new HashMap<>();
     private RawResponseData defaultResponse_;
-    private WebRequest lastRequest_;
-    private int requestCount_;
+    private volatile WebRequest lastRequest_;
+    private final AtomicInteger requestCount_ = new AtomicInteger();
     private final List<URL> requestedUrls_ = Collections.synchronizedList(new ArrayList<>());
 
     /**
      * Contains the raw data configured for a response.
      */
-    public static class RawResponseData {
+    public static class RawResponseData implements Serializable {
         private final List<NameValuePair> headers_;
         private final byte[] byteContent_;
         private final String stringContent_;
         private final int statusCode_;
         private final String statusMessage_;
-        private Charset charset_;
+        private transient Charset charset_;
 
         RawResponseData(final byte[] byteContent, final int statusCode, final String statusMessage,
                 final String contentType, final List<NameValuePair> headers) {
             byteContent_ = byteContent;
             stringContent_ = null;
+            charset_ = null;
             statusCode_ = statusCode;
             statusMessage_ = statusMessage;
             headers_ = compileHeaders(headers, contentType);
@@ -99,7 +104,7 @@ public class MockWebConnection implements WebConnection {
                 content = byteContent_;
             }
             else if (stringContent_ == null) {
-                content = new byte[] {};
+                content = ArrayUtils.EMPTY_BYTE_ARRAY;
             }
             else {
                 content = stringContent_.getBytes(charset_);
@@ -108,7 +113,8 @@ public class MockWebConnection implements WebConnection {
         }
 
         /**
-         * Gets the configured headers.
+         * Returns the configured response headers.
+         *
          * @return the headers
          */
         public List<NameValuePair> getHeaders() {
@@ -116,23 +122,26 @@ public class MockWebConnection implements WebConnection {
         }
 
         /**
-         * Gets the configured content bytes.
-         * @return {@code null} if a String content has been configured
+         * Returns the configured response content as a byte array.
+         *
+         * @return the byte content, or {@code null} if string content was configured
          */
         public byte[] getByteContent() {
             return byteContent_;
         }
 
         /**
-         * Gets the configured content String.
-         * @return {@code null} if a byte content has been configured
+         * Returns the configured response content as a string.
+         *
+         * @return the string content, or {@code null} if byte content was configured
          */
         public String getStringContent() {
             return stringContent_;
         }
 
         /**
-         * Gets the configured status code.
+         * Returns the configured HTTP status code.
+         *
          * @return the status code
          */
         public int getStatusCode() {
@@ -140,19 +149,34 @@ public class MockWebConnection implements WebConnection {
         }
 
         /**
-         * Gets the configured status message.
-         * @return the message
+         * Returns the configured HTTP status message.
+         *
+         * @return the status message
          */
         public String getStatusMessage() {
             return statusMessage_;
         }
 
         /**
-         * Gets the configured charset.
-         * @return {@code null} for byte content
+         * Returns the configured charset, or {@code null} if byte content was configured.
+         *
+         * @return the charset, or {@code null} for byte content
          */
         public Charset getCharset() {
             return charset_;
+        }
+
+        private void writeObject(final ObjectOutputStream oos) throws IOException {
+            oos.defaultWriteObject();
+            oos.writeObject(charset_ == null ? null : charset_.name());
+        }
+
+        private void readObject(final ObjectInputStream ois) throws ClassNotFoundException, IOException {
+            ois.defaultReadObject();
+            final String charsetName = (String) ois.readObject();
+            if (charsetName != null) {
+                charset_ = Charset.forName(charsetName);
+            }
         }
     }
 
@@ -166,10 +190,25 @@ public class MockWebConnection implements WebConnection {
     }
 
     /**
-     * Gets the raw response configured for the request.
+     * Returns the raw response configured for the given request.
+     *
+     * <p>The request is always recorded (incrementing {@link #getRequestCount()} and
+     * appending to {@link #getRequestedUrls()}) before any configured {@link IOException}
+     * is thrown, mirroring real HTTP behaviour where the request was dispatched even
+     * if the connection subsequently failed.
+     * </p>
+     *
+     * <p>URL lookup first tries an exact match (including query string), then retries
+     * without the query string, then falls back to the default response. If no default
+     * has been set an {@link IllegalStateException} is thrown.
+     * </p>
+     *
      * @param request the request
      * @return the raw response
-     * @throws IOException if defined
+     * @throws IOException if an {@link IOException} has been registered for the URL
+     *         via {@link #setThrowable(URL, IOException)}
+     * @throws IllegalStateException if no response or default response is configured
+     *         for the URL
      */
     public RawResponseData getRawResponse(final WebRequest request) throws IOException {
         final URL url = request.getUrl();
@@ -179,13 +218,15 @@ public class MockWebConnection implements WebConnection {
         }
 
         lastRequest_ = request;
-        requestCount_++;
+        requestCount_.incrementAndGet();
         requestedUrls_.add(url);
 
         String urlString = url.toExternalForm();
         final IOException throwable = throwableMap_.get(urlString);
         if (throwable != null) {
-            throw throwable;
+            // wrap to produce a stack trace pointing to this call site rather than
+            // to where the IOException was originally constructed
+            throw new IOException(throwable.getMessage(), throwable);
         }
 
         RawResponseData rawResponse = responseMap_.get(urlString);
@@ -212,17 +253,26 @@ public class MockWebConnection implements WebConnection {
     }
 
     /**
-     * Gets the list of requested URLs.
-     * @return the list of relative URLs
+     * Returns an unmodifiable list of all URLs requested so far, in request order.
+     *
+     * @return the list of requested URLs
      */
     public List<URL> getRequestedUrls() {
         return Collections.unmodifiableList(requestedUrls_);
     }
 
     /**
-     * Gets the list of requested URLs relative to the provided URL.
-     * @param relativeTo what should be removed from the requested URLs.
-     * @return the list of relative URLs
+     * Returns an unmodifiable list of requested URLs relativized against the given base URL.
+     * If a requested URL starts with {@code relativeTo}, the base is stripped; otherwise
+     * the full URL string is returned as-is.
+     *
+     * <p>Note: the base URL string is compared as a plain prefix. Ensure {@code relativeTo}
+     * has a trailing slash if needed to avoid unintended partial matches
+     * (e.g. {@code http://localhost/} rather than {@code http://localhost}).
+     * </p>
+     *
+     * @param relativeTo the base URL whose prefix should be stripped from each requested URL
+     * @return the list of relative (or absolute, if not matching) URL strings
      */
     public List<String> getRequestedUrls(final URL relativeTo) {
         final String baseUrl = relativeTo.toString();
@@ -239,25 +289,30 @@ public class MockWebConnection implements WebConnection {
     }
 
     /**
-     * Returns the method that was used in the last call to submitRequest().
+     * Returns the HTTP method that was used in the last call to
+     * {@link #getResponse(WebRequest)}.
      *
-     * @return the method that was used in the last call to submitRequest()
+     * @return the HTTP method of the last request
+     * @throws IllegalStateException if no request has been made yet
      */
     public HttpMethod getLastMethod() {
-        return lastRequest_.getHttpMethod();
+        return getLastWebRequest().getHttpMethod();
     }
 
     /**
-     * Returns the parameters that were used in the last call to submitRequest().
+     * Returns the request parameters that were used in the last call to
+     * {@link #getResponse(WebRequest)}.
      *
-     * @return the parameters that were used in the last call to submitRequest()
+     * @return the parameters of the last request
+     * @throws IllegalStateException if no request has been made yet
      */
     public List<NameValuePair> getLastParameters() {
-        return lastRequest_.getRequestParameters();
+        return getLastWebRequest().getRequestParameters();
     }
 
     /**
      * Sets the response that will be returned when the specified URL is requested.
+     *
      * @param url the URL that will return the given response
      * @param content the content to return
      * @param statusCode the status code to return
@@ -281,6 +336,7 @@ public class MockWebConnection implements WebConnection {
 
     /**
      * Sets the response that will be returned when the specified URL is requested.
+     *
      * @param url the URL that will return the given response
      * @param content the content to return
      * @param statusCode the status code to return
@@ -300,8 +356,13 @@ public class MockWebConnection implements WebConnection {
 
     /**
      * Sets the exception that will be thrown when the specified URL is requested.
+     *
+     * <p>The stored exception is wrapped at throw time so that the stack trace
+     * points to the actual call site rather than to where the exception was constructed.
+     * </p>
+     *
      * @param url the URL that will force the exception
-     * @param throwable the Throwable
+     * @param throwable the {@link IOException} to throw
      */
     public void setThrowable(final URL url, final IOException throwable) {
         throwableMap_.put(url.toExternalForm(), throwable);
@@ -309,6 +370,7 @@ public class MockWebConnection implements WebConnection {
 
     /**
      * Sets the response that will be returned when the specified URL is requested.
+     *
      * @param url the URL that will return the given response
      * @param content the content to return
      * @param statusCode the status code to return
@@ -330,13 +392,11 @@ public class MockWebConnection implements WebConnection {
         return new RawResponseData(content, statusCode, statusMessage, contentType, headers);
     }
 
-    private static RawResponseData buildRawResponseData(final String content, Charset charset, final int statusCode,
-            final String statusMessage, final String contentType, final List<NameValuePair> headers) {
-
-        if (charset == null) {
-            charset = ISO_8859_1;
-        }
-        return new RawResponseData(content, charset, statusCode, statusMessage, contentType, headers);
+    private static RawResponseData buildRawResponseData(final String content, final Charset charset,
+            final int statusCode, final String statusMessage, final String contentType,
+            final List<NameValuePair> headers) {
+        return new RawResponseData(content, charset == null ? ISO_8859_1 : charset,
+                statusCode, statusMessage, contentType, headers);
     }
 
     /**
@@ -387,13 +447,13 @@ public class MockWebConnection implements WebConnection {
      * @param title the title of the page
      */
     public void setResponseAsGenericHtml(final URL url, final String title) {
-        final String content = "<html><head><title>" + title + "</title></head><body></body></html>";
+        final String content = "<!DOCTYPE html><html><head><title>" + title + "</title></head><body></body></html>";
         setResponse(url, content);
     }
 
     /**
      * Sets the response that will be returned when a URL is requested that does
-     * not have a specific content set for it.
+     * not have a specific response configured for it.
      *
      * @param content the content to return
      * @param statusCode the status code to return
@@ -408,7 +468,7 @@ public class MockWebConnection implements WebConnection {
 
     /**
      * Sets the response that will be returned when a URL is requested that does
-     * not have a specific content set for it.
+     * not have a specific response configured for it.
      *
      * @param content the content to return
      * @param statusCode the status code to return
@@ -423,7 +483,7 @@ public class MockWebConnection implements WebConnection {
 
     /**
      * Sets the response that will be returned when a URL is requested that does
-     * not have a specific content set for it.
+     * not have a specific response configured for it.
      *
      * @param content the content to return
      */
@@ -433,7 +493,7 @@ public class MockWebConnection implements WebConnection {
 
     /**
      * Sets the response that will be returned when a URL is requested that does
-     * not have a specific content set for it.
+     * not have a specific response configured for it.
      *
      * @param content the content to return
      * @param contentType the content type to return
@@ -444,7 +504,7 @@ public class MockWebConnection implements WebConnection {
 
     /**
      * Sets the response that will be returned when a URL is requested that does
-     * not have a specific content set for it.
+     * not have a specific response configured for it.
      *
      * @param content the content to return
      * @param contentType the content type to return
@@ -455,7 +515,9 @@ public class MockWebConnection implements WebConnection {
     }
 
     /**
-     * Sets the response that will be returned when the specified URL is requested.
+     * Sets the response that will be returned when a URL is requested that does
+     * not have a specific response configured for it.
+     *
      * @param content the content to return
      * @param statusCode the status code to return
      * @param statusMessage the status message to return
@@ -470,7 +532,9 @@ public class MockWebConnection implements WebConnection {
     }
 
     /**
-     * Sets the response that will be returned when the specified URL is requested.
+     * Sets the response that will be returned when a URL is requested that does
+     * not have a specific response configured for it.
+     *
      * @param content the content to return
      * @param statusCode the status code to return
      * @param statusMessage the status message to return
@@ -486,46 +550,71 @@ public class MockWebConnection implements WebConnection {
     }
 
     /**
-     * Returns the additional headers that were used in the in the last call
+     * Returns the additional headers that were used in the last call
      * to {@link #getResponse(WebRequest)}.
-     * @return the additional headers that were used in the in the last call
-     *         to {@link #getResponse(WebRequest)}
+     *
+     * @return the additional headers of the last request
+     * @throws IllegalStateException if no request has been made yet
      */
     public Map<String, String> getLastAdditionalHeaders() {
-        return lastRequest_.getAdditionalHeaders();
+        return getLastWebRequest().getAdditionalHeaders();
     }
 
     /**
-     * Returns the {@link WebRequest} that was used in the in the last call
+     * Returns the {@link WebRequest} that was used in the last call
      * to {@link #getResponse(WebRequest)}.
-     * @return the {@link WebRequest} that was used in the in the last call
-     *         to {@link #getResponse(WebRequest)}
+     *
+     * @return the last {@link WebRequest}
+     * @throws IllegalStateException if no request has been made yet
      */
     public WebRequest getLastWebRequest() {
+        if (lastRequest_ == null) {
+            throw new IllegalStateException("No request has been made yet.");
+        }
         return lastRequest_;
     }
 
     /**
      * Returns the number of requests made to this mock web connection.
+     *
      * @return the number of requests made to this mock web connection
      */
     public int getRequestCount() {
-        return requestCount_;
+        return requestCount_.get();
     }
 
     /**
-     * Indicates if a response has already been configured for this URL.
-     * @param url the url
-     * @return {@code false} if no response has been configured
+     * Returns whether a response has been configured for the given URL.
+     *
+     * @param url the URL to check
+     * @return {@code true} if a response has been configured for the URL; {@code false} otherwise
      */
     public boolean hasResponse(final URL url) {
         return responseMap_.containsKey(url.toExternalForm());
     }
 
     /**
-     * {@inheritDoc}
+     * Delegates to {@link #clear()}, resetting all configured responses, recorded
+     * requests, and request counts.
      */
     @Override
     public void close() {
+        clear();
+    }
+
+    /**
+     * Resets all state: clears all configured responses and throwables, the default
+     * response, the last request, the request count, and the list of requested URLs.
+     *
+     * <p>Note: {@link #close()} delegates to this method, so using this connection</p>
+     * in a try-with-resources block will reset all configured state on exit.
+     */
+    public void clear() {
+        throwableMap_.clear();
+        responseMap_.clear();
+        defaultResponse_ = null;
+        lastRequest_ = null;
+        requestCount_.set(0);
+        requestedUrls_.clear();
     }
 }

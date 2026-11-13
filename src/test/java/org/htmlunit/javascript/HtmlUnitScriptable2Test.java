@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,45 +14,35 @@
  */
 package org.htmlunit.javascript;
 
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Locale;
-
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.html.HtmlPageTest;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.HtmlUnitNYI;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link HtmlUnitScriptable}.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
- * @author <a href="mailto:BarnabyCourt@users.sourceforge.net">Barnaby Court</a>
+ * @author Mike Bowler
+ * @author Barnaby Court
  * @author David K. Taylor
- * @author <a href="mailto:bcurren@esomnie.com">Ben Curren</a>
+ * @author Ben Curren
  * @author Marc Guillemot
  * @author Chris Erskine
  * @author Ahmed Ashour
  * @author Sudhan Moghe
- * @author <a href="mailto:mike@10gen.com">Mike Dirolf</a>
+ * @author Mike Dirolf
  * @author Frank Danek
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class HtmlUnitScriptable2Test extends WebDriverTestCase {
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"text/html", "text/html"},
-            IE = {"undefined", "123456"})
+    @Alerts({"text/html", "text/html"})
     public void setNonWritablePropertyContentType() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -61,7 +51,7 @@ public class HtmlUnitScriptable2Test extends WebDriverTestCase {
             + "      log(document.contentType);\n"
             + "      document.contentType = '123456';\n"
             + "      log(document.contentType);\n"
-            + "    } catch (e) { log('exception'); }\n"
+            + "    } catch(e) { logEx(e); }\n"
             + "  }\n"
             + "</script></head>\n"
             + "<body onload='test()'>\n"
@@ -76,7 +66,7 @@ public class HtmlUnitScriptable2Test extends WebDriverTestCase {
     @Test
     @Alerts({"CSS1Compat", "CSS1Compat"})
     public void setNonWritablePropertyCompatMode() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -85,7 +75,7 @@ public class HtmlUnitScriptable2Test extends WebDriverTestCase {
             + "      log(document.compatMode);\n"
             + "      document.compatMode = '123456';\n"
             + "      log(document.compatMode);\n"
-            + "    } catch (e) { log('exception'); }\n"
+            + "    } catch(e) { logEx(e); }\n"
             + "  }\n"
             + "</script></head>\n"
             + "<body onload='test()'>\n"
@@ -100,7 +90,7 @@ public class HtmlUnitScriptable2Test extends WebDriverTestCase {
     @Test
     @Alerts("[object Arguments]")
     public void arguments_toString() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -120,7 +110,7 @@ public class HtmlUnitScriptable2Test extends WebDriverTestCase {
     @Test
     @Alerts("3")
     public void stringWithExclamationMark() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -142,7 +132,7 @@ public class HtmlUnitScriptable2Test extends WebDriverTestCase {
     @Test
     @Alerts({"x1", "x2", "x3", "x4", "x5"})
     public void arrayedMap() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -171,7 +161,7 @@ public class HtmlUnitScriptable2Test extends WebDriverTestCase {
     @Test
     @Alerts("true")
     public void parentProtoFeature() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -193,7 +183,7 @@ public class HtmlUnitScriptable2Test extends WebDriverTestCase {
     @Test
     @Alerts("1")
     public void passFunctionAsParameter() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -212,52 +202,12 @@ public class HtmlUnitScriptable2Test extends WebDriverTestCase {
     }
 
     /**
-     * Test JavaScript: 'new Date().getTimezoneOffset()' compared to java.text.SimpleDateFormat.format().
-     *
-     * @throws Exception if the test fails
-     */
-    @Test
-    public void dateGetTimezoneOffset() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
-            + "<html><head>\n"
-            + "<script>\n"
-            + LOG_TITLE_FUNCTION
-            + "  function test() {\n"
-            + "    var offset = Math.abs(new Date().getTimezoneOffset());\n"
-            + "    var timezone = '' + (offset/60);\n"
-            + "    if (timezone.length == 1)\n"
-            + "      timezone = '0' + timezone;\n"
-            + "    log(timezone);\n"
-            + "  }\n"
-            + "</script></head>\n"
-            + "<body onload='test()'>\n"
-            + "</body></html>";
-        final String timeZone = new SimpleDateFormat("Z", Locale.ROOT)
-                .format(Calendar.getInstance(Locale.ROOT).getTime());
-        final String hour = timeZone.substring(1, 3);
-        String strMinutes = timeZone.substring(3, 5);
-        final int minutes = Integer.parseInt(strMinutes);
-        final StringBuilder sb = new StringBuilder();
-        if (minutes != 0) {
-            sb.append(hour, 1, hour.length());
-            strMinutes = String.valueOf((double) minutes / 60);
-            strMinutes = strMinutes.substring(1);
-            sb.append(strMinutes);
-        }
-        else {
-            sb.append(hour);
-        }
-        setExpectedAlerts(sb.toString());
-        loadPageVerifyTitle2(html);
-    }
-
-    /**
      * @throws Exception if the test fails
      */
     @Test
     @Alerts({"true", "function", "function"})
     public void callee() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -327,11 +277,6 @@ public class HtmlUnitScriptable2Test extends WebDriverTestCase {
      */
     @Test
     @Alerts("window.length was set")
-    @HtmlUnitNYI(CHROME = "0",
-            EDGE = "0",
-            FF = "0",
-            FF_ESR = "0",
-            IE = "0")
     public void set_ReadOnly_window_length() throws Exception {
         set_ReadOnly("window.length");
     }
@@ -359,7 +304,7 @@ public class HtmlUnitScriptable2Test extends WebDriverTestCase {
     }
 
     private void set_ReadOnly(final String expression) throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -367,7 +312,7 @@ public class HtmlUnitScriptable2Test extends WebDriverTestCase {
             + "  try {\n"
             + "    " + expression + " = '" + expression + " was set" + "';\n"
             + "    log(" + expression + ");\n"
-            + "  } catch(e) {log('exception')}\n"
+            + "  } catch(e) { logEx(e) }\n"
             + "}\n"
             + "</script></head>\n"
             + "<body onload='test()'>\n"
@@ -385,12 +330,11 @@ public class HtmlUnitScriptable2Test extends WebDriverTestCase {
     @Test
     @Alerts(DEFAULT = {"function", "true", "function length() { [native code] }", "0", "0"},
             CHROME = {"function", "true", "function get length() { [native code] }", "0", "0"},
-            EDGE = {"function", "true", "function get length() { [native code] }", "0", "0"},
-            IE = {"function", "true", " function length() { [native code] } ", "0", "0"})
+            EDGE = {"function", "true", "function get length() { [native code] }", "0", "0"})
     @HtmlUnitNYI(CHROME = {"function", "true", "function length() { [native code] }", "0", "0"},
             EDGE = {"function", "true", "function length() { [native code] }", "0", "0"})
     public void lookupGetter() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -402,7 +346,7 @@ public class HtmlUnitScriptable2Test extends WebDriverTestCase {
             + "    log(lengthGetter);\n"
             + "    log(lengthGetter.call(window));\n"
             + "    log(lengthGetter.call());\n"
-            + "  } catch(e) {log('exception')}\n"
+            + "  } catch(e) { logEx(e) }\n"
             + "}\n"
             + "</script></head>\n"
             + "<body onload='test()'>\n"

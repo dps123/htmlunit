@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
  */
 package org.htmlunit.html;
 
-import static org.htmlunit.BrowserVersionFeatures.HTMLKEYGEN_END_TAG_FORBIDDEN;
-
 import java.util.Map;
 
 import org.htmlunit.SgmlPage;
@@ -23,11 +21,12 @@ import org.htmlunit.SgmlPage;
 /**
  * Wrapper for the HTML element "blockquote".
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author David K. Taylor
- * @author <a href="mailto:cse@dynabean.de">Christian Sell</a>
+ * @author Christian Sell
  * @author Ahmed Ashour
  * @author Frank Danek
+ * @author Ronald Brill
  */
 public class HtmlBlockQuote extends HtmlElement {
 
@@ -55,17 +54,5 @@ public class HtmlBlockQuote extends HtmlElement {
      */
     public final String getCiteAttribute() {
         return getAttributeDirect("cite");
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public DisplayStyle getDefaultStyleDisplay() {
-        if ("keygen".equals(getNodeName()) && hasFeature(HTMLKEYGEN_END_TAG_FORBIDDEN)) {
-            return DisplayStyle.INLINE;
-        }
-
-        return super.getDefaultStyleDisplay();
     }
 }

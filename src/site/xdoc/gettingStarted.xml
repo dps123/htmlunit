@@ -5,66 +5,188 @@
     <properties>
         <title>Getting Started with HtmlUnit</title>
         <author email="mbowler@GargoyleSoftware.com">Mike Bowler</author>
+        <author>RBRi</author>
     </properties>
 
     <body>
-        <section name="Introduction">
+        <macro name="toc"/>
+
+        <section name="Quick Start" id="quick_start">
+            <p>
+                This example demonstrates the basic workflow when using HtmlUnit:
+                <br/>
+                &nbsp;-&nbsp;Create a WebClient.
+                <br/>
+                &nbsp;-&nbsp;Load a web page.
+                <br/>
+                &nbsp;-&nbsp;Access the page contents.
+            </p>
+<source><![CDATA[
+try (final WebClient webClient = new WebClient()) {
+    final HtmlPage page = webClient.getPage("https://example.com");
+
+    System.out.println("Title: " + page.getTitleText());
+
+    // Extract human-readable text rendered by the browser
+    final String visibleText = page.asNormalizedText();
+    System.out.println("Page Content:\n" + visibleText);
+}]]></source>
+            <p>
+                The WebClient is the central entry point of the HtmlUnit API. It represents a web browser, 
+                manages network communication, executes JavaScript, maintains cookies, and provides access to the pages you load.
+                <br/>
+                The <code>getPage()</code> method retrieves the requested resource and returns an object representing the loaded page.
+                In this example, the returned object is an <code>HtmlPage</code>, which provides access to the document structure and browser APIs.
+                <br/>
+                Once a page has been loaded, you can inspect its contents, locate elements, interact with forms, click links, 
+                execute JavaScript, or extract data.
+                <br/>
+                To extract rendered text exactly as a user would see it in a browser, use <code>page.asNormalizedText()</code>. 
+                This handles whitespace collapse, block element separations (with newlines), and ignores hidden script or style contents.
+            </p>
+            <p>
+                The following sections introduce these capabilities in more detail.
+            </p>
+
+            <subsection name="When to Use HtmlUnit" id="when_to_use_htmlunit">
+            
+                <p>
+                    HtmlUnit is one of several libraries for working with web content.
+                    The right choice depends on your application's requirements.
+                </p>
+            
+                <table>
+                    <tr>
+                        <th>Library</th>
+                        <th>Best suited for</th>
+                    </tr>
+                    <tr>
+                        <td>HtmlUnit</td>
+                        <td>Browser automation, testing, and web scraping with JavaScript support, without requiring a graphical browser.</td>
+                    </tr>
+                    <tr>
+                        <td>Jsoup</td>
+                        <td>Parsing and extracting data from HTML documents when browser behavior and JavaScript execution are not required.</td>
+                    </tr>
+                    <tr>
+                        <td>Selenium</td>
+                        <td>Automating real browsers for end-to-end testing and browser-specific behavior.</td>
+                    </tr>
+                </table>
+            
+                <p>
+                    HtmlUnit provides a browser-like programming model entirely within Java.
+                    It is often a good choice when JavaScript support is required, but running
+                    a full browser would be unnecessary or impractical.
+                </p>
+                <p>
+                    The <a href="https://github.com/HtmlUnit/htmlunit-jsoup">htmlunit-jsoup</a>
+                    bridge combines HtmlUnit's browser emulation and JavaScript support with
+                    Jsoup's DOM and selector API. It also makes it possible to use many
+                    Jsoup-based libraries with pages loaded and rendered by HtmlUnit.
+                </p>                
+            </subsection>
+        </section>
+
+        <section name="HtmlUnit's Programming Model" id="sec_programming_model">
+        
+            <p>
+                HtmlUnit models the interaction between a web browser and web pages.
+                The central class is <code>WebClient</code>, which represents a browser
+                instance. A <code>WebClient</code> is responsible for making HTTP requests,
+                executing JavaScript, managing cookies, following redirects, and maintaining
+                browser state across multiple requests.
+            </p>
+        
+            <p>
+                Loading a page with <code>WebClient.getPage()</code> returns an object
+                representing the retrieved resource. For HTML documents, this is typically
+                an <code>HtmlPage</code>, which provides access to the page's DOM and
+                browser-specific functionality.
+            </p>
+        
+            <p>
+                Once a page has been loaded, you can:
+            </p>
+        
+            <ul>
+                <li>Inspect the document structure</li>
+                <li>Locate elements by ID, CSS selector, or XPath</li>
+                <li>Interact with forms and links</li>
+                <li>Execute JavaScript</li>
+                <li>Extract text, attributes, and other page content</li>
+                <li>Navigate to additional pages while preserving browser state</li>
+            </ul>
+        
+            <p>
+                In most applications, a single <code>WebClient</code> is reused to
+                navigate through multiple pages, just as a user would with a web browser.
+                Each call to <code>getPage()</code> returns a new page object while the
+                browser state, such as cookies and session information, remains associated
+                with the <code>WebClient</code>.
+            </p>
+        
+        </section>
+
+        <section name="Writing a first test" id="writing_a_first_test">
             <p>
                 The <a href="dependencies.html">dependencies page</a> lists all the jars that you will need
                 to have in your classpath.
             </p>
             <p>
-                The class com.gargoylesoftware.htmlunit.WebClient is the
+                The class org.htmlunit.WebClient is the
                 main starting point. This simulates a web browser and will be used to execute
                 all of the tests. (see <a href="webclient.html">WebClient - the browser</a>)
             </p>
             <p><strong>Android</strong><br/>
-                Using HtmlUnit on Android has some challanges because of the subtle technical distinction
-                of java on android. Because of this we offer a customized distribution to work around these problem.
+                Using HtmlUnit on Android has some challenges because of the subtle technical distinction
+                of java on android. Because of this, we offer a customized distribution to work around these problems.
                 Please check out <a href="https://github.com/HtmlUnit/htmlunit-android" target="_blank">htmlunit-android</a> on github.
             </p>
             <p>
-                Most unit testing will be done within a framework like <a href="http://www.junit.org">JUnit</a>
+                Most unit testing will be done within a framework like <a href="https://junit.org">JUnit</a>
                 so all the examples here will assume that we are using that.
             </p>
             <p>
                 In the first sample, we create the web client and have it load the homepage from the HtmlUnit website.
-                We then verify that this page has the correct title.  Note that getPage() can return different types
-                of pages based on the content type of the returned data.  In this case we are expecting a content
-                type of text/html so we cast the result to an com.gargoylesoftware.htmlunit.html.HtmlPage.
+                We then verify that this page has the correct title. Note that getPage() can return different types
+                of pages based on the content type of the returned data. In this case, we are expecting a content
+                type of text/html, so we cast the result to an org.htmlunit.html.HtmlPage.
             </p>
-            <source><![CDATA[
-@Test
+<source><![CDATA[@Test
 public void homePage() throws Exception {
-    try (final WebClient webClient = new WebClient()) {
-        final HtmlPage page = webClient.getPage("https://htmlunit.sourceforge.io/");
-        Assert.assertEquals("HtmlUnit – Welcome to HtmlUnit", page.getTitleText());
+    try (WebClient webClient = new WebClient()) {
+        final HtmlPage page = webClient.getPage("https://www.htmlunit.org/");
+        Assertions.assertEquals("HtmlUnit – Welcome to HtmlUnit", page.getTitleText());
 
         final String pageAsXml = page.asXml();
-        Assert.assertTrue(pageAsXml.contains("<body class=\"topBarDisabled\">"));
+        Assertions.assertTrue(pageAsXml.contains("<body class=\"topBarDisabled\">"));
 
         final String pageAsText = page.asNormalizedText();
-        Assert.assertTrue(pageAsText.contains("Support for the HTTP and HTTPS protocols"));
+        Assertions.assertTrue(pageAsText.contains("Support for the HTTP and HTTPS protocols"));
     }
 }]]></source>
+            <p>
+                To learn more about extracting visible text, HTML source code, and working with links or element attributes, 
+                see the dedicated <a href="contentExtraction.html">Content Extraction</a> guide.
+            </p>
         </section>
 
-        <section name="Submitting a form">
+        <section name="Submitting a form" id="submitting_a_form">
             <p>
                 Frequently we want to change values in a form and submit the form back to the server. The
                 following example shows how you might do this.
             </p>
-            <source><![CDATA[
-@Test
+<source><![CDATA[@Test
 public void submittingForm() throws Exception {
-    try (final WebClient webClient = new WebClient()) {
+    try (WebClient webClient = new WebClient()) {
 
         // Get the first page
-        final HtmlPage page1 = webClient.getPage("http://some_url");
+        final HtmlPage page = webClient.getPage("http://some_url");
 
-        // Get the form that we are dealing with and within that form, 
+        // Get the form that we are dealing with and within that form,
         // find the submit button and the field that we want to change.
-        final HtmlForm form = page1.getFormByName("myform");
+        final HtmlForm form = page.getFormByName("myform");
 
         final HtmlSubmitInput button = form.getInputByName("submitbutton");
         final HtmlTextInput textField = form.getInputByName("userid");
@@ -73,46 +195,129 @@ public void submittingForm() throws Exception {
         textField.type("root");
 
         // Now submit the form by clicking the button and get back the second page.
-        final HtmlPage page2 = button.click();
+        final HtmlPage secondPage = button.click();
     }
 }]]></source>
+
+            <subsection name="Finding form elements" id="finding_form_elements">
+                <p>
+                    For filling out a form, you first have to find the form elements you like to interact with.
+                </p>
+<source><![CDATA[final HtmlTextInput textField = form.getInputByName("userid");]]></source>
+                <p>
+                    In addition to all the general ways of finding dom elements (see <a href="#finding_a_specific_element">below</a>) the HtmlForm object
+                    offers some convenient methods to find form elements:
+                </p>
+                <ul>
+                    <li>HtmlForm.getButtonByName(String)</li>
+                    <li>HtmlForm.getButtonsByName(String)</li>
+                    <li>HtmlForm.getCheckedRadioButton(String)</li>
+                    <li>HtmlForm.getInputByName(String)</li>
+                    <li>HtmlForm.getInputByValue(String)</li>
+                    <li>HtmlForm.getInputsByName(String)</li>
+                    <li>HtmlForm.getInputsByValue(String)</li>
+                    <li>HtmlForm.getRadioButtonsByName(String)</li>
+                    <li>HtmlForm.getSelectByName(String)</li>
+                    <li>HtmlForm.getSelectsByName(String)</li>
+                    <li>HtmlForm.getTextAreaByName(String)</li>
+                    <li>HtmlForm.getTextAreasByName(String)</li>
+                    <li>HtmlForm.getElements()</li>
+                </ul>
+                <p>
+                    All these methods work based on a list of all dom elements associated with this form -
+                    this list includes all descendants of the form element AND all other elements associated to
+                    this form using the 'form' attribute. In general, the method HtmlForm.getElements() builds this
+                    list and all other methods use this list as a base for more filtering.
+                </p>
+            </subsection>
+
+            <subsection name="Text input &lt;input type='text'&gt;" id="text_input">
+                <p>
+                    These form elements are represented as instances of class HtmlTextInput.
+                </p>
+<source><![CDATA[final HtmlTextInput textField = form.getInputByName("userid");]]></source>
+                <p>
+                    To replace the value with some new text you should use the method 
+                    <a href='apidocs/org/htmlunit/html/HtmlElement.html#type-java.lang.String-'>HtmlElement#type(String)</a>.
+                    This call takes care of setting the focus (if required; including triggering all the focus related events) and
+                    then simulating the typing of the provided string (char by char, including the keyboard events).
+                </p>
+<source><![CDATA[textField.type("RBRi");]]></source>
+                <p>
+                    If all the events are not really needed, you can also use the method
+                    <a href='apidocs/org/htmlunit/html/HtmlSelectableTextInput.html#setValue-java.lang.String-'>HtmlSelectableTextInput#setValue(String)</a>.
+                </p>
+            </subsection>
+
+            <subsection name="Text area &lt;textarea&gt;" id="text_area">
+                <p>
+                    These form elements are represented as instances of class HtmlTextArea.
+                </p>
+<source><![CDATA[final HtmlTextArea textArea = form.getTextAreaByName("comment");]]></source>
+                <p>
+                    The usage of HtmlTextArea is similar to HtmlTextInput (because both are derived from HtmlSelectableTextInput).
+                    This means you can also use type(String) or even setValue(String) for updating these elements.
+                </p>
+<source><![CDATA[textArea.type("HtmlUnit is a great library...");]]></source>
+            </subsection>
+
+            <subsection name="Radio buttons &lt;input type='radio'&gt; and Checkboxes &lt;input type='checkbox'&gt;" id="radio_and_checkbox">
+                <p>
+                    These form elements are represented as instances of class HtmlRadioButtonInput/HtmlCheckBoxInput.
+                </p>
+<source><![CDATA[final HtmlRadioButtonInput countryGermany = form.getInputByName("radio_country_germany");
+final HtmlCheckBoxInput programmingLanguage = form.getInputByName("check_language_java");]]></source>
+                <p>
+                    Usually your form contains many of these elements organized in groups. To check a radio button
+                    or a checkbox you have to use 
+                    <a href='apidocs/org/htmlunit/html/HtmlRadioButtonInput.html#setChecked-boolean-'>HtmlRadioButtonInput#setChecked(boolean)</a>
+                    or
+                    <a href='apidocs/org/htmlunit/html/HtmlCheckBoxInput.html#setChecked-boolean-'>HtmlCheckBoxInput#setChecked(boolean)</a>.
+                </p>
+<source><![CDATA[countryGermany.setChecked(true);
+programmingLanguage.setChecked(true);]]></source>
+                <p>
+                    Checking a single radio button will automatically uncheck all other radio buttons in the same group.
+                </p>
+            </subsection>
+
+            <subsection name="Select &lt;select&gt;" id="select">
+                <p>
+                    These form elements are represented as instances of class HtmlSelect. The individual options are represented by
+                    instances of class HtmlOption.
+                </p>
+<source><![CDATA[final HtmlSelect currency = form.getSelectByName("currency");]]></source>
+                <p>
+                    The simplest way to select one of the options is the method
+                    <a href='apidocs/org/htmlunit/html/HtmlSelect.html#setSelectedIndex-int-'>HtmlSelect.html#setSelectedIndex(int)</a>.
+                </p>
+<source><![CDATA[currency.setSelectedIndex(0);]]></source>
+                <p>
+                    To make your code more readable and robust, you have to search for the HtmlOption to select and then use
+                    <a href='apidocs/org/htmlunit/html/HtmlSelect.html#setSelectedAttribute-org.htmlunit.html.HtmlOption-boolean-'>HtmlSelect.html#setSelectedAttribute(HtmlOption, boolean)</a>.
+                </p>
+<source><![CDATA[HtmlOption euro = currency.getOptionByValue("Euro");
+currency.setSelectedAttribute(euro, true);]]></source>
+                <p>
+                    For single selection select elements, this call also deselects all other options.
+                </p>
+            </subsection>
         </section>
 
-        <section name="Imitating a specific browser">
-            <p>
-                Often you will want to simulate a specific browser. This is done by passing a
-                com.gargoylesoftware.htmlunit.BrowserVersion into the WebClient constructor.
-                Constants have been provided for some common browsers but you can create your own specific
-                version by instantiating a BrowserVersion.
-            </p>
-            <source><![CDATA[
-@Test
-public void homePage_Firefox() throws Exception {
-    try (final WebClient webClient = new WebClient(BrowserVersion.FIREFOX)) {
-        final HtmlPage page = webClient.getPage("https://htmlunit.sourceforge.io/");
-        Assert.assertEquals("HtmlUnit – Welcome to HtmlUnit", page.getTitleText());
-    }
-}]]></source>
-            <p>
-                Specifying this BrowserVersion will change the user agent header that is sent up to the
-                server and will change the behavior of some of the JavaScript.
-            </p>
-        </section>
-
-        <section name="Finding a specific element">
+        <section name="Finding a specific element" id="finding_a_specific_element">
             <p>
                 Once you have a reference to an HtmlPage, you can search for a specific HtmlElement by one of
-                'get' methods, or by using XPath or CSS selectors.
+                'get' methods, or by using CSS or XPath selectors.
             </p>
-            <subsection name="Traversing the DOM tree">
+            <subsection name="Traversing the DOM tree" id="traversing_dom">
                 <p>
                     Below is an example of finding a 'div' by an ID, and getting an anchor by name:
                 </p>
-                <source><![CDATA[
-@Test
-public void getElements() throws Exception {
-    try (final WebClient webClient = new WebClient()) {
+<source><![CDATA[@Test
+public void getElementsById() throws Exception {
+    try (WebClient webClient = new WebClient()) {
         final HtmlPage page = webClient.getPage("http://some_url");
+
         final HtmlDivision div = page.getHtmlElementById("some_div_id");
         final HtmlAnchor anchor = page.getAnchorByName("anchor_name");
     }
@@ -120,18 +325,18 @@ public void getElements() throws Exception {
                 <p>
                     A simple way for finding elements might be to find all elements of a specific type.
                 </p>
-                <source><![CDATA[
- @Test
- public void getElements() throws Exception {
-     try (final WebClient webClient = new WebClient()) {
-         final HtmlPage page = webClient.getPage("http://some_url");
-         NodeList inputs = page.getElementsByTagName("input");
-         final Iterator<E> nodesIterator = nodes.iterator();
-         // now iterate
-     }
- }]]></source>
+<source><![CDATA[@Test
+public void getElementsByTagName() throws Exception {
+    try (WebClient webClient = new WebClient()) {
+        final HtmlPage page = webClient.getPage("http://some_url");
+
+        final DomNodeList<DomElement> inputs = page.getElementsByTagName("input");
+        final Iterator<DomElement> nodesIterator = inputs.iterator();
+        // now iterate
+    }
+}]]></source>
                 <p>
-                    There is rich set of methods usable to locate page elements e.g.
+                    There is a rich set of methods usable to locate page elements e.g.
                 </p>
                 <ul>
                     <li>HtmlPage.getAnchors(); HtmlPage.getAnchorByHref(String); HtmlPage.getAnchorByName(String); HtmlPage.getAnchorByText(String)</li>
@@ -149,21 +354,41 @@ public void getElements() throws Exception {
                     <li>DomElement.getChildElements(); DomElement.getChildElementCount()</li>
                     <li>DomElement.getFirstElementChild(); DomElement.getLastElementChild()</li>
                     <li>HtmlElement.getEnclosingElement(String); HtmlElement.getEnclosingForm()</li>
-                    <li>DomNode.getChildNodes(); DomNode.getChildren(); DomNode.getDescendants(); DomNode.getDomElementDescendants(); DomNode.getFirstChild(); DomNode.getHtmlElementDescendants()
-                        DomNode.getLastChild(); DomNode.getNextElementSibling(); DomNode.getNextSibling(); DomNode.getPreviousElementSibling(); getPreviousSibling()</li>
+                    <li>DomNode.getChildNodes(); DomNode.getChildren(); DomNode.getDescendants(); DomNode.getDomElementDescendants(); DomNode.getFirstChild(); DomNode.getHtmlElementDescendants();
+                        DomNode.getLastChild(); DomNode.getNextElementSibling(); DomNode.getNextSibling(); DomNode.getPreviousElementSibling(); DomNode.getPreviousSibling()</li>
                 </ul>
             </subsection>
 
-            <subsection name="XPath queries">
+            <subsection name="CSS Selectors" id="css_selectors">
+                <p>
+                    You can also use CSS selectors
+                </p>
+<source><![CDATA[@Test
+public void cssSelector() throws Exception {
+    try (WebClient webClient = new WebClient()) {
+        final HtmlPage page = webClient.getPage("https://www.htmlunit.org/");
+
+        //get list of all divs
+        final DomNodeList<DomNode> divs = page.querySelectorAll("div");
+        for (final DomNode div : divs) {
+            // ....
+        }
+
+        //get div which has the id 'breadcrumbs'
+        final DomNode div = page.querySelector("div#breadcrumbs");
+    }
+}]]></source>
+            </subsection>
+
+            <subsection name="XPath queries" id="xpath_queries">
                 <p>
                     XPath is the suggested way for more complex searches, a brief tutorial can be found in
                     <a href="https://www.w3schools.com/xml/xpath_intro.asp">W3Schools</a>
                 </p>
-                <source><![CDATA[
-@Test
+<source><![CDATA[@Test
 public void xpath() throws Exception {
-    try (final WebClient webClient = new WebClient()) {
-        final HtmlPage page = webClient.getPage("https://htmlunit.sourceforge.io/");
+    try (WebClient webClient = new WebClient()) {
+        final HtmlPage page = webClient.getPage("https://www.htmlunit.org/");
 
         //get list of all divs
         final List<?> divs = page.getByXPath("//div");
@@ -173,25 +398,47 @@ public void xpath() throws Exception {
     }
 }]]></source>
             </subsection>
+        </section>
 
-            <subsection name="CSS Selectors">
+        <section name="Extracting text" id="extracting_text">
+            <p>
+                When you need to extract text from a web page, think of it as a two-step process: find it, then extract it.
+                Use HtmlUnit's search methods (like getElementById(), XPath, or CSS selectors) to find the specific element
+                containing the text you want. Then simply call the asNormalizedText() method on that element to get the text
+                exactly as a user would see it in their browser.<br/>
+                See following example:
+            </p>
+<source><![CDATA[@Test
+public void extractTextToc() throws Exception {
+    try (WebClient webClient = new WebClient()) {
+        final HtmlPage page = webClient.getPage("https://www.htmlunit.org/");
+
+        final DomNode sponsoringDiv = page.querySelector("#bodyColumn > section:nth-child(1) > div:nth-child(2)");
+
+        // A normalized textual representation of this element that represents
+        // what would be visible to the user if this page was shown in a web browser.
+        // Whitespace is normalized like in the browser and block tags are separated by '\n'.
+        final String content = sponsoringDiv.asNormalizedText();
+    }
+}]]></source>
+
+            <subsection name="Extracting the whole page content" id="extracting_whole_page_content">
                 <p>
-                    You can also use CSS selectors
+                    If you want to extract all text from an entire page without targeting specific elements, you can call asNormalizedText() 
+                    directly on the body element. This is useful for getting a quick overview of all visible content or for full-text indexing.<br/>
+                    Here's a simple example that loads a page and extracts all its text:
                 </p>
-                <source><![CDATA[
-@Test
-public void cssSelector() throws Exception {
-    try (final WebClient webClient = new WebClient()) {
-        final HtmlPage page = webClient.getPage("https://htmlunit.sourceforge.io/");
+<source><![CDATA[@Test
+public void extractTextFromBody() throws Exception {
+    try (WebClient webClient = new WebClient()) {
+        final HtmlPage page = webClient.getPage("https://www.htmlunit.org/");
 
-        //get list of all divs
-        final DomNodeList<DomNode> divs = page.querySelectorAll("div");
-        for (DomNode div : divs) {
-            ....
-        }
+        final HtmlBody body = page.getBody();
 
-        //get div which has the id 'breadcrumbs'
-        final DomNode div = page.querySelector("div#breadcrumbs");
+        // A normalized textual representation of this element that represents
+        // what would be visible to the user if this page was shown in a web browser.
+        // Whitespace is normalized like in the browser and block tags are separated by '\n'.
+        final String bodyContent = body.asNormalizedText();
     }
 }]]></source>
             </subsection>

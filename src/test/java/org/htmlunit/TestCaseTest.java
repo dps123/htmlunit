@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,22 +15,20 @@
 package org.htmlunit;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
-import org.junit.Test;
-
 import org.htmlunit.html.DefaultElementFactory;
 import org.htmlunit.html.HtmlTitle;
 import org.htmlunit.javascript.configuration.ClassConfiguration;
 import org.htmlunit.javascript.configuration.JavaScriptConfiguration;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for various test cases.
@@ -51,7 +49,7 @@ public final class TestCaseTest {
      */
     @Test
     public void generateTestForHtmlElements() throws Exception {
-        allClassNames_ = getAllClassNames();
+        allClassNames_ = getAllConfiguredJsClassNames();
         generateTestForHtmlElements(new File("src/test/java"));
     }
 
@@ -62,14 +60,17 @@ public final class TestCaseTest {
                 if (file.isDirectory() && !".git".equals(file.getName())) {
                     generateTestForHtmlElements(file);
                 }
-                else if (file.getName().endsWith(".java")) {
+                else if (file.getName().endsWith(".java")
+                        && !file.getName().endsWith("HtmlTagSupportTest.java")
+                        && !file.getName().endsWith("InnerHtmlSerializationTest.java")
+                        && !file.getName().endsWith("OuterHtmlSerializationTest.java")) {
                     final List<String> lines = FileUtils.readLines(file, ISO_8859_1);
                     for (final String line : lines) {
                         if (line.contains("(\"xmp\")")) {
                             final String relativePath = file.getAbsolutePath().substring(
                                     new File(".").getAbsolutePath().length() - 1);
                             final HashSet<String> tags =
-                                    new HashSet<String>(Arrays.asList(DefaultElementFactory.SUPPORTED_TAGS_));
+                                    new HashSet<>(DefaultElementFactory.SUPPORTED_TAGS_);
                             // title tag is special
                             tags.remove(HtmlTitle.TAG_NAME);
                             checkLines(relativePath, line, lines, "xmp", tags);
@@ -90,7 +91,7 @@ public final class TestCaseTest {
      * @return the list
      * @throws Exception if an error occurs.
      */
-    public static Set<String> getAllClassNames() throws Exception {
+    public static Set<String> getAllConfiguredJsClassNames() throws Exception {
         final Set<String> names = new HashSet<>();
 
         for (final BrowserVersion browser : BrowserVersion.ALL_SUPPORTED_BROWSERS) {
@@ -99,6 +100,34 @@ public final class TestCaseTest {
                 names.add(config.getClassName());
             }
         }
+        return names;
+    }
+
+    /**
+     * Returns list of all constructors defined.
+     * @return the list
+     * @throws Exception if an error occurs.
+     */
+    public static Set<String> getAllConfiguredJsConstructorNames() throws Exception {
+        final Set<String> names = new HashSet<>();
+
+        for (final BrowserVersion browser : BrowserVersion.ALL_SUPPORTED_BROWSERS) {
+            final JavaScriptConfiguration jsConfig = JavaScriptConfiguration.getInstance(browser);
+            for (final ClassConfiguration config : jsConfig.getAll()) {
+                if (config.getJsConstructor() != null) {
+                    names.add(config.getJsConstructor().getKey());
+                }
+                else {
+                    names.add(config.getClassName());
+                }
+                if (config.getJsConstructorAlias() != null) {
+                    names.add(config.getJsConstructorAlias());
+                }
+            }
+        }
+
+        names.add("Image");
+        names.add("Option");
 
         return names;
     }

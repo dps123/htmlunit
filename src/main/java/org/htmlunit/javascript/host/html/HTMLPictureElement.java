@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,6 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
 import org.htmlunit.html.HtmlPicture;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
@@ -28,14 +23,18 @@ import org.htmlunit.javascript.configuration.JsxConstructor;
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLPictureElement">MDN Documentation</a>
  */
-@JsxClass(domClass = HtmlPicture.class, value = {CHROME, EDGE, FF, FF_ESR})
+@JsxClass(domClass = HtmlPicture.class)
 public class HTMLPictureElement extends HTMLElement {
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
+    @Override
     @JsxConstructor
-    public HTMLPictureElement() {
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,15 @@ package org.htmlunit.html;
 
 import java.io.PrintWriter;
 
-import org.w3c.dom.Comment;
-
 import org.htmlunit.SgmlPage;
+import org.w3c.dom.Comment;
 
 /**
  * Wrapper for the DOM node Comment.
  *
  * @author Karel Kolman
  * @author Ahmed Ashour
+ * @author Ronald Brill
  */
 public class DomComment extends DomCharacterData implements Comment {
 
@@ -47,11 +47,11 @@ public class DomComment extends DomCharacterData implements Comment {
      */
     @Override
     public short getNodeType() {
-        return org.w3c.dom.Node.COMMENT_NODE;
+        return COMMENT_NODE;
     }
 
     /**
-     * @return the node name, in this case {@link #NODE_NAME}
+     * {@inheritDoc}
      */
     @Override
     public String getNodeName() {
@@ -59,18 +59,18 @@ public class DomComment extends DomCharacterData implements Comment {
     }
 
     /**
-     * Recursively write the XML data for the node tree starting at <code>node</code>.
-     *
-     * @param indent white space to indent child nodes
-     * @param printWriter writer where child nodes are written
+     * {@inheritDoc}
      */
     @Override
-    protected void printXml(final String indent, final PrintWriter printWriter) {
+    protected boolean printXml(final String indent, final boolean indentBefore, final PrintWriter printWriter) {
         printWriter.print(indent);
         printWriter.print("<!--");
-        printWriter.print(getData());
+        final String data = getData();
+        if (data != null) {
+            printWriter.print(data);
+        }
         printWriter.print("-->");
-        printChildrenAsXml(indent, printWriter);
+        return printChildrenAsXml(indent, true, printWriter);
     }
 
     /**

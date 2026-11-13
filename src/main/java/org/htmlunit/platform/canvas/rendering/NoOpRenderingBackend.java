@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,11 @@
 package org.htmlunit.platform.canvas.rendering;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import org.htmlunit.javascript.host.canvas.ImageData;
 
 /**
  * The default implementation of {@link RenderingBackend}.
@@ -30,12 +30,8 @@ public class NoOpRenderingBackend implements RenderingBackend {
 
     private static final Log LOG = LogFactory.getLog(NoOpRenderingBackend.class);
 
-    private static int ID_GENERATOR_;
+    private static final AtomicInteger ID_GENERATOR = new AtomicInteger();
     private final int id_;
-
-    private static synchronized int nextId() {
-        return ID_GENERATOR_++;
-    }
 
     /**
      * Constructor.
@@ -43,7 +39,7 @@ public class NoOpRenderingBackend implements RenderingBackend {
      * @param imageHeight the height
      */
     public NoOpRenderingBackend(final int imageWidth, final int imageHeight) {
-        id_ = nextId();
+        id_ = ID_GENERATOR.getAndIncrement();
     }
 
     /**
@@ -144,7 +140,7 @@ public class NoOpRenderingBackend implements RenderingBackend {
      * {@inheritDoc}
      */
     @Override
-    public void fill() {
+    public void fill(final WindingRule windingRule) {
         if (LOG.isDebugEnabled()) {
             LOG.debug("[" + id_ + "] fill()");
         }
@@ -154,7 +150,7 @@ public class NoOpRenderingBackend implements RenderingBackend {
      * {@inheritDoc}
      */
     @Override
-    public void fillRect(final int x, final int y, final int w, final int h) {
+    public void fillRect(final double x, final double y, final double w, final double h) {
         if (LOG.isDebugEnabled()) {
             LOG.debug("[" + id_ + "] fillRect(" + x + ", "  + y + ", "  + w + ", "  + h + ")");
         }
@@ -206,7 +202,8 @@ public class NoOpRenderingBackend implements RenderingBackend {
      * {@inheritDoc}
      */
     @Override
-    public void putImageData(final ImageData imageData,
+    public void putImageData(
+            final ByteBuffer imageDataBytes, final int imageDataHeight, final int imageDataWidth,
             final int dx, final int dy, final int dirtyX, final int dirtyY,
             final int dirtyWidth, final int dirtyHeight) {
 
@@ -260,8 +257,8 @@ public class NoOpRenderingBackend implements RenderingBackend {
      * {@inheritDoc}
      */
     @Override
-    public int getLineWidth() {
-        return 1;
+    public float getLineWidth() {
+        return 1f;
     }
 
     /**
@@ -298,7 +295,7 @@ public class NoOpRenderingBackend implements RenderingBackend {
      * {@inheritDoc}
      */
     @Override
-    public void setLineWidth(final int lineWidth) {
+    public void setLineWidth(final float lineWidth) {
         if (LOG.isDebugEnabled()) {
             LOG.debug("[" + id_ + "] setLineWidth(" + lineWidth + ")");
         }
@@ -330,7 +327,7 @@ public class NoOpRenderingBackend implements RenderingBackend {
      * {@inheritDoc}
      */
     @Override
-    public void strokeRect(final int x, final int y, final int w, final int h) {
+    public void strokeRect(final double x, final double y, final double w, final double h) {
         if (LOG.isDebugEnabled()) {
             LOG.debug("[" + id_ + "] strokeRect(" + x + ", "  + y + ", "  + w + ", "  + h + ")");
         }
@@ -351,7 +348,7 @@ public class NoOpRenderingBackend implements RenderingBackend {
      * {@inheritDoc}
      */
     @Override
-    public void translate(final int x, final int y) {
+    public void translate(final double x, final double y) {
         if (LOG.isDebugEnabled()) {
             LOG.debug("[" + id_ + "] translate()");
         }
@@ -375,6 +372,90 @@ public class NoOpRenderingBackend implements RenderingBackend {
     public void closePath() {
         if (LOG.isDebugEnabled()) {
             LOG.debug("[" + id_ + "] closePath()");
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public LineJoin getLineJoin() {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("[" + id_ + "] getLineJoin()");
+        }
+        return LineJoin.MITER;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void setLineJoin(final LineJoin lineJoin) {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("[" + id_ + "] setLineJoin(" + lineJoin + ")");
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public LineCap getLineCap() {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("[" + id_ + "] getLineCap()");
+        }
+        return LineCap.BUTT;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void setLineCap(final LineCap lineCap) {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("[" + id_ + "] setLineCap(" + lineCap + ")");
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public TextAlign getTextAlign() {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("[" + id_ + "] getTextAlign()");
+        }
+        return TextAlign.START;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void setTextAlign(final TextAlign textAlign) {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("[" + id_ + "] setTextAlign(" + textAlign + ")");
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public TextBaseline getTextBaseline() {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("[" + id_ + "] getTextBaseline()");
+        }
+        return TextBaseline.ALPHABETIC;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void setTextBaseline(final TextBaseline textBaseline) {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("[" + id_ + "] setTextBaseline(" + textBaseline + ")");
         }
     }
 }

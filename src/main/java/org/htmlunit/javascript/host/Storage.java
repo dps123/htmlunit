@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,34 +14,30 @@
  */
 package org.htmlunit.javascript.host;
 
-import static org.htmlunit.BrowserVersionFeatures.JS_STORAGE_GET_FROM_ITEMS;
 import static org.htmlunit.BrowserVersionFeatures.JS_STORAGE_PRESERVED_INCLUDED;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
 
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 
-import org.w3c.dom.DOMException;
-
+import org.htmlunit.corejs.javascript.Scriptable;
 import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
-
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.Scriptable;
+import org.w3c.dom.DOMException;
 
 /**
- * The JavaScript object that represents a Storage.
+ * JavaScript host object for {@code Storage}.
  *
  * @author Ahmed Ashour
  * @author Marc Guillemot
  * @author Ronald Brill
+ * @author Kanoko Yamamoto
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/Storage">MDN Documentation</a>
  */
 @JsxClass
 public class Storage extends HtmlUnitScriptable {
@@ -57,22 +53,32 @@ public class Storage extends HtmlUnitScriptable {
     private long storeSize_;
 
     /**
-     * Public default constructor only for the prototype.
+     * Default constructor for prototype instantiation only.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
     public Storage() {
+        super();
         store_ = null;
     }
 
     /**
-     * Constructor.
+     * Creates an instance of this object.
+     */
+    @JsxConstructor
+    public void jsConstructor() {
+        // nothing to do
+    }
+
+    /**
+     * Creates a new {@code Storage} instance backed by the given store.
+     *
      * @param window the parent scope
-     * @param store the storage itself
+     * @param store the backing map for this storage
      */
     public Storage(final Window window, final Map<String, String> store) {
+        super();
         store_ = store;
         storeSize_ = 0L;
-        setParentScope(window);
+        setParentScope(getTopLevelScope(window.getParentScope()));
         setPrototype(window.getPrototype(Storage.class));
     }
 
@@ -86,7 +92,7 @@ public class Storage extends HtmlUnitScriptable {
             super.put(name, start, value);
         }
         if (store_ != null && (!isReserved || getBrowserVersion().hasFeature(JS_STORAGE_PRESERVED_INCLUDED))) {
-            setItem(name, Context.toString(value));
+            setItem(name, JavaScriptEngine.toString(value));
         }
     }
 
@@ -95,8 +101,7 @@ public class Storage extends HtmlUnitScriptable {
      */
     @Override
     public Object get(final String name, final Scriptable start) {
-        if (store_ == null
-                || (RESERVED_NAMES_.contains(name) && !getBrowserVersion().hasFeature(JS_STORAGE_GET_FROM_ITEMS))) {
+        if (store_ == null || RESERVED_NAMES_.contains(name)) {
             return super.get(name, start);
         }
         final Object value = getItem(name);
@@ -107,8 +112,9 @@ public class Storage extends HtmlUnitScriptable {
     }
 
     /**
-     * Returns the length property.
-     * @return the length property
+     * Returns the number of items in the storage.
+     *
+     * @return the number of items
      */
     @JsxGetter
     public int getLength() {
@@ -116,8 +122,9 @@ public class Storage extends HtmlUnitScriptable {
     }
 
     /**
-     * Removes the specified key.
-     * @param key the item key
+     * Removes the item with the specified key.
+     *
+     * @param key the key of the item to remove
      */
     @JsxFunction
     public void removeItem(final String key) {
@@ -128,25 +135,30 @@ public class Storage extends HtmlUnitScriptable {
     }
 
     /**
-     * Returns the key of the specified index.
-     * @param index the index
-     * @return the key
+     * Returns the key at the specified index.
+     *
+     * @param index the index of the key to retrieve
+     * @return the key at the given index, or {@code null} if out of range
      */
     @JsxFunction
     public String key(final int index) {
-        int counter = 0;
-        for (final String key : store_.keySet()) {
-            if (counter++ == index) {
-                return key;
+        if (index >= 0) {
+            int counter = 0;
+            for (final String key : store_.keySet()) {
+                if (counter == index) {
+                    return key;
+                }
+                counter++;
             }
         }
         return null;
     }
 
     /**
-     * Returns the value of the specified key.
-     * @param key the item key
-     * @return the value
+     * Returns the value associated with the given key.
+     *
+     * @param key the key of the item to retrieve
+     * @return the value for the given key, or {@code null} if not found
      */
     @JsxFunction
     public Object getItem(final String key) {
@@ -154,25 +166,26 @@ public class Storage extends HtmlUnitScriptable {
     }
 
     /**
-     * Sets the item value.
-     * @param key the item key
-     * @param data the value
+     * Sets the value for the given key.
+     *
+     * @param key the key of the item to set
+     * @param data the new value
      */
     @JsxFunction
     public void setItem(final String key, final String data) {
-        final long storeSize = storeSize_ + data.length();
+        final String existingData = store_.get(key);
+        final long storeSize = storeSize_ + data.length() - (existingData != null ? existingData.length() : 0);
         if (storeSize > STORE_SIZE_KIMIT) {
-            Context.throwAsScriptRuntimeEx(
+            throw JavaScriptEngine.throwAsScriptRuntimeEx(
                     new DOMException((short) 22, "QuotaExceededError: Failed to execute 'setItem' on 'Storage': "
                             + "Setting the value of '" + key + "' exceeded the quota."));
-            return;
         }
         storeSize_ = storeSize;
         store_.put(key, data);
     }
 
     /**
-     * Clears all items.
+     * Removes all items from this storage.
      */
     @JsxFunction
     public void clear() {

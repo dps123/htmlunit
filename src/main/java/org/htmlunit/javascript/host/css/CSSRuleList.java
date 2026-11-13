@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,22 +15,17 @@
 package org.htmlunit.javascript.host.css;
 
 import static org.htmlunit.BrowserVersionFeatures.JS_CSSRULELIST_ENUM_ITEM_LENGTH;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import org.htmlunit.corejs.javascript.Scriptable;
 import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
-
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.Scriptable;
 
 /**
  * A JavaScript object for {@code CSSRuleList}.
@@ -38,7 +33,7 @@ import org.htmlunit.corejs.javascript.Scriptable;
  * @author Ahmed Ashour
  * @author Ronald Brill
  * @author Frank Danek
- * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/CSSRuleList">MDN doc</a>
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/CSSRuleList">MDN Documentation</a>
  */
 @JsxClass
 public class CSSRuleList extends HtmlUnitScriptable {
@@ -49,14 +44,15 @@ public class CSSRuleList extends HtmlUnitScriptable {
      * Creates a new instance.
      */
     public CSSRuleList() {
+        super();
     }
 
     /**
      * Creates an instance.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
+    @JsxConstructor
     public void jsConstructor() {
-        throw Context.reportRuntimeError("Illegal constructor.");
+        throw JavaScriptEngine.typeErrorIllegalConstructor();
     }
 
     /**
@@ -64,6 +60,7 @@ public class CSSRuleList extends HtmlUnitScriptable {
      * @param stylesheet the stylesheet
      */
     public CSSRuleList(final CSSStyleSheet stylesheet) {
+        super();
         setParentScope(stylesheet.getParentScope());
         setPrototype(getPrototype(getClass()));
     }
@@ -73,12 +70,13 @@ public class CSSRuleList extends HtmlUnitScriptable {
      * @param groupingRule the grouping rule
      */
     public CSSRuleList(final CSSGroupingRule groupingRule) {
+        super();
         setParentScope(groupingRule.getParentScope());
         setPrototype(getPrototype(getClass()));
     }
 
     /**
-     * Add a rule.
+     * Adds a rule.
      * @param rule the rule to add
      */
     protected void addRule(final CSSRule rule) {
@@ -86,7 +84,7 @@ public class CSSRuleList extends HtmlUnitScriptable {
     }
 
     /**
-     * Clear the listOfRules.
+     * Clears the list of rules.
      */
     protected void clearRules() {
         rules_.clear();
@@ -108,7 +106,11 @@ public class CSSRuleList extends HtmlUnitScriptable {
      */
     @JsxFunction
     public Object item(final int index) {
-        return get(index, this);
+        final Object item = get(index, this);
+        if (NOT_FOUND == item) {
+            return null;
+        }
+        return item;
     }
 
     /**
@@ -153,8 +155,8 @@ public class CSSRuleList extends HtmlUnitScriptable {
         try {
             return has(Integer.parseInt(name), start);
         }
-        catch (final Exception e) {
-            //ignore
+        catch (final Exception ignored) {
+            // ignore
         }
         return false;
     }

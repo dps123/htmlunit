@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,28 +17,123 @@ package org.htmlunit.html;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.SimpleWebTestCase;
-import org.htmlunit.junit.BrowserRunner;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link HtmlResetInput}.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author Ahmed Ashour
+ * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class HtmlResetInputTest extends SimpleWebTestCase {
 
     /**
      * @throws Exception if the test fails
      */
     @Test
+    @Alerts({})
+    public void defaultValue() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + "  function test() {\n"
+            + "    alert(document.getElementById('myId').value);\n"
+            + "  }\n"
+            + "</script>\n"
+            + "</head>\n"
+            + "<body onload='test()'>\n"
+            + "<form action='foo.html'>\n"
+            + "  <input type='reset' id='myId'>\n"
+            + "</form>\n"
+            + "</body></html>";
+
+        final HtmlPage page = loadPageWithAlerts(html);
+        HtmlResetInput submit = page.getHtmlElementById("myId");
+
+        assertEquals("", submit.getValueAttribute());
+        assertEquals("", submit.getValue());
+
+        assertTrue(page.asNormalizedText().contains("Reset"));
+        assertEquals("Reset", submit.asNormalizedText());
+
+        assertFalse(page.asXml().contains("Reset"));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("")
+    public void emptyValue() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + "  function test() {\n"
+            + "    alert(document.getElementById('myId').value);\n"
+            + "  }\n"
+            + "</script>\n"
+            + "</head>\n"
+            + "<body onload='test()'>\n"
+            + "<form action='" + URL_SECOND + "'>\n"
+            + "  <input type='reset' id='myId' value=''>\n"
+            + "</form>\n"
+            + "</body></html>";
+
+        final HtmlPage page = loadPageWithAlerts(html);
+        HtmlResetInput submit = page.getHtmlElementById("myId");
+
+        assertEquals("", submit.getValueAttribute());
+        assertEquals("", submit.getValue());
+
+        assertFalse(page.asNormalizedText().contains("Reset"));
+        assertEquals("", submit.asNormalizedText());
+
+        assertTrue(page.asXml().contains("value=\"\""));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("Press Me")
+    public void value() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + "  function test() {\n"
+            + "    alert(document.getElementById('myId').value);\n"
+            + "  }\n"
+            + "</script>\n"
+            + "</head>\n"
+            + "<body onload='test()'>\n"
+            + "<form action='" + URL_SECOND + "'>\n"
+            + "  <input type='reset' id='myId' value='Press Me'>\n"
+            + "</form>\n"
+            + "</body></html>";
+
+        final HtmlPage page = loadPageWithAlerts(html);
+        HtmlResetInput submit = page.getHtmlElementById("myId");
+
+        assertEquals("Press Me", submit.getValueAttribute());
+        assertEquals("Press Me", submit.getValue());
+
+        assertTrue(page.asNormalizedText().contains("Press Me"));
+        assertFalse(page.asNormalizedText().contains("Reset"));
+        assertEquals("Press Me", submit.asNormalizedText());
+
+        assertTrue(page.asXml().contains("value=\"Press Me\""));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
     public void reset() throws Exception {
-        final String htmlContent
-            = "<html><head><title>foo</title></head><body>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html><head><title>foo</title></head><body>\n"
             + "<form id='form1'>\n"
             + "<input type='text' name='textfield1' id='textfield1' value='foo'/>\n"
             + "<input type='password' name='password1' id='password1' value='foo'/>\n"
@@ -69,10 +164,6 @@ public class HtmlResetInputTest extends SimpleWebTestCase {
         page.<HtmlTextInput>getHtmlElementById("textfield1").setValue("Flintstone");
         page.<HtmlHiddenInput>getHtmlElementById("hidden1").setValue("Flintstone");
         page.<HtmlPasswordInput>getHtmlElementById("password1").setValue("Flintstone");
-        HtmlElement elem = page.getHtmlElementById("isindex1");
-        if (elem instanceof HtmlIsIndex) {
-            ((HtmlIsIndex) elem).setValue("Flintstone");
-        }
 
         // Check to make sure they did get changed
         assertEquals("bar", form.getCheckedRadioButton("radioButton").getValueAttribute());
@@ -85,10 +176,6 @@ public class HtmlResetInputTest extends SimpleWebTestCase {
         assertEquals("Flintstone", page.<HtmlTextInput>getHtmlElementById("textfield1").getValue());
         assertEquals("Flintstone", page.<HtmlHiddenInput>getHtmlElementById("hidden1").getValueAttribute());
         assertEquals("Flintstone", page.<HtmlHiddenInput>getHtmlElementById("hidden1").getValue());
-        elem = page.getHtmlElementById("isindex1");
-        if (elem instanceof HtmlIsIndex) {
-            assertEquals("Flintstone", ((HtmlIsIndex) elem).getValue());
-        }
 
         final HtmlPage secondPage = resetInput.click();
         assertSame(page, secondPage);
@@ -110,10 +197,6 @@ public class HtmlResetInputTest extends SimpleWebTestCase {
 
         assertEquals("foo", page.<HtmlPasswordInput>getHtmlElementById("password1").getValueAttribute());
         assertEquals("foo", page.<HtmlPasswordInput>getHtmlElementById("password1").getValue());
-        elem = page.getHtmlElementById("isindex1");
-        if (elem instanceof HtmlIsIndex) {
-            assertEquals("", ((HtmlIsIndex) elem).getValue());
-        }
     }
 
     /**
@@ -121,8 +204,8 @@ public class HtmlResetInputTest extends SimpleWebTestCase {
      */
     @Test
     public void resetClick_onClick() throws Exception {
-        final String htmlContent
-            = "<html><head><title>foo</title></head><body>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html><head><title>foo</title></head><body>\n"
             + "<form id='form1' onSubmit='alert(\"bar\")' onReset='alert(\"reset\")'>\n"
             + "  <button type='reset' name='button' id='button' "
             + "onClick='alert(\"foo\")'>Push me</button>\n"
@@ -144,8 +227,8 @@ public class HtmlResetInputTest extends SimpleWebTestCase {
      */
     @Test
     public void outsideForm() throws Exception {
-        final String html =
-            "<html><head></head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head></head>\n"
             + "<body>\n"
             + "<input id='myInput' type='reset' onclick='alert(1)'>\n"
             + "</body></html>";

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,20 +14,38 @@
  */
 package org.htmlunit.html;
 
-import static org.htmlunit.BrowserVersionFeatures.FORM_SUBMISSION_FORM_ATTRIBUTE;
-import static org.htmlunit.BrowserVersionFeatures.HTMLELEMENT_DETACH_ACTIVE_TRIGGERS_NO_KEYUP_EVENT;
 import static org.htmlunit.BrowserVersionFeatures.HTMLELEMENT_REMOVE_ACTIVE_TRIGGERS_BLUR_EVENT;
-import static org.htmlunit.BrowserVersionFeatures.KEYBOARD_EVENT_SPECIAL_KEYPRESS;
+import static org.htmlunit.BrowserVersionFeatures.KEYBOARD_EVENT_META_NO_KEYPRESS;
+import static org.htmlunit.css.CssStyleSheet.ABSOLUTE;
+import static org.htmlunit.css.CssStyleSheet.FIXED;
+import static org.htmlunit.css.CssStyleSheet.STATIC;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import org.apache.commons.lang3.StringUtils;
+import org.htmlunit.ClipboardHandler;
+import org.htmlunit.ElementNotFoundException;
+import org.htmlunit.Page;
+import org.htmlunit.ScriptResult;
+import org.htmlunit.SgmlPage;
+import org.htmlunit.WebAssert;
+import org.htmlunit.WebClient;
+import org.htmlunit.WebWindow;
+import org.htmlunit.css.ComputedCssStyleDeclaration;
+import org.htmlunit.html.impl.SelectableTextInput;
+import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.host.dom.Document;
+import org.htmlunit.javascript.host.dom.MutationObserver;
+import org.htmlunit.javascript.host.event.Event;
+import org.htmlunit.javascript.host.event.EventTarget;
+import org.htmlunit.javascript.host.event.InputEvent;
+import org.htmlunit.javascript.host.event.KeyboardEvent;
+import org.htmlunit.javascript.host.html.HTMLDocument;
+import org.htmlunit.javascript.host.html.HTMLElement;
+import org.htmlunit.util.StringUtils;
 import org.w3c.dom.Attr;
 import org.w3c.dom.CDATASection;
 import org.w3c.dom.Comment;
@@ -38,29 +56,13 @@ import org.w3c.dom.Node;
 import org.w3c.dom.ProcessingInstruction;
 import org.w3c.dom.Text;
 
-import org.htmlunit.BrowserVersion;
-import org.htmlunit.ElementNotFoundException;
-import org.htmlunit.Page;
-import org.htmlunit.ScriptResult;
-import org.htmlunit.SgmlPage;
-import org.htmlunit.WebAssert;
-import org.htmlunit.WebClient;
-import org.htmlunit.html.impl.SelectableTextInput;
-import org.htmlunit.javascript.host.dom.Document;
-import org.htmlunit.javascript.host.dom.MutationObserver;
-import org.htmlunit.javascript.host.event.Event;
-import org.htmlunit.javascript.host.event.EventTarget;
-import org.htmlunit.javascript.host.event.KeyboardEvent;
-import org.htmlunit.javascript.host.html.HTMLDocument;
-import org.htmlunit.javascript.host.html.HTMLElement;
-
 /**
  * An abstract wrapper for HTML elements.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
- * @author <a href="mailto:gudujarlson@sf.net">Mike J. Bresnahan</a>
+ * @author Mike Bowler
+ * @author Mike J. Bresnahan
  * @author David K. Taylor
- * @author <a href="mailto:cse@dynabean.de">Christian Sell</a>
+ * @author Christian Sell
  * @author David D. Kilzer
  * @author Mike Gallaher
  * @author Denis N. Antonioli
@@ -72,6 +74,7 @@ import org.htmlunit.javascript.host.html.HTMLElement;
  * @author Ronald Brill
  * @author Frank Danek
  * @author Ronny Shapiro
+ * @author Lai Quang Duong
  */
 public abstract class HtmlElement extends DomElement {
 
@@ -113,8 +116,12 @@ public abstract class HtmlElement extends DomElement {
         TABLE_CAPTION("table-caption"),
         /** ruby. */
         RUBY("ruby"),
-        /** ruby-text. */
-        RUBY_TEXT("ruby-text");
+        /** ruby-base. */
+        RUBY_BASE("ruby-base"),
+        /** ruby-text-container. */
+        RUBY_TEXT("ruby-text"),
+        /** ruby-text-container. */
+        RUBY_TEXT_CONTAINER("ruby-text-container");
 
         private final String value_;
         DisplayStyle(final String value) {
@@ -142,9 +149,13 @@ public abstract class HtmlElement extends DomElement {
     protected static final String ATTRIBUTE_REQUIRED = "required";
     /** Constant 'checked'. */
     protected static final String ATTRIBUTE_CHECKED = "checked";
+    /** Constant 'hidden'. */
+    protected static final String ATTRIBUTE_HIDDEN = "hidden";
+    /** Constant 'readonly'. */
+    protected static final String ATTRIBUTE_READONLY = "readonly";
 
     /** The listeners which are to be notified of attribute changes. */
-    private final Collection<HtmlAttributeChangeListener> attributeListeners_;
+    private final List<HtmlAttributeChangeListener> attributeListeners_ = new ArrayList<>();
 
     /** The owning form for lost form children. */
     private HtmlForm owningForm_;
@@ -152,6 +163,7 @@ public abstract class HtmlElement extends DomElement {
     private boolean shiftPressed_;
     private boolean ctrlPressed_;
     private boolean altPressed_;
+    private boolean metaPressed_;
 
     /**
      * Creates an instance.
@@ -159,7 +171,7 @@ public abstract class HtmlElement extends DomElement {
      * @param qualifiedName the qualified name of the element type to instantiate
      * @param page the page that contains this element
      * @param attributes a map ready initialized with the attributes for this element, or
-     * {@code null}. The map will be stored as is, not copied.
+     *        {@code null}. The map will be stored as is, not copied.
      */
     protected HtmlElement(final String qualifiedName, final SgmlPage page,
             final Map<String, DomAttr> attributes) {
@@ -173,12 +185,11 @@ public abstract class HtmlElement extends DomElement {
      * @param qualifiedName the qualified name of the element type to instantiate
      * @param page the page that contains this element
      * @param attributes a map ready initialized with the attributes for this element, or
-     * {@code null}. The map will be stored as is, not copied.
+     *        {@code null}. The map will be stored as is, not copied.
      */
     protected HtmlElement(final String namespaceURI, final String qualifiedName, final SgmlPage page,
             final Map<String, DomAttr> attributes) {
         super(namespaceURI, qualifiedName, page, attributes);
-        attributeListeners_ = new LinkedHashSet<>();
     }
 
     /**
@@ -189,20 +200,21 @@ public abstract class HtmlElement extends DomElement {
             final String attributeValue, final boolean notifyAttributeChangeListeners,
             final boolean notifyMutationObservers) {
 
+        final HtmlPage htmlPage = getHtmlPageOrNull();
+
         // TODO: Clean up; this is a hack for HtmlElement living within an XmlPage.
-        if (null == getHtmlPageOrNull()) {
+        if (htmlPage == null) {
             super.setAttributeNS(namespaceURI, qualifiedName, attributeValue, notifyAttributeChangeListeners,
                     notifyMutationObservers);
             return;
         }
 
         final String oldAttributeValue = getAttribute(qualifiedName);
-        final HtmlPage htmlPage = (HtmlPage) getPage();
         final boolean mappedElement = isAttachedToPage()
-                    && HtmlPage.isMappedElement(htmlPage, qualifiedName);
+                && (DomElement.NAME_ATTRIBUTE.equals(qualifiedName) || DomElement.ID_ATTRIBUTE.equals(qualifiedName));
         if (mappedElement) {
-            // cast is save here because isMappedElement checks for HtmlPage
-            htmlPage.removeMappedElement(this);
+            // cast is safe here because isMappedElement checks for HtmlPage
+            htmlPage.removeMappedElement(this, false, false);
         }
 
         final HtmlAttributeChangeEvent event;
@@ -232,7 +244,7 @@ public abstract class HtmlElement extends DomElement {
      */
     protected static void notifyAttributeChangeListeners(final HtmlAttributeChangeEvent event,
             final HtmlElement element, final String oldAttributeValue, final boolean notifyMutationObservers) {
-        final Collection<HtmlAttributeChangeListener> listeners = element.attributeListeners_;
+        final List<HtmlAttributeChangeListener> listeners = new ArrayList<>(element.attributeListeners_);
         if (ATTRIBUTE_NOT_DEFINED == oldAttributeValue) {
             synchronized (listeners) {
                 for (final HtmlAttributeChangeListener listener : listeners) {
@@ -251,16 +263,17 @@ public abstract class HtmlElement extends DomElement {
                 }
             }
         }
+
         final DomNode parentNode = element.getParentNode();
-        if (parentNode instanceof HtmlElement) {
-            notifyAttributeChangeListeners(event, (HtmlElement) parentNode, oldAttributeValue, notifyMutationObservers);
+        if (parentNode instanceof HtmlElement htmlElement) {
+            notifyAttributeChangeListeners(event, htmlElement, oldAttributeValue, notifyMutationObservers);
         }
     }
 
     private void fireAttributeChangeImpl(final HtmlAttributeChangeEvent event,
             final HtmlPage htmlPage, final boolean mappedElement, final String oldAttributeValue) {
         if (mappedElement) {
-            htmlPage.addMappedElement(this);
+            htmlPage.addMappedElement(this, false);
         }
 
         if (ATTRIBUTE_NOT_DEFINED == oldAttributeValue) {
@@ -284,14 +297,21 @@ public abstract class HtmlElement extends DomElement {
      */
     @Override
     public Attr setAttributeNode(final Attr attribute) {
+        final HtmlPage htmlPage = getHtmlPageOrNull();
+
+        // TODO: Clean up; this is a hack for HtmlElement living within an XmlPage.
+        if (htmlPage == null) {
+            return super.setAttributeNode(attribute);
+        }
+
         final String qualifiedName = attribute.getName();
         final String oldAttributeValue = getAttribute(qualifiedName);
-        final HtmlPage htmlPage = (HtmlPage) getPage();
+
         final boolean mappedElement = isAttachedToPage()
-                    && HtmlPage.isMappedElement(htmlPage, qualifiedName);
+                && (DomElement.NAME_ATTRIBUTE.equals(qualifiedName)
+                        || DomElement.ID_ATTRIBUTE.equals(qualifiedName));
         if (mappedElement) {
-            // cast is save here because isMappedElement checks for HtmlPage
-            htmlPage.removeMappedElement(this);
+            htmlPage.removeMappedElement(this, false, false);
         }
 
         final HtmlAttributeChangeEvent event;
@@ -322,64 +342,76 @@ public abstract class HtmlElement extends DomElement {
         }
 
         final HtmlPage htmlPage = getHtmlPageOrNull();
-        if (htmlPage != null) {
-            htmlPage.removeMappedElement(this);
+
+        // TODO: Clean up; this is a hack for HtmlElement living within an XmlPage.
+        if (htmlPage == null) {
+            super.removeAttribute(attributeName);
+            return;
+        }
+
+        final boolean mapped = DomElement.NAME_ATTRIBUTE.equals(attributeName)
+                                || DomElement.ID_ATTRIBUTE.equals(attributeName);
+        if (mapped) {
+            htmlPage.removeMappedElement(this, false, false);
         }
 
         super.removeAttribute(attributeName);
 
-        if (htmlPage != null) {
-            htmlPage.addMappedElement(this);
-
-            final HtmlAttributeChangeEvent event = new HtmlAttributeChangeEvent(this, attributeName, value);
-            fireHtmlAttributeRemoved(event);
-            htmlPage.fireHtmlAttributeRemoved(event);
+        if (mapped) {
+            htmlPage.addMappedElement(this, false);
         }
+
+        final HtmlAttributeChangeEvent event = new HtmlAttributeChangeEvent(this, attributeName, value);
+        fireHtmlAttributeRemoved(event);
+        htmlPage.fireHtmlAttributeRemoved(event);
     }
 
     /**
      * Support for reporting HTML attribute changes. This method can be called when an attribute
-     * has been added and it will send the appropriate {@link HtmlAttributeChangeEvent} to any
+     * has been added, and it will send the appropriate {@link HtmlAttributeChangeEvent} to any
      * registered {@link HtmlAttributeChangeListener}s.
      * <p>
      * Note that this method recursively calls this element's parent's
      * {@link #fireHtmlAttributeAdded(HtmlAttributeChangeEvent)} method.
+     * </p>
      *
      * @param event the event
      * @see #addHtmlAttributeChangeListener(HtmlAttributeChangeListener)
      */
     protected void fireHtmlAttributeAdded(final HtmlAttributeChangeEvent event) {
         final DomNode parentNode = getParentNode();
-        if (parentNode instanceof HtmlElement) {
-            ((HtmlElement) parentNode).fireHtmlAttributeAdded(event);
+        if (parentNode instanceof HtmlElement element) {
+            element.fireHtmlAttributeAdded(event);
         }
     }
 
     /**
      * Support for reporting HTML attribute changes. This method can be called when an attribute
-     * has been replaced and it will send the appropriate {@link HtmlAttributeChangeEvent} to any
+     * has been replaced, and it will send the appropriate {@link HtmlAttributeChangeEvent} to any
      * registered {@link HtmlAttributeChangeListener}s.
      * <p>
      * Note that this method recursively calls this element's parent's
      * {@link #fireHtmlAttributeReplaced(HtmlAttributeChangeEvent)} method.
+     * </p>
      *
      * @param event the event
      * @see #addHtmlAttributeChangeListener(HtmlAttributeChangeListener)
      */
     protected void fireHtmlAttributeReplaced(final HtmlAttributeChangeEvent event) {
         final DomNode parentNode = getParentNode();
-        if (parentNode instanceof HtmlElement) {
-            ((HtmlElement) parentNode).fireHtmlAttributeReplaced(event);
+        if (parentNode instanceof HtmlElement element) {
+            element.fireHtmlAttributeReplaced(event);
         }
     }
 
     /**
      * Support for reporting HTML attribute changes. This method can be called when an attribute
-     * has been removed and it will send the appropriate {@link HtmlAttributeChangeEvent} to any
+     * has been removed, and it will send the appropriate {@link HtmlAttributeChangeEvent} to any
      * registered {@link HtmlAttributeChangeListener}s.
      * <p>
      * Note that this method recursively calls this element's parent's
      * {@link #fireHtmlAttributeRemoved(HtmlAttributeChangeEvent)} method.
+     * </p>
      *
      * @param event the event
      * @see #addHtmlAttributeChangeListener(HtmlAttributeChangeListener)
@@ -391,12 +423,14 @@ public abstract class HtmlElement extends DomElement {
             }
         }
         final DomNode parentNode = getParentNode();
-        if (parentNode instanceof HtmlElement) {
-            ((HtmlElement) parentNode).fireHtmlAttributeRemoved(event);
+        if (parentNode instanceof HtmlElement element) {
+            element.fireHtmlAttributeRemoved(event);
         }
     }
 
     /**
+     * Returns the same value as returned by {@link #getTagName()}.
+     *
      * @return the same value as returned by {@link #getTagName()}
      */
     @Override
@@ -413,7 +447,7 @@ public abstract class HtmlElement extends DomElement {
     }
 
     /**
-     * Returns this element's tab index, if it has one. If the tab index is outside of the
+     * Returns this element's tab index, if it has one. If the tab index is outside the
      * valid range (less than <code>0</code> or greater than <code>32767</code>), this method
      * returns {@link #TAB_INDEX_OUT_OF_BOUNDS}. If this element does not have
      * a tab index, or its tab index is otherwise invalid, this method returns {@code null}.
@@ -447,8 +481,8 @@ public abstract class HtmlElement extends DomElement {
         final String tagNameLC = tagName.toLowerCase(Locale.ROOT);
 
         for (DomNode currentNode = getParentNode(); currentNode != null; currentNode = currentNode.getParentNode()) {
-            if (currentNode instanceof HtmlElement && currentNode.getNodeName().equals(tagNameLC)) {
-                return (HtmlElement) currentNode;
+            if (currentNode instanceof HtmlElement element && currentNode.getNodeName().equals(tagNameLC)) {
+                return element;
             }
         }
         return null;
@@ -456,20 +490,17 @@ public abstract class HtmlElement extends DomElement {
 
     /**
      * Returns the form which contains this element, or {@code null} if this element is not inside
-     * of a form.
+     * a form.
      * @return the form which contains this element
      */
     public HtmlForm getEnclosingForm() {
-        final BrowserVersion browserVersion = getPage().getWebClient().getBrowserVersion();
-        if (browserVersion.hasFeature(FORM_SUBMISSION_FORM_ATTRIBUTE)) {
-            final String formId = getAttribute("form");
-            if (ATTRIBUTE_NOT_DEFINED != formId) {
-                final Element formById = getPage().getElementById(formId);
-                if (formById instanceof HtmlForm) {
-                    return (HtmlForm) formById;
-                }
-                return null;
+        final String formId = getAttribute("form");
+        if (ATTRIBUTE_NOT_DEFINED != formId) {
+            final Element formById = getPage().getElementById(formId);
+            if (formById instanceof HtmlForm form) {
+                return form;
             }
+            return null;
         }
 
         if (owningForm_ != null) {
@@ -495,7 +526,7 @@ public abstract class HtmlElement extends DomElement {
      * Simulates typing the specified text while this element has focus.
      * Note that for some elements, typing '\n' submits the enclosed form.
      * @param text the text you with to simulate typing
-     * @exception IOException If an IO error occurs
+     * @throws IOException If an IO error occurs
      */
     public void type(final String text) throws IOException {
         for (final char ch : text.toCharArray()) {
@@ -511,7 +542,7 @@ public abstract class HtmlElement extends DomElement {
      *
      * @param c the character you wish to simulate typing
      * @return the page that occupies this window after typing
-     * @exception IOException if an IO error occurs
+     * @throws IOException if an IO error occurs
      */
     public Page type(final char c) throws IOException {
         return type(c, true);
@@ -526,22 +557,41 @@ public abstract class HtmlElement extends DomElement {
      * @param c the character you wish to simulate typing
      * @param lastType is this the last character to type
      * @return the page contained in the current window as returned by {@link WebClient#getCurrentWindow()}
-     * @exception IOException if an IO error occurs
+     * @throws IOException if an IO error occurs
      */
     private Page type(final char c, final boolean lastType)
+        throws IOException {
+        return typeChar(c, lastType, true, true);
+    }
+
+    /**
+     * Simulates typing (or only pressing or only releasing the key of) the specified character.
+     *
+     * @param c the character
+     * @param lastType is this the last character to type
+     * @param fireDown whether to press the key (keydown, keypress, typing the char and the input event)
+     * @param fireUp whether to release the key (keyup)
+     * @return the page contained in the current window as returned by {@link WebClient#getCurrentWindow()}
+     * @throws IOException if an IO error occurs
+     */
+    private Page typeChar(final char c, final boolean lastType, final boolean fireDown, final boolean fireUp)
         throws IOException {
         if (isDisabledElementAndDisabled()) {
             return getPage();
         }
 
         // make enclosing window the current one
-        getPage().getWebClient().setCurrentWindow(getPage().getEnclosingWindow());
-
         final HtmlPage page = (HtmlPage) getPage();
+        page.getWebClient().setCurrentWindow(page.getEnclosingWindow());
+
         if (page.getFocusedElement() != this) {
             focus();
         }
-        final boolean isShiftNeeded = KeyboardEvent.isShiftNeeded(c, shiftPressed_);
+        final WebClient webClient = page.getWebClient();
+
+        // the implicit shift key is only used if the char is typed completely
+        final boolean isShiftNeeded = fireDown && fireUp && KeyboardEvent.isShiftNeeded(c, shiftPressed_);
+        final boolean shift = shiftPressed_ || isShiftNeeded;
 
         final Event shiftDown;
         final ScriptResult shiftDownResult;
@@ -555,46 +605,43 @@ public abstract class HtmlElement extends DomElement {
             shiftDownResult = null;
         }
 
-        final Event keyDown = new KeyboardEvent(this, Event.TYPE_KEY_DOWN, c,
-                                                shiftPressed_ || isShiftNeeded, ctrlPressed_, altPressed_);
-        final ScriptResult keyDownResult = fireEvent(keyDown);
+        if (fireDown) {
+            final String textBefore = getTextForInputEvent();
 
-        if (!keyDown.isAborted(keyDownResult)) {
-            final Event keyPress = new KeyboardEvent(this, Event.TYPE_KEY_PRESS, c,
-                    shiftPressed_ || isShiftNeeded, ctrlPressed_, altPressed_);
-            final ScriptResult keyPressResult = fireEvent(keyPress);
+            final Event keyDown = new KeyboardEvent(this, Event.TYPE_KEY_DOWN, c,
+                                                    shift, ctrlPressed_, altPressed_, metaPressed_);
+            final ScriptResult keyDownResult = fireEvent(keyDown);
 
-            if ((shiftDown == null || !shiftDown.isAborted(shiftDownResult))
-                    && !keyPress.isAborted(keyPressResult)) {
-                doType(c, lastType);
+            if (!keyDown.isAborted(keyDownResult)) {
+                // like in the browsers, there is no keypress if the control key
+                // (or for some browsers the meta key) is pressed
+                boolean keyPressAborted = false;
+                if (!isTypingSuppressedByModifiers()) {
+                    final Event keyPress = new KeyboardEvent(this, Event.TYPE_KEY_PRESS, c,
+                            shift, ctrlPressed_, altPressed_, metaPressed_);
+                    final ScriptResult keyPressResult = fireEvent(keyPress);
+                    keyPressAborted = keyPress.isAborted(keyPressResult);
+                }
+
+                if ((shiftDown == null || !shiftDown.isAborted(shiftDownResult))
+                        && !keyPressAborted) {
+                    doType(c, lastType);
+                }
             }
-        }
 
-        final WebClient webClient = page.getWebClient();
-        if (this instanceof HtmlTextInput
-                || this instanceof HtmlTextArea
-                || this instanceof HtmlTelInput
-                || this instanceof HtmlNumberInput
-                || this instanceof HtmlSearchInput
-                || this instanceof HtmlPasswordInput) {
-            fireEvent(new KeyboardEvent(this, Event.TYPE_INPUT, c,
-                                        shiftPressed_ || isShiftNeeded, ctrlPressed_, altPressed_));
+            if (isTextChanged(textBefore)) {
+                fireEvent(createInputEvent(c));
+            }
         }
 
         HtmlElement eventSource = this;
         if (!isAttachedToPage()) {
-            final BrowserVersion browserVersion = page.getWebClient().getBrowserVersion();
-            if (browserVersion.hasFeature(HTMLELEMENT_DETACH_ACTIVE_TRIGGERS_NO_KEYUP_EVENT)) {
-                eventSource = null;
-            }
-            else {
-                eventSource = page.getBody();
-            }
+            eventSource = page.getBody();
         }
 
-        if (eventSource != null) {
+        if (fireUp && eventSource != null) {
             final Event keyUp = new KeyboardEvent(this, Event.TYPE_KEY_UP, c,
-                                                    shiftPressed_ || isShiftNeeded, ctrlPressed_, altPressed_);
+                                                    shift, ctrlPressed_, altPressed_, metaPressed_);
             eventSource.fireEvent(keyUp);
 
             if (isShiftNeeded) {
@@ -606,14 +653,20 @@ public abstract class HtmlElement extends DomElement {
         }
 
         final HtmlForm form = getEnclosingForm();
-        if (form != null && c == '\n' && isSubmittableByEnter()) {
-            final HtmlSubmitInput submit = form.getFirstByXPath(".//input[@type='submit']");
-            if (submit != null) {
-                return submit.click();
+        if (fireDown && form != null && c == '\n' && isSubmittableByEnter()) {
+            for (final DomElement descendant : form.getDomElementDescendants()) {
+                if (descendant instanceof HtmlSubmitInput) {
+                    return descendant.click();
+                }
             }
+
             form.submit((SubmittableElement) this);
-            webClient.getJavaScriptEngine().processPostponedActions();
+
+            if (webClient.isJavaScriptEnabled()) {
+                webClient.getJavaScriptEngine().processPostponedActions();
+            }
         }
+
         return webClient.getCurrentWindow().getEnclosedPage();
     }
 
@@ -625,12 +678,14 @@ public abstract class HtmlElement extends DomElement {
      * submits the enclosed form.
      * <p>
      * An example of predefined values is {@link KeyboardEvent#DOM_VK_PAGE_DOWN}.
+     * </p>
      *
      * @param keyCode the key code to simulate typing
      * @return the page that occupies this window after typing
+     * @throws IOException in case of problems
      */
-    public Page type(final int keyCode) {
-        return type(keyCode, true, true, true, true);
+    public Page type(final int keyCode) throws IOException {
+        return type(keyCode, Keyboard.DEFAULT_LOCATION, true, true, true, true);
     }
 
     /**
@@ -642,16 +697,13 @@ public abstract class HtmlElement extends DomElement {
      *
      * @param keyboard the keyboard
      * @return the page that occupies this window after typing
-     * @exception IOException if an IO error occurs
+     * @throws IOException if an IO error occurs
      */
     public Page type(final Keyboard keyboard) throws IOException {
-        Page page = null;
-
-        final List<Object[]> keys = keyboard.getKeys();
+        final List<Keyboard.KeyAction> keys = keyboard.getKeys();
 
         if (keyboard.isStartAtEnd()) {
-            if (this instanceof SelectableTextInput) {
-                final SelectableTextInput textInput = (SelectableTextInput) this;
+            if (this instanceof SelectableTextInput textInput) {
                 textInput.setSelectionStart(textInput.getText().length());
             }
             else {
@@ -662,46 +714,75 @@ public abstract class HtmlElement extends DomElement {
             }
         }
 
-        for (int i = 0; i < keys.size(); i++) {
-            final Object[] entry = keys.get(i);
-            if (entry.length == 1) {
-                type((char) entry[0], i == keys.size() - 1);
+        final boolean[] pressedModifiers = keyboard.getPressedModifiers();
+        if (pressedModifiers != null) {
+            shiftPressed_ = pressedModifiers[0];
+            ctrlPressed_ = pressedModifiers[1];
+            altPressed_ = pressedModifiers[2];
+            metaPressed_ = pressedModifiers[3];
+        }
+
+        return type(keys);
+    }
+
+    /**
+     * Simulates typing the specified key actions while this element has focus.
+     * If the tab key moves the focus to another element, the remaining actions are
+     * typed into that element (like in the browsers).
+     *
+     * @param keys the key actions
+     * @return the page that occupies this window after typing
+     * @throws IOException if an IO error occurs
+     */
+    private Page type(final List<Keyboard.KeyAction> keys) throws IOException {
+        Page page = null;
+
+        final int size = keys.size();
+        int i = 0;
+        for (final Keyboard.KeyAction keyAction : keys) {
+            i++;
+            final boolean lastType = i == size;
+
+            if (keyAction instanceof Keyboard.TypedChar typedChar) {
+                page = type(typedChar.ch(), lastType);
             }
-            else {
-                final int key = (int) entry[0];
-                final boolean pressed = (boolean) entry[1];
-                switch (key) {
-                    case KeyboardEvent.DOM_VK_SHIFT:
-                        shiftPressed_ = pressed;
-                        break;
+            else if (keyAction instanceof Keyboard.CharKeyAction charKeyAction) {
+                page = typeChar(charKeyAction.ch(), lastType, charKeyAction.down(), !charKeyAction.down());
+            }
+            else if (keyAction instanceof Keyboard.KeyCodeKeyAction keyCodeKeyAction) {
+                final int key = keyCodeKeyAction.keyCode();
+                final boolean down = keyCodeKeyAction.down();
+                updateModifiers(key, down);
+                page = type(key, keyCodeKeyAction.location(), down, down, !down, lastType);
+            }
+            else if (keyAction instanceof Keyboard.KeyCodeAction keyCodeAction) {
+                final int key = keyCodeAction.keyCode();
+                final boolean pressed = keyCodeAction.pressed();
 
-                    case KeyboardEvent.DOM_VK_CONTROL:
-                        ctrlPressed_ = pressed;
-                        break;
-
-                    case KeyboardEvent.DOM_VK_ALT:
-                        altPressed_ = pressed;
-                        break;
-
-                    default:
+                if (updateModifiers(key, pressed)) {
+                    page = type(key, Keyboard.DEFAULT_LOCATION, pressed, false, !pressed, lastType);
                 }
-                if (pressed) {
-                    boolean keyPress = true;
-                    boolean keyUp = true;
-                    switch (key) {
-                        case KeyboardEvent.DOM_VK_SHIFT:
-                        case KeyboardEvent.DOM_VK_CONTROL:
-                        case KeyboardEvent.DOM_VK_ALT:
-                            keyPress = false;
-                            keyUp = false;
-                            break;
-
-                        default:
-                    }
-                    page = type(key, true, keyPress, keyUp, i == keys.size() - 1);
+                else if (pressed) {
+                    page = type(key, Keyboard.DEFAULT_LOCATION, true, true, true, lastType);
                 }
                 else {
-                    page = type(key, false, false, true, i == keys.size() - 1);
+                    page = type(key, Keyboard.DEFAULT_LOCATION, false, false, true, lastType);
+                }
+            }
+
+            // the tab key has moved the focus; the remaining keys are typed into the focused element
+            if (i < size && isTabKeyDown(keyAction) && getPage() instanceof HtmlPage htmlPage) {
+                final DomElement focusedElement = htmlPage.getFocusedElement();
+                if (focusedElement == null) {
+                    // the focus has left the page (moved to the browser ui); the remaining keys are lost
+                    return page;
+                }
+                if (focusedElement instanceof HtmlElement focused && focused != this) {
+                    focused.shiftPressed_ = shiftPressed_;
+                    focused.ctrlPressed_ = ctrlPressed_;
+                    focused.altPressed_ = altPressed_;
+                    focused.metaPressed_ = metaPressed_;
+                    return focused.type(keys.subList(i, size));
                 }
             }
         }
@@ -709,9 +790,76 @@ public abstract class HtmlElement extends DomElement {
         return page;
     }
 
-    private Page type(final int keyCode,
+    private static boolean isTabKeyDown(final Keyboard.KeyAction keyAction) {
+        if (keyAction instanceof Keyboard.KeyCodeAction keyCodeAction) {
+            return keyCodeAction.keyCode() == KeyboardEvent.DOM_VK_TAB && keyCodeAction.pressed();
+        }
+        if (keyAction instanceof Keyboard.KeyCodeKeyAction keyCodeKeyAction) {
+            return keyCodeKeyAction.keyCode() == KeyboardEvent.DOM_VK_TAB && keyCodeKeyAction.down();
+        }
+        return false;
+    }
+
+    /**
+     * Moves the focus to the next (or with shift to the previous) element in the tab order,
+     * like the tab key does in the browsers. The whole text of a text input getting the focus is selected.
+     * Tab from the last (shift+tab from the first) element moves the focus out of the page
+     * (in the browsers to the browser ui); no element has the focus afterwards.
+     *
+     * @param page the page
+     * @return the element that has the focus now or {@code null}
+     */
+    private HtmlElement moveFocusByTab(final HtmlPage page) {
+        final List<HtmlElement> tabbableElements = page.getTabbableElements();
+        final int index = tabbableElements.indexOf(this);
+        if (index != -1 && index == (shiftPressed_ ? 0 : tabbableElements.size() - 1)) {
+            page.setFocusedElement(null);
+            return null;
+        }
+
+        final HtmlElement focused = shiftPressed_ ? page.tabToPreviousElement() : page.tabToNextElement();
+        if (focused instanceof HtmlInput && focused instanceof SelectableTextInput textInput) {
+            textInput.setSelectionStart(0);
+            textInput.setSelectionEnd(textInput.getText().length());
+        }
+        return focused;
+    }
+
+    /**
+     * Returns whether the pressed modifier keys suppress the keypress event and the typing of chars;
+     * this is the case if the control key (or for some browsers the meta key) is pressed.
+     *
+     * @return {@code true} if chars are not typed
+     */
+    boolean isTypingSuppressedByModifiers() {
+        return ctrlPressed_
+                || (metaPressed_ && getPage().getWebClient().getBrowserVersion()
+                                    .hasFeature(KEYBOARD_EVENT_META_NO_KEYPRESS));
+    }
+
+    /**
+     * Updates the state of the modifier keys.
+     *
+     * @param keyCode the key code of the pressed or released key
+     * @param pressed whether the key is pressed or released
+     * @return {@code true} if the key is a modifier key
+     */
+    private boolean updateModifiers(final int keyCode, final boolean pressed) {
+        switch (keyCode) {
+            case KeyboardEvent.DOM_VK_SHIFT -> shiftPressed_ = pressed;
+            case KeyboardEvent.DOM_VK_CONTROL -> ctrlPressed_ = pressed;
+            case KeyboardEvent.DOM_VK_ALT -> altPressed_ = pressed;
+            case KeyboardEvent.DOM_VK_META, KeyboardEvent.DOM_VK_WIN -> metaPressed_ = pressed;
+            default -> {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private Page type(final int keyCode, final int location,
                     final boolean fireKeyDown, final boolean fireKeyPress, final boolean fireKeyUp,
-                    final boolean lastType) {
+                    final boolean lastType) throws IOException {
         if (isDisabledElementAndDisabled()) {
             return getPage();
         }
@@ -721,10 +869,13 @@ public abstract class HtmlElement extends DomElement {
             focus();
         }
 
+        final String textBefore = getTextForInputEvent();
+
         final Event keyDown;
         final ScriptResult keyDownResult;
         if (fireKeyDown) {
-            keyDown = new KeyboardEvent(this, Event.TYPE_KEY_DOWN, keyCode, shiftPressed_, ctrlPressed_, altPressed_);
+            keyDown = new KeyboardEvent(this, Event.TYPE_KEY_DOWN, keyCode, location,
+                    shiftPressed_, ctrlPressed_, altPressed_, metaPressed_);
             keyDownResult = fireEvent(keyDown);
         }
         else {
@@ -732,13 +883,11 @@ public abstract class HtmlElement extends DomElement {
             keyDownResult = null;
         }
 
-        final BrowserVersion browserVersion = page.getWebClient().getBrowserVersion();
-
         final Event keyPress;
         final ScriptResult keyPressResult;
-        if (fireKeyPress && browserVersion.hasFeature(KEYBOARD_EVENT_SPECIAL_KEYPRESS)) {
-            keyPress = new KeyboardEvent(this, Event.TYPE_KEY_PRESS, keyCode,
-                    shiftPressed_, ctrlPressed_, altPressed_);
+        if (fireKeyPress && KeyboardEvent.isCharacterKey(keyCode) && !isTypingSuppressedByModifiers()) {
+            keyPress = new KeyboardEvent(this, Event.TYPE_KEY_PRESS, keyCode, location,
+                    shiftPressed_, ctrlPressed_, altPressed_, metaPressed_);
 
             keyPressResult = fireEvent(keyPress);
         }
@@ -747,41 +896,120 @@ public abstract class HtmlElement extends DomElement {
             keyPressResult = null;
         }
 
+        // the element getting the keyup event; the tab key moves the focus before
+        HtmlElement keyUpTarget = this;
         if (keyDown != null && !keyDown.isAborted(keyDownResult)
                 && (keyPress == null || !keyPress.isAborted(keyPressResult))) {
-            doType(keyCode, lastType);
+            if (keyCode == KeyboardEvent.DOM_VK_TAB) {
+                final HtmlElement focused = moveFocusByTab(page);
+                if (focused != null) {
+                    keyUpTarget = focused;
+                }
+                else if (page.getBody() != null) {
+                    keyUpTarget = page.getBody();
+                }
+            }
+            else {
+                doType(keyCode, lastType);
+            }
         }
 
-        if (this instanceof HtmlTextInput
-            || this instanceof HtmlTextArea
-            || this instanceof HtmlTelInput
-            || this instanceof HtmlNumberInput
-            || this instanceof HtmlSearchInput
-            || this instanceof HtmlPasswordInput) {
-            final Event input = new KeyboardEvent(this, Event.TYPE_INPUT, keyCode,
-                    shiftPressed_, ctrlPressed_, altPressed_);
-            fireEvent(input);
+        if (isTextChanged(textBefore)) {
+            fireEvent(createInputEvent(keyCode));
         }
 
         if (fireKeyUp) {
-            final Event keyUp = new KeyboardEvent(this, Event.TYPE_KEY_UP, keyCode,
-                    shiftPressed_, ctrlPressed_, altPressed_);
-            fireEvent(keyUp);
+            final Event keyUp = new KeyboardEvent(keyUpTarget, Event.TYPE_KEY_UP, keyCode, location,
+                    shiftPressed_, ctrlPressed_, altPressed_, metaPressed_);
+            keyUpTarget.fireEvent(keyUp);
         }
 
-//        final HtmlForm form = getEnclosingForm();
-//        if (form != null && keyCode == '\n' && isSubmittableByEnter()) {
-//            if (!getPage().getWebClient().getBrowserVersion()
-//                    .hasFeature(BUTTON_EMPTY_TYPE_BUTTON)) {
-//                final HtmlSubmitInput submit = form.getFirstByXPath(".//input[@type='submit']");
-//                if (submit != null) {
-//                    return submit.click();
-//                }
-//            }
-//            form.submit((SubmittableElement) this);
-//            page.getWebClient().getJavaScriptEngine().processPostponedActions();
-//        }
         return page.getWebClient().getCurrentWindow().getEnclosedPage();
+    }
+
+    /**
+     * Creates the input event for a typed char that has changed the text.
+     *
+     * @param c the typed char
+     * @return the input event with the {@code inputType} and {@code data} like in the browsers
+     */
+    private InputEvent createInputEvent(final char c) {
+        final String inputType;
+        String data = null;
+        if (c == '\b') {
+            inputType = "deleteContentBackward";
+        }
+        else if (c == '\r' || c == '\n') {
+            inputType = "insertLineBreak";
+        }
+        else if (ctrlPressed_ && (c == 'x' || c == 'X')) {
+            inputType = "deleteByCut";
+        }
+        else if (ctrlPressed_ && (c == 'v' || c == 'V')) {
+            inputType = "insertFromPaste";
+            final ClipboardHandler clipboardHandler = getPage().getWebClient().getClipboardHandler();
+            if (clipboardHandler != null) {
+                data = clipboardHandler.getClipboardContent();
+            }
+        }
+        else {
+            inputType = "insertText";
+            data = String.valueOf(c);
+        }
+        return new InputEvent(this, Event.TYPE_INPUT, inputType, data);
+    }
+
+    /**
+     * Creates the input event for a typed key that has changed the text.
+     *
+     * @param keyCode the key code of the typed key
+     * @return the input event with the {@code inputType} and {@code data} like in the browsers
+     */
+    private InputEvent createInputEvent(final int keyCode) {
+        final String inputType;
+        String data = null;
+        if (keyCode == KeyboardEvent.DOM_VK_BACK_SPACE) {
+            inputType = ctrlPressed_ ? "deleteWordBackward" : "deleteContentBackward";
+        }
+        else if (keyCode == KeyboardEvent.DOM_VK_DELETE) {
+            inputType = ctrlPressed_ ? "deleteWordForward" : "deleteContentForward";
+        }
+        else if (keyCode == KeyboardEvent.DOM_VK_RETURN) {
+            inputType = "insertLineBreak";
+        }
+        else {
+            inputType = "insertText";
+            final int charCode = KeyboardEvent.getCharCode(keyCode);
+            if (charCode != 0) {
+                data = String.valueOf((char) charCode);
+            }
+        }
+        return new InputEvent(this, Event.TYPE_INPUT, inputType, data);
+    }
+
+    /**
+     * Returns the current text of this element if this is a text control that fires
+     * input events while typing ({@code input} elements with text and {@code textarea}).
+     *
+     * @return the text or {@code null} if this is not such a control
+     */
+    private String getTextForInputEvent() {
+        if (this instanceof SelectableTextInput textInput) {
+            return textInput.getText();
+        }
+        return null;
+    }
+
+    /**
+     * Returns whether the text of this text control was changed by typing; like in the browsers,
+     * the input event is only fired if the text has changed (e.g. not for the arrow keys, if
+     * the event was canceled or if the maximum length was already reached).
+     *
+     * @param textBefore the text before typing (see {@link #getTextForInputEvent()})
+     * @return whether the text has changed
+     */
+    private boolean isTextChanged(final String textBefore) {
+        return textBefore != null && !textBefore.equals(getTextForInputEvent());
     }
 
     /**
@@ -800,11 +1028,13 @@ public abstract class HtmlElement extends DomElement {
      * Performs the effective type action, called after the keyPress event and before the keyUp event.
      * <p>
      * An example of predefined values is {@link KeyboardEvent#DOM_VK_PAGE_DOWN}.
+     * </p>
      *
      * @param keyCode the key code wish to simulate typing
      * @param lastType is this the last to type
+     * @throws IOException in case of problems
      */
-    protected void doType(final int keyCode, final boolean lastType) {
+    protected void doType(final int keyCode, final boolean lastType) throws IOException {
         final DomText domText = getDoTypeNode();
         if (domText != null) {
             domText.doType(keyCode, this, lastType);
@@ -820,13 +1050,13 @@ public abstract class HtmlElement extends DomElement {
         if (scriptElement.isIsContentEditable()
                 || "on".equals(((Document) scriptElement.getOwnerDocument()).getDesignMode())) {
 
-            DomNodeList<DomNode> children = getChildNodes();
-            while (!children.isEmpty()) {
-                final DomNode lastChild = children.get(children.size() - 1);
-                if (lastChild instanceof DomText) {
-                    return (DomText) lastChild;
-                }
-                children = lastChild.getChildNodes();
+            DomNode node = this;
+            while (node.getLastChild() != null) {
+                node = node.getLastChild();
+            }
+
+            if (node instanceof DomText text) {
+                return text;
             }
 
             final DomText domText = new DomText(getPage(), "");
@@ -846,14 +1076,15 @@ public abstract class HtmlElement extends DomElement {
     }
 
     /**
-     * Indicates if the provided character can by "typed" in the element.
+     * Indicates if the provided character can be "typed" in the element.
      * @param c the character
      * @return {@code true} if it is accepted
      */
     protected boolean acceptChar(final char c) {
         // This range is this is private use area
         // see http://www.unicode.org/charts/PDF/UE000.pdf
-        return (c < '\uE000' || c > '\uF8FF') && (c == ' ' || !Character.isWhitespace(c));
+        return (c < '\uE000' || c > '\uF8FF')
+                && (c == ' ' || c == '\t' || c == '\u3000' || c == '\u2006' || !Character.isWhitespace(c));
     }
 
     /**
@@ -932,7 +1163,7 @@ public abstract class HtmlElement extends DomElement {
      */
     public final HtmlElement appendChildIfNoneExists(final String tagName) {
         final HtmlElement child;
-        final List<HtmlElement> children = getElementsByTagName(tagName);
+        final List<HtmlElement> children = getStaticElementsByTagName(tagName);
         if (children.isEmpty()) {
             // Add a new child and return it.
             child = (HtmlElement) ((HtmlPage) getPage()).createElement(tagName);
@@ -952,7 +1183,7 @@ public abstract class HtmlElement extends DomElement {
      * @param i the index of the child to remove
      */
     public final void removeChild(final String tagName, final int i) {
-        final List<HtmlElement> children = getElementsByTagName(tagName);
+        final List<HtmlElement> children = getStaticElementsByTagName(tagName);
         if (i >= 0 && i < children.size()) {
             children.get(i).remove();
         }
@@ -967,9 +1198,9 @@ public abstract class HtmlElement extends DomElement {
      */
     public final boolean hasEventHandlers(final String eventName) {
         if (getPage().getWebClient().isJavaScriptEngineEnabled()) {
-            final Object jsObj = getScriptableObject();
-            if (jsObj instanceof EventTarget) {
-                return ((EventTarget) jsObj).hasEventHandlers(eventName);
+            final HtmlUnitScriptable jsObj = getScriptableObject();
+            if (jsObj instanceof EventTarget target) {
+                return target.hasEventHandlers(eventName);
             }
         }
         return false;
@@ -1019,7 +1250,13 @@ public abstract class HtmlElement extends DomElement {
         super.checkChildHierarchy(childNode);
     }
 
-    void setOwningForm(final HtmlForm form) {
+    /**
+     * <span style="color:red">INTERNAL API - SUBJECT TO CHANGE AT ANY TIME - USE AT YOUR OWN RISK.</span><br>
+     *
+     * Allows the parser to connect to a form that is not a parent of this due to malformed HTML code
+     * @param form the owning form
+     */
+    public void setOwningForm(final HtmlForm form) {
         owningForm_ = form;
     }
 
@@ -1210,10 +1447,56 @@ public abstract class HtmlElement extends DomElement {
     }
 
     /**
+     * Returns the value of the 'hidden' attribute or an empty string if not set.
+     *
+     * @return the value of the 'hidden' attribute or an empty string if not set.
+     */
+    public String getHidden() {
+        return getAttributeDirect(ATTRIBUTE_HIDDEN);
+    }
+
+    /**
+     * Returns true if the hidden attribute is set.
+     *
      * @return true if the hidden attribute is set.
      */
     public boolean isHidden() {
-        return ATTRIBUTE_NOT_DEFINED != getAttributeDirect("hidden");
+        return ATTRIBUTE_NOT_DEFINED != getAttributeDirect(ATTRIBUTE_HIDDEN);
+    }
+
+    /**
+     * Sets the {@code hidden} property.
+     * If the provided string is empty, the 'hidden' attribute will be removed.
+     * If the provided string is 'until-found' then the attribute value will be 'until-found'.
+     * For all other provided strings the attribute will be set to ''.
+     * @see #setHidden(boolean)
+     * @param hidden the {@code hidden} property
+     */
+    public void setHidden(final String hidden) {
+        if ("until-found".equalsIgnoreCase(hidden)) {
+            setAttribute(ATTRIBUTE_HIDDEN, "until-found");
+            return;
+        }
+
+        if (StringUtils.isEmptyString(hidden)) {
+            removeAttribute(ATTRIBUTE_HIDDEN);
+            return;
+        }
+
+        setAttribute(ATTRIBUTE_HIDDEN, "");
+    }
+
+    /**
+     * Sets the {@code hidden} property.
+     * @param hidden the {@code hidden} property
+     */
+    public void setHidden(final boolean hidden) {
+        if (hidden) {
+            setAttribute(ATTRIBUTE_HIDDEN, "");
+            return;
+        }
+
+        removeAttribute(ATTRIBUTE_HIDDEN);
     }
 
     /**
@@ -1222,7 +1505,8 @@ public abstract class HtmlElement extends DomElement {
      */
     @Override
     public boolean isDisplayed() {
-        if (isHidden()) {
+        // if css is enabled, the hidden attribute is handled by the computed display style
+        if (isHidden() && !getPage().getWebClient().getOptions().isCssEnabled()) {
             return false;
         }
         return super.isDisplayed();
@@ -1243,12 +1527,9 @@ public abstract class HtmlElement extends DomElement {
      * Helper for src retrieval and normalization.
      *
      * @return the value of the attribute {@code src} with all line breaks removed
-     * or an empty string if that attribute isn't defined.
+     *         or an empty string if that attribute isn't defined.
      */
     protected final String getSrcAttributeNormalized() {
-        // at the moment StringUtils.replaceChars returns the org string
-        // if nothing to replace was found but the doc implies, that we
-        // can't trust on this in the future
         final String attrib = getAttributeDirect(SRC_ATTRIBUTE);
         if (ATTRIBUTE_NOT_DEFINED == attrib) {
             return attrib;
@@ -1271,14 +1552,12 @@ public abstract class HtmlElement extends DomElement {
             return;
         }
 
-        final Object document = page.getScriptableObject();
+        final HtmlUnitScriptable document = page.getScriptableObject();
 
-        if (document instanceof HTMLDocument) {
-            final HTMLDocument doc = (HTMLDocument) document;
+        if (document instanceof HTMLDocument doc) {
             final Object activeElement = doc.getActiveElement();
 
             if (activeElement == getScriptableObject()) {
-                doc.setActiveElement(null);
                 if (hasFeature(HTMLELEMENT_REMOVE_ACTIVE_TRIGGERS_BLUR_EVENT)) {
                     ((HtmlPage) page).setFocusedElement(null);
                 }
@@ -1289,7 +1568,6 @@ public abstract class HtmlElement extends DomElement {
             else {
                 for (final DomNode child : getChildNodes()) {
                     if (activeElement == child.getScriptableObject()) {
-                        doc.setActiveElement(null);
                         if (hasFeature(HTMLELEMENT_REMOVE_ACTIVE_TRIGGERS_BLUR_EVENT)) {
                             ((HtmlPage) page).setFocusedElement(null);
                         }
@@ -1345,13 +1623,21 @@ public abstract class HtmlElement extends DomElement {
     }
 
     /**
+     * Returns whether the {@code META} is currently pressed.
+     * @return whether the {@code META} is currently pressed
+     */
+    public boolean isMetaPressed() {
+        return metaPressed_;
+    }
+
+    /**
      * Returns whether this element satisfies all form validation constraints set.
      * @return whether this element satisfies all form validation constraints set
      */
     public boolean isValid() {
         return !isRequiredSupported()
                 || ATTRIBUTE_NOT_DEFINED == getAttributeDirect(ATTRIBUTE_REQUIRED)
-                || !getAttributeDirect("value").isEmpty();
+                || !getAttributeDirect(VALUE_ATTRIBUTE).isEmpty();
     }
 
     /**
@@ -1363,6 +1649,8 @@ public abstract class HtmlElement extends DomElement {
     }
 
     /**
+     * Returns the true if the required attribute is set.
+     *
      * @return the true if the required attribute is set
      */
     public boolean isRequired() {
@@ -1370,6 +1658,8 @@ public abstract class HtmlElement extends DomElement {
     }
 
     /**
+     * Returns the true if the required attribute is supported and set.
+     *
      * @return the true if the required attribute is supported and set
      */
     public boolean isOptional() {
@@ -1389,6 +1679,190 @@ public abstract class HtmlElement extends DomElement {
                 removeAttribute(ATTRIBUTE_REQUIRED);
             }
         }
+    }
+
+    /**
+     * <span style="color:red">INTERNAL API - SUBJECT TO CHANGE AT ANY TIME - USE AT YOUR OWN RISK.</span><br>
+     *
+     * @param returnNullIfFixed if position is 'fixed' return null
+     * @return the offset parent {@link HtmlElement}
+     */
+    public HtmlElement getOffsetParentInternal(final boolean returnNullIfFixed) {
+        if (getParentNode() == null) {
+            return null;
+        }
+
+        final WebWindow webWindow = getPage().getEnclosingWindow();
+        final ComputedCssStyleDeclaration style = webWindow.getComputedStyle(this, null);
+        final String position = style.getPositionWithInheritance();
+
+        if (returnNullIfFixed && FIXED.equals(position)) {
+            return null;
+        }
+
+        final boolean staticPos = STATIC.equals(position);
+
+        DomNode currentElement = this;
+        while (currentElement != null) {
+
+            final DomNode parentNode = currentElement.getParentNode();
+            if (parentNode instanceof HtmlBody
+                || (staticPos && parentNode instanceof HtmlTableDataCell)
+                || (staticPos && parentNode instanceof HtmlTable)) {
+                return (HtmlElement) parentNode;
+            }
+
+            if (parentNode instanceof HtmlElement element) {
+                final ComputedCssStyleDeclaration parentStyle =
+                        webWindow.getComputedStyle(element, null);
+                final String parentPosition = parentStyle.getPositionWithInheritance();
+                if (!STATIC.equals(parentPosition)) {
+                    return element;
+                }
+            }
+
+            currentElement = currentElement.getParentNode();
+        }
+
+        return null;
+    }
+
+    /**
+     * Returns this element's top offset, which is the calculated left position of this.
+     *
+     * @return this element's top offset, which is the calculated left position of this
+     *         element relative to the <code>offsetParent</code>.
+     */
+    public int getOffsetTop() {
+        if (this instanceof HtmlBody) {
+            return 0;
+        }
+
+        int top = 0;
+
+        // Add the offset for this node.
+        final WebWindow webWindow = getPage().getEnclosingWindow();
+        ComputedCssStyleDeclaration style = webWindow.getComputedStyle(this, null);
+        top += style.getTop(true, false, false);
+
+        // If this node is absolutely positioned, we're done.
+        final String position = style.getPositionWithInheritance();
+        if (ABSOLUTE.equals(position) || FIXED.equals(position)) {
+            return top;
+        }
+
+        final HtmlElement offsetParent = getOffsetParentInternal(false);
+
+        // Add the offset for the ancestor nodes.
+        DomNode parentNode = getParentNode();
+        while (parentNode != null && parentNode != offsetParent) {
+            if (parentNode instanceof HtmlElement element) {
+                style = webWindow.getComputedStyle(element, null);
+                top += style.getTop(false, true, true);
+            }
+            parentNode = parentNode.getParentNode();
+        }
+
+        if (offsetParent != null) {
+            style = webWindow.getComputedStyle(this, null);
+            final boolean thisElementHasTopMargin = style.getMarginTopValue() != 0;
+
+            style = webWindow.getComputedStyle(offsetParent, null);
+            if (!thisElementHasTopMargin) {
+                top += style.getMarginTopValue();
+            }
+            top += style.getPaddingTopValue();
+        }
+
+        return top;
+    }
+
+    /**
+     * Returns this element's left offset, which is the calculated left position of this.
+     *
+     * @return this element's left offset, which is the calculated left position of this
+     *         element relative to the <code>offsetParent</code>.
+     */
+    public int getOffsetLeft() {
+        if (this instanceof HtmlBody) {
+            return 0;
+        }
+
+        int left = 0;
+
+        // Add the offset for this node.
+        final WebWindow webWindow = getPage().getEnclosingWindow();
+        ComputedCssStyleDeclaration style = webWindow.getComputedStyle(this, null);
+        left += style.getLeft(true, false, false);
+
+        // If this node is absolutely positioned, we're done.
+        final String position = style.getPositionWithInheritance();
+        if (ABSOLUTE.equals(position) || FIXED.equals(position)) {
+            return left;
+        }
+
+        final HtmlElement offsetParent = getOffsetParentInternal(false);
+
+        DomNode parentNode = getParentNode();
+        while (parentNode != null && parentNode != offsetParent) {
+            if (parentNode instanceof HtmlElement element) {
+                style = webWindow.getComputedStyle(element, null);
+                left += style.getLeft(true, true, true);
+            }
+            parentNode = parentNode.getParentNode();
+        }
+
+        if (offsetParent != null) {
+            style = webWindow.getComputedStyle(offsetParent, null);
+            left += style.getMarginLeftValue();
+            left += style.getPaddingLeftValue();
+        }
+
+        return left;
+    }
+
+    /**
+     * Returns this element's X position.
+     * @return this element's X position
+     */
+    public int getPosX() {
+        int cumulativeOffset = 0;
+        final WebWindow webWindow = getPage().getEnclosingWindow();
+
+        HtmlElement element = this;
+        while (element != null) {
+            cumulativeOffset += element.getOffsetLeft();
+            if (element != this) {
+                final ComputedCssStyleDeclaration style =
+                        webWindow.getComputedStyle(element, null);
+                cumulativeOffset += style.getBorderLeftValue();
+            }
+            element = element.getOffsetParentInternal(false);
+        }
+
+        return cumulativeOffset;
+    }
+
+    /**
+     * Returns this element's Y position.
+     * @return this element's Y position
+     */
+    public int getPosY() {
+        int cumulativeOffset = 0;
+        final WebWindow webWindow = getPage().getEnclosingWindow();
+
+        HtmlElement element = this;
+        while (element != null) {
+            cumulativeOffset += element.getOffsetTop();
+            if (element != this) {
+                final ComputedCssStyleDeclaration style =
+                        webWindow.getComputedStyle(element, null);
+                cumulativeOffset += style.getBorderTopValue();
+            }
+            element = element.getOffsetParentInternal(false);
+        }
+
+        return cumulativeOffset;
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,21 +17,19 @@ package org.htmlunit.util;
 import java.awt.Frame;
 
 import org.apache.commons.lang3.StringUtils;
-
 import org.htmlunit.WebClient;
 import org.htmlunit.WebResponse;
 import org.htmlunit.WebWindow;
-import org.htmlunit.javascript.HtmlUnitContextFactory;
-import org.htmlunit.javascript.JavaScriptEngine;
-
 import org.htmlunit.corejs.javascript.tools.debugger.Main;
 import org.htmlunit.corejs.javascript.tools.debugger.ScopeProvider;
 import org.htmlunit.corejs.javascript.tools.debugger.SourceProvider;
+import org.htmlunit.javascript.HtmlUnitContextFactory;
 
 /**
  * Utility class containing miscellaneous {@link WebClient}-related methods.
  *
  * @author Daniel Gredler
+ * @author Ronald Brill
  */
 public final class WebClientUtils {
 
@@ -43,12 +41,13 @@ public final class WebClientUtils {
     }
 
     /**
-     * Attaches a visual (GUI) debugger to the specified client.
+     * Attaches a visual (GUI) JavaScript debugger to the specified client.
+     *
      * @param client the client to which the visual debugger is to be attached
-     * @see <a href="http://www.mozilla.org/rhino/debugger.html">Mozilla Rhino Debugger Documentation</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Tools">Mozilla Developer Tools</a>
      */
     public static void attachVisualDebugger(final WebClient client) {
-        final HtmlUnitContextFactory cf = ((JavaScriptEngine) client.getJavaScriptEngine()).getContextFactory();
+        final HtmlUnitContextFactory cf = client.getJavaScriptEngine().getContextFactory();
         final Main main = Main.mainEmbedded(cf, (ScopeProvider) null, "HtmlUnit JavaScript Debugger");
         main.getDebugFrame().setExtendedState(Frame.MAXIMIZED_BOTH);
 
@@ -70,5 +69,4 @@ public final class WebClientUtils {
         };
         main.setSourceProvider(sourceProvider);
     }
-
 }

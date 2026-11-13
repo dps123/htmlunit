@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,32 +14,23 @@
  */
 package org.htmlunit.javascript.host.event;
 
-import static org.htmlunit.BrowserVersionFeatures.EVENT_BEFORE_UNLOAD_RETURN_VALUE_IS_HTML5_LIKE;
-import static org.htmlunit.BrowserVersionFeatures.EVENT_HANDLER_NULL_RETURN_IS_MEANINGFUL;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
 import org.htmlunit.BrowserVersion;
 import org.htmlunit.html.DomNode;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.configuration.JsxSetter;
 
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.Undefined;
-
 /**
- * JavaScript object representing the BeforeUnloadEvent.
- * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/window.onbeforeunload">Mozilla Developer Network</a>
- * @see <a href="http://msdn.microsoft.com/en-us/library/ie/ff974336.aspx">MSDN</a>
+ * JavaScript host object for {@code BeforeUnloadEvent}.
  *
  * @author Frank Danek
  * @author Ahmed Ashour
  * @author Ronald Brill
  * @author Atsushi Nakagawa
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/BeforeUnloadEvent">MDN Documentation</a>
  */
 @JsxClass
 public class BeforeUnloadEvent extends Event {
@@ -49,16 +40,16 @@ public class BeforeUnloadEvent extends Event {
      * Creates a new event instance.
      */
     public BeforeUnloadEvent() {
-        setType("");
+        super("");
         returnValue_ = "";
     }
 
     /**
-     * The JavaScript constructor. It seems it is not possible to do it from JavaScript code.
+     * JavaScript constructor. This event cannot be constructed from JavaScript.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
+    @JsxConstructor
     public void jsConstructor() {
-        Context.throwAsScriptRuntimeEx(new IllegalArgumentException("Illegal Constructor"));
+        throw JavaScriptEngine.typeError("Illegal Constructor");
     }
 
     /**
@@ -81,22 +72,23 @@ public class BeforeUnloadEvent extends Event {
     }
 
     private static Object getReturnValueDefault(final BrowserVersion browserVersion) {
-        if (browserVersion.hasFeature(EVENT_BEFORE_UNLOAD_RETURN_VALUE_IS_HTML5_LIKE)) {
-            // Empty string default is specified by HTML5
-            // https://www.w3.org/TR/html5/browsers.html#the-beforeunloadevent-interface
-            return "";
-        }
-        return Undefined.instance;
+        // Empty string default is specified by HTML5
+        // https://www.w3.org/TR/html5/browsers.html#the-beforeunloadevent-interface
+        return "";
     }
 
     /**
-     * @return {@code true} if returnValue holds the beforeunload message
+     * Returns {@code true} if {@code returnValue} holds the beforeunload message.
+     *
+     * @return {@code true} if {@code returnValue} holds the beforeunload message
      */
     public boolean isBeforeUnloadMessageSet() {
         return !getReturnValueDefault(getBrowserVersion()).equals(getReturnValue());
     }
 
     /**
+     * Returns the return value associated with the event.
+     *
      * @return the return value associated with the event
      */
     @JsxGetter
@@ -107,6 +99,7 @@ public class BeforeUnloadEvent extends Event {
 
     /**
      * Sets the return value associated with the event.
+     *
      * @param returnValue the return value associated with the event
      */
     @JsxSetter
@@ -122,10 +115,9 @@ public class BeforeUnloadEvent extends Event {
         final BrowserVersion browserVersion = getBrowserVersion();
 
         // Most browsers ignore null return values of property handlers
-        if (returnValue != null || browserVersion.hasFeature(EVENT_HANDLER_NULL_RETURN_IS_MEANINGFUL)) {
+        if (returnValue != null) {
             // Chrome/Firefox only accept the return value if returnValue is equal to default
-            if (!browserVersion.hasFeature(EVENT_BEFORE_UNLOAD_RETURN_VALUE_IS_HTML5_LIKE)
-                    || getReturnValueDefault(browserVersion).equals(getReturnValue())) {
+            if (getReturnValueDefault(browserVersion).equals(getReturnValue())) {
                 setReturnValue(returnValue);
             }
         }

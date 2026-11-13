@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,28 +14,25 @@
  */
 package org.htmlunit.javascript.host;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.openqa.selenium.By;
-import org.openqa.selenium.WebDriver;
+import java.util.List;
 
-import org.htmlunit.PluginConfiguration;
+import org.htmlunit.HttpHeader;
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.html.HtmlPageTest;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.HtmlUnitNYI;
+import org.htmlunit.util.NameValuePair;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link Navigator}.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author Daniel Gredler
  * @author Marc Guillemot
  * @author Ahmed Ashour
  * @author Frank Danek
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class NavigatorTest extends WebDriverTestCase {
 
     /**
@@ -52,8 +49,7 @@ public class NavigatorTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "0")
+    @Alerts("undefined")
     public void appMinorVersion() throws Exception {
         attribute("appMinorVersion", getExpectedAlerts()[0]);
     }
@@ -83,8 +79,7 @@ public class NavigatorTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "en-US")
+    @Alerts("undefined")
     public void browserLanguage() throws Exception {
         attribute("browserLanguage", getExpectedAlerts()[0]);
     }
@@ -96,10 +91,10 @@ public class NavigatorTest extends WebDriverTestCase {
     @Test
     @Alerts(DEFAULT = {"string", "20100101"},
             CHROME = {"string", "20030107"},
-            EDGE = {"string", "20030107"},
-            IE = {"undefined", "undefined"})
+            EDGE = {"string", "20030107"})
     public void productSub() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  log(typeof(navigator.productSub));\n"
@@ -116,8 +111,7 @@ public class NavigatorTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "x86")
+    @Alerts("undefined")
     public void cpuClass() throws Exception {
         attribute("cpuClass", getExpectedAlerts()[0]);
     }
@@ -145,8 +139,7 @@ public class NavigatorTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "en-US")
+    @Alerts("undefined")
     public void systemLanguage() throws Exception {
         attribute("systemLanguage", getExpectedAlerts()[0]);
     }
@@ -167,8 +160,7 @@ public class NavigatorTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "en-US")
+    @Alerts("undefined")
     public void userLanguage() throws Exception {
         attribute("userLanguage", getExpectedAlerts()[0]);
     }
@@ -178,38 +170,35 @@ public class NavigatorTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
+    @Alerts({"5",
+        "PDF Viewer", "Portable Document Format", "internal-pdf-viewer", "undefined",
+        "Chrome PDF Viewer", "Portable Document Format", "internal-pdf-viewer", "undefined",
+        "Chromium PDF Viewer", "Portable Document Format", "internal-pdf-viewer", "undefined",
+        "Microsoft Edge PDF Viewer", "Portable Document Format", "internal-pdf-viewer", "undefined",
+        "WebKit built-in PDF", "Portable Document Format", "internal-pdf-viewer", "undefined"})
     public void plugins() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
-                + "  <title>test</title>\n"
                 + "  <script>\n"
-                + "    function log(text) {\n"
-                + "      var textarea = document.getElementById('myTextarea');\n"
-                + "      textarea.value += text + ',';\n"
-                + "    }\n"
-
+                + LOG_TITLE_FUNCTION
                 + "    function doTest() {\n"
-                + "      var names = [];"
+                + "      log(window.navigator.plugins.length);\n"
                 + "      for (var i = 0; i < window.navigator.plugins.length; i++) {\n"
-                + "        names[i] = window.navigator.plugins[i].name;\n"
+                + "        let pl = window.navigator.plugins[i];\n"
+                + "        log(pl.name);\n"
+                + "        log(pl.description);\n"
+                + "        log(pl.filename);\n"
+                + "        log(pl.version);\n"
                 + "      }\n"
-                // there is no fixed order, sort for stable testing
-                + "    name = names.sort().join('; ');\n"
-                + "    log(names);\n"
-                + "  }\n"
+                + "    }\n"
                 + "  </script>\n"
                 + "</head>\n"
                 + "<body onload='doTest()'>\n"
-                + "  <textarea id='myTextarea' cols='80' rows='10'></textarea>\n"
                 + "</body>\n"
                 + "</html>";
 
-        final WebDriver driver = loadPage2(html);
-        final String alerts = driver.findElement(By.id("myTextarea")).getAttribute("value");
-
-        for (final PluginConfiguration plugin : getBrowserVersion().getPlugins()) {
-            assertTrue(plugin.getName() + " not found", alerts.contains(plugin.getName()));
-        }
+        loadPageVerifyTitle2(html);
     }
 
     /**
@@ -219,7 +208,8 @@ public class NavigatorTest extends WebDriverTestCase {
     @Test
     @Alerts("Shockwave Flash not available")
     public void pluginsShockwaveFlash() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "  <script>\n"
                 + LOG_TITLE_FUNCTION
@@ -249,22 +239,53 @@ public class NavigatorTest extends WebDriverTestCase {
     }
 
     /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"2",
+             "application/pdf", "Portable Document Format", "pdf", "[object Plugin]", "true",
+             "text/pdf", "Portable Document Format", "pdf", "[object Plugin]", "true"})
+    public void mimeTypes() throws Exception {
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
+                + "  <script>\n"
+                + LOG_TITLE_FUNCTION
+                + "    function doTest() {\n"
+                + "      log(window.navigator.mimeTypes.length);\n"
+                + "      for (var i = 0; i < window.navigator.mimeTypes.length; i++) {\n"
+                + "        let mt = window.navigator.mimeTypes[i];\n"
+                + "        log(mt.type);\n"
+                + "        log(mt.description);\n"
+                + "        log(mt.suffixes);\n"
+                + "        log(mt.enabledPlugin);\n"
+                + "        log(mt.enabledPlugin === window.navigator.plugins[0]);"
+                + "      }\n"
+                + "    }\n"
+                + "  </script>\n"
+            + "</head><body onload='doTest()'></body>\n"
+            + "</html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
      * Tests the {@code taintEnabled} property.
      * @throws Exception on test failure
      */
     @Test
     @Alerts(DEFAULT = "false",
-            CHROME = "exception",
-            EDGE = "exception")
+            CHROME = "TypeError",
+            EDGE = "TypeError")
     public void taintEnabled() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "  <script>\n"
                 + LOG_TITLE_FUNCTION
                 + "  function doTest() {\n"
                 + "    try {\n"
                 + "      log(window.navigator.taintEnabled());\n"
-                + "    } catch(e) { log('exception'); }\n"
+                + "    } catch(e) { logEx(e); }\n"
                 + "  }\n"
                 + "  </script>\n"
                 + "</head>\n"
@@ -282,7 +303,8 @@ public class NavigatorTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     void attribute(final String name, final String value, final String... ignore) throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "  <script>\n"
                 + LOG_TITLE_FUNCTION
@@ -306,8 +328,8 @@ public class NavigatorTest extends WebDriverTestCase {
     @Test
     @Alerts("en-US")
     public void language() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION
             + "  </script>\n"
@@ -323,11 +345,14 @@ public class NavigatorTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "en-US,en",
-            IE = "undefined")
+    @Alerts(DEFAULT = "en-US",
+            FF = "en-US,en",
+            FF_ESR = "en-US,en")
+    @HtmlUnitNYI(CHROME = "en-US,en",
+            EDGE = "en-US,en")
     public void languages() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION
             + "  </script>\n"
@@ -344,8 +369,8 @@ public class NavigatorTest extends WebDriverTestCase {
     @Test
     @Alerts({"number", "number"})
     public void mozilla() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -365,8 +390,8 @@ public class NavigatorTest extends WebDriverTestCase {
     @Test
     @Alerts("Gecko")
     public void product() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -385,8 +410,8 @@ public class NavigatorTest extends WebDriverTestCase {
     @Test
     @Alerts("[object Geolocation]")
     public void geolocation() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -407,8 +432,8 @@ public class NavigatorTest extends WebDriverTestCase {
             FF = "20181001000000",
             FF_ESR = "20181001000000")
     public void buildID() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -427,11 +452,10 @@ public class NavigatorTest extends WebDriverTestCase {
     @Test
     @Alerts(DEFAULT = {"Google Inc.", ""},
             FF = {"", ""},
-            FF_ESR = {"", ""},
-            IE = {"", "undefined"})
+            FF_ESR = {"", ""})
     public void vendor() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -453,8 +477,8 @@ public class NavigatorTest extends WebDriverTestCase {
             FF = "true",
             FF_ESR = "true")
     public void oscpu() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -475,7 +499,7 @@ public class NavigatorTest extends WebDriverTestCase {
             CHROME = {"[object NetworkInformation]", "undefined", "undefined"},
             EDGE = {"[object NetworkInformation]", "undefined", "undefined"})
     public void connection() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -497,10 +521,9 @@ public class NavigatorTest extends WebDriverTestCase {
     @Test
     @Alerts(DEFAULT = {"unspecified", "undefined", "undefined"},
             CHROME = {"null", "undefined", "undefined"},
-            EDGE = {"null", "undefined", "undefined"},
-            IE = {"undefined", "undefined", "null"})
+            EDGE = {"null", "undefined", "undefined"})
     public void doNotTrack() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -520,10 +543,9 @@ public class NavigatorTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"[object MediaDevices]", "true"},
-            IE = {"undefined", "true"})
+    @Alerts({"[object MediaDevices]", "true"})
     public void mediaDevices() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -536,5 +558,187 @@ public class NavigatorTest extends WebDriverTestCase {
             + "</body></html>";
 
         loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("true")
+    public void pdfViewerEnabled() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    log(navigator.pdfViewerEnabled);\n"
+            + "  }\n"
+            + "</script>\n"
+            + "</head><body onload='test()'>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Tests {@code navigator.sendBeacon()} with a plain string payload.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("true")
+    public void sendBeaconString() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<body>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  log(navigator.sendBeacon('" + URL_SECOND + "', 'HtmlUnit'));\n"
+            + "</script>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+
+        sleepRealBrowser(100);
+        assertEquals(URL_SECOND, getMockWebConnection().getLastWebRequest().getUrl());
+
+        final String contentType = getMockWebConnection().getLastWebRequest()
+                .getAdditionalHeader(HttpHeader.CONTENT_TYPE);
+        final String requestBody = getMockWebConnection().getLastWebRequest().getRequestBody();
+
+        assertEquals("text/plain;charset=utf-8", contentType.replace(" ", ""));
+        assertEquals("HtmlUnit", requestBody);
+    }
+
+    /**
+     * Tests {@code navigator.sendBeacon()} with a {@code Blob} payload.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("true")
+    public void sendBeaconBlob() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<body>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  var blob = new Blob(['HtmlUnit'], {type: 'text/plain'});\n"
+            + "  log(navigator.sendBeacon('" + URL_SECOND + "', blob));\n"
+            + "</script>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+
+        sleepRealBrowser(100);
+        assertEquals(URL_SECOND, getMockWebConnection().getLastWebRequest().getUrl());
+
+        final String contentType = getMockWebConnection().getLastWebRequest()
+                .getAdditionalHeader(HttpHeader.CONTENT_TYPE);
+        final String requestBody = getMockWebConnection().getLastWebRequest().getRequestBody();
+
+        assertEquals("text/plain", contentType);
+        assertEquals("HtmlUnit", requestBody);
+    }
+
+    /**
+     * Tests {@code navigator.sendBeacon()} with a {@code URLSearchParams} payload.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("true")
+    public void sendBeaconURLSearchParams() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<body>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  var params = new URLSearchParams();\n"
+            + "  params.append('key', 'value');\n"
+            + "  log(navigator.sendBeacon('" + URL_SECOND + "', params));\n"
+            + "</script>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+
+        sleepRealBrowser(100);
+        assertEquals(URL_SECOND, getMockWebConnection().getLastWebRequest().getUrl());
+
+        final String contentType = getMockWebConnection().getLastWebRequest()
+                .getAdditionalHeader(HttpHeader.CONTENT_TYPE);
+        final List<NameValuePair> requestParams = getMockWebConnection().getLastWebRequest().getRequestParameters();
+
+        assertEquals("application/x-www-form-urlencoded;charset=utf-8", contentType.replace(" ", ""));
+        assertEquals(1, requestParams.size());
+        assertEquals("[key=value]", requestParams.toString());
+    }
+
+    /**
+     * Tests {@code navigator.sendBeacon()} with a {@code FormData} payload.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("true")
+    public void sendBeaconFormData() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<body>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  var data = new FormData();\n"
+            + "  data.append('key', 'value');\n"
+            + "  log(navigator.sendBeacon('" + URL_SECOND + "', data));\n"
+            + "</script>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+
+        sleepRealBrowser(100);
+        assertEquals(URL_SECOND, getMockWebConnection().getLastWebRequest().getUrl());
+
+        final String contentType = getMockWebConnection().getLastWebRequest()
+                .getAdditionalHeader(HttpHeader.CONTENT_TYPE);
+        final String requestBody = getMockWebConnection().getLastWebRequest().getRequestBody();
+
+        assertTrue(contentType.startsWith("multipart/form-data; boundary="));
+        assertTrue(requestBody.contains("name=\"key\""));
+        assertTrue(requestBody.contains("value"));
+    }
+
+    /**
+     * Tests {@code navigator.sendBeacon()} with a typed-array (ArrayBufferView) payload.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"true", "null"})
+    @HtmlUnitNYI(
+            CHROME = {"true", "text/plain; charset=iso-8859-1"},
+            EDGE = {"true", "text/plain; charset=iso-8859-1"},
+            FF = {"true", "text/plain; charset=iso-8859-1"},
+            FF_ESR = {"true", "text/plain; charset=iso-8859-1"})
+    public void sendBeaconArrayBufferView() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<body>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  var bytes = new Uint8Array([72, 116, 109, 108, 85, 110, 105, 116]);\n"
+            + "  log(navigator.sendBeacon('" + URL_SECOND + "', bytes));\n"
+            + "</script>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html, getExpectedAlerts()[0]);
+
+        sleepRealBrowser(100);
+        assertEquals(URL_SECOND, getMockWebConnection().getLastWebRequest().getUrl());
+
+        final String contentType = getMockWebConnection().getLastWebRequest()
+                .getAdditionalHeader(HttpHeader.CONTENT_TYPE);
+        final String requestBody = getMockWebConnection().getLastWebRequest().getRequestBody();
+
+        assertEquals(getExpectedAlerts()[1], "" + contentType);
+        assertEquals("HtmlUnit", requestBody);
     }
 }

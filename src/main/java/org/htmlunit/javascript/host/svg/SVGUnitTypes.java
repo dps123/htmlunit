@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,21 +14,18 @@
  */
 package org.htmlunit.javascript.host.svg;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
 import org.htmlunit.javascript.HtmlUnitScriptable;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstant;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 
 /**
- * A JavaScript object for {@code SVGUnitTypes}.
+ * JavaScript host object for {@code SVGUnitTypes}.
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/SVGUnitTypes">MDN Documentation</a>
  */
 @JsxClass
 public class SVGUnitTypes extends HtmlUnitScriptable {
@@ -44,10 +41,10 @@ public class SVGUnitTypes extends HtmlUnitScriptable {
     public static final int SVG_UNIT_TYPE_OBJECTBOUNDINGBOX = 2;
 
     /**
-     * Creates an instance.
+     * Creates an instance of this object.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public SVGUnitTypes() {
+    @JsxConstructor
+    public void jsConstructor() {
+        // nothing to do
     }
-
 }

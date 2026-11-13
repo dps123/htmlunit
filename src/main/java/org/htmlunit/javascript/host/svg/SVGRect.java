@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,6 @@
  */
 package org.htmlunit.javascript.host.svg;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
 import org.htmlunit.javascript.HtmlUnitScriptable;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
@@ -26,10 +21,12 @@ import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.configuration.JsxSetter;
 
 /**
- * A JavaScript object for {@code SVGRect}.
+ * JavaScript host object for {@code SVGRect}.
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/SVGRect">MDN Documentation</a>
  */
 @JsxClass
 public class SVGRect extends HtmlUnitScriptable {
@@ -40,15 +37,17 @@ public class SVGRect extends HtmlUnitScriptable {
     private double height_;
 
     /**
-     * Creates an instance.
+     * Creates an instance of this object.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public SVGRect() {
+    @JsxConstructor
+    public void jsConstructor() {
+        // nothing to do
     }
 
     /**
-     * Gets x.
-     * @return x
+     * Returns the {@code x} coordinate of the rectangle.
+     *
+     * @return the {@code x} coordinate
      */
     @JsxGetter
     public double getX() {
@@ -56,8 +55,9 @@ public class SVGRect extends HtmlUnitScriptable {
     }
 
     /**
-     * Sets x.
-     * @param x the x
+     * Sets the {@code x} coordinate of the rectangle.
+     *
+     * @param x the {@code x} coordinate
      */
     @JsxSetter
     public void setX(final double x) {
@@ -65,8 +65,9 @@ public class SVGRect extends HtmlUnitScriptable {
     }
 
     /**
-     * Gets y.
-     * @return y
+     * Returns the {@code y} coordinate of the rectangle.
+     *
+     * @return the {@code y} coordinate
      */
     @JsxGetter
     public double getY() {
@@ -74,8 +75,9 @@ public class SVGRect extends HtmlUnitScriptable {
     }
 
     /**
-     * Sets y.
-     * @param y the y
+     * Sets the {@code y} coordinate of the rectangle.
+     *
+     * @param y the {@code y} coordinate
      */
     @JsxSetter
     public void setY(final double y) {
@@ -83,8 +85,9 @@ public class SVGRect extends HtmlUnitScriptable {
     }
 
     /**
-     * Gets width.
-     * @return width
+     * Returns the width of the rectangle.
+     *
+     * @return the width
      */
     @JsxGetter
     public double getWidth() {
@@ -92,7 +95,8 @@ public class SVGRect extends HtmlUnitScriptable {
     }
 
     /**
-     * Sets width.
+     * Sets the width of the rectangle.
+     *
      * @param width the width
      */
     @JsxSetter
@@ -101,8 +105,9 @@ public class SVGRect extends HtmlUnitScriptable {
     }
 
     /**
-     * Gets height.
-     * @return height
+     * Returns the height of the rectangle.
+     *
+     * @return the height
      */
     @JsxGetter
     public double getHeight() {
@@ -110,12 +115,12 @@ public class SVGRect extends HtmlUnitScriptable {
     }
 
     /**
-     * Sets height.
+     * Sets the height of the rectangle.
+     *
      * @param height the height
      */
     @JsxSetter
     public void setHeight(final double height) {
         height_ = height;
     }
-
 }

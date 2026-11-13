@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,14 +20,11 @@ import java.util.List;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.MockWebConnection;
 import org.htmlunit.SimpleWebTestCase;
 import org.htmlunit.WebClient;
 import org.htmlunit.html.HtmlPage;
-import org.htmlunit.junit.BrowserRunner;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test class for {@link HTMLParserListener}.
@@ -36,16 +33,16 @@ import org.htmlunit.junit.BrowserRunner;
  * parser but just that we catch and "transmit" them.
  *
  * @author Marc Guillemot
+ * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class HTMLParserListenerTest extends SimpleWebTestCase {
     static class MessageInfo {
-        private boolean error_; // versus warning
-        private String message_;
-        private URL url_;
-        private String html_;
-        private int line_;
-        private int column_;
+        private final boolean error_; // versus warning
+        private final String message_;
+        private final URL url_;
+        private final String html_;
+        private final int line_;
+        private final int column_;
 
         /**
          * Utility class to hold data.
@@ -67,7 +64,9 @@ public class HTMLParserListenerTest extends SimpleWebTestCase {
             // ignore key
         }
 
-        /** @see Object#toString() */
+        /**
+         * @see Object#toString()
+         */
         @Override
         public String toString() {
             return message_ + " (" + url_ + " " + line_ + ":" + column_ + ")";
@@ -79,10 +78,9 @@ public class HTMLParserListenerTest extends SimpleWebTestCase {
          */
         @Override
         public boolean equals(final Object obj) {
-            if (!(obj instanceof MessageInfo)) {
+            if (!(obj instanceof MessageInfo other)) {
                 return false;
             }
-            final MessageInfo other = (MessageInfo) obj;
             final EqualsBuilder builder = new EqualsBuilder();
             builder.append(error_, other.error_);
             builder.append(message_, other.message_);
@@ -114,27 +112,31 @@ public class HTMLParserListenerTest extends SimpleWebTestCase {
      * to an (accepted - at least in a first time -) regression in
      * NekoHTML, it doesn't work anymore.
      * testSimple_withWrongLineCol ensures that no other regression occurs here.
-     * @exception Exception If the test fails
+     * @throws Exception If the test fails
      */
     @Test
     public void simple() throws Exception {
-        testSimple(5, 7);
+        testSimple(5, 8);
     }
 
     /**
      * Currently, NekoHtml doesn't deliver right information about the line
      * for the warning. Let this test run with wrong expectation
      * on line and col to avoid that other regression occur.
-     * @exception Exception If the test fails
+     * @throws Exception If the test fails
      */
     @Test
     public void simple_withWrongLineCol() throws Exception {
-        testSimple(5, 7);
+        testSimple(5, 8);
     }
 
     private void testSimple(final int line, final int col) throws Exception {
-        final String htmlContent = "<html>\n" + "<head>\n<title>foo\n</head>\n"
-                + "<body>\nfoo\n</body>\n</html>";
+        final String htmlContent =
+                "<html>\n"
+                + "<body>\n"
+                + "<p>foo\n"
+                + "</body>"
+                + "\n</html>";
 
         final WebClient webClient = getWebClient();
         assertNull(webClient.getHTMLParserListener());
@@ -161,11 +163,11 @@ public class HTMLParserListenerTest extends SimpleWebTestCase {
         webClient.setWebConnection(webConnection);
 
         final HtmlPage page = webClient.getPage(URL_FIRST);
-        assertEquals("foo", page.getTitleText());
+        assertEquals("foo", page.asNormalizedText());
 
         // ignore column and key
         final MessageInfo expectedError = new MessageInfo(false,
-                "End element <head> automatically closes element <title>.",
+                "End element <body> automatically closes element <p>.",
                 URL_FIRST, null, line, col, null);
 
         assertEquals(1, messages.size());
@@ -174,7 +176,7 @@ public class HTMLParserListenerTest extends SimpleWebTestCase {
 
     /**
      * Test parsing of a fragment.
-     * @exception Exception If the test fails
+     * @throws Exception If the test fails
      */
     @Test
     public void parseFragment() throws Exception {

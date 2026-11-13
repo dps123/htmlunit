@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,93 +14,81 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.BrowserVersionFeatures.HTMLDOCUMENT_COOKIES_IGNORE_BLANK;
 import static org.htmlunit.BrowserVersionFeatures.HTMLDOCUMENT_ELEMENTS_BY_NAME_EMPTY;
-import static org.htmlunit.BrowserVersionFeatures.HTMLDOCUMENT_FUNCTION_DETACHED;
-import static org.htmlunit.BrowserVersionFeatures.HTMLDOCUMENT_GET_ALSO_FRAMES;
-import static org.htmlunit.BrowserVersionFeatures.HTMLDOCUMENT_GET_FOR_ID_AND_OR_NAME;
-import static org.htmlunit.BrowserVersionFeatures.HTMLDOCUMENT_GET_PREFERS_STANDARD_FUNCTIONS;
-import static org.htmlunit.BrowserVersionFeatures.JS_DOCUMENT_CREATE_ATTRUBUTE_LOWER_CASE;
-import static org.htmlunit.BrowserVersionFeatures.JS_DOCUMENT_OPEN_OVERWRITES_ABOUT_BLANK_LOCATION;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
 import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
 import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
 
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Supplier;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.htmlunit.ScriptResult;
 import org.htmlunit.StringWebResponse;
 import org.htmlunit.WebClient;
 import org.htmlunit.WebWindow;
+import org.htmlunit.corejs.javascript.Context;
+import org.htmlunit.corejs.javascript.Function;
+import org.htmlunit.corejs.javascript.Scriptable;
+import org.htmlunit.corejs.javascript.VarScope;
 import org.htmlunit.html.BaseFrameElement;
+import org.htmlunit.html.DomDocumentFragment;
 import org.htmlunit.html.DomElement;
 import org.htmlunit.html.DomNode;
 import org.htmlunit.html.FrameWindow;
-import org.htmlunit.html.HtmlApplet;
 import org.htmlunit.html.HtmlAttributeChangeEvent;
 import org.htmlunit.html.HtmlElement;
 import org.htmlunit.html.HtmlForm;
 import org.htmlunit.html.HtmlImage;
-import org.htmlunit.html.HtmlInlineFrame;
 import org.htmlunit.html.HtmlPage;
 import org.htmlunit.html.HtmlScript;
-import org.htmlunit.httpclient.HtmlUnitBrowserCompatCookieSpec;
 import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.PostponedAction;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
-import org.htmlunit.javascript.configuration.JsxSetter;
+import org.htmlunit.javascript.configuration.JsxStaticFunction;
 import org.htmlunit.javascript.host.Element;
-import org.htmlunit.javascript.host.Window;
 import org.htmlunit.javascript.host.dom.AbstractList.EffectOnCache;
 import org.htmlunit.javascript.host.dom.Attr;
 import org.htmlunit.javascript.host.dom.Document;
+import org.htmlunit.javascript.host.dom.Node;
+import org.htmlunit.javascript.host.dom.NodeList;
 import org.htmlunit.javascript.host.dom.Selection;
 import org.htmlunit.javascript.host.event.Event;
-import org.htmlunit.util.Cookie;
+import org.htmlunit.javascript.host.event.EventTarget;
 import org.htmlunit.util.UrlUtils;
-
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.Function;
-import org.htmlunit.corejs.javascript.Scriptable;
-import org.htmlunit.corejs.javascript.ScriptableObject;
-import org.htmlunit.corejs.javascript.Undefined;
 
 /**
  * A JavaScript object for {@code HTMLDocument}.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author David K. Taylor
- * @author <a href="mailto:chen_jun@users.sourceforge.net">Chen Jun</a>
- * @author <a href="mailto:cse@dynabean.de">Christian Sell</a>
+ * @author Chen Jun
+ * @author Christian Sell
  * @author Chris Erskine
  * @author Marc Guillemot
  * @author Daniel Gredler
  * @author Michael Ottati
- * @author <a href="mailto:george@murnock.com">George Murnock</a>
+ * @author George Murnock
  * @author Ahmed Ashour
  * @author Rob Di Marco
  * @author Sudhan Moghe
- * @author <a href="mailto:mike@10gen.com">Mike Dirolf</a>
+ * @author Mike Dirolf
  * @author Ronald Brill
  * @author Frank Danek
- * @see <a href="http://msdn.microsoft.com/en-us/library/ms535862.aspx">MSDN documentation</a>
+ * @author Sven Strickroth
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/Document">MDN Documentation</a>
  * @see <a href="http://www.w3.org/TR/2000/WD-DOM-Level-1-20000929/level-one-html.html#ID-7068919">
- * W3C DOM Level 1</a>
+ *     W3C DOM Level 1</a>
  */
 @JsxClass
 public class HTMLDocument extends Document {
@@ -108,8 +96,6 @@ public class HTMLDocument extends Document {
     private static final Log LOG = LogFactory.getLog(HTMLDocument.class);
 
     private enum ParsingStatus { OUTSIDE, START, IN_NAME, INSIDE, IN_STRING }
-
-    private HTMLElement activeElement_;
 
     /** The buffer that will be used for calls to document.write(). */
     private final StringBuilder writeBuilder_ = new StringBuilder();
@@ -119,10 +105,12 @@ public class HTMLDocument extends Document {
     private boolean executionExternalPostponed_;
 
     /**
-     * The constructor.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public HTMLDocument() {
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
@@ -134,7 +122,7 @@ public class HTMLDocument extends Document {
             return super.getDomNodeOrDie();
         }
         catch (final IllegalStateException e) {
-            throw Context.reportRuntimeError("No node attached to this object");
+            throw JavaScriptEngine.typeError("No node attached to this object");
         }
     }
 
@@ -148,16 +136,36 @@ public class HTMLDocument extends Document {
     }
 
     /**
+     * Parses the given string of HTML without sanitizing it and returns a new HTMLDocument.
+     *
+     * @param cx the current context
+     * @param scope the scope
+     * @param thisObj the scriptable this object
+     * @param args the arguments
+     * @param funObj the function object
+     * @return a newly created {@link HTMLDocument}
+     *
+     * @see <a href="https://html.spec.whatwg.org/multipage/dynamic-markup-insertion.html#dom-parsehtmlunsafe">
+     *     HTML spec - parseHTMLUnsafe</a>
+     */
+    @JsxStaticFunction
+    public static HTMLDocument parseHTMLUnsafe(final Context cx, final VarScope scope,
+            final Scriptable thisObj, final Object[] args, final Function funObj) {
+        return (HTMLDocument) Document.parseHTMLUnsafe(cx, scope, thisObj, args, funObj);
+    }
+
+    /**
      * JavaScript function "write" may accept a variable number of arguments.
      * @param context the JavaScript context
+     * @param scope the scope
      * @param thisObj the scriptable
      * @param args the arguments passed into the method
      * @param function the function
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms536782.aspx">MSDN documentation</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/Document/write">MDN Documentation</a>
      */
     @JsxFunction
-    public static void write(final Context context, final Scriptable thisObj, final Object[] args,
-        final Function function) {
+    public static void write(final Context context, final VarScope scope,
+            final Scriptable thisObj, final Object[] args, final Function function) {
         final HTMLDocument thisAsDocument = getDocument(thisObj);
         thisAsDocument.write(concatArgsAsString(args));
     }
@@ -170,29 +178,45 @@ public class HTMLDocument extends Document {
     private static String concatArgsAsString(final Object[] args) {
         final StringBuilder builder = new StringBuilder();
         for (final Object arg : args) {
-            builder.append(Context.toString(arg));
+            builder.append(JavaScriptEngine.toString(arg));
         }
         return builder.toString();
     }
 
     /**
-     * JavaScript function "writeln" may accept a variable number of arguments.
+     * Moves a given Node inside the invoking node as a direct child, before a given reference node.
+     *
      * @param context the JavaScript context
+     * @param scope the scope
      * @param thisObj the scriptable
      * @param args the arguments passed into the method
      * @param function the function
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms536783.aspx">MSDN documentation</a>
      */
     @JsxFunction
-    public static void writeln(
-        final Context context, final Scriptable thisObj, final Object[] args, final Function function) {
+    public static void moveBefore(final Context context, final VarScope scope,
+            final Scriptable thisObj, final Object[] args, final Function function) {
+        moveBeforeImpl(thisObj, args, "Document");
+    }
+
+    /**
+     * JavaScript function "writeln" may accept a variable number of arguments.
+     * @param context the JavaScript context
+     * @param scope the scope
+     * @param thisObj the scriptable
+     * @param args the arguments passed into the method
+     * @param function the function
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/Document/writeln">MDN Documentation</a>
+     */
+    @JsxFunction
+    public static void writeln(final Context context, final VarScope scope,
+            final Scriptable thisObj, final Object[] args, final Function function) {
         final HTMLDocument thisAsDocument = getDocument(thisObj);
         thisAsDocument.write(concatArgsAsString(args) + "\n");
     }
 
     /**
      * Returns the current document instance, using <code>thisObj</code> as a hint.
-     * @param thisObj a hint as to the current document (may be the prototype when function is used without "this")
+     * @param thisObj a hint as to the current document (maybe the prototype when function is used without "this")
      * @return the current document instance
      */
     private static HTMLDocument getDocument(final Scriptable thisObj) {
@@ -200,23 +224,19 @@ public class HTMLDocument extends Document {
         // cf unit test DocumentTest#testDocumentWrite_AssignedToVar
         // may be the prototype too
         // cf DocumentTest#testDocumentWrite_AssignedToVar2
-        if (thisObj instanceof HTMLDocument && thisObj.getPrototype() instanceof HTMLDocument) {
-            return (HTMLDocument) thisObj;
+        if (thisObj instanceof HTMLDocument document && thisObj.getPrototype() instanceof HTMLDocument) {
+            return document;
         }
-        if (thisObj instanceof DocumentProxy && thisObj.getPrototype() instanceof HTMLDocument) {
-            return (HTMLDocument) ((DocumentProxy) thisObj).getDelegee();
+        if (thisObj instanceof DocumentProxy proxy && thisObj.getPrototype() instanceof HTMLDocument) {
+            return (HTMLDocument) proxy.getDelegee();
         }
 
-        final Window window = getWindow(thisObj);
-        if (window.getBrowserVersion().hasFeature(HTMLDOCUMENT_FUNCTION_DETACHED)) {
-            return (HTMLDocument) window.getDocument();
-        }
-        throw Context.reportRuntimeError("Function can't be used detached from document");
+        throw JavaScriptEngine.reportRuntimeError("Function can't be used detached from document");
     }
 
     /**
      * This a hack!!! A cleaner way is welcome.
-     * Handle a case where document.write is simply ignored.
+     * Handle a case where document.write() is simply ignored.
      * See HTMLDocumentWrite2Test.write_fromScriptAddedWithAppendChild_external.
      * @param executing indicates if executing or not
      */
@@ -229,6 +249,7 @@ public class HTMLDocument extends Document {
      * <p>
      * See http://www.whatwg.org/specs/web-apps/current-work/multipage/section-dynamic.html for
      * a good description of the semantics of open(), write(), writeln() and close().
+     * </p>
      *
      * @param content the content to write
      */
@@ -255,17 +276,13 @@ public class HTMLDocument extends Document {
 
         // If open() was called; don't write to doc yet -- wait for call to close().
         if (!writeInCurrentDocument_) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("wrote content to buffer");
-            }
+            LOG.debug("wrote content to buffer");
             scheduleImplicitClose();
             return;
         }
         final String bufferedContent = writeBuilder_.toString();
         if (!canAlreadyBeParsed(bufferedContent)) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("write: not enough content to parse it now");
-            }
+            LOG.debug("write: not enough content to parse it now");
             return;
         }
 
@@ -297,10 +314,10 @@ public class HTMLDocument extends Document {
     }
 
     /**
-     * Indicates if the content is a well formed HTML snippet that can already be parsed to be added to the DOM.
+     * Indicates if the content is a well-formed HTML snippet that can already be parsed to be added to the DOM.
      *
      * @param content the HTML snippet
-     * @return {@code false} if it not well formed
+     * @return {@code false} if it is not well-formed
      */
     static boolean canAlreadyBeParsed(final String content) {
         // all <script> must have their </script> because the parser doesn't close automatically this tag
@@ -393,7 +410,7 @@ public class HTMLDocument extends Document {
         if (scriptTagCount > 0 || tagState != ParsingStatus.OUTSIDE) {
             if (LOG.isDebugEnabled()) {
                 final StringBuilder message = new StringBuilder()
-                    .append("canAlreadyBeParsed() retruns false for content: '")
+                    .append("canAlreadyBeParsed() returns false for content: '")
                     .append(StringUtils.abbreviateMiddle(content, ".", 100))
                     .append("' (scriptTagCount: ")
                         .append(scriptTagCount)
@@ -424,67 +441,22 @@ public class HTMLDocument extends Document {
     }
 
     /**
-     * {@inheritDoc}
-     */
-    @Override
-    @JsxGetter
-    public String getCookie() {
-        final HtmlPage page = getPage();
-
-        final URL url = page.getUrl();
-
-        final StringBuilder builder = new StringBuilder();
-        final Set<Cookie> cookies = page.getWebClient().getCookies(url);
-        for (final Cookie cookie : cookies) {
-            if (cookie.isHttpOnly()) {
-                continue;
-            }
-            if (builder.length() != 0) {
-                builder.append("; ");
-            }
-            if (!HtmlUnitBrowserCompatCookieSpec.EMPTY_COOKIE_NAME.equals(cookie.getName())) {
-                builder.append(cookie.getName());
-                builder.append('=');
-            }
-            builder.append(cookie.getValue());
-        }
-
-        return builder.toString();
-    }
-
-    /**
-     * Adds a cookie, as long as cookies are enabled.
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms533693.aspx">MSDN documentation</a>
-     * @param newCookie in the format "name=value[;expires=date][;domain=domainname][;path=path][;secure]
-     */
-    @JsxSetter
-    public void setCookie(final String newCookie) {
-        final HtmlPage page = getPage();
-        final WebClient client = page.getWebClient();
-
-        if (StringUtils.isBlank(newCookie)
-                && client.getBrowserVersion().hasFeature(HTMLDOCUMENT_COOKIES_IGNORE_BLANK)) {
-            return;
-        }
-        client.addCookie(newCookie, getPage().getUrl(), this);
-    }
-
-    /**
      * JavaScript function "open".
      * <p>
      * See http://www.whatwg.org/specs/web-apps/current-work/multipage/section-dynamic.html for
      * a good description of the semantics of open(), write(), writeln() and close().
+     * </p>
      *
      * @param url when a new document is opened, <i>url</i> is a String that specifies a MIME type for the document.
      *        When a new window is opened, <i>url</i> is a String that specifies the URL to render in the new window
      * @param name the name
      * @param features the features
-     * @param replace whether to replace in the history list or no
-     * @return a reference to the new document object.
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms536652.aspx">MSDN documentation</a>
+     * @param replace whether to replace in the history list or not
+     * @return a reference to the new document object
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/Document/open">MDN Documentation</a>
      */
     @JsxFunction
-    public Object open(final Object url, final Object name, final Object features,
+    public HTMLDocument open(final Object url, final Object name, final Object features,
             final Object replace) {
         // Any open() invocations are ignored during the parsing stage, because write() and
         // writeln() invocations will directly append content to the current insertion point.
@@ -499,12 +471,21 @@ public class HTMLDocument extends Document {
             LOG.warn("Function open() called when document is already open.");
         }
         writeInCurrentDocument_ = false;
+
+        // like the browsers, document.open() removes all event listeners and handlers
+        // of the document, all its nodes and the window
+        for (final DomNode node : page.getDescendants()) {
+            if (node.getScriptableObjectIfCreated() instanceof EventTarget target) {
+                target.removeAllEventListeners();
+            }
+        }
+        removeAllEventListeners();
+        getWindow().removeAllEventListeners();
+
         final WebWindow ww = getWindow().getWebWindow();
-        if (ww instanceof FrameWindow
-                && (!Undefined.isUndefined(url)
-                        || getBrowserVersion().hasFeature(JS_DOCUMENT_OPEN_OVERWRITES_ABOUT_BLANK_LOCATION))
+        if (ww instanceof FrameWindow window
                 && UrlUtils.ABOUT_BLANK.equals(getPage().getUrl().toExternalForm())) {
-            final URL enclosingUrl = ((FrameWindow) ww).getEnclosingPage().getUrl();
+            final URL enclosingUrl = window.getEnclosingPage().getUrl();
             getPage().getWebResponse().getWebRequest().setUrl(enclosingUrl);
         }
         return this;
@@ -530,11 +511,11 @@ public class HTMLDocument extends Document {
             final WebClient webClient = page.getWebClient();
             final WebWindow window = page.getEnclosingWindow();
             // reset isAttachedToPageDuringOnload_ to trigger the onload event for chrome also
-            if (window instanceof FrameWindow) {
-                final BaseFrameElement frame = ((FrameWindow) window).getFrameElement();
-                final ScriptableObject scriptable = frame.getScriptableObject();
-                if (scriptable instanceof HTMLIFrameElement) {
-                    ((HTMLIFrameElement) scriptable).onRefresh();
+            if (window instanceof FrameWindow frameWindow) {
+                final BaseFrameElement frame = frameWindow.getFrameElement();
+                final HtmlUnitScriptable scriptable = frame.getScriptableObject();
+                if (scriptable instanceof HTMLIFrameElement element) {
+                    element.onRefresh();
                 }
             }
             webClient.loadWebResponseInto(webResponse, window);
@@ -560,7 +541,7 @@ public class HTMLDocument extends Document {
                 close();
             }
             catch (final IOException e) {
-                throw Context.throwAsScriptRuntimeEx(e);
+                throw JavaScriptEngine.throwAsScriptRuntimeEx(e);
             }
         }
     }
@@ -569,8 +550,42 @@ public class HTMLDocument extends Document {
      * {@inheritDoc}
      */
     @Override
-    public Object appendChild(final Object childObject) {
-        throw Context.reportRuntimeError("Node cannot be inserted at the specified point in the hierarchy.");
+    public Node appendChild(final Object childObject) {
+        if (childObject instanceof Node childNode
+                && !isInsertableAtEnd(getPage(), childNode.getDomNodeOrDie())) {
+            throw JavaScriptEngine.asJavaScriptException(
+                    getWindow(),
+                    "Node cannot be inserted at the specified point in the hierarchy.",
+                    org.htmlunit.javascript.host.dom.DOMException.HIERARCHY_REQUEST_ERR);
+        }
+        return super.appendChild(childObject);
+    }
+
+    /**
+     * Pre-insertion validity of a node that is appended to a document (DOM standard, "ensure
+     * pre-insertion validity"): at most one element, at most one doctype and the doctype has to be
+     * in front of the element; text is not allowed; comments and processing instructions are always fine.
+     */
+    private static boolean isInsertableAtEnd(final HtmlPage page, final DomNode node) {
+        if (node instanceof DomDocumentFragment fragment) {
+            int elements = 0;
+            for (final DomNode child : fragment.getChildren()) {
+                if (child instanceof org.w3c.dom.Element) {
+                    elements++;
+                }
+                else if (child instanceof org.w3c.dom.Text) {
+                    return false;
+                }
+            }
+            return elements == 0 || (elements == 1 && page.getDocumentElement() == null);
+        }
+        if (node instanceof org.w3c.dom.Element) {
+            return page.getDocumentElement() == null;
+        }
+        if (node instanceof org.w3c.dom.DocumentType) {
+            return page.getDoctype() == null && page.getDocumentElement() == null;
+        }
+        return node instanceof org.w3c.dom.Comment || node instanceof org.w3c.dom.ProcessingInstruction;
     }
 
     /**
@@ -580,10 +595,10 @@ public class HTMLDocument extends Document {
      */
     @JsxFunction
     @Override
-    public Object getElementById(final String id) {
+    public HtmlUnitScriptable getElementById(final String id) {
         implicitCloseIfNecessary();
         final DomElement domElement = getPage().getElementById(id);
-        if (null == domElement) {
+        if (domElement == null) {
             // Just fall through - result is already set to null
             if (LOG.isDebugEnabled()) {
                 LOG.debug("getElementById(" + id + "): no DOM node found with this id");
@@ -591,7 +606,7 @@ public class HTMLDocument extends Document {
             return null;
         }
 
-        final Object jsElement = getScriptableFor(domElement);
+        final HtmlUnitScriptable jsElement = getScriptableFor(domElement);
         if (jsElement == NOT_FOUND) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("getElementById(" + id
@@ -615,17 +630,17 @@ public class HTMLDocument extends Document {
      * {@inheritDoc}
      */
     @Override
-    @JsxFunction({FF, FF_ESR})
-    public HTMLCollection getElementsByName(final String elementName) {
+    public NodeList getElementsByName(final String elementName) {
         implicitCloseIfNecessary();
+
         if ("null".equals(elementName)
                 || (elementName.isEmpty()
                     && getBrowserVersion().hasFeature(HTMLDOCUMENT_ELEMENTS_BY_NAME_EMPTY))) {
-            return HTMLCollection.emptyCollection(getWindow().getDomNodeOrDie());
+            return NodeList.staticNodeList(getParentScope(), new ArrayList<>());
         }
 
         final HtmlPage page = getPage();
-        final HTMLCollection elements = new HTMLCollection(page, true);
+        final NodeList elements = new NodeList(page, true);
         elements.setElementsSupplier(
                 (Supplier<List<DomNode>> & Serializable)
                 () -> new ArrayList<>(page.getElementsByName(elementName)));
@@ -645,13 +660,13 @@ public class HTMLDocument extends Document {
     /**
      * Calls to <code>document.XYZ</code> should first look at elements named <code>XYZ</code> before
      * using standard functions.
-     * <p>
+     *
      * {@inheritDoc}
      */
     @Override
     protected Object getWithPreemption(final String name) {
         final HtmlPage page = (HtmlPage) getDomNodeOrNull();
-        if (page == null || getBrowserVersion().hasFeature(HTMLDOCUMENT_GET_PREFERS_STANDARD_FUNCTIONS)) {
+        if (page == null) {
             final Object response = getPrototype().get(name, this);
             if (response != NOT_FOUND) {
                 return response;
@@ -666,21 +681,18 @@ public class HTMLDocument extends Document {
             return NOT_FOUND;
         }
 
-        final boolean forIDAndOrName = getBrowserVersion().hasFeature(HTMLDOCUMENT_GET_FOR_ID_AND_OR_NAME);
-        final boolean alsoFrames = getBrowserVersion().hasFeature(HTMLDOCUMENT_GET_ALSO_FRAMES);
-
-        // for performance
+        // for performance,
         // we will calculate the elements to decide if we really have
         // to really create a HTMLCollection or not
-        final List<DomNode> matchingElements = getItComputeElements(page, name, forIDAndOrName, alsoFrames);
+        final List<DomNode> matchingElements = getItComputeElements(page, name);
         final int size = matchingElements.size();
         if (size == 0) {
             return NOT_FOUND;
         }
         if (size == 1) {
             final DomNode object = matchingElements.get(0);
-            if (alsoFrames && object instanceof BaseFrameElement) {
-                return ((BaseFrameElement) object).getEnclosedWindow().getScriptableObject();
+            if (object instanceof BaseFrameElement element) {
+                return element.getEnclosedWindow().getScriptableObject();
             }
             return super.getScriptableFor(object);
         }
@@ -688,8 +700,8 @@ public class HTMLDocument extends Document {
         final HTMLCollection coll = new HTMLCollection(page, matchingElements) {
             @Override
             protected HtmlUnitScriptable getScriptableFor(final Object object) {
-                if (alsoFrames && object instanceof BaseFrameElement) {
-                    return ((BaseFrameElement) object).getEnclosedWindow().getScriptableObject();
+                if (object instanceof BaseFrameElement element) {
+                    return element.getEnclosedWindow().getScriptableObject();
                 }
                 return super.getScriptableFor(object);
             }
@@ -697,13 +709,13 @@ public class HTMLDocument extends Document {
 
         coll.setElementsSupplier(
                 (Supplier<List<DomNode>> & Serializable)
-                () -> getItComputeElements(page, name, forIDAndOrName, alsoFrames));
+                () -> getItComputeElements(page, name));
 
         coll.setEffectOnCacheFunction(
                 (java.util.function.Function<HtmlAttributeChangeEvent, EffectOnCache> & Serializable)
                 event -> {
                     final String attributeName = event.getName();
-                    if ("name".equals(attributeName) || (forIDAndOrName && "id".equals(attributeName))) {
+                    if (DomElement.NAME_ATTRIBUTE.equals(attributeName)) {
                         return EffectOnCache.RESET;
                     }
 
@@ -713,19 +725,11 @@ public class HTMLDocument extends Document {
         return coll;
     }
 
-    static List<DomNode> getItComputeElements(final HtmlPage page, final String name,
-            final boolean forIDAndOrName, final boolean alsoFrames) {
-        final List<DomElement> elements;
-        if (forIDAndOrName) {
-            elements = page.getElementsByIdAndOrName(name);
-        }
-        else {
-            elements = page.getElementsByName(name);
-        }
+    static List<DomNode> getItComputeElements(final HtmlPage page, final String name) {
+        final List<DomElement> elements = page.getElementsByName(name);
         final List<DomNode> matchingElements = new ArrayList<>();
         for (final DomElement elt : elements) {
-            if (elt instanceof HtmlForm || elt instanceof HtmlImage || elt instanceof HtmlApplet
-                    || (alsoFrames && elt instanceof BaseFrameElement)) {
+            if (elt instanceof HtmlForm || elt instanceof HtmlImage || elt instanceof BaseFrameElement) {
                 matchingElements.add(elt);
             }
         }
@@ -736,7 +740,6 @@ public class HTMLDocument extends Document {
      * {@inheritDoc}
      */
     @Override
-    @JsxGetter
     public HTMLElement getHead() {
         final HtmlElement head = getPage().getHead();
         if (head == null) {
@@ -750,7 +753,7 @@ public class HTMLDocument extends Document {
      */
     @Override
     public String getTitle() {
-        return getPage().getTitleText();
+        return getPage().getDocumentTitle();
     }
 
     /**
@@ -766,14 +769,11 @@ public class HTMLDocument extends Document {
      */
     @Override
     public HTMLElement getActiveElement() {
-        if (activeElement_ == null) {
-            final HtmlElement body = getPage().getBody();
-            if (body != null) {
-                activeElement_ = (HTMLElement) getScriptableFor(body);
-            }
+        final HtmlElement activeElement = getPage().getActiveElement();
+        if (activeElement != null) {
+            return activeElement.getScriptableObject();
         }
-
-        return activeElement_;
+        return null;
     }
 
     /**
@@ -781,32 +781,7 @@ public class HTMLDocument extends Document {
      */
     @Override
     public boolean hasFocus() {
-        return activeElement_ != null && getPage().getFocusedElement() == activeElement_.getDomNodeOrDie();
-    }
-
-    /**
-     * Sets the specified element as the document's active element.
-     * @see HTMLElement#setActive()
-     * @param element the new active element for this document
-     */
-    public void setActiveElement(final HTMLElement element) {
-        // TODO update page focus element also
-
-        activeElement_ = element;
-
-        if (element != null) {
-            // if this is part of an iFrame, make the iFrame tag the
-            // active element of his doc
-            final WebWindow window = element.getDomNodeOrDie().getPage().getEnclosingWindow();
-            if (window instanceof FrameWindow) {
-                final BaseFrameElement frame = ((FrameWindow) window).getFrameElement();
-                if (frame instanceof HtmlInlineFrame) {
-                    final Window winWithFrame = frame.getPage().getEnclosingWindow().getScriptableObject();
-                    ((HTMLDocument) winWithFrame.getDocument()).setActiveElement(
-                            frame.getScriptableObject());
-                }
-            }
-        }
+        return getPage().getFocusedElement() != null;
     }
 
     /**
@@ -827,19 +802,9 @@ public class HTMLDocument extends Document {
     }
 
     /**
-     * Sets the head.
-     * @param head the head
-     */
-    @JsxSetter({FF, FF_ESR, IE})
-    public void setHead(final ScriptableObject head) {
-        //ignore
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
-    @JsxFunction
     public Selection getSelection() {
         return getWindow().getSelectionImpl();
     }
@@ -853,9 +818,8 @@ public class HTMLDocument extends Document {
     @Override
     public Attr createAttribute(final String attributeName) {
         String name = attributeName;
-        if (StringUtils.isNotEmpty(name)
-                && getBrowserVersion().hasFeature(JS_DOCUMENT_CREATE_ATTRUBUTE_LOWER_CASE)) {
-            name = org.htmlunit.util.StringUtils.toRootLowerCaseWithCache(name);
+        if (!org.htmlunit.util.StringUtils.isEmptyOrNull(name)) {
+            name = org.htmlunit.util.StringUtils.toRootLowerCase(name);
         }
 
         return super.createAttribute(name);
@@ -873,7 +837,7 @@ public class HTMLDocument extends Document {
      * {@inheritDoc}
      */
     @Override
-    public Object elementFromPoint(final int x, final int y) {
+    public HtmlUnitScriptable elementFromPoint(final int x, final int y) {
         final HtmlElement element = getPage().getElementFromPoint(x, y);
         return element == null ? null : element.getScriptableObject();
     }

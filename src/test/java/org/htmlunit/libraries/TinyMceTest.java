@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,22 +14,17 @@
  */
 package org.htmlunit.libraries;
 
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.IE;
-
 import java.time.Duration;
 import java.util.List;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.htmlunit.WebDriverTestCase;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.HtmlUnitNYI;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
-
-import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
 
 /**
  * <p>Tests for compatibility with <a href="http://tinymce.moxiecode.com/">TinyMCE</a>.</p>
@@ -41,17 +36,21 @@ import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
  * @author Frank Danek
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class TinyMceTest extends WebDriverTestCase {
 
     /**
      * @throws Exception if an error occurs
      */
+    @BeforeAll
+    public static void startServer() throws Exception {
+        startWebServer("src/test/resources/libraries/tinymce/3.2.7", null);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
     @Test
-    @Alerts(DEFAULT = {"348", "0"},
-            IE = {"348", "13"})
-    @NotYetImplemented(IE)
-    // TODO [IE]XML tinymce 3.2.7 is not compatible with IE
+    @Alerts({"348", "0"})
     public void api() throws Exception {
         test("api", Integer.parseInt(getExpectedAlerts()[0]), Integer.parseInt(getExpectedAlerts()[1]));
     }
@@ -62,10 +61,11 @@ public class TinyMceTest extends WebDriverTestCase {
     @Test
     @Alerts(DEFAULT = {"89", "0"},
             CHROME = {"89", "1"},
-            EDGE = {"89", "1"},
-            IE = {"89", "4"})
-    @NotYetImplemented
-    // TODO [IE]XML tinymce 3.2.7 is not compatible with IE
+            EDGE = {"89", "1"})
+    @HtmlUnitNYI(CHROME = {"70", "50"},
+            EDGE = {"70", "50"},
+            FF = {"89", "45"},
+            FF_ESR = {"89", "45"})
     public void basic() throws Exception {
         test("basic", Integer.parseInt(getExpectedAlerts()[0]), Integer.parseInt(getExpectedAlerts()[1]));
     }
@@ -94,15 +94,6 @@ public class TinyMceTest extends WebDriverTestCase {
 
         final WebElement failedSpan = result.findElement(By.xpath("./span[@class='bad']"));
         final int failed = Integer.parseInt(failedSpan.getText());
-        assertEquals(msg.toString(), expectedFailed, failed);
-    }
-
-    /**
-     * Performs pre-test initialization.
-     * @throws Exception if an error occurs
-     */
-    @Before
-    public void setUp() throws Exception {
-        startWebServer("src/test/resources/libraries/tinymce/3.2.7", null, null);
+        assertEquals(expectedFailed, failed);
     }
 }

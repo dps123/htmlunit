@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,21 +14,11 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
-
-import org.apache.commons.lang3.ArrayUtils;
-
 import org.htmlunit.html.HtmlParagraph;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.configuration.JsxSetter;
-
-import org.htmlunit.corejs.javascript.Context;
 
 /**
  * The JavaScript object {@code HTMLParagraphElement}.
@@ -36,18 +26,19 @@ import org.htmlunit.corejs.javascript.Context;
  * @author Ahmed Ashour
  * @author Daniel Gredler
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLParagraphElement">MDN Documentation</a>
  */
 @JsxClass(domClass = HtmlParagraph.class)
 public class HTMLParagraphElement extends HTMLElement {
 
-    /** Valid values for the {@link #getClear() clear} property. */
-    private static final String[] VALID_CLEAR_VALUES = {"left", "right", "all", "none"};
-
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public HTMLParagraphElement() {
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
@@ -66,30 +57,5 @@ public class HTMLParagraphElement extends HTMLElement {
     @JsxSetter
     public void setAlign(final String align) {
         setAlign(align, false);
-    }
-
-    /**
-     * Returns the value of the {@code clear} property.
-     * @return the value of the {@code clear} property
-     */
-    @JsxGetter(IE)
-    public String getClear() {
-        final String clear = getDomNodeOrDie().getAttributeDirect("clear");
-        if (!ArrayUtils.contains(VALID_CLEAR_VALUES, clear)) {
-            return "";
-        }
-        return clear;
-    }
-
-    /**
-     * Sets the value of the {@code clear} property.
-     * @param clear the value of the {@code clear} property
-     */
-    @JsxSetter(IE)
-    public void setClear(final String clear) {
-        if (!ArrayUtils.contains(VALID_CLEAR_VALUES, clear)) {
-            throw Context.reportRuntimeError("Invalid clear property value: '" + clear + "'.");
-        }
-        getDomNodeOrDie().setAttribute("clear", clear);
     }
 }

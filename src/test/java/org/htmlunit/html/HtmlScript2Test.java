@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,22 +19,23 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.io.ByteOrderMark;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.openqa.selenium.By;
-import org.openqa.selenium.WebDriver;
-
 import org.htmlunit.HttpHeader;
+import org.htmlunit.MockWebConnection;
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.WebResponse;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
+import org.htmlunit.WebRequest;
+import org.htmlunit.http.HttpStatus;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.HtmlUnitNYI;
 import org.htmlunit.util.MimeType;
 import org.htmlunit.util.NameValuePair;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
 
 /**
  * Tests for {@link HtmlScript}, but as WebDriverTestCase.
@@ -45,9 +46,13 @@ import org.htmlunit.util.NameValuePair;
  * @author Ronald Brill
  * @author Daniel Wagner-Hall
  * @author Frank Danek
+ * @author Vidya m
  */
-@RunWith(BrowserRunner.class)
 public class HtmlScript2Test extends WebDriverTestCase {
+
+    private static final String AUTHORIZATION = "Bearer secret";
+
+    private int uniqueId_;
 
     /**
      * @throws Exception on test failure
@@ -55,8 +60,8 @@ public class HtmlScript2Test extends WebDriverTestCase {
     @Test
     @Alerts("myValue")
     public void insertBefore() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -79,7 +84,8 @@ public class HtmlScript2Test extends WebDriverTestCase {
     @Test
     @Alerts({"created", "hello", "replaced"})
     public void addedFromDocumentFragment() throws Exception {
-        final String html = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<span id='A'></span>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -92,7 +98,7 @@ public class HtmlScript2Test extends WebDriverTestCase {
             + "  log('created');\n"
             + "  element.parentNode.replaceChild(fragment, element);\n"
             + "  log('replaced');\n"
-            + "} catch(e) { log('exception'); }\n"
+            + "} catch(e) { logEx(e); }\n"
             + "</script></body></html>";
 
         loadPageVerifyTitle2(html);
@@ -104,7 +110,8 @@ public class HtmlScript2Test extends WebDriverTestCase {
     @Test
     @Alerts("[object HTMLScriptElement]")
     public void simpleScriptable() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -120,12 +127,13 @@ public class HtmlScript2Test extends WebDriverTestCase {
     }
 
     /**
-     * @exception Exception If the test fails
+     * @throws Exception If the test fails
      */
     @Test
     @Alerts("Hello")
     public void type_case_sensitivity() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <script type='text/JavaScript'>\n"
             + LOG_TITLE_FUNCTION
@@ -138,14 +146,13 @@ public class HtmlScript2Test extends WebDriverTestCase {
 
     /**
      * See https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types#JavaScript_types.
-     * @exception Exception If the test fails
+     * @throws Exception If the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F", "G"},
-            IE = {"1", "2", "4", "5", "6", "8", "9", "A", "D", "E", "G"})
-    @HtmlUnitNYI(IE = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F", "G"})
+    @Alerts({"1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F", "G"})
     public void typeValues() throws Exception {
-        final String html = "<html>"
+        final String html = DOCTYPE_HTML
+            + "<html>"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -174,12 +181,13 @@ public class HtmlScript2Test extends WebDriverTestCase {
     }
 
     /**
-     * @exception Exception If the test fails
+     * @throws Exception If the test fails
      */
     @Test
     @Alerts({"1", "5", "7"})
     public void type_language() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -220,7 +228,8 @@ public class HtmlScript2Test extends WebDriverTestCase {
     @Test
     @Alerts("a")
     public void scriptIsNotRunWhenCloned() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -238,7 +247,8 @@ public class HtmlScript2Test extends WebDriverTestCase {
     @Test
     @Alerts({"deferred", "start", "dcl listener added", "end", "dcLoaded", "onload"})
     public void deferInline() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION
@@ -264,7 +274,8 @@ public class HtmlScript2Test extends WebDriverTestCase {
     @Test
     @Alerts({"start", "dcl listener added", "end", "deferred-1", "deferred-2", "deferred-3", "dcLoaded", "onload"})
     public void deferExternal() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION
@@ -301,21 +312,18 @@ public class HtmlScript2Test extends WebDriverTestCase {
             CHROME = {"dcl listener added", "head-end", "end",
                       "deferred-1", "deferred-3", "dcLoaded", "deferred-2", "onload"},
             EDGE = {"dcl listener added", "head-end", "end",
-                    "deferred-1", "deferred-3", "dcLoaded", "deferred-2", "onload"},
-            IE = {"dcl listener added", "head-end", "deferred-2", "end",
-                  "deferred-1", "deferred-3", "dcLoaded", "onload"})
-    @HtmlUnitNYI(CHROME = {"dcl listener added", "head-end", "end",
-                           "deferred-1", "deferred-2", "deferred-3", "dcLoaded", "onload"},
-            EDGE = {"dcl listener added", "head-end", "end",
-                    "deferred-1", "deferred-2", "deferred-3", "dcLoaded", "onload"},
-            FF = {"dcl listener added", "head-end", "end",
-                  "deferred-1", "deferred-2", "deferred-3", "dcLoaded", "onload"},
-            FF_ESR = {"dcl listener added", "head-end", "end",
-                      "deferred-1", "deferred-2", "deferred-3", "dcLoaded", "onload"},
-            IE = {"dcl listener added", "head-end", "end",
-                  "deferred-1", "deferred-2", "deferred-3", "dcLoaded", "onload"})
+                    "deferred-1", "deferred-3", "dcLoaded", "deferred-2", "onload"})
+    @HtmlUnitNYI(CHROME = {"dcl listener added", "deferred-2", "head-end", "end",
+                           "deferred-1", "deferred-3", "dcLoaded", "onload"},
+            EDGE = {"dcl listener added", "deferred-2", "head-end", "end",
+                    "deferred-1", "deferred-3", "dcLoaded", "onload"},
+            FF = {"dcl listener added", "deferred-2", "head-end", "end",
+                  "deferred-1", "deferred-3", "dcLoaded", "onload"},
+            FF_ESR = {"dcl listener added", "deferred-2", "head-end", "end",
+                      "deferred-1", "deferred-3", "dcLoaded", "onload"})
     public void deferDynamicExternal() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION
@@ -348,14 +356,106 @@ public class HtmlScript2Test extends WebDriverTestCase {
     }
 
     /**
+     * The defer attribute has no effect for scripts inserted by javascript after the page was loaded.
+     *
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"end", "s0 6", "5", "deferred-1", "deferred-2", "deferred-3", "onload"},
-            IE = {"end", "s0 6", "5", "deferred-1", "deferred-2", "onload"})
-    @HtmlUnitNYI(IE = {"end", "s0 6", "5", "deferred-1", "deferred-2", "deferred-3", "onload"})
+    @Alerts({"end", "onload", "script1", "script2"})
+    public void deferDynamicAfterLoad() throws Exception {
+        deferDynamic("window.addEventListener('load', function() {\n"
+                + "  log('onload');\n"
+                + "  addScript('script1.js', true);\n"
+                + "  addScript('script2.js', false);\n"
+                + "});\n");
+    }
+
+    /**
+     * The defer attribute has no effect for scripts inserted by javascript from a timer.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"end", "onload", "timeout", "script1"})
+    public void deferDynamicFromTimeout() throws Exception {
+        deferDynamic("window.addEventListener('load', function() {\n"
+                + "  log('onload');\n"
+                + "  setTimeout(function() {\n"
+                + "    log('timeout');\n"
+                + "    addScript('script1.js', true);\n"
+                + "  }, 10);\n"
+                + "});\n");
+    }
+
+    /**
+     * Scripts from createContextualFragment() are not parser-inserted; the defer
+     * attribute has no effect.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"end", "onload", "script1"})
+    public void deferDynamicContextualFragment() throws Exception {
+        deferDynamic("window.addEventListener('load', function() {\n"
+                + "  log('onload');\n"
+                + "  var range = document.createRange();\n"
+                + "  range.selectNode(document.body);\n"
+                + "  var frag = range.createContextualFragment("
+                + "\"<script defer src='script1.js'><\\/script>\");\n"
+                + "  document.body.appendChild(frag);\n"
+                + "});\n");
+    }
+
+    /**
+     * Scripts written by document.write() during parsing are parser-inserted; the defer
+     * attribute is respected.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"written", "end", "script1", "dcLoaded", "onload"})
+    public void deferDocumentWrite() throws Exception {
+        deferDynamic("document.addEventListener('DOMContentLoaded', function() { log('dcLoaded'); });\n"
+                + "window.addEventListener('load', function() { log('onload'); });\n"
+                + "document.write(\"<script defer src='script1.js'><\\/script>\");\n"
+                + "log('written');\n");
+    }
+
+    private void deferDynamic(final String js) throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<head>\n"
+            + "  <script>\n"
+            + LOG_WINDOW_NAME_FUNCTION
+            + "    function addScript(src, defer) {\n"
+            + "      var script = document.createElement('script');\n"
+            + "      if (defer) script.defer = true;\n"
+            + "      script.src = src;\n"
+            + "      document.head.appendChild(script);\n"
+            + "    }\n"
+            + js
+            + "  </script>\n"
+            + "</head>\n"
+            + "<body>\n"
+            + "  <script>log('end')</script>\n"
+            + "</body>\n"
+            + "</html>";
+
+        getMockWebConnection().setResponse(new URL(URL_FIRST, "script1.js"), "log('script1');");
+        getMockWebConnection().setResponse(new URL(URL_FIRST, "script2.js"), "log('script2');");
+
+        final WebDriver driver = loadPage2(html);
+        verifyWindowName2(DEFAULT_WAIT_TIME, driver, getExpectedAlerts());
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"end", "s0 6", "5", "deferred-1", "deferred-2", "deferred-3", "onload"})
     public void deferRemovesScript() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION
@@ -389,8 +489,8 @@ public class HtmlScript2Test extends WebDriverTestCase {
     @Test
     @Alerts({"false", "false"})
     public void appendChild_newIdAndScriptAddedInOnce() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  var div1 = document.createElement('div');\n"
@@ -412,8 +512,8 @@ public class HtmlScript2Test extends WebDriverTestCase {
     @Test
     @Alerts({"1", "2"})
     public void executesMultipleTextNodes() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  var script = document.createElement('script');\n"
@@ -436,8 +536,8 @@ public class HtmlScript2Test extends WebDriverTestCase {
     @Test
     @Alerts("var x=1;x=2;")
     public void getTextMultipleTextNodes() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  var script = document.createElement('script');\n"
@@ -461,8 +561,8 @@ public class HtmlScript2Test extends WebDriverTestCase {
     @Test
     @Alerts("3")
     public void setTextMultipleTextNodes() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  try {\n"
@@ -471,7 +571,7 @@ public class HtmlScript2Test extends WebDriverTestCase {
             + "    script.appendChild(document.createTextNode('log(\"2\");'));\n"
             + "    script.text = 'log(\"3\");';\n"
             + "    document.body.appendChild(script);\n"
-            + "  } catch (e) {log('exception');}\n"
+            + "  } catch(e) {logEx(e);}\n"
             + "</script>\n"
             + "</body></html>";
 
@@ -485,8 +585,8 @@ public class HtmlScript2Test extends WebDriverTestCase {
     @Test
     @Alerts({"1", "2", "3"})
     public void settingSrcAttribute() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION
@@ -520,11 +620,10 @@ public class HtmlScript2Test extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = {"s-x", "z"},
-            IE = {"s-x", "x", "z"})
+    @Alerts({"s-x", "z"})
     public void addEventListener_load() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -548,7 +647,7 @@ public class HtmlScript2Test extends WebDriverTestCase {
             + "<body onload='test()'></body>\n"
             + "</html>";
 
-        getMockWebConnection().setDefaultResponse("", MimeType.APPLICATION_JAVASCRIPT);
+        getMockWebConnection().setDefaultResponse("", MimeType.TEXT_JAVASCRIPT);
 
         loadPage2(html);
         verifyTitle2(DEFAULT_WAIT_TIME, getWebDriver(), getExpectedAlerts());
@@ -558,21 +657,357 @@ public class HtmlScript2Test extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "load",
-            IE = "error")
+    @Alerts("load")
     public void addEventListener_NoContent() throws Exception {
-        // use always a different url to avoid caching effects
-        final URL scriptUrl = new URL(URL_SECOND, "" + System.currentTimeMillis() + ".js");
+        addEventListener(HttpStatus.NO_CONTENT_204);
+    }
 
-        final String html
-            = "<html><head>\n"
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_BadRequest() throws Exception {
+        addEventListener(HttpStatus.BAD_REQUEST_400);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_Forbidden() throws Exception {
+        addEventListener(HttpStatus.FORBIDDEN_403);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_NotFound() throws Exception {
+        addEventListener(HttpStatus.NOT_FOUND_404);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_MethodNotAllowed() throws Exception {
+        addEventListener(HttpStatus.METHOD_NOT_ALLOWED_405);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_NotAcceptable() throws Exception {
+        addEventListener(HttpStatus.NOT_ACCEPTABLE_406);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_ProxyAuthRequired() throws Exception {
+        addEventListener(HttpStatus.PROXY_AUTHENTICATION_REQUIRED_407);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_RequestTimeout() throws Exception {
+        addEventListener(HttpStatus.REQUEST_TIMEOUT_408);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_Conflict() throws Exception {
+        addEventListener(HttpStatus.CONFLICT_409);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_Gone() throws Exception {
+        addEventListener(HttpStatus.GONE_410);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_LengthRequired() throws Exception {
+        addEventListener(HttpStatus.LENGTH_REQUIRED_411);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_PreconditionFailed() throws Exception {
+        addEventListener(HttpStatus.PRECONDITION_FAILED_412);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_PayloadTooLarge() throws Exception {
+        addEventListener(HttpStatus.PAYLOAD_TOO_LARGE_413);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_UriTooLong() throws Exception {
+        addEventListener(HttpStatus.URI_TOO_LONG_414);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_UnsupportedMediaType() throws Exception {
+        addEventListener(HttpStatus.UNSUPPORTED_MEDIA_TYPE_415);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_RangeNotSatisfiable() throws Exception {
+        addEventListener(HttpStatus.RANGE_NOT_SATISFIABLE_416);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_ExpectationFailed() throws Exception {
+        addEventListener(HttpStatus.EXPECTATION_FAILED_417);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_ImaTeapot() throws Exception {
+        addEventListener(HttpStatus.IM_A_TEAPOT_418);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_EnhanceYourCalm() throws Exception {
+        addEventListener(HttpStatus.ENHANCE_YOUR_CALM_420);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_MisdirectedRequest() throws Exception {
+        addEventListener(HttpStatus.MISDIRECTED_REQUEST_421);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_UnprocessableEntity() throws Exception {
+        addEventListener(HttpStatus.UNPROCESSABLE_ENTITY_422);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_Locked() throws Exception {
+        addEventListener(HttpStatus.LOCKED_423);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_FailedDependency() throws Exception {
+        addEventListener(HttpStatus.FAILED_DEPENDENCY_424);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_UpgradeRequired() throws Exception {
+        addEventListener(HttpStatus.UPGRADE_REQUIRED_426);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_PreconditionRequired() throws Exception {
+        addEventListener(HttpStatus.PRECONDITION_REQUIRED_428);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_TooManyRedirects() throws Exception {
+        addEventListener(HttpStatus.TOO_MANY_REQUESTS_429);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_RequestHeaderFieldsTooLarge() throws Exception {
+        addEventListener(HttpStatus.REQUEST_HEADER_FIELDS_TOO_LARGE_431);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_UnavailableForLegalReasons() throws Exception {
+        addEventListener(HttpStatus.UNAVAILABLE_FOR_LEGAL_REASONS_451);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_InternalServerError() throws Exception {
+        addEventListener(HttpStatus.INTERNAL_SERVER_ERROR_500);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_NotImplemented() throws Exception {
+        addEventListener(HttpStatus.NOT_IMPLEMENTED_501);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_BadGateway() throws Exception {
+        addEventListener(HttpStatus.BAD_GATEWAY_502);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_ServiceUnavailable() throws Exception {
+        addEventListener(HttpStatus.SERVICE_UNAVAILABLE_503);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_GatewayTimeout() throws Exception {
+        addEventListener(HttpStatus.GATEWAY_TIMEOUT_504);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_HttpVersionNotSupported() throws Exception {
+        addEventListener(HttpStatus.HTTP_VERSION_NOT_SUPPORTED_505);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_InsufficientStrorage() throws Exception {
+        addEventListener(HttpStatus.INSUFFICIENT_STORAGE_507);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_LoopDetected() throws Exception {
+        addEventListener(HttpStatus.LOOP_DETECTED_508);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_NotExtended() throws Exception {
+        addEventListener(HttpStatus.NOT_EXTENDED_510);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("error [object HTMLScriptElement]")
+    public void addEventListener_NetworkAuthenticationRequired() throws Exception {
+        addEventListener(HttpStatus.NETWORK_AUTHENTICATION_REQUIRED_511);
+    }
+
+    private void addEventListener(final int statusCode) throws Exception {
+        // use always a different url to avoid caching effects
+        final URL scriptUrl = new URL(URL_SECOND, System.currentTimeMillis() + ".js");
+
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
             + "    var s1 = document.createElement('script');\n"
             + "    s1.src = '" + scriptUrl + "';\n"
-            + "    s1.addEventListener('load', function() {log('load')}, false);\n"
-            + "    s1.addEventListener('error', function() {log('error')}, false);\n"
+            + "    s1.addEventListener('load', function() { log('load'); }, false);\n"
+            + "    s1.addEventListener('error', function(event) { log(event.type + ' ' + event.target); }, false);\n"
             + "    document.body.insertBefore(s1, document.body.firstChild);\n"
             + "  }\n"
             + "</script>\n"
@@ -580,8 +1015,8 @@ public class HtmlScript2Test extends WebDriverTestCase {
             + "<body onload='test()'></body>\n"
             + "</html>";
 
-        getMockWebConnection().setResponse(scriptUrl, (String) null, WebResponse.NO_CONTENT, "No Content",
-                                                MimeType.APPLICATION_JAVASCRIPT, null);
+        getMockWebConnection().setResponse(scriptUrl, (String) null,
+                statusCode, "test", MimeType.TEXT_JAVASCRIPT, null);
         loadPageVerifyTitle2(html);
     }
 
@@ -591,7 +1026,8 @@ public class HtmlScript2Test extends WebDriverTestCase {
      */
     @Test
     public void badSrcUrl() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "<script src='http://'>log(1)</script>\n"
                 + "</head><body></body></html>";
 
@@ -605,7 +1041,7 @@ public class HtmlScript2Test extends WebDriverTestCase {
      */
     @Test
     public void invalidJQuerySrcAttribute() throws Exception {
-        loadPage2("<html><body><script src='//:'></script></body></html>");
+        loadPage2(DOCTYPE_HTML + "<html><body><script src='//:'></script></body></html>");
     }
 
     /**
@@ -614,37 +1050,46 @@ public class HtmlScript2Test extends WebDriverTestCase {
     @Test
     @Alerts({"loaded", "§§URL§§abcd"})
     public void lineBreaksInUrl() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "  <script>\n"
+            + LOG_TITLE_FUNCTION_NORMALIZE
+            + "  </script>\n"
             + "  <script id='myScript' src='" + URL_SECOND + "a\rb\nc\r\nd'></script>\n"
             + "</head>\n"
-            + "<body onload='alert(document.getElementById(\"myScript\").src);'>Test</body>\n"
+            + "<body onload='log(document.getElementById(\"myScript\").src);'>Test</body>\n"
             + "</html>";
 
-        getMockWebConnection().setResponse(new URL(URL_SECOND, "abcd"), "alert('loaded')");
+        getMockWebConnection().setResponse(new URL(URL_SECOND, "abcd"), "log('loaded')");
         expandExpectedAlertsVariables(URL_SECOND);
-        loadPageWithAlerts2(html);
+
+        loadPageVerifyTitle2(html);
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("\u0623\u0647\u0644\u0627\u064b\u0623\u0647\u0644\u0627"
-            + "\u064b\u0623\u0647\u0644\u0627\u064b\u0623\u0647\u0644\u0627\u064b")
+    @Alerts({"\u0623\u0647\u0644\u0627\u064b\u0623\u0647\u0644\u0627"
+            + "\u064b\u0623\u0647\u0644\u0627\u064b\u0623\u0647\u0644\u0627\u064b", "§§URL§§"})
     public void incorrectCharset() throws Exception {
-        final String html
-            = "<html><head>\n"
-            + "  <script src='" + URL_SECOND + "' charset='" + ISO_8859_1 + "'></script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "  <script>\n"
+            + LOG_TITLE_FUNCTION_NORMALIZE
+            + "  </script>\n"
+            + "  <script id='myScript' src='" + URL_SECOND + "' charset='" + ISO_8859_1 + "'></script>\n"
             + "</head>\n"
-            + "<body></body>\n"
+            + "<body onload='log(document.getElementById(\"myScript\").src);'></body>\n"
             + "</html>";
 
-        final String script = new String(ByteOrderMark.UTF_8.getBytes())
-                + "alert('" + "\u0623\u0647\u0644\u0627\u064b\u0623\u0647\u0644\u0627"
+        final String script = new String(ByteOrderMark.UTF_8.getBytes(), UTF_8)
+                + "log('" + "\u0623\u0647\u0644\u0627\u064b\u0623\u0647\u0644\u0627"
                             + "\u064b\u0623\u0647\u0644\u0627\u064b\u0623\u0647\u0644\u0627\u064b" + "');";
-        getMockWebConnection().setResponse(URL_SECOND, script, MimeType.APPLICATION_JAVASCRIPT, UTF_8);
-        loadPageWithAlerts2(html);
+        getMockWebConnection().setResponse(URL_SECOND, script, MimeType.TEXT_JAVASCRIPT, UTF_8);
+        expandExpectedAlertsVariables(URL_SECOND);
+
+        loadPageVerifyTitle2(html);
     }
 
     /**
@@ -661,8 +1106,7 @@ public class HtmlScript2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"onLoad", "body onLoad"},
-            IE = "body onLoad")
+    @Alerts({"onLoad", "body onLoad"})
     public void onLoadTypeWhitespace() throws Exception {
         getMockWebConnection().setResponse(new URL(URL_FIRST, "simple.js"), "");
         onLoadOnError("src='simple.js' type='\t  text/javascript     '");
@@ -687,8 +1131,8 @@ public class HtmlScript2Test extends WebDriverTestCase {
     }
 
     private void onLoadOnError(final String attribs) throws Exception {
-        final String html
-                = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "  <script>\n"
                 + LOG_TITLE_FUNCTION
@@ -711,8 +1155,8 @@ public class HtmlScript2Test extends WebDriverTestCase {
     @Alerts({"from script", "onLoad [object Event]"})
     public void onLoadDynamic() throws Exception {
         getMockWebConnection().setResponse(new URL(URL_FIRST, "simple.js"), "log('from script');");
-        final String html
-                = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "  <script>\n"
                 + LOG_TITLE_FUNCTION
@@ -736,11 +1180,10 @@ public class HtmlScript2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "[object HTMLScriptElement]",
-            IE = "undefined")
+    @Alerts("[object HTMLScriptElement]")
     public void currentScriptInline() throws Exception {
-        final String html
-                = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "  <script id='tester'>\n"
                 + LOG_TITLE_FUNCTION
@@ -758,11 +1201,10 @@ public class HtmlScript2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "null",
-            IE = "undefined")
+    @Alerts("null")
     public void currentScriptFunction() throws Exception {
-        final String html
-                = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "  <script id='tester'>\n"
                 + LOG_TITLE_FUNCTION
@@ -782,12 +1224,11 @@ public class HtmlScript2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "[object HTMLScriptElement]",
-            IE = "undefined")
+    @Alerts("[object HTMLScriptElement]")
     public void currentScriptExternal() throws Exception {
         getMockWebConnection().setResponse(new URL(URL_FIRST, "simple.js"), "log(document.currentScript);");
-        final String html
-                = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "  <script>\n"
                 + LOG_TITLE_FUNCTION
@@ -810,17 +1251,17 @@ public class HtmlScript2Test extends WebDriverTestCase {
             + "21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39")
     public void scriptExecutionOrder() throws Exception {
         final StringBuilder html = new StringBuilder();
-        html.append("<html>\n<head>\n");
+        html.append(DOCTYPE_HTML + "<html>\n<head>\n");
         int i = 0;
         for ( ; i < 20; i++) {
             html.append("  <script type='text/javascript'>document.title += ' ")
-                .append(Integer.toString(i))
+                .append(i)
                 .append("'</script>\n");
         }
         html.append("</head>\n<body>\n");
         for ( ; i < 40; i++) {
             html.append("  <script type='text/javascript'>document.title += ' ")
-                .append(Integer.toString(i))
+                .append(i)
                 .append("'</script>\n");
         }
         html.append("</body>\n</html>");
@@ -836,8 +1277,8 @@ public class HtmlScript2Test extends WebDriverTestCase {
     @Test
     @Alerts("§§URL§§index.html?test")
     public void refererHeader() throws Exception {
-        final String firstContent
-            = "<html><head><title>Page A</title></head>\n"
+        final String firstContent = DOCTYPE_HTML
+            + "<html><head><title>Page A</title></head>\n"
             + "<body><script src='" + URL_SECOND + "'/></body>\n"
             + "</html>";
 
@@ -845,12 +1286,12 @@ public class HtmlScript2Test extends WebDriverTestCase {
 
         expandExpectedAlertsVariables(URL_FIRST);
 
-        final URL indexUrl = new URL(URL_FIRST.toString() + "index.html");
+        final URL indexUrl = new URL(URL_FIRST + "index.html");
 
         getMockWebConnection().setResponse(indexUrl, firstContent);
         getMockWebConnection().setResponse(URL_SECOND, secondContent);
 
-        loadPage2(firstContent, new URL(URL_FIRST.toString() + "index.html?test#ref"));
+        loadPage2(firstContent, new URL(URL_FIRST + "index.html?test#ref"));
 
         assertEquals(2, getMockWebConnection().getRequestCount());
 
@@ -863,14 +1304,19 @@ public class HtmlScript2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts("ok")
+    @Alerts({"loaded", "§§URL§§"})
     public void whitespaceInSrc() throws Exception {
-        final String html = "<html><head><script src=' " + URL_SECOND + " '></script></head><body>abc</body></html>";
-        final String js = "alert('ok')";
+        final String html = DOCTYPE_HTML
+                + "<html><head>"
+                + "  <script>" + LOG_TITLE_FUNCTION_NORMALIZE + "</script>"
+                + "<script id='myScript' src=' " + URL_SECOND + " '></script></head>"
+                + "<body onload='log(document.getElementById(\"myScript\").src);'>abc</body></html>";
 
+        final String js = "log('loaded')";
         getMockWebConnection().setResponse(URL_SECOND, js);
+        expandExpectedAlertsVariables(URL_SECOND);
 
-        loadPageWithAlerts2(html);
+        loadPageVerifyTitle2(html);
     }
 
     /**
@@ -878,15 +1324,19 @@ public class HtmlScript2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts("ok")
+    @Alerts({"loaded", "§§URL§§"})
     public void controlCharsInSrc() throws Exception {
-        final String html = "<html><head>"
-                + "<script src='\u0011" + URL_SECOND + "\u001d'></script></head><body>abc</body></html>";
-        final String js = "alert('ok')";
+        final String html = DOCTYPE_HTML
+                + "<html><head>"
+                + "  <script>" + LOG_TITLE_FUNCTION_NORMALIZE + "</script>"
+                + "<script id='myScript' src=' " + URL_SECOND + "\u001d'></script></head>"
+                + "<body onload='log(document.getElementById(\"myScript\").src);'>abc</body></html>";
 
+        final String js = "log('loaded')";
         getMockWebConnection().setResponse(URL_SECOND, js);
+        expandExpectedAlertsVariables(URL_SECOND);
 
-        loadPageWithAlerts2(html);
+        loadPageVerifyTitle2(html);
     }
 
     /**
@@ -894,18 +1344,22 @@ public class HtmlScript2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts("ok")
+    @Alerts({"loaded", "§§URL§§"})
     public void tabCharInSrc() throws Exception {
         String url = URL_SECOND.toExternalForm();
         url = url.replace("http", "http\t");
 
-        final String html = "<html><head>"
-                + "<script src='" + url + "'></script></head><body>abc</body></html>";
-        final String js = "alert('ok')";
+        final String html = DOCTYPE_HTML
+                + "<html><head>"
+                + "  <script>" + LOG_TITLE_FUNCTION_NORMALIZE + "</script>"
+                + "<script id='myScript' src=' " + url + "\u001d'></script></head>"
+                + "<body onload='log(document.getElementById(\"myScript\").src);'>abc</body></html>";
 
+        final String js = "log('loaded')";
         getMockWebConnection().setResponse(URL_SECOND, js);
+        expandExpectedAlertsVariables(URL_SECOND);
 
-        loadPageWithAlerts2(html);
+        loadPageVerifyTitle2(html);
     }
 
     /**
@@ -914,8 +1368,8 @@ public class HtmlScript2Test extends WebDriverTestCase {
      */
     @Test
     public void emptySrc() throws Exception {
-        final String html1 = "<html><head><script src=''></script></head><body>abc</body></html>";
-        final String html2 = "<html><head><script src='  '></script></head><body>abc</body></html>";
+        final String html1 = DOCTYPE_HTML + "<html><head><script src=''></script></head><body>abc</body></html>";
+        final String html2 = DOCTYPE_HTML + "<html><head><script src='  '></script></head><body>abc</body></html>";
 
         loadPageWithAlerts2(html1);
         loadPageWithAlerts2(html2);
@@ -928,13 +1382,286 @@ public class HtmlScript2Test extends WebDriverTestCase {
      */
     @Test
     public void noContent() throws Exception {
-        final String html = "<html><body><script src='" + URL_SECOND + "'/></body></html>";
+        final String html = DOCTYPE_HTML + "<html><body><script src='" + URL_SECOND + "'/></body></html>";
 
         final ArrayList<NameValuePair> headers = new ArrayList<>();
-        getMockWebConnection().setResponse(URL_SECOND, (String) null, WebResponse.NO_CONTENT, "No Content",
-                MimeType.APPLICATION_JAVASCRIPT,
+        getMockWebConnection().setResponse(URL_SECOND, (String) null,
+                HttpStatus.NO_CONTENT_204, HttpStatus.NO_CONTENT_204_MSG,
+                MimeType.TEXT_JAVASCRIPT,
                 headers);
 
         loadPageWithAlerts2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts("script")
+    public void srcAndContent() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "  <head>\n"
+            + "    <script src='foo.js'>window.document.title += 'content' + '\\u00a7';</script>\n";
+
+        final String js = "window.document.title += 'script' + '\\u00a7';";
+
+        getMockWebConnection().setDefaultResponse(js, MimeType.TEXT_JAVASCRIPT);
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void emptySrcAndContent() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "  <head>\n"
+            + "    <script src=''>window.document.title += 'content' + '\\u00a7';</script>\n";
+
+        final String js = "window.document.title += 'script' + '\\u00a7';";
+
+        getMockWebConnection().setDefaultResponse(js, MimeType.TEXT_JAVASCRIPT);
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void blankSrcAndContent() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "  <head>\n"
+            + "    <script src=' '>window.document.title += 'content' + '\\u00a7';</script>\n";
+
+        final String js = "window.document.title += 'script' + '\\u00a7';";
+
+        getMockWebConnection().setDefaultResponse(js, MimeType.TEXT_JAVASCRIPT);
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void attribSrcAndContent() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "  <head>\n"
+            + "    <script src>window.document.title += 'content' + '\\u00a7';</script>\n";
+
+        final String js = "window.document.title += 'script' + '\\u00a7';";
+
+        getMockWebConnection().setDefaultResponse(js, MimeType.TEXT_JAVASCRIPT);
+
+        loadPageVerifyTitle2(html);
+    }
+
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"first script", "second script"})
+    public void content() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "  <head>\n"
+            + "    <script src='foo.js'>window.document.title += 'content' + '\\u00a7';</script>\n"
+            + "    <script>window.document.title += 'second script' + '\\u00a7';</script>\n";
+
+        final String js = "window.document.title += 'first script' + '\\u00a7';";
+
+        getMockWebConnection().setDefaultResponse(js, MimeType.TEXT_JAVASCRIPT);
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Verifies that the "Authorization" header of the page request is only sent
+     * with the request for an external script if the script has the same origin.
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void authorizationHeaderNotSentToCrossOriginScript() throws Exception {
+        final MockWebConnection conn = startHtmlUnitOnly();
+
+        externalScriptAuthorizationHeader(conn, "Authorization", URL_FIRST, AUTHORIZATION);
+        externalScriptAuthorizationHeader(conn, "Authorization", URL_THIRD, null);
+    }
+
+    /**
+     * Header names are case-insensitive; the "Authorization" header has to be dropped
+     * for cross-origin scripts regardless of the spelling used by the caller.
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void authorizationHeaderLowercaseNotSentToCrossOriginScript() throws Exception {
+        final MockWebConnection conn = startHtmlUnitOnly();
+
+        externalScriptAuthorizationHeader(conn, "authorization", URL_FIRST, AUTHORIZATION);
+        externalScriptAuthorizationHeader(conn, "authorization", URL_THIRD, null);
+    }
+
+    private void externalScriptAuthorizationHeader(final MockWebConnection conn, final String headerName,
+            final URL scriptBase, final String expectedAuthorization) throws Exception {
+        final String id = nextId();
+        final URL page = new URL(URL_FIRST, "page_" + id + ".html");
+        final URL script = new URL(scriptBase, "script_" + id + ".js");
+
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
+                + "<script src='" + script + "'></script>\n"
+                + "</head><body></body></html>";
+        conn.setResponse(page, html);
+        conn.setResponse(script, "var i = 7;", MimeType.TEXT_JAVASCRIPT);
+
+        getWebClient().getPage(authorizedRequest(page, headerName));
+
+        verifyLastRequest(conn, script, expectedAuthorization);
+    }
+
+    /**
+     * Dropping the "Authorization" header for a cross-origin script must not
+     * change the headers used for the following same-origin scripts of the page.
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void authorizationHeaderSentToSameOriginScriptAfterCrossOriginScript() throws Exception {
+        final MockWebConnection conn = startHtmlUnitOnly();
+
+        final String id = nextId();
+        final URL page = new URL(URL_FIRST, "page_" + id + ".html");
+        final URL crossOriginScript = new URL(URL_THIRD, "script_" + id + "_1.js");
+        final URL sameOriginScript = new URL(URL_FIRST, "script_" + id + "_2.js");
+
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
+                + "<script src='" + crossOriginScript + "'></script>\n"
+                + "<script src='" + sameOriginScript + "'></script>\n"
+                + "</head><body></body></html>";
+        conn.setResponse(page, html);
+        conn.setResponse(crossOriginScript, "var i = 7;", MimeType.TEXT_JAVASCRIPT);
+        conn.setResponse(sameOriginScript, "var j = 8;", MimeType.TEXT_JAVASCRIPT);
+
+        getWebClient().getPage(authorizedRequest(page, "Authorization"));
+
+        assertTrue(conn.getRequestedUrls().contains(crossOriginScript));
+        verifyLastRequest(conn, sameOriginScript, AUTHORIZATION);
+    }
+
+    /**
+     * Same as {@link #authorizationHeaderNotSentToCrossOriginScript()} but the
+     * script element is created and added by javascript.
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void authorizationHeaderNotSentToCrossOriginDynamicScript() throws Exception {
+        final MockWebConnection conn = startHtmlUnitOnly();
+
+        dynamicScriptAuthorizationHeader(conn, URL_FIRST, AUTHORIZATION);
+        dynamicScriptAuthorizationHeader(conn, URL_THIRD, null);
+    }
+
+    private void dynamicScriptAuthorizationHeader(final MockWebConnection conn,
+            final URL scriptBase, final String expectedAuthorization) throws Exception {
+        final String id = nextId();
+        final URL page = new URL(URL_FIRST, "page_" + id + ".html");
+        final URL script = new URL(scriptBase, "script_" + id + ".js");
+
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
+                + "<script>\n"
+                + "  var s = document.createElement('script');\n"
+                + "  s.src = '" + script + "';\n"
+                + "  document.head.appendChild(s);\n"
+                + "</script>\n"
+                + "</head><body></body></html>";
+        conn.setResponse(page, html);
+        conn.setResponse(script, "var i = 7;", MimeType.TEXT_JAVASCRIPT);
+
+        getWebClient().getPage(authorizedRequest(page, "Authorization"));
+
+        verifyLastRequest(conn, script, expectedAuthorization);
+    }
+
+    /**
+     * If the page request was redirected, the scripts are loaded using the headers of
+     * the redirected request; after a cross-origin redirect the "Authorization" header is gone,
+     * even for scripts from the original origin.
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void authorizationHeaderNotSentToScriptAfterCrossOriginPageRedirect() throws Exception {
+        final MockWebConnection conn = startHtmlUnitOnly();
+
+        // page stays at the origin
+        redirectedPageScriptAuthorizationHeader(conn, URL_SECOND, URL_FIRST, AUTHORIZATION);
+        redirectedPageScriptAuthorizationHeader(conn, URL_SECOND, URL_THIRD, null);
+
+        // page moved to another origin
+        redirectedPageScriptAuthorizationHeader(conn, URL_THIRD, URL_THIRD, null);
+        redirectedPageScriptAuthorizationHeader(conn, URL_THIRD, URL_FIRST, null);
+    }
+
+    private void redirectedPageScriptAuthorizationHeader(final MockWebConnection conn, final URL pageBase,
+            final URL scriptBase, final String expectedAuthorization) throws Exception {
+        final String id = nextId();
+        final URL start = new URL(URL_FIRST, "redirect_" + id);
+        final URL page = new URL(pageBase, "page_" + id + ".html");
+        final URL script = new URL(scriptBase, "script_" + id + ".js");
+
+        final List<NameValuePair> headers = new ArrayList<>();
+        headers.add(new NameValuePair("Location", page.toString()));
+        conn.setResponse(start, "", 302, "Found", MimeType.TEXT_HTML, headers);
+
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
+                + "<script src='" + script + "'></script>\n"
+                + "</head><body></body></html>";
+        conn.setResponse(page, html);
+        conn.setResponse(script, "var i = 7;", MimeType.TEXT_JAVASCRIPT);
+
+        getWebClient().getPage(authorizedRequest(start, "Authorization"));
+
+        assertTrue(conn.getRequestedUrls().contains(page));
+        verifyLastRequest(conn, script, expectedAuthorization);
+    }
+
+    // Real browsers offer no way to add an "Authorization" header to a navigation,
+    // therefore these tests are using the HtmlUnit api of the driver's WebClient;
+    // the responses are still delivered by the test server.
+    private MockWebConnection startHtmlUnitOnly() throws Exception {
+        Assumptions.assumeFalse(useRealBrowser(),
+                "a real browser can not add an Authorization header to a navigation request");
+
+        getWebDriver();
+        startWebServer(getMockWebConnection(), null);
+        return getMockWebConnection();
+    }
+
+    private static WebRequest authorizedRequest(final URL url, final String headerName) {
+        final WebRequest request = new WebRequest(url);
+        request.setAdditionalHeader(headerName, AUTHORIZATION);
+        request.setAdditionalHeader("foo", "bar");
+        return request;
+    }
+
+    private static void verifyLastRequest(final MockWebConnection conn, final URL expectedUrl,
+            final String expectedAuthorization) {
+        final WebRequest last = conn.getLastWebRequest();
+        assertEquals(expectedUrl, last.getUrl());
+        assertEquals(expectedAuthorization, last.getAdditionalHeader("Authorization"));
+        assertEquals("bar", last.getAdditionalHeader("foo"));
+    }
+
+    private String nextId() {
+        uniqueId_++;
+        return Integer.toString(uniqueId_);
     }
 }

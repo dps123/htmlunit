@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,64 +14,143 @@
  */
 package org.htmlunit.javascript.host;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
+import java.util.ArrayList;
+import java.util.List;
 
+import org.htmlunit.corejs.javascript.Scriptable;
+import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
+import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
+import org.htmlunit.javascript.configuration.JsxSymbol;
 
 /**
- * A JavaScript object for {@code Plugin}.
+ * JavaScript host object for {@code Plugin}.
  *
  * @author Marc Guillemot
  * @author Ahmed Ashour
+ * @author Ronald Brill
  *
- * @see <a href="http://www.xulplanet.com/references/objref/MimeTypeArray.html">XUL Planet</a>
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/Plugin">MDN Documentation</a>
  */
 @JsxClass
-public class Plugin extends SimpleArray {
+public class Plugin extends HtmlUnitScriptable {
     private String description_;
     private String filename_;
     private String name_;
-    private String version_;
+
+    private final List<MimeType> elements_ = new ArrayList<>();
 
     /**
      * Creates an instance.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
     public Plugin() {
+        super();
     }
 
     /**
-     * C'tor initializing fields.
+     * Creates an instance of this object.
+     */
+    @JsxConstructor
+    public void jsConstructor() {
+        // nothing to do
+    }
+
+    /**
+     * Creates an instance with the given properties.
+     *
      * @param name the plugin name
      * @param description the plugin description
-     * @param version the version
      * @param filename the plugin filename
      */
-    public Plugin(final String name, final String description, final String version, final String filename) {
+    public Plugin(final String name, final String description, final String filename) {
+        super();
         name_ = name;
         description_ = description;
-        version_ = version;
         filename_ = filename;
     }
 
     /**
-     * Gets the name of the mime type.
-     * @param element a {@link MimeType}
-     * @return the name
+     * Returns the {@link MimeType} at the given index.
+     *
+     * @param index the index
+     * @return the {@link MimeType} at the given position, or {@code null} if out of range
      */
-    @Override
-    protected String getItemName(final Object element) {
-        return ((MimeType) element).getType();
+    @JsxFunction
+    public MimeType item(final int index) {
+        if (index >= 0 && index < elements_.size()) {
+            return elements_.get(index);
+        }
+        return null;
     }
 
     /**
-     * Gets the plugin's description.
+     * {@inheritDoc}
+     */
+    @Override
+    protected Object getWithPreemption(final String name) {
+        final MimeType response = namedItem(name);
+        if (response != null) {
+            return response;
+        }
+        return NOT_FOUND;
+    }
+
+    /**
+     * Returns the element at the specified index, or {@link #NOT_FOUND} if the index is invalid.
+     * {@inheritDoc}
+     */
+    @Override
+    public final Object get(final int index, final Scriptable start) {
+        final Plugin plugin = (Plugin) start;
+        final List<MimeType> elements = plugin.elements_;
+
+        if (index >= 0 && index < elements.size()) {
+            return elements.get(index);
+        }
+        return NOT_FOUND;
+    }
+
+    /**
+     * Returns the {@link MimeType} with the given MIME type string.
+     *
+     * @param name the MIME type string to look up
+     * @return the matching {@link MimeType}, or {@code null} if not found
+     */
+    @JsxFunction
+    public MimeType namedItem(final String name) {
+        for (final MimeType element : elements_) {
+            if (name.equals(element.getType())) {
+                return element;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns the number of MIME types supported by this plugin.
+     *
+     * @return the number of elements
+     */
+    @JsxGetter
+    public int getLength() {
+        return elements_.size();
+    }
+
+    /**
+     * Adds a {@link MimeType} to this plugin.
+     *
+     * @param element the element to add
+     */
+    void add(final MimeType element) {
+        elements_.add(element);
+    }
+
+    /**
+     * Returns the plugin description.
+     *
      * @return the description
      */
     @JsxGetter
@@ -80,8 +159,9 @@ public class Plugin extends SimpleArray {
     }
 
     /**
-     * Gets the plugin's file name.
-     * @return the file name
+     * Returns the plugin filename.
+     *
+     * @return the filename
      */
     @JsxGetter
     public String getFilename() {
@@ -89,7 +169,8 @@ public class Plugin extends SimpleArray {
     }
 
     /**
-     * Gets the plugin's name.
+     * Returns the plugin name.
+     *
      * @return the name
      */
     @JsxGetter
@@ -98,11 +179,12 @@ public class Plugin extends SimpleArray {
     }
 
     /**
-     * Gets the plugin's version.
-     * @return the name
+     * Returns an iterator over the values in this plugin.
+     *
+     * @return the iterator
      */
-    @JsxGetter({IE, FF, FF_ESR})
-    public String getVersion() {
-        return version_;
+    @JsxSymbol
+    public Scriptable iterator() {
+        return JavaScriptEngine.newArrayIteratorTypeValues(getParentScope(), this);
     }
 }

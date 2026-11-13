@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,29 +14,19 @@
  */
 package org.htmlunit.javascript.host.dom;
 
-import static org.htmlunit.BrowserVersionFeatures.JS_ATTR_FIRST_LAST_CHILD_RETURNS_NULL;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
-
 import org.htmlunit.html.DomAttr;
 import org.htmlunit.html.DomElement;
-import org.htmlunit.html.DomText;
+import org.htmlunit.javascript.HtmlUnitScriptable;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.configuration.JsxSetter;
 
-import org.htmlunit.corejs.javascript.Scriptable;
-import org.htmlunit.corejs.javascript.ScriptableObject;
-
 /**
  * A JavaScript object for {@code Attr}.
  *
  * @see <a href="http://www.w3.org/TR/2000/REC-DOM-Level-2-Core-20001113/core.html#ID-63764602">W3C DOM Level 2</a>
- * @see <a href="http://msdn.microsoft.com/en-us/library/ms535187.aspx">MSDN documentation</a>
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/Attr">MDN Documentation</a>
  * @author Daniel Gredler
  * @author Chris Erskine
  * @author Ahmed Ashour
@@ -48,10 +38,12 @@ import org.htmlunit.corejs.javascript.ScriptableObject;
 public class Attr extends Node {
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public Attr() {
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
@@ -64,19 +56,6 @@ public class Attr extends Node {
             domNode.setValue(parent.getAttribute(getName()));
         }
         domNode.remove();
-    }
-
-    /**
-     * Returns {@code true} if the attribute is a custom property.
-     * @return {@code true} if the attribute is a custom property
-     */
-    @JsxGetter(IE)
-    public boolean isExpando() {
-        final Object owner = getOwnerElement();
-        if (null == owner) {
-            return false;
-        }
-        return !ScriptableObject.hasProperty((Scriptable) owner, getName());
     }
 
     /**
@@ -102,7 +81,7 @@ public class Attr extends Node {
      * @return the owner element
      */
     @JsxGetter
-    public Object getOwnerElement() {
+    public HtmlUnitScriptable getOwnerElement() {
         final DomElement parent = getDomNodeOrDie().getOwnerElement();
         if (parent != null) {
             return parent.getScriptableObject();
@@ -159,12 +138,7 @@ public class Attr extends Node {
      */
     @Override
     public Node getLastChild() {
-        if (getBrowserVersion().hasFeature(JS_ATTR_FIRST_LAST_CHILD_RETURNS_NULL)) {
-            return null;
-        }
-
-        final DomText text = new DomText(getDomNodeOrDie().getPage(), getNodeValue());
-        return text.getScriptableObject();
+        return null;
     }
 
     /**
@@ -180,7 +154,7 @@ public class Attr extends Node {
      */
     @Override
     @JsxGetter
-    public Object getPrefix() {
+    public String getPrefix() {
         return super.getPrefix();
     }
 
@@ -189,7 +163,7 @@ public class Attr extends Node {
      */
     @Override
     @JsxGetter
-    public Object getLocalName() {
+    public String getLocalName() {
         return super.getLocalName();
     }
 
@@ -198,16 +172,16 @@ public class Attr extends Node {
      */
     @Override
     @JsxGetter
-    public Object getNamespaceURI() {
+    public String getNamespaceURI() {
         return super.getNamespaceURI();
     }
 
     /**
-     * Returns the owner document.
-     * @return the document
+     * Returns the root node.
+     * @return this attribute itself, since it has no parent node
      */
     @Override
-    public Object getRootNode() {
+    public Node getRootNode() {
         return this;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,29 +14,23 @@
  */
 package org.htmlunit.html;
 
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.FF;
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.FF_ESR;
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.IE;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.htmlunit.HttpHeader;
+import org.htmlunit.WebDriverTestCase;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.HtmlUnitNYI;
+import org.htmlunit.util.MimeType;
+import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
+import org.openqa.selenium.InvalidSelectorException;
 import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
-
-import org.htmlunit.HttpHeader;
-import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
-import org.htmlunit.util.MimeType;
 
 /**
  * Tests for {@link HtmlPage}.
@@ -47,7 +41,6 @@ import org.htmlunit.util.MimeType;
  * @author Frank Danek
  * @author Joerg Werner
  */
-@RunWith(BrowserRunner.class)
 public class HtmlPage3Test extends WebDriverTestCase {
 
     /**
@@ -69,7 +62,8 @@ public class HtmlPage3Test extends WebDriverTestCase {
      */
     @Test
     public void formElementCreatedFromJavascript() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script type='text/javascript'>\n"
             + "  function modifyForm() {\n"
@@ -112,10 +106,10 @@ public class HtmlPage3Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"windows-1252", "windows-1252", "windows-1252", "undefined"},
-            IE = {"ISO-8859-1", "iso-8859-1", "iso-8859-1", "windows-1252"})
+    @Alerts({"windows-1252", "windows-1252", "windows-1252", "undefined"})
     public void getPageEncoding() throws Exception {
-        final String htmlContent = "<html><head>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html><head>\n"
             + "  <meta http-equiv='Content-Type' content='text/html; charset=Shift_JIS'>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION
@@ -144,7 +138,8 @@ public class HtmlPage3Test extends WebDriverTestCase {
      */
     @Test
     public void onLoadHandler_ScriptNameRead() throws Exception {
-        final String html = "<html><head><title>foo</title>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><title>foo</title>\n"
             + "<script type='text/javascript'>\n"
             + "  load = function() {};\n"
             + "  onload = load;\n"
@@ -158,11 +153,12 @@ public class HtmlPage3Test extends WebDriverTestCase {
     }
 
     /**
-     * @exception Exception If the test fails
+     * @throws Exception If the test fails
      */
     @Test
     public void constructor() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head><title>foo</title></head>\n"
             + "<body>\n"
             + "<p>hello world</p>\n"
@@ -183,7 +179,8 @@ public class HtmlPage3Test extends WebDriverTestCase {
      */
     @Test
     public void getInputByName() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head><title>foo</title></head>\n"
             + "<body>\n"
             + "<p>hello world</p>\n"
@@ -199,19 +196,20 @@ public class HtmlPage3Test extends WebDriverTestCase {
 
         final WebElement form = driver.findElement(By.id("form1"));
         final WebElement input = form.findElement(By.name("textInput1"));
-        assertEquals("name", "textInput1", input.getAttribute("name"));
+        assertEquals("name", "textInput1", input.getDomAttribute("name"));
 
-        assertEquals("value", "textInput1", input.getAttribute("value"));
-        assertEquals("type", "text", input.getAttribute("type"));
+        assertEquals("value", "textInput1", input.getDomAttribute("value"));
+        assertEquals("type", "text", input.getDomAttribute("type"));
     }
 
     /**
-     * @exception Exception if the test fails
+     * @throws Exception if the test fails
      */
     @Test
     @Alerts({"[object HTMLInputElement]", "1"})
     public void write_getElementById_afterParsing() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_WINDOW_NAME_FUNCTION
@@ -225,22 +223,18 @@ public class HtmlPage3Test extends WebDriverTestCase {
             + "<body onload='test()'>\n"
             + "</body></html>";
 
-        // [IE] real IE waits for the page to load until infinity
-        if (useRealBrowser() && getBrowserVersion().isIE()) {
-            Assert.fail("Blocks real IE");
-        }
-
         loadPage2(html);
         verifyWindowName2(getWebDriver(), getExpectedAlerts());
     }
 
     /**
-     * @exception Exception if the test fails
+     * @throws Exception if the test fails
      */
     @Test
     @Alerts({"[object HTMLInputElement]", "1"})
     public void write_getElementById_duringParsing() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body><script>\n"
             + LOG_TITLE_FUNCTION
@@ -258,7 +252,8 @@ public class HtmlPage3Test extends WebDriverTestCase {
     @Test
     @Alerts("Hello")
     public void application_javascript_type() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <script type='application/javascript'>\n"
             + LOG_TITLE_FUNCTION
@@ -275,7 +270,8 @@ public class HtmlPage3Test extends WebDriverTestCase {
     @Test
     @Alerts("Hello")
     public void application_x_javascript_type() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <script type='application/x-javascript'>\n"
             + LOG_TITLE_FUNCTION
@@ -295,7 +291,8 @@ public class HtmlPage3Test extends WebDriverTestCase {
     }
 
     private void basePath(final String baseUrl, final String expected) throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <base href='" + baseUrl + "'>\n"
             + "</head>\n"
@@ -480,7 +477,8 @@ public class HtmlPage3Test extends WebDriverTestCase {
     @Alerts(DEFAULT = "error",
             CHROME = "Something",
             EDGE = "Something")
-    @NotYetImplemented({IE, FF, FF_ESR})
+    @HtmlUnitNYI(FF = "Something",
+            FF_ESR = "Something")
     public void shouldBeAbleToFindElementByXPathInXmlDocument() throws Exception {
         final String html = "<?xml version='1.0' encoding='UTF-8'?>\n"
             + "<html xmlns='http://www.w3.org/1999/xhtml'\n"
@@ -499,7 +497,7 @@ public class HtmlPage3Test extends WebDriverTestCase {
             final WebElement element = driver.findElement(By.xpath("//svg:svg//svg:text"));
             actual = element.getText();
         }
-        catch (final NoSuchElementException e) {
+        catch (final NoSuchElementException | InvalidSelectorException e) {
             actual = "error";
         }
         assertEquals(getExpectedAlerts()[0], actual);
@@ -511,8 +509,8 @@ public class HtmlPage3Test extends WebDriverTestCase {
     @Test
     @Alerts("interactive")
     public void readyStateInDOMContentLoaded() throws Exception {
-        final String html =
-                "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "  <head>\n"
                 + "    <script>\n"
                 + LOG_TITLE_FUNCTION
@@ -533,8 +531,8 @@ public class HtmlPage3Test extends WebDriverTestCase {
     @Test
     @Alerts("25")
     public void loadExternalJavaScript() throws Exception {
-        final String html =
-            "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + "function makeIframe() {\n"
             + "  var iframesrc = '<html><head>';\n"
@@ -544,7 +542,7 @@ public class HtmlPage3Test extends WebDriverTestCase {
             + "  iframesrc += '    try {';\n"
             + "  iframesrc += '      var y = squared(5);';\n"
             + "  iframesrc += '      alert(y);';\n"
-            + "  iframesrc += '    } catch (e) {';\n"
+            + "  iframesrc += '    } catch(e) {';\n"
             + "  iframesrc += '      alert(\"error\");';\n"
             + "  iframesrc += '    }';\n"
             + "  iframesrc += '}';\n"
@@ -583,8 +581,8 @@ public class HtmlPage3Test extends WebDriverTestCase {
     @Test
     @Alerts("25")
     public void loadExternalJavaScript_absolute() throws Exception {
-        final String html =
-            "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + "function makeIframe() {\n"
             + "  var iframesrc = '<html><head>';\n"
@@ -594,7 +592,7 @@ public class HtmlPage3Test extends WebDriverTestCase {
             + "  iframesrc += '    try {';\n"
             + "  iframesrc += '      var y = squared(5);';\n"
             + "  iframesrc += '      alert(y);';\n"
-            + "  iframesrc += '    } catch (e) {';\n"
+            + "  iframesrc += '    } catch(e) {';\n"
             + "  iframesrc += '      log(\"error\");';\n"
             + "  iframesrc += '    }';\n"
             + "  iframesrc += '}';\n"
@@ -633,7 +631,8 @@ public class HtmlPage3Test extends WebDriverTestCase {
     @Test
     @Alerts({"cl2", "cl1"})
     public void onLoadHandler_idChange() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<div id='id1' class='cl1'><div id='id2' class='cl2'></div></div>'"
             + "<script type='text/javascript'>\n"
@@ -645,5 +644,116 @@ public class HtmlPage3Test extends WebDriverTestCase {
             + "</head><body></body></html>";
 
         loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Tests getElementById() of child element after appendChild(), removeChild(), then appendChild()
+     * of the parent element.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("[object HTMLTableRowElement]")
+    public void getElementById_AfterAppendRemoveAppendChild() throws Exception {
+        final String content = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var table = document.createElement('table');\n"
+            + "    var tr = document.createElement('tr');\n"
+            + "    tr.id = 'myTR';\n"
+            + "    table.appendChild(tr);\n"
+            + "    document.body.appendChild(table);\n"
+            + "    document.body.removeChild(table);\n"
+            + "    document.body.appendChild(table);\n"
+            + "    log(document.getElementById('myTR'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "</body></html>";
+        loadPageVerifyTitle2(content);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("null")
+    public void getElementById_AfterAppendingToNewlyCreatedElement() throws Exception {
+        final String content = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var table = document.createElement('table');\n"
+            + "    var tr = document.createElement('tr');\n"
+            + "    tr.id = 'myTR';\n"
+            + "    table.appendChild(tr);\n"
+            + "    log(document.getElementById('myTR'));\n"
+            + "  }\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "</body></html>";
+        loadPageVerifyTitle2(content);
+    }
+
+    /**
+     * When looking for the refresh meta tag don't get confused by stuff with a namespace.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("works")
+    public void metaWithNamespace() throws Exception {
+        final String content = DOCTYPE_HTML
+                + "<html>\n"
+                + "<head>\n"
+                + "  <title>works\u00a7</title>\n"
+                + "</head>\n"
+                + "<body>\n"
+                + "  <overheidrg:meta xmlns:overheidrg='http://standaarden.overheid.nl/cvdr/terms/'>\n"
+                + "</body>\n"
+                + "</html>";
+
+        loadPageVerifyTitle2(content);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"sync-executed", "async-executed"})
+    public void asyncScriptExecuted() throws Exception {
+        final String content = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script async src='async.js'></script>\n"
+            + "<script>document.title += 'sync-executed§';</script>\n"
+            + "</head>"
+            + "<body></body>"
+            + "</html>";
+
+        getMockWebConnection().setResponse(new URL(URL_FIRST, "async.js"),
+                "document.title += 'async-executed§';", MimeType.TEXT_JAVASCRIPT);
+
+        loadPageVerifyTitle2(content);
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts("async-executed")
+    public void asyncScriptExecutedWithoutSyncScript() throws Exception {
+        final String content = DOCTYPE_HTML
+                + "<html><head>\n"
+                + "<script async src='async.js'></script>\n"
+                + "</head>"
+                + "<body></body>"
+                + "</html>";
+
+            getMockWebConnection().setResponse(new URL(URL_FIRST, "async.js"),
+                    "document.title += 'async-executed§';", MimeType.TEXT_JAVASCRIPT);
+
+        loadPageVerifyTitle2(content);
     }
 }

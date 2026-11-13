@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.htmlunit.Page;
 import org.htmlunit.SgmlPage;
 import org.htmlunit.WebResponse;
@@ -55,13 +54,28 @@ public class XmlSerializer {
     private final StringBuilder indent_ = new StringBuilder();
     private File outputDir_;
 
+    /**
+     * Saves the specified page to the given file.
+     *
+     * @param page the page to save
+     * @param file the destination
+     * @throws IOException in case of error
+     */
     public void save(final SgmlPage page, final File file) throws IOException {
+        save(page, file, false);
+    }
+
+    private void save(final SgmlPage page, final File file, final boolean append) throws IOException {
         String fileName = file.getName();
-        if (!fileName.endsWith(".htm") && !fileName.endsWith(".html")) {
-            fileName += ".html";
+
+        if (!append) {
+            if (!fileName.endsWith(".htm") && !fileName.endsWith(".html")) {
+                fileName += ".html";
+            }
         }
         final File outputFile = new File(file.getParentFile(), fileName);
-        if (outputFile.exists()) {
+
+        if (!append && outputFile.exists()) {
             throw new IOException("File already exists: " + outputFile);
         }
         fileName = fileName.substring(0, fileName.lastIndexOf('.'));
@@ -82,10 +96,12 @@ public class XmlSerializer {
         printXml(node);
         final String response = builder_.toString();
         builder_.setLength(0);
-        FileUtils.writeStringToFile(outputFile, response, charsetName);
+        FileUtils.writeStringToFile(outputFile, response, charsetName, append);
     }
 
     /**
+     * Returns the XML representation of the specified element.
+     *
      * @param node a node
      * @return the xml representation according to the setting of this serializer
      * @throws IOException in case of problem saving resources
@@ -112,15 +128,12 @@ public class XmlSerializer {
             builder_.append(indent_).append('<');
             printOpeningTag(node);
 
-            if (!hasChildren && !node.isEmptyXmlTagExpanded()) {
-                builder_.append("/>\n");
-            }
-            else {
+            if (hasChildren || node.isEmptyXmlTagExpanded()) {
                 builder_.append(">\n");
                 for (DomNode child = node.getFirstChild(); child != null; child = child.getNextSibling()) {
                     indent_.append("  ");
-                    if (child instanceof DomElement) {
-                        printXml((DomElement) child);
+                    if (child instanceof DomElement element) {
+                        printXml(element);
                     }
                     else {
                         builder_.append(child);
@@ -129,18 +142,23 @@ public class XmlSerializer {
                 }
                 builder_.append(indent_).append("</").append(node.getTagName()).append(">\n");
             }
+            else {
+                builder_.append("/>\n");
+            }
         }
     }
 
     /**
+     * Returns the text content of the specified node.
+     *
      * @param node a node
      * @return the text representation according to the setting of this serializer
      */
     public String asText(final DomNode node) {
         builder_.setLength(0);
 
-        if (node instanceof DomText) {
-            builder_.append(((DomText) node).getData());
+        if (node instanceof DomText text) {
+            builder_.append(text.getData());
         }
         else {
             printText(node);
@@ -151,10 +169,14 @@ public class XmlSerializer {
         return response;
     }
 
+    /**
+     * Prints the text content from this node and all children.
+     * @param node the node
+     */
     protected void printText(final DomNode node) {
         for (DomNode child = node.getFirstChild(); child != null; child = child.getNextSibling()) {
-            if (child instanceof DomText) {
-                builder_.append(((DomText) child).getData());
+            if (child instanceof DomText text) {
+                builder_.append(text.getData());
             }
             else {
                 printText(child);
@@ -173,30 +195,29 @@ public class XmlSerializer {
         final Map<String, DomAttr> attributes = readAttributes(node);
 
         for (final Map.Entry<String, DomAttr> entry : attributes.entrySet()) {
-            builder_.append(' ');
-            builder_.append(entry.getKey());
-            builder_.append("=\"");
+            builder_.append(' ')
+                .append(entry.getKey())
+                .append("=\"");
             final String value = entry.getValue().getNodeValue();
-            builder_.append(org.htmlunit.util.StringUtils.escapeXmlAttributeValue(value));
-            builder_.append('"');
+            builder_.append(org.htmlunit.util.StringUtils.escapeXmlAttributeValue(value))
+                .append('"');
         }
     }
 
     private Map<String, DomAttr> readAttributes(final DomElement node) throws IOException {
-        if (node instanceof HtmlImage) {
-            return getAttributesFor((HtmlImage) node);
+        if (node instanceof HtmlImage image) {
+            return getAttributesFor(image);
         }
-        else if (node instanceof HtmlLink) {
-            return getAttributesFor((HtmlLink) node);
+        else if (node instanceof HtmlLink link) {
+            return getAttributesFor(link);
         }
-        else if (node instanceof BaseFrameElement) {
-            return getAttributesFor((BaseFrameElement) node);
+        else if (node instanceof BaseFrameElement element) {
+            return getAttributesFor(element);
         }
 
         Map<String, DomAttr> attributes = node.getAttributesMap();
-        if (node instanceof HtmlOption) {
+        if (node instanceof HtmlOption option) {
             attributes = new HashMap<>(attributes);
-            final HtmlOption option = (HtmlOption) node;
             if (option.isSelected()) {
                 if (!attributes.containsKey("selected")) {
                     attributes.put("selected", new DomAttr(node.getPage(), null, "selected", "selected", false));
@@ -209,6 +230,12 @@ public class XmlSerializer {
         return attributes;
     }
 
+    /**
+     * Returns the attributes to serialize for the specified frame.
+     *
+     * @param frame the frame to get the attributes from
+     * @return the attribute map
+     */
     private Map<String, DomAttr> getAttributesFor(final BaseFrameElement frame) throws IOException {
         final Map<String, DomAttr> map = createAttributesCopyWithClonedAttribute(frame, DomElement.SRC_ATTRIBUTE);
         final DomAttr srcAttr = map.get(DomElement.SRC_ATTRIBUTE);
@@ -222,9 +249,7 @@ public class XmlSerializer {
 
         if (enclosedPage != null) {
             if (enclosedPage.isHtmlPage()) {
-                file.delete(); // TODO: refactor as it is stupid to create empty file at one place
-                // and then to complain that it already exists
-                ((HtmlPage) enclosedPage).save(file);
+                new XmlSerializer().save((HtmlPage) enclosedPage, file, true);
             }
             else {
                 try (InputStream is = enclosedPage.getWebResponse().getContentAsStream()) {
@@ -254,14 +279,21 @@ public class XmlSerializer {
         return ".unknown";
     }
 
+    /**
+     * Returns the attributes to serialize for the specified link.
+     *
+     * @param link the link to get the attributes from
+     * @return the attribute map
+     * @throws IOException in case of error
+     */
     protected Map<String, DomAttr> getAttributesFor(final HtmlLink link) throws IOException {
         final Map<String, DomAttr> map = createAttributesCopyWithClonedAttribute(link, "href");
         final DomAttr hrefAttr = map.get("href");
-        if (hrefAttr != null && StringUtils.isNotBlank(hrefAttr.getValue())) {
+        if (hrefAttr != null && org.htmlunit.util.StringUtils.isNotBlank(hrefAttr.getValue())) {
             final String protocol = link.getWebRequest().getUrl().getProtocol();
             if ("http".equals(protocol) || "https".equals(protocol)) {
                 try {
-                    final WebResponse response = link.getWebResponse(true, null);
+                    final WebResponse response = link.getWebResponse(true, null, false, null);
 
                     final File file = createFile(hrefAttr.getValue(), ".css");
                     FileUtils.writeStringToFile(file, response.getContentAsString(), ISO_8859_1);
@@ -281,10 +313,16 @@ public class XmlSerializer {
         return map;
     }
 
+    /**
+     * Returns the attributes to serialize for the specified image.
+     *
+     * @param image the image to get the attributes from
+     * @return the attribute map
+     */
     protected Map<String, DomAttr> getAttributesFor(final HtmlImage image) {
         final Map<String, DomAttr> map = createAttributesCopyWithClonedAttribute(image, DomElement.SRC_ATTRIBUTE);
         final DomAttr srcAttr = map.get(DomElement.SRC_ATTRIBUTE);
-        if (srcAttr != null && StringUtils.isNotBlank(srcAttr.getValue())) {
+        if (srcAttr != null && org.htmlunit.util.StringUtils.isNotBlank(srcAttr.getValue())) {
             try {
                 final WebResponse response = image.getWebResponse(true);
 
@@ -309,10 +347,17 @@ public class XmlSerializer {
         return map;
     }
 
+    /**
+     * Returns the file extension for the specified page.
+     *
+     * @param enclosedPage the page
+     * @return the file extension
+     */
     private static String getSuffix(final WebResponse response) {
         // first try to take the one from the requested file
         final String url = response.getWebRequest().getUrl().toString();
-        final String fileName = StringUtils.substringAfterLast(StringUtils.substringBefore(url, "?"), "/");
+        final String fileName =
+                StringUtils.substringAfterLast(org.htmlunit.util.StringUtils.substringBefore(url, "?"), "/");
         // if there is a suffix with 2-4 letters, the take it
         final String suffix = StringUtils.substringAfterLast(fileName, ".");
         if (suffix.length() > 1 && suffix.length() < 5) {
@@ -323,13 +368,20 @@ public class XmlSerializer {
         return MimeType.getFileExtension(response.getContentType());
     }
 
+    /**
+     * Creates a copy of the element's attributes with the specified attribute cloned.
+     *
+     * @param elt the element
+     * @param attrName the attribute to clone
+     * @return the copied attribute map
+     */
     private static Map<String, DomAttr> createAttributesCopyWithClonedAttribute(final HtmlElement elt,
             final String attrName) {
         final Map<String, DomAttr> newMap = new HashMap<>(elt.getAttributesMap());
 
         // clone the specified element, if possible
         final DomAttr attr = newMap.get(attrName);
-        if (null == attr) {
+        if (attr == null) {
             return newMap;
         }
 
@@ -341,6 +393,12 @@ public class XmlSerializer {
         return newMap;
     }
 
+    /**
+     * Determines whether the specified element should be excluded from serialization.
+     *
+     * @param element the element to check
+     * @return true if the element is a HtmlScript
+     */
     protected boolean isExcluded(final DomElement element) {
         return element instanceof HtmlScript;
     }
@@ -355,8 +413,8 @@ public class XmlSerializer {
     private File createFile(final String url, final String extension) throws IOException {
         String name = url.replaceFirst("/$", "");
         name = CREATE_FILE_PATTERN.matcher(name).replaceAll("");
-        name = StringUtils.substringBefore(name, "?"); // remove query
-        name = StringUtils.substringBefore(name, ";"); // remove additional info
+        name = org.htmlunit.util.StringUtils.substringBefore(name, "?"); // remove query
+        name = org.htmlunit.util.StringUtils.substringBefore(name, ";"); // remove additional info
         name = StringUtils.substring(name, 0, 30); // many file systems have a limit at 255, let's limit it
         name = org.htmlunit.util.StringUtils.sanitizeForFileName(name);
         if (!name.endsWith(extension)) {
@@ -365,12 +423,12 @@ public class XmlSerializer {
         int counter = 0;
         while (true) {
             final String fileName;
-            if (counter != 0) {
-                fileName = StringUtils.substringBeforeLast(name, ".")
-                    + "_" + counter + "." + StringUtils.substringAfterLast(name, ".");
+            if (counter == 0) {
+                fileName = name;
             }
             else {
-                fileName = name;
+                fileName = StringUtils.substringBeforeLast(name, ".")
+                        + "_" + counter + "." + StringUtils.substringAfterLast(name, ".");
             }
             FileUtils.forceMkdir(outputDir_);
             final File f = new File(outputDir_, fileName);

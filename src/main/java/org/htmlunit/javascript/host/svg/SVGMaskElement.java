@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,8 @@
  */
 package org.htmlunit.javascript.host.svg;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
 import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
 import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
 
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstant;
@@ -26,10 +23,12 @@ import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.svg.SvgMask;
 
 /**
- * A JavaScript object for {@code SVGMaskElement}.
+ * JavaScript host object for {@code SVGMaskElement}.
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/SVGMaskElement">MDN Documentation</a>
  */
 @JsxClass(domClass = SvgMask.class)
 public class SVGMaskElement extends SVGElement {
@@ -40,27 +39,12 @@ public class SVGMaskElement extends SVGElement {
     /** Constant for {@code SVG_MASKTYPE_ALPHA}. */
     @JsxConstant({FF, FF_ESR})
     public static final int SVG_MASKTYPE_ALPHA = 1;
-    /** Constant for {@code SVG_UNIT_TYPE_UNKNOWN}. */
-    @JsxConstant(IE)
-    public static final int SVG_UNIT_TYPE_UNKNOWN = 0;
-    /** Constant for {@code SVG_UNIT_TYPE_USERSPACEONUSE}. */
-    @JsxConstant(IE)
-    public static final int SVG_UNIT_TYPE_USERSPACEONUSE = 1;
-    /** Constant for {@code SVG_UNIT_TYPE_OBJECTBOUNDINGBOX}. */
-    @JsxConstant(IE)
-    public static final int SVG_UNIT_TYPE_OBJECTBOUNDINGBOX = 2;
 
     /**
-     * Creates an instance.
+     * Creates an instance of this object.
      */
-    public SVGMaskElement() {
-    }
-
-    /**
-     * Creates an instance.
-     */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
     @Override
+    @JsxConstructor
     public void jsConstructor() {
         super.jsConstructor();
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,62 +14,46 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.BrowserVersionFeatures.FORMFIELD_REACHABLE_BY_NEW_NAMES;
-import static org.htmlunit.BrowserVersionFeatures.FORMFIELD_REACHABLE_BY_ORIGINAL_NAME;
-import static org.htmlunit.BrowserVersionFeatures.JS_FORM_ACTION_EXPANDURL_NOT_DEFINED;
 import static org.htmlunit.BrowserVersionFeatures.JS_FORM_DISPATCHEVENT_SUBMITS;
-import static org.htmlunit.BrowserVersionFeatures.JS_FORM_REJECT_INVALID_ENCODING;
-import static org.htmlunit.BrowserVersionFeatures.JS_FORM_USABLE_AS_FUNCTION;
-import static org.htmlunit.html.DomElement.ATTRIBUTE_NOT_DEFINED;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
 
 import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.function.Supplier;
 
 import org.htmlunit.FormEncodingType;
 import org.htmlunit.WebAssert;
+import org.htmlunit.corejs.javascript.Context;
+import org.htmlunit.corejs.javascript.Function;
+import org.htmlunit.corejs.javascript.Scriptable;
+import org.htmlunit.corejs.javascript.ScriptableObject;
+import org.htmlunit.corejs.javascript.VarScope;
 import org.htmlunit.html.DomElement;
 import org.htmlunit.html.DomNode;
-import org.htmlunit.html.FormFieldWithNameHistory;
 import org.htmlunit.html.HtmlAttributeChangeEvent;
-import org.htmlunit.html.HtmlButton;
 import org.htmlunit.html.HtmlElement;
 import org.htmlunit.html.HtmlForm;
 import org.htmlunit.html.HtmlImage;
-import org.htmlunit.html.HtmlImageInput;
-import org.htmlunit.html.HtmlInput;
 import org.htmlunit.html.HtmlPage;
-import org.htmlunit.html.HtmlSelect;
-import org.htmlunit.html.HtmlTextArea;
 import org.htmlunit.html.SubmittableElement;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.configuration.JsxSetter;
+import org.htmlunit.javascript.configuration.JsxSymbol;
 import org.htmlunit.javascript.host.dom.AbstractList.EffectOnCache;
+import org.htmlunit.javascript.host.dom.DOMTokenList;
+import org.htmlunit.javascript.host.dom.RadioNodeList;
 import org.htmlunit.javascript.host.event.Event;
 import org.htmlunit.util.MimeType;
 
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.Function;
-import org.htmlunit.corejs.javascript.ScriptRuntime;
-import org.htmlunit.corejs.javascript.Scriptable;
-import org.htmlunit.corejs.javascript.ScriptableObject;
-import org.htmlunit.corejs.javascript.Undefined;
-
 /**
- * A JavaScript object for {@code HTMLFormElement}.
+ * A JavaScript object {@code HTMLFormElement}.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author Daniel Gredler
  * @author Kent Tong
  * @author Chris Erskine
@@ -78,17 +62,20 @@ import org.htmlunit.corejs.javascript.Undefined;
  * @author Sudhan Moghe
  * @author Ronald Brill
  * @author Frank Danek
+ * @author Lai Quang Duong
  *
- * @see <a href="http://msdn.microsoft.com/en-us/library/ms535249.aspx">MSDN documentation</a>
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement">MDN Documentation</a>
  */
 @JsxClass(domClass = HtmlForm.class)
 public class HTMLFormElement extends HTMLElement implements Function {
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public HTMLFormElement() {
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
@@ -116,55 +103,36 @@ public class HTMLFormElement extends HTMLElement implements Function {
      * @return the value of this property
      */
     @JsxGetter
-    public HTMLCollection getElements() {
+    public HTMLFormControlsCollection getElements() {
         final HtmlForm htmlForm = getHtmlForm();
 
-        final HTMLCollection elements = new HTMLCollection(htmlForm, false) {
+        final HTMLFormControlsCollection elements = new HTMLFormControlsCollection(htmlForm, false) {
             @Override
             protected Object getWithPreemption(final String name) {
-                return HTMLFormElement.this.getWithPreemption(name);
+                final List<HtmlElement> elementsForName = findElements(name);
+                if (elementsForName.isEmpty()) {
+                    return NOT_FOUND;
+                }
+                if (elementsForName.size() == 1) {
+                    return getScriptableFor(elementsForName.get(0));
+                }
+
+                final List<DomNode> nodes = new ArrayList<>(elementsForName);
+                final RadioNodeList nodeList = new RadioNodeList(getHtmlForm(), nodes);
+                nodeList.setElementsSupplier(
+                        (Supplier<List<DomNode>> & Serializable) () -> new ArrayList<>(findElements(name)));
+                return nodeList;
             }
         };
 
         elements.setElementsSupplier(
                 (Supplier<List<DomNode>> & Serializable)
                 () -> {
-                    boolean filterChildrenOfNestedForms = false;
-
-                    final List<DomNode> response = new ArrayList<>();
                     final DomNode domNode = getDomNodeOrNull();
                     if (domNode == null) {
-                        return response;
+                        return new ArrayList<>();
                     }
-                    for (final DomNode desc : domNode.getDescendants()) {
-                        if (desc instanceof DomElement) {
-                            if (desc instanceof HtmlForm) {
-                                filterChildrenOfNestedForms = true;
-                            }
-                            else {
-                                if (desc instanceof HtmlInput || desc instanceof HtmlButton
-                                    || desc instanceof HtmlTextArea || desc instanceof HtmlSelect) {
-                                    response.add(desc);
-                                }
-                            }
-                        }
-                    }
-
-                    // it would be more performant to avoid iterating through
-                    // nested forms but as it is a corner case of ill formed HTML
-                    // the needed refactoring would take too much time
-                    // => filter here and not in isMatching as it won't be needed in most
-                    // of the cases
-                    if (filterChildrenOfNestedForms) {
-                        for (final Iterator<DomNode> iter = response.iterator(); iter.hasNext();) {
-                            final HtmlElement field = (HtmlElement) iter.next();
-                            if (field.getEnclosingForm() != htmlForm) {
-                                iter.remove();
-                            }
-                        }
-                    }
-                    response.addAll(htmlForm.getLostChildren());
-                    return response;
+                    return new ArrayList<>(((HtmlForm) domNode).getElementsJS());
                 });
 
         elements.setEffectOnCacheFunction(
@@ -175,16 +143,23 @@ public class HTMLFormElement extends HTMLElement implements Function {
     }
 
     /**
+     * Returns the {@code Symbol.iterator} function that allows iterating over the form's elements.
+     * @return the Iterator symbol
+     */
+    @JsxSymbol
+    public Scriptable iterator() {
+        return getElements().iterator();
+    }
+
+    /**
      * Returns the value of the property {@code length}.
      * Does not count input {@code type=image} elements
-     * (<a href="http://msdn.microsoft.com/en-us/library/ms534101.aspx">MSDN doc</a>)
+     * (<a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/length">MDN doc</a>)
      * @return the value of this property
      */
     @JsxGetter
     public int getLength() {
-        final int all = getElements().getLength();
-        final int images = getHtmlForm().getElementsByAttribute(HtmlInput.TAG_NAME, "type", "image").size();
-        return all - images;
+        return getElements().getLength();
     }
 
     /**
@@ -195,15 +170,10 @@ public class HTMLFormElement extends HTMLElement implements Function {
     public String getAction() {
         final String action = getHtmlForm().getActionAttribute();
 
-        if (ATTRIBUTE_NOT_DEFINED == action
-                && !getBrowserVersion().hasFeature(JS_FORM_ACTION_EXPANDURL_NOT_DEFINED)) {
-            return action;
-        }
-
         try {
             return ((HtmlPage) getHtmlForm().getPage()).getFullyQualifiedUrl(action).toExternalForm();
         }
-        catch (final MalformedURLException e) {
+        catch (final MalformedURLException ignored) {
             // nothing, return action attribute
         }
         return action;
@@ -230,7 +200,7 @@ public class HTMLFormElement extends HTMLElement implements Function {
 
     /**
      * Sets the value of the property {@code method}.
-     * @param method the new property
+     * @param method the new value
      */
     @JsxSetter
     public void setMethod(final String method) {
@@ -258,12 +228,43 @@ public class HTMLFormElement extends HTMLElement implements Function {
     }
 
     /**
-     * Returns the value of the rel property.
-     * @return the rel property
+     * Returns the value of the property {@code rel}.
+     * @return the value of this property
      */
-    @JsxGetter({CHROME, EDGE, FF})
+    @JsxGetter
     public String getRel() {
         return getHtmlForm().getRelAttribute();
+    }
+
+    /**
+     * Sets the value of the property {@code rel}.
+     * @param rel the new value
+     */
+    @JsxSetter
+    public void setRel(final String rel) {
+        getHtmlForm().setAttribute("rel", rel);
+    }
+
+    /**
+     * Returns the {@code relList} attribute.
+     * @return the {@code relList} attribute
+     */
+    @JsxGetter
+    public DOMTokenList getRelList() {
+        return new DOMTokenList(this, "rel");
+    }
+
+    /**
+     * Sets the {@code relList} attribute.
+     * @param rel the {@code relList} attribute value
+     */
+    @JsxSetter
+    public void setRelList(final Object rel) {
+        if (JavaScriptEngine.isUndefined(rel)) {
+            setRel("undefined");
+            return;
+        }
+        setRel(JavaScriptEngine.toString(rel));
     }
 
     /**
@@ -288,12 +289,6 @@ public class HTMLFormElement extends HTMLElement implements Function {
     @JsxSetter
     public void setEnctype(final String enctype) {
         WebAssert.notNull("encoding", enctype);
-        if (getBrowserVersion().hasFeature(JS_FORM_REJECT_INVALID_ENCODING)
-                && !FormEncodingType.URL_ENCODED.getName().equals(enctype)
-                && !FormEncodingType.MULTIPART.getName().equals(enctype)
-                && !FormEncodingType.TEXT_PLAIN.getName().equals(enctype)) {
-            throw Context.reportRuntimeError("Cannot set the encoding property to invalid value: '" + enctype + "'");
-        }
         getHtmlForm().setEnctypeAttribute(enctype);
     }
 
@@ -316,6 +311,7 @@ public class HTMLFormElement extends HTMLElement implements Function {
     }
 
     /**
+     * Returns the {@link HtmlForm} associated with this element.
      * @return the associated HtmlForm
      */
     public HtmlForm getHtmlForm() {
@@ -331,72 +327,46 @@ public class HTMLFormElement extends HTMLElement implements Function {
     }
 
     /**
-     * Submits the form by submitted using a specific submit button.
-     * @param submitter The submit button whose attributes describe the method
-     * by which the form is to be submitted. This may be either
-     * an &lt;input&gt; or &lt;button&gt; element whose type attribute is submit.
-     * If you omit the submitter parameter, the form element itself is used as the submitter.
+     * Submits the form using the specified submit button.
+     * @param submitter the submit button whose attributes describe the method
+     *        by which the form is to be submitted. This may be either
+     *        a &lt;input&gt; or &lt;button&gt; element whose type attribute is submit.
+     *        If you omit the submitter parameter, the form element itself is used as the submitter.
      */
-    @JsxFunction({CHROME, EDGE, FF, FF_ESR})
+    @JsxFunction
     public void requestSubmit(final Object submitter) {
-        if (Undefined.isUndefined(submitter)) {
+        if (JavaScriptEngine.isUndefined(submitter)) {
             submit();
             return;
         }
 
         SubmittableElement submittable = null;
-        if (submitter instanceof HTMLElement) {
-            final HTMLElement subHtmlElement = (HTMLElement) submitter;
-            if (subHtmlElement instanceof HTMLButtonElement) {
-                if ("submit".equals(((HTMLButtonElement) subHtmlElement).getType())) {
+        if (submitter instanceof HTMLElement subHtmlElement) {
+            if (subHtmlElement instanceof HTMLButtonElement element1) {
+                if ("submit".equals(element1.getType())) {
                     submittable = (SubmittableElement) subHtmlElement.getDomNodeOrDie();
                 }
             }
-            else if (subHtmlElement instanceof HTMLInputElement) {
-                if ("submit".equals(((HTMLInputElement) subHtmlElement).getType())) {
+            else if (subHtmlElement instanceof HTMLInputElement element) {
+                if ("submit".equals(element.getType())) {
                     submittable = (SubmittableElement) subHtmlElement.getDomNodeOrDie();
                 }
             }
 
             if (submittable != null && subHtmlElement.getForm() != this) {
-                throw ScriptRuntime.typeError(
+                throw JavaScriptEngine.typeError(
                         "Failed to execute 'requestSubmit' on 'HTMLFormElement': "
                         + "The specified element is not owned by this form element.");
             }
         }
 
         if (submittable == null) {
-            throw ScriptRuntime.typeError(
+            throw JavaScriptEngine.typeError(
                     "Failed to execute 'requestSubmit' on 'HTMLFormElement': "
                     + "The specified element is not a submit button.");
         }
 
         this.getHtmlForm().submit(submittable);
-    }
-
-    /**
-     * Retrieves a form object or an object from an elements collection.
-     * @param index Integer or String that specifies the object or collection to retrieve.
-     *              If this parameter is an integer, it is the zero-based index of the object.
-     *              If this parameter is a string, all objects with matching name or id properties are retrieved,
-     *              and a collection is returned if more than one match is made
-     * @param subIndex Optional. Integer that specifies the zero-based index of the object to retrieve
-     *              when a collection is returned
-     * @return an object or a collection of objects if successful, or null otherwise
-     */
-    @JsxFunction(IE)
-    public Object item(final Object index, final Object subIndex) {
-        if (index instanceof Number) {
-            return getElements().item(index);
-        }
-
-        final String name = Context.toString(index);
-        final Object response = getWithPreemption(name);
-        if (subIndex instanceof Number && response instanceof HTMLCollection) {
-            return ((HTMLCollection) response).item(subIndex);
-        }
-
-        return response;
     }
 
     /**
@@ -409,6 +379,8 @@ public class HTMLFormElement extends HTMLElement implements Function {
 
     /**
      * Overridden to allow the retrieval of certain form elements by ID or name.
+     * @see <a href="https://html.spec.whatwg.org/multipage/forms.html#dom-form-nameditem">
+     *     HTML spec - form named item</a>
      *
      * @param name {@inheritDoc}
      * @return {@inheritDoc}
@@ -421,28 +393,82 @@ public class HTMLFormElement extends HTMLElement implements Function {
         final List<HtmlElement> elements = findElements(name);
 
         if (elements.isEmpty()) {
-            return NOT_FOUND;
+            final HtmlElement element = getHtmlForm().getNamedElement(name);
+            return element != null ? getScriptableFor(element) : NOT_FOUND;
         }
         if (elements.size() == 1) {
-            return getScriptableFor(elements.get(0));
+            final HtmlElement element = elements.get(0);
+            getHtmlForm().registerPastName(name, element);
+            return getScriptableFor(element);
         }
         final List<DomNode> nodes = new ArrayList<>(elements);
 
-        final HTMLCollection coll = new HTMLCollection(getHtmlForm(), nodes);
-        coll.setElementsSupplier((Supplier<List<DomNode>> & Serializable) () -> new ArrayList<>(findElements(name)));
-        return coll;
+        final RadioNodeList nodeList = new RadioNodeList(getHtmlForm(), nodes);
+        nodeList.setElementsSupplier(
+                (Supplier<List<DomNode>> & Serializable)
+                () -> new ArrayList<>(findElements(name)));
+        return nodeList;
+    }
+
+    /**
+     * Overridden to allow the retrieval of certain form elements by ID or name.
+     *
+     * @param name {@inheritDoc}
+     * @param start {@inheritDoc}
+     * @return {@inheritDoc}
+     */
+    @Override
+    public boolean has(final String name, final Scriptable start) {
+        if (super.has(name, start)) {
+            return true;
+        }
+
+        return findFirstElement(name) != null;
+    }
+
+    /**
+     * Overridden to allow the retrieval of certain form elements by ID or name.
+     *
+     * @param cx {@inheritDoc}
+     * @param id {@inheritDoc}
+     * @return {@inheritDoc}
+     */
+    @Override
+    protected DescriptorInfo getOwnPropertyDescriptor(final Context cx, final Object id) {
+        final DescriptorInfo descInfo = super.getOwnPropertyDescriptor(cx, id);
+        if (descInfo != null) {
+            return descInfo;
+        }
+
+        if (id instanceof CharSequence) {
+            final HtmlElement element = findFirstElement(id.toString());
+            if (element != null) {
+                return ScriptableObject.buildDataDescriptor(element.getScriptableObject(),
+                                            ScriptableObject.READONLY | ScriptableObject.DONTENUM);
+            }
+        }
+
+        return null;
     }
 
     List<HtmlElement> findElements(final String name) {
         final List<HtmlElement> elements = new ArrayList<>();
-        addElements(name, getHtmlForm().getHtmlElementDescendants(), elements);
-        addElements(name, getHtmlForm().getLostChildren(), elements);
+        final HtmlForm form = (HtmlForm) getDomNodeOrNull();
+        if (form == null) {
+            return elements;
+        }
+
+        for (final HtmlElement element : form.getElementsJS()) {
+            if (name.equals(element.getId())
+                    || name.equals(element.getAttributeDirect(DomElement.NAME_ATTRIBUTE))) {
+                elements.add(element);
+            }
+        }
 
         // If no form fields are found, browsers are able to find img elements by ID or name.
         if (elements.isEmpty()) {
-            for (final DomNode node : getHtmlForm().getHtmlElementDescendants()) {
-                if (node instanceof HtmlImage) {
-                    final HtmlImage img = (HtmlImage) node;
+            for (final DomNode node : form.getHtmlElementDescendants()) {
+                if (node instanceof HtmlImage img) {
                     if (name.equals(img.getId()) || name.equals(img.getNameAttribute())) {
                         elements.add(img);
                     }
@@ -453,45 +479,29 @@ public class HTMLFormElement extends HTMLElement implements Function {
         return elements;
     }
 
-    private void addElements(final String name, final Iterable<HtmlElement> nodes,
-        final List<HtmlElement> addTo) {
-        for (final HtmlElement node : nodes) {
-            if (isAccessibleByIdOrName(node, name)) {
-                addTo.add(node);
+    private HtmlElement findFirstElement(final String name) {
+        final HtmlForm form = (HtmlForm) getDomNodeOrNull();
+        if (form == null) {
+            return null;
+        }
+
+        for (final HtmlElement node : form.getElementsJS()) {
+            if (name.equals(node.getId())
+                    || name.equals(node.getAttributeDirect(DomElement.NAME_ATTRIBUTE))) {
+                return node;
             }
         }
-    }
 
-    /**
-     * Indicates if the element can be reached by id or name in expressions like "myForm.myField".
-     * @param element the element to test
-     * @param name the name used to address the element
-     * @return {@code true} if this element matches the conditions
-     */
-    private boolean isAccessibleByIdOrName(final HtmlElement element, final String name) {
-        if (element instanceof FormFieldWithNameHistory && !(element instanceof HtmlImageInput)) {
-            if (element.getEnclosingForm() != getHtmlForm()) {
-                return false; // nested forms
-            }
-            if (name.equals(element.getId())) {
-                return true;
-            }
-            final FormFieldWithNameHistory elementWithNames = (FormFieldWithNameHistory) element;
-            if (getBrowserVersion().hasFeature(FORMFIELD_REACHABLE_BY_ORIGINAL_NAME)) {
-                if (name.equals(elementWithNames.getOriginalName())) {
-                    return true;
+        // If no form fields are found, browsers are able to find img elements by ID or name.
+        for (final DomNode node : form.getHtmlElementDescendants()) {
+            if (node instanceof HtmlImage img) {
+                if (name.equals(img.getId()) || name.equals(img.getNameAttribute())) {
+                    return img;
                 }
             }
-            else if (name.equals(element.getAttributeDirect("name"))) {
-                return true;
-            }
-
-            if (getBrowserVersion().hasFeature(FORMFIELD_REACHABLE_BY_NEW_NAMES)
-                    && elementWithNames.getNewNames().contains(name)) {
-                return true;
-            }
         }
-        return false;
+
+        return null;
     }
 
     /**
@@ -512,31 +522,16 @@ public class HTMLFormElement extends HTMLElement implements Function {
      * {@inheritDoc}
      */
     @Override
-    public Object call(final Context cx, final Scriptable scope, final Scriptable thisObj, final Object[] args) {
-        if (!getBrowserVersion().hasFeature(JS_FORM_USABLE_AS_FUNCTION)) {
-            throw Context.reportRuntimeError("Not a function.");
-        }
-        if (args.length > 0) {
-            final Object arg = args[0];
-            if (arg instanceof String) {
-                return ScriptableObject.getProperty(this, (String) arg);
-            }
-            else if (arg instanceof Number) {
-                return ScriptableObject.getProperty(this, ((Number) arg).intValue());
-            }
-        }
-        return Undefined.instance;
+    public Object call(final Context cx, final VarScope scope, final Object thisObj, final Object[] args) {
+        throw JavaScriptEngine.typeError("Not a function.");
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public Scriptable construct(final Context cx, final Scriptable scope, final Object[] args) {
-        if (!getBrowserVersion().hasFeature(JS_FORM_USABLE_AS_FUNCTION)) {
-            throw Context.reportRuntimeError("Not a function.");
-        }
-        return null;
+    public Scriptable construct(final Context cx, final Object nt, final VarScope scope, final Object[] args) {
+        throw JavaScriptEngine.typeError("Not a function.");
     }
 
     @Override
@@ -552,11 +547,35 @@ public class HTMLFormElement extends HTMLElement implements Function {
 
     /**
      * Checks whether the element has any constraints and whether it satisfies them.
-     * @return if the element is valid
+     * <p>
+     * NOTE: this deliberately does NOT go through each control's JS peer/host
+     * object -- the org.htmlunit.html (DOM) layer is not permitted to reach
+     * back up into org.htmlunit.javascript.host.*. Instead,
+     * {@link ValidatableHTMLElement#doCheckValidity(HtmlElement)} operates
+     * purely on the Java HtmlElement side, firing the 'invalid' event directly
+     * via the element itself; this still reaches any 'invalid' listeners
+     * attached via addEventListener, since event dispatch doesn't require
+     * going through a specific JS peer to notify listeners.
+     * </p>
+     * @return {@code true} if every one of the form's validatable controls is valid
      */
     @JsxFunction
     public boolean checkValidity() {
-        return getDomNodeOrDie().isValid();
+        boolean allValid = true;
+        for (final HtmlElement element : ((HtmlForm) getDomNodeOrDie()).getFormElements()) {
+            final boolean elementValid = ValidatableHTMLElement.doCheckValidity(element);
+            allValid = allValid && elementValid;
+        }
+        return allValid;
+    }
+
+    /**
+     * Performs the same validity checking steps as the checkValidity() method.
+     * @return {@code true} if the element is valid
+     */
+    @JsxFunction
+    public boolean reportValidity() {
+        return checkValidity();
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,6 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.HttpWebConnectionTest;
 import org.htmlunit.MockWebConnection;
 import org.htmlunit.Page;
@@ -32,9 +29,9 @@ import org.htmlunit.WebResponse;
 import org.htmlunit.html.HtmlAnchor;
 import org.htmlunit.html.HtmlElement;
 import org.htmlunit.html.HtmlPage;
-import org.htmlunit.junit.BrowserRunner;
 import org.htmlunit.util.MimeType;
 import org.htmlunit.util.NameValuePair;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link Attachment}.
@@ -43,8 +40,8 @@ import org.htmlunit.util.NameValuePair;
  * @author Sudhan Moghe
  * @author Daniel Gredler
  * @author Ronald Brill
+ * @author Lai Quang Duong
  */
-@RunWith(BrowserRunner.class)
 public class AttachmentTest extends SimpleWebTestCase {
 
     /**
@@ -53,7 +50,8 @@ public class AttachmentTest extends SimpleWebTestCase {
      */
     @Test
     public void basic() throws Exception {
-        final String content1 = "<html><body>\n"
+        final String content1 = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<form method='POST' name='form' action='" + URL_SECOND + "'>\n"
             + "<input type='submit' value='ok'>\n"
             + "</form>\n"
@@ -79,7 +77,7 @@ public class AttachmentTest extends SimpleWebTestCase {
         final Page clickResult = anchor.click();
         assertEquals(result, clickResult);
         assertEquals(1, attachments.size());
-        assertTrue(HtmlPage.class.isInstance(attachments.get(0).getPage()));
+        assertTrue(attachments.get(0).getPage() instanceof HtmlPage);
         // the attachment is opened inside a new window
         assertEquals(2, client.getWebWindows().size());
 
@@ -99,7 +97,8 @@ public class AttachmentTest extends SimpleWebTestCase {
      */
     @Test
     public void contentDispositionCaseInsensitive() throws Exception {
-        final String content1 = "<html><body>\n"
+        final String content1 = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<form method='POST' name='form' action='" + URL_SECOND + "'>\n"
             + "<input type='submit' value='ok'>\n"
             + "</form>\n"
@@ -133,7 +132,7 @@ public class AttachmentTest extends SimpleWebTestCase {
      */
     @Test
     public void filename() throws Exception {
-        final String content = "<html>But is it really?</html>";
+        final String content = DOCTYPE_HTML + "<html>But is it really?</html>";
 
         final WebClient client = getWebClient();
         final MockWebConnection conn = new MockWebConnection();
@@ -181,13 +180,112 @@ public class AttachmentTest extends SimpleWebTestCase {
     }
 
     /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void filenameFromAnchor() throws Exception {
+        final WebClient client = getWebClient();
+        final MockWebConnection conn = new MockWebConnection();
+        client.setWebConnection(conn);
+        final List<Attachment> attachments = new ArrayList<>();
+        client.setAttachmentHandler(new CollectingAttachmentHandler(attachments));
+
+        final String content = DOCTYPE_HTML
+                + "<html>\n"
+                + "<head>\n"
+                + "<script>\n"
+                + "var blob = new Blob(['foo'], {type: 'text/plain'}),\n"
+                + "  url = URL.createObjectURL(blob),\n"
+                + "  elem = document.createElement('a');\n"
+                + "elem.href = url, elem.download = 'foo.txt', elem.click();\n"
+                + "</script>\n"
+                + "</head>\n"
+                + "</html>\n";
+
+        conn.setResponse(URL_FIRST, content);
+        client.getPage(URL_FIRST);
+
+        final Attachment result = attachments.get(0);
+        assertEquals(result.getSuggestedFilename(), "foo.txt");
+        assertEquals("foo", ((TextPage) result.getPage()).getContent());
+        attachments.clear();
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void filenameFromFile() throws Exception {
+        final WebClient client = getWebClient();
+        final MockWebConnection conn = new MockWebConnection();
+        client.setWebConnection(conn);
+        final List<Attachment> attachments = new ArrayList<>();
+        client.setAttachmentHandler(new CollectingAttachmentHandler(attachments));
+
+        final String content = DOCTYPE_HTML
+                + "<html>\n"
+                + "<head>\n"
+                + "<script>\n"
+                + "var blob = new File(['bar'], 'bar.txt', {type: 'text/plain'}),\n"
+                + "  url = URL.createObjectURL(blob),\n"
+                + "  elem = document.createElement('a');\n"
+                + "elem.href = url, elem.download = '', elem.click();\n"
+                + "</script>\n"
+                + "</head>\n"
+                + "</html>\n";
+
+        conn.setResponse(URL_FIRST, content);
+        client.getPage(URL_FIRST);
+
+        final Attachment result = attachments.get(0);
+        assertEquals(result.getSuggestedFilename(), "bar.txt");
+        assertEquals("bar", ((TextPage) result.getPage()).getContent());
+        attachments.clear();
+    }
+
+
+    /**
+     * Prioritize name from Anchor.download over File.name.
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void filenameFromFilePrioritizeAnchorDownloadOverFileName() throws Exception {
+        final WebClient client = getWebClient();
+        final MockWebConnection conn = new MockWebConnection();
+        client.setWebConnection(conn);
+        final List<Attachment> attachments = new ArrayList<>();
+        client.setAttachmentHandler(new CollectingAttachmentHandler(attachments));
+
+        final String content = DOCTYPE_HTML
+                + "<html>\n"
+                + "<head>\n"
+                + "<script>\n"
+                + "var blob = new File(['bar'], 'bar.txt', {type: 'text/plain'}),\n"
+                + "  url = URL.createObjectURL(blob),\n"
+                + "  elem = document.createElement('a');\n"
+                + "elem.href = url, elem.download = 'foobar.txt', elem.click();\n"
+                + "</script>\n"
+                + "</head>\n"
+                + "</html>\n";
+
+        conn.setResponse(URL_FIRST, content);
+        client.getPage(URL_FIRST);
+
+        final Attachment result = attachments.get(0);
+        assertEquals(result.getSuggestedFilename(), "foobar.txt");
+        assertEquals("bar", ((TextPage) result.getPage()).getContent());
+        attachments.clear();
+    }
+
+    /**
      * This was causing a ClassCastException in Location.setHref as of 2013-10-08 because the TextPage
      * used for the attachment was wrongly associated to the HTMLDocument of the first page.
      * @throws Exception if an error occurs
      */
     @Test
     public void jsChangeLocationAfterReceptionOfAttachment() throws Exception {
-        final String html = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<form action='action'>\n"
             + "<input type='submit' onclick='window.location=\"foo\"; return false'>\n"
             + "</form>\n"
@@ -210,7 +308,7 @@ public class AttachmentTest extends SimpleWebTestCase {
         page.getAnchors().get(0).click();
         assertEquals(1, attachments.size());
 
-        final HtmlElement htmlElement = (HtmlElement) page.getFirstByXPath("//input");
+        final HtmlElement htmlElement = page.getFirstByXPath("//input");
         htmlElement.click(); // exception was occurring here
     }
 
@@ -220,7 +318,8 @@ public class AttachmentTest extends SimpleWebTestCase {
      */
     @Test
     public void handleResponseFromHandler() throws Exception {
-        final String content1 = "<html><body>\n"
+        final String content1 = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<form method='POST' name='form' action='" + URL_SECOND + "'>\n"
             + "<input type='submit' value='ok'>\n"
             + "</form>\n"
@@ -230,17 +329,19 @@ public class AttachmentTest extends SimpleWebTestCase {
 
         final WebClient client = getWebClient();
         final List<WebResponse> attachments = new ArrayList<>();
+        final List<String> attachmentFilenames = new ArrayList<>();
 
         client.setAttachmentHandler(new AttachmentHandler() {
             @Override
-            public boolean handleAttachment(final WebResponse response) {
+            public boolean handleAttachment(final WebResponse response, final String attachmentFilename) {
                 attachments.add(response);
+                attachmentFilenames.add(attachmentFilename);
                 return true;
             }
 
             @Override
-            public void handleAttachment(final Page page) {
-                throw new IllegalAccessError("handleAttachment(Page) called");
+            public void handleAttachment(final Page page, final String attachmentFilename) {
+                throw new IllegalAccessError("handleAttachment(Page, String) called");
             }
         });
 
@@ -252,12 +353,14 @@ public class AttachmentTest extends SimpleWebTestCase {
         conn.setResponse(URL_SECOND, content2, 200, "OK", MimeType.TEXT_HTML, headers);
         client.setWebConnection(conn);
         assertTrue(attachments.isEmpty());
+        assertTrue(attachmentFilenames.isEmpty());
 
         final HtmlPage result = client.getPage(URL_FIRST);
         final HtmlAnchor anchor = result.getAnchors().get(0);
         final Page clickResult = anchor.click();
         assertEquals(result, clickResult);
         assertEquals(1, attachments.size());
+        assertEquals(1, attachmentFilenames.size());
         assertEquals(1, client.getWebWindows().size());
 
         final WebResponse attachmentResponse = attachments.get(0);
@@ -266,5 +369,220 @@ public class AttachmentTest extends SimpleWebTestCase {
         assertEquals(MimeType.TEXT_HTML, attachmentResponse.getContentType());
         assertEquals(200, attachmentResponse.getStatusCode());
         assertEquals(URL_SECOND, attachmentResponse.getWebRequest().getUrl());
+
+        assertNull(attachmentFilenames.get(0));
+    }
+
+    /**
+     * Tests attachment callbacks and the contents of attachments.
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void handleResponseFromHandlerWithFileName() throws Exception {
+        final String content1 = DOCTYPE_HTML
+            + "<html><body>\n"
+            + "<form method='POST' name='form' action='" + URL_SECOND + "'>\n"
+            + "<input type='submit' value='ok'>\n"
+            + "</form>\n"
+            + "<a href='#' onclick='document.form.submit()'>click me</a>\n"
+            + "</body></html>";
+        final String content2 = "download file contents";
+
+        final WebClient client = getWebClient();
+        final List<WebResponse> attachments = new ArrayList<>();
+        final List<String> attachmentFilenames = new ArrayList<>();
+
+        client.setAttachmentHandler(new AttachmentHandler() {
+            @Override
+            public boolean handleAttachment(final WebResponse response, final String attachmentFilename) {
+                attachments.add(response);
+                attachmentFilenames.add(attachmentFilename);
+                return true;
+            }
+
+            @Override
+            public void handleAttachment(final Page page, final String attachmentFilename) {
+                throw new IllegalAccessError("handleAttachment(Page, String) called");
+            }
+        });
+
+        final List<NameValuePair> headers = new ArrayList<>();
+        headers.add(new NameValuePair("Content-Disposition", "attachment; filename=htmlunit.zip"));
+
+        final MockWebConnection conn = new MockWebConnection();
+        conn.setResponse(URL_FIRST, content1);
+        conn.setResponse(URL_SECOND, content2, 200, "OK", MimeType.TEXT_HTML, headers);
+        client.setWebConnection(conn);
+        assertTrue(attachments.isEmpty());
+        assertTrue(attachmentFilenames.isEmpty());
+
+        final HtmlPage result = client.getPage(URL_FIRST);
+        final HtmlAnchor anchor = result.getAnchors().get(0);
+        final Page clickResult = anchor.click();
+        assertEquals(result, clickResult);
+        assertEquals(1, attachments.size());
+        assertEquals(1, attachmentFilenames.size());
+        assertEquals(1, client.getWebWindows().size());
+
+        final WebResponse attachmentResponse = attachments.get(0);
+        final InputStream attachmentStream = attachmentResponse.getContentAsStream();
+        HttpWebConnectionTest.assertEquals(new ByteArrayInputStream(content2.getBytes()), attachmentStream);
+        assertEquals(MimeType.TEXT_HTML, attachmentResponse.getContentType());
+        assertEquals(200, attachmentResponse.getStatusCode());
+        assertEquals(URL_SECOND, attachmentResponse.getWebRequest().getUrl());
+
+        assertEquals("htmlunit.zip", attachmentFilenames.get(0));
+    }
+
+    /**
+     * Tests attachment callbacks and the contents of attachments.
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void handleResponseOnlyApplicationOctetstream() throws Exception {
+        final String content1 = DOCTYPE_HTML
+            + "<html><body>\n"
+            + "<form method='POST' name='form' action='" + URL_SECOND + "'>\n"
+            + "<input type='submit' value='ok'>\n"
+            + "</form>\n"
+            + "<a href='#' onclick='document.form.submit()'>click me</a>\n"
+            + "</body></html>";
+        final String content2 = "download file contents";
+
+        final WebClient client = getWebClient();
+        final List<WebResponse> attachments = new ArrayList<>();
+        final List<String> attachmentFilenames = new ArrayList<>();
+
+        client.setAttachmentHandler(new AttachmentHandler() {
+            @Override
+            public boolean handleAttachment(final WebResponse response, final String attachmentFilename) {
+                attachments.add(response);
+                attachmentFilenames.add(attachmentFilename);
+                return true;
+            }
+
+            @Override
+            public void handleAttachment(final Page page, final String attachmentFilename) {
+                throw new IllegalAccessError("handleAttachment(Page, String) called");
+            }
+        });
+
+        final List<NameValuePair> headers = new ArrayList<>();
+        headers.add(new NameValuePair("Content-Type", MimeType.APPLICATION_OCTET_STREAM));
+
+        final MockWebConnection conn = new MockWebConnection();
+        conn.setResponse(URL_FIRST, content1);
+        conn.setResponse(URL_SECOND, content2, 200, "OK", MimeType.TEXT_HTML, headers);
+        client.setWebConnection(conn);
+        assertTrue(attachments.isEmpty());
+        assertTrue(attachmentFilenames.isEmpty());
+
+        final HtmlPage result = client.getPage(URL_FIRST);
+        final HtmlAnchor anchor = result.getAnchors().get(0);
+        final Page clickResult = anchor.click();
+        assertEquals(result, clickResult);
+        assertEquals(1, attachments.size());
+        assertEquals(1, attachmentFilenames.size());
+        assertEquals(1, client.getWebWindows().size());
+
+        final WebResponse attachmentResponse = attachments.get(0);
+        final InputStream attachmentStream = attachmentResponse.getContentAsStream();
+        HttpWebConnectionTest.assertEquals(new ByteArrayInputStream(content2.getBytes()), attachmentStream);
+        assertEquals(MimeType.APPLICATION_OCTET_STREAM, attachmentResponse.getContentType());
+        assertEquals(200, attachmentResponse.getStatusCode());
+        assertEquals(URL_SECOND, attachmentResponse.getWebRequest().getUrl());
+
+        assertNull(attachmentFilenames.get(0));
+    }
+
+    private List<Attachment> clickAndCollect(final String contentDisposition) throws Exception {
+        final String content1 = DOCTYPE_HTML
+            + "<html><body>\n"
+            + "<form method='POST' name='form' action='" + URL_SECOND + "'>\n"
+            + "<input type='submit' value='ok'>\n"
+            + "</form>\n"
+            + "<a href='#' onclick='document.form.submit()'>click me</a>\n"
+            + "</body></html>";
+
+        final WebClient client = getWebClient();
+        final List<Attachment> attachments = new ArrayList<>();
+        client.setAttachmentHandler(new CollectingAttachmentHandler(attachments));
+
+        final List<NameValuePair> headers = new ArrayList<>();
+        headers.add(new NameValuePair("Content-Disposition", contentDisposition));
+
+        final MockWebConnection conn = new MockWebConnection();
+        conn.setResponse(URL_FIRST, content1);
+        conn.setResponse(URL_SECOND, "download file contents", 200, "OK", MimeType.TEXT_HTML, headers);
+        client.setWebConnection(conn);
+
+        final HtmlPage result = client.getPage(URL_FIRST);
+        result.getAnchors().get(0).click();
+        return attachments;
+    }
+
+    /**
+     * White space in front of the disposition type is ignored.
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void contentDispositionLeadingWhitespace() throws Exception {
+        final List<Attachment> attachments = clickAndCollect("  attachment; filename=\"foo.txt\"");
+        assertEquals(1, attachments.size());
+        assertEquals("foo.txt", attachments.get(0).getSuggestedFilename());
+    }
+
+    /**
+     * An unknown disposition type is handled like attachment.
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void contentDispositionUnknownType() throws Exception {
+        final List<Attachment> attachments = clickAndCollect("attachmentfoo; filename=\"foo.txt\"");
+        assertEquals(1, attachments.size());
+        assertEquals("foo.txt", attachments.get(0).getSuggestedFilename());
+    }
+
+    /**
+     * A header without a disposition type is loaded inline.
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void contentDispositionWithoutType() throws Exception {
+        final List<Attachment> attachments = clickAndCollect("; filename=\"foo.txt\"");
+        assertTrue(attachments.isEmpty());
+    }
+
+    /**
+     * Inline is loaded in the window, even if the header contains a file name.
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void contentDispositionInline() throws Exception {
+        final List<Attachment> attachments = clickAndCollect("inline; filename=\"foo.txt\"");
+        assertTrue(attachments.isEmpty());
+    }
+
+    /**
+     * The file name passed to the handler is sanitized like the browsers do.
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void suggestedFilenameIsSanitized() throws Exception {
+        final List<Attachment> attachments = clickAndCollect("attachment; filename=\"../a:b.txt\"");
+        assertEquals(1, attachments.size());
+        assertEquals("_a_b.txt", attachments.get(0).getSuggestedFilename());
+    }
+
+    /**
+     * The extended file name wins over the plain one.
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void suggestedFilenameExtended() throws Exception {
+        final List<Attachment> attachments = clickAndCollect(
+                "attachment; filename=\"fallback.txt\"; filename*=UTF-8''gr%C3%B6%C3%9Fe.txt");
+        assertEquals(1, attachments.size());
+        assertEquals("gr\u00f6\u00dfe.txt", attachments.get(0).getSuggestedFilename());
     }
 }

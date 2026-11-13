@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,31 +14,25 @@
  */
 package org.htmlunit.javascript.host;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link FontFaceSet}.
  *
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class FontFaceSetTest extends WebDriverTestCase {
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            FF = "function FontFaceSet() { [native code] }",
-            FF_ESR = "function FontFaceSet() { [native code] }")
+    @Alerts("function FontFaceSet() { [native code] }")
     public void window() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -53,11 +47,10 @@ public class FontFaceSetTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "[object FontFaceSet]",
-            IE = "undefined")
+    @Alerts("[object FontFaceSet]")
     public void documentFonts() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -72,11 +65,10 @@ public class FontFaceSetTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "then: ",
-            IE = "document.fonts is undefined")
+    @Alerts("then: ")
     public void load() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -92,5 +84,34 @@ public class FontFaceSetTest extends WebDriverTestCase {
 
         loadPage2(html);
         verifyTitle2(DEFAULT_WAIT_TIME, getWebDriver(), getExpectedAlerts());
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"false", "undefined", "ReferenceError", "ReferenceError", "ReferenceError",
+             "true", "function FontFaceSet() { [native code] }", "function FontFaceSet() { [native code] }",
+             "[object FontFaceSet]", "function EventTarget() { [native code] }"})
+    public void windowScope() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html></body>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  log('fontFaceSet' in window);\n"
+            + "  log(window.fontFaceSet);\n"
+            + "  try { log(fontFaceSet); } catch(e) { logEx(e); };\n"
+            + "  try { log(fontFaceSet.prototype); } catch(e) { logEx(e); };\n"
+            + "  try { log(fontFaceSet.__proto__); } catch(e) { logEx(e); };\n"
+
+            + "  log('FontFaceSet' in window);\n"
+            + "  log(window.FontFaceSet);\n"
+            + "  try { log(FontFaceSet); } catch(e) { logEx(e); };\n"
+            + "  try { log(FontFaceSet.prototype); } catch(e) { logEx(e); };\n"
+            + "  try { log(FontFaceSet.__proto__); } catch(e) { logEx(e); };\n"
+            + "</script>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
     }
 }

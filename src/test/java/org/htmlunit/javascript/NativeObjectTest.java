@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,10 @@
  */
 package org.htmlunit.javascript;
 
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.IE;
-
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
-import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.HtmlUnitNYI;
+import org.junit.jupiter.api.Test;
 
 /**
  * Object is a native JavaScript object and therefore provided by Rhino but some tests are needed here
@@ -35,7 +29,6 @@ import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
  * @author Natasha Lazarova
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class NativeObjectTest extends WebDriverTestCase {
 
     /**
@@ -77,11 +70,10 @@ public class NativeObjectTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "1",
-            IE = {})
+    @Alerts("1")
     public void assign() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  if (Object.assign) {\n"
@@ -100,11 +92,10 @@ public class NativeObjectTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "1",
-            IE = {})
+    @Alerts("1")
     public void assignUndefined() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + "function test() {\n"
             + LOG_TITLE_FUNCTION
             + "  if (Object.assign) {\n"
@@ -123,11 +114,10 @@ public class NativeObjectTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = {})
+    @Alerts("undefined")
     public void assignUndefined2() throws Exception {
-        final String html
-                = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head><script>\n"
                 + "function test() {\n"
                 + LOG_TITLE_FUNCTION
                 + "  if (Object.assign) {\n"
@@ -145,11 +135,10 @@ public class NativeObjectTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = {})
+    @Alerts("undefined")
     public void assignNull() throws Exception {
-        final String html
-                = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head><script>\n"
                 + "function test() {\n"
                 + LOG_TITLE_FUNCTION
                 + "  if (Object.assign) {\n"
@@ -167,11 +156,10 @@ public class NativeObjectTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = {})
+    @Alerts("undefined")
     public void assignNull2() throws Exception {
-        final String html
-                = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head><script>\n"
                 + "function test() {\n"
                 + LOG_TITLE_FUNCTION
                 + "  if (Object.assign) {\n"
@@ -191,11 +179,9 @@ public class NativeObjectTest extends WebDriverTestCase {
     @Test
     @Alerts(DEFAULT = "function\\s()\\s{\\s[native\\scode]\\s}",
             FF = "function\\s()\\s{\\n\\s\\s\\s\\s[native\\scode]\\n}",
-            FF_ESR = "function\\s()\\s{\\n\\s\\s\\s\\s[native\\scode]\\n}",
-            IE = "\\nfunction()\\s{\\n\\s\\s\\s\\s[native\\scode]\\n}\\n")
-    @NotYetImplemented(IE)
+            FF_ESR = "function\\s()\\s{\\n\\s\\s\\s\\s[native\\scode]\\n}")
     public void proto() throws Exception {
-        final String html = ""
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION_NORMALIZE
@@ -218,7 +204,7 @@ public class NativeObjectTest extends WebDriverTestCase {
     @Test
     @Alerts({"[object Object]", "null"})
     public void proto2() throws Exception {
-        final String html = ""
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -240,18 +226,16 @@ public class NativeObjectTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "true",
-            IE = "exception")
-    @NotYetImplemented(IE)
+    @Alerts("true")
     public void getPrototypeOfString() throws Exception {
-        final String html = ""
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
             + "    try {\n"
             + "      log(String.prototype === Object.getPrototypeOf(''));\n"
-            + "    } catch(e) {log('exception')}\n"
+            + "    } catch(e) { logEx(e) }\n"
             + "  }\n"
             + "</script>\n"
             + "</head>\n"
@@ -265,18 +249,16 @@ public class NativeObjectTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "true",
-            IE = "exception")
-    @NotYetImplemented(IE)
+    @Alerts("true")
     public void getPrototypeOfNumber() throws Exception {
-        final String html = ""
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
             + "    try {\n"
             + "      log(Number.prototype === Object.getPrototypeOf(1));\n"
-            + "    } catch(e) {log('exception')}\n"
+            + "    } catch(e) { logEx(e) }\n"
             + "  }\n"
             + "</script>\n"
             + "</head>\n"
@@ -290,18 +272,16 @@ public class NativeObjectTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "true",
-            IE = "exception")
-    @NotYetImplemented(IE)
+    @Alerts("true")
     public void getPrototypeOfBoolean() throws Exception {
-        final String html = ""
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
             + "    try {\n"
             + "      log(Boolean.prototype === Object.getPrototypeOf(true));\n"
-            + "    } catch(e) {log('exception')}\n"
+            + "    } catch(e) { logEx(e) }\n"
             + "  }\n"
             + "</script>\n"
             + "</head>\n"
@@ -315,18 +295,16 @@ public class NativeObjectTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "object",
-            IE = "exception")
-    @NotYetImplemented(IE)
+    @Alerts("object")
     public void getTypeOfPrototypeOfNumber() throws Exception {
-        final String html = ""
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
             + "    try {\n"
             + "      log(typeof Object.getPrototypeOf(1));\n"
-            + "    } catch(e) {log('exception')}\n"
+            + "    } catch(e) { logEx(e) }\n"
             + "  }\n"
             + "</script>\n"
             + "</head>\n"
@@ -340,10 +318,9 @@ public class NativeObjectTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"2", "true", "true"},
-            IE = "exception")
+    @Alerts({"2", "true", "true"})
     public void getOwnPropertySymbols() throws Exception {
-        final String html = ""
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -360,7 +337,7 @@ public class NativeObjectTest extends WebDriverTestCase {
             + "      log(objectSymbols.length);\n"
             + "      log(objectSymbols[0] === a);\n"
             + "      log(objectSymbols[1] === b);\n"
-            + "    } catch(e) {log('exception')}\n"
+            + "    } catch(e) { logEx(e) }\n"
             + "  }\n"
             + "</script>\n"
             + "</head>\n"
@@ -374,9 +351,9 @@ public class NativeObjectTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("exception")
+    @Alerts("TypeError")
     public void getOwnPropertySymbolsEmpty() throws Exception {
-        final String html = ""
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -384,7 +361,7 @@ public class NativeObjectTest extends WebDriverTestCase {
             + "    try {\n"
             + "      var objectSymbols = Object.getOwnPropertySymbols();\n"
             + "      log(objectSymbols.length);\n"
-            + "    } catch(e) {log('exception')}\n"
+            + "    } catch(e) { logEx(e) }\n"
             + "  }\n"
             + "</script>\n"
             + "</head>\n"
@@ -398,15 +375,12 @@ public class NativeObjectTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"[object HTMLInputElement]", "[object HTMLInputElementPrototype]",
-                       "[object Object]", "function"},
-            CHROME = {"[object HTMLInputElement]", "[object HTMLInputElement]", "[object Object]", "function"},
+    @Alerts(CHROME = {"[object HTMLInputElement]", "[object HTMLInputElement]", "[object Object]", "function"},
             EDGE = {"[object HTMLInputElement]", "[object HTMLInputElement]", "[object Object]", "function"},
             FF = {"[object HTMLInputElement]", "[object HTMLInputElement]", "[object Object]", "function"},
             FF_ESR = {"[object HTMLInputElement]", "[object HTMLInputElement]", "[object Object]", "function"})
-    @HtmlUnitNYI(IE = {"[object HTMLInputElement]", "[object HTMLInputElement]", "[object Object]", "function"})
     public void getOwnPropertyDescriptor() throws Exception {
-        final String html = ""
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -420,7 +394,7 @@ public class NativeObjectTest extends WebDriverTestCase {
             + "      log(desc);\n"
 
             + "      log(typeof desc.get);\n"
-            + "    } catch(e) {log('exception')}\n"
+            + "    } catch(e) { logEx(e) }\n"
             + "  }\n"
             + "</script>\n"
             + "</head>\n"
@@ -443,21 +417,16 @@ public class NativeObjectTest extends WebDriverTestCase {
                   "x.get.call = function call() {\n    [native code]\n}"},
             FF_ESR = {"[object HTMLInputElement]", "x = [object Object]",
                       "x.get = function value() {\n    [native code]\n}",
-                      "x.get.call = function call() {\n    [native code]\n}"},
-            IE = {"[object HTMLInputElementPrototype]", "x = [object Object]",
-                  "x.get = \nfunction value() {\n    [native code]\n}\n",
-                  "x.get.call = \nfunction call() {\n    [native code]\n}\n"})
+                      "x.get.call = function call() {\n    [native code]\n}"})
     @HtmlUnitNYI(CHROME = {"[object HTMLInputElement]", "x = [object Object]",
                            "x.get = function value() { [native code] }",
                            "x.get.call = function call() { [native code] }"},
             EDGE = {"[object HTMLInputElement]", "x = [object Object]",
                     "x.get = function value() { [native code] }",
-                    "x.get.call = function call() { [native code] }"},
-            IE = {"[object HTMLInputElement]", "x = [object Object]",
-                  "x.get = \nfunction value() {\n    [native code]\n}\n",
-                  "x.get.call = \nfunction call() {\n    [native code]\n}\n"})
+                    "x.get.call = function call() { [native code] }"})
     public void getOwnPropertyDescriptorGetCall() throws Exception {
-        final String html = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TEXTAREA_FUNCTION
             + "function test() {\n"
             + "  var proto = i1.constructor.prototype;\n"
@@ -474,5 +443,55 @@ public class NativeObjectTest extends WebDriverTestCase {
             + "</body></html>";
 
         loadPageVerifyTextArea2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"before: [object Object]", "after: [object Object]", "true"})
+    public void definePropertyUsingConsString() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  'use strict';\n"
+            + "  var f = function () {};\n"
+            + "  var a1='proto';\n"
+            + "  var p = a1 + 'type';\n"
+            + "  log('before: ' + f.prototype);\n"
+            + "  Object.defineProperty(f, p, {});\n"
+            + "  log('after: ' + f.prototype);\n"
+            + "  var p = new f();\n"
+            + "  log(p instanceof f);\n"
+            + "}\n"
+            + "</script></head>\n"
+            + "<body onload='test()'>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("val1-val2")
+    public void objectAssignCopiesSymbols() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head></head>\n"
+            + "<body>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "var s1 = Symbol('foo');\n"
+            + "var s2 = Symbol('bar');\n"
+            + "var source = { [s1]: 'val1', [Object(s2)]: 'val2' };\n"
+            + "var target = {};\n"
+            + "Object.assign(target, source);\n"
+            + "log(target[s1] + '-' + target[s2]);\n"
+            + "</script>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
     }
 }

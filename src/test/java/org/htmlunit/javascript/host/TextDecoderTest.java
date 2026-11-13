@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,9 @@
  */
 package org.htmlunit.javascript.host;
 
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.CHROME;
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.EDGE;
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.FF;
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.FF_ESR;
-
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link TextDecoder}.
@@ -33,25 +24,20 @@ import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
  * @author Ronald Brill
  * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/TextDecoder">TextDecoder() - Web APIs | MDN</a>
  */
-@RunWith(BrowserRunner.class)
 public class TextDecoderTest extends WebDriverTestCase {
 
     /**
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = {"utf-8", "utf-8", "utf-8", "utf-8"},
-            IE = "no TextDecoder")
+    @Alerts({"utf-8", "utf-8", "utf-8", "utf-8"})
     public void encoding() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION
             + "    function doTest() {\n"
-            + "      if (typeof TextDecoder === 'undefined') {\n"
-            + "        log('no TextDecoder');\n"
-            + "        return;\n"
-            + "      };\n"
             + "      var enc = new TextDecoder();\n"
             + "      log(enc.encoding);\n"
 
@@ -77,8 +63,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "utf-8",
-            IE = "no TextDecoder")
+    @Alerts("utf-8")
     public void encoding_utf8() throws Exception {
         encoding("unicode-1-1-utf-8");
         encoding("utf-8");
@@ -89,8 +74,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "ibm866",
-            IE = "no TextDecoder")
+    @Alerts("ibm866")
     public void encoding_ibm866() throws Exception {
         encoding("866");
         encoding("cp866");
@@ -102,8 +86,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "iso-8859-2",
-            IE = "no TextDecoder")
+    @Alerts("iso-8859-2")
     public void encoding_iso_8859_2() throws Exception {
         encoding("csisolatin2");
         encoding("iso-8859-2");
@@ -120,8 +103,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "iso-8859-3",
-            IE = "no TextDecoder")
+    @Alerts("iso-8859-3")
     public void encoding_iso_8859_3() throws Exception {
         encoding("csisolatin3");
         encoding("iso-8859-3");
@@ -138,8 +120,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "iso-8859-4",
-            IE = "no TextDecoder")
+    @Alerts("iso-8859-4")
     public void encoding_iso_8859_4() throws Exception {
         encoding("csisolatin4");
         encoding("iso-8859-4");
@@ -156,8 +137,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "iso-8859-5",
-            IE = "no TextDecoder")
+    @Alerts("iso-8859-5")
     public void encoding_iso_8859_5() throws Exception {
         encoding("csisolatincyrillic");
         encoding("cyrillic");
@@ -172,8 +152,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "iso-8859-6",
-            IE = "no TextDecoder")
+    @Alerts("iso-8859-6")
     public void encoding_iso_8859_6() throws Exception {
         encoding("arabic");
         encoding("asmo-708");
@@ -195,8 +174,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "iso-8859-7",
-            IE = "no TextDecoder")
+    @Alerts("iso-8859-7")
     public void encoding_iso_8859_7() throws Exception {
         encoding("csisolatingreek");
         encoding("ecma-118");
@@ -216,8 +194,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "iso-8859-8",
-            IE = "no TextDecoder")
+    @Alerts("iso-8859-8")
     public void encoding_iso_8859_8() throws Exception {
         encoding("csiso88598e");
         encoding("csisolatinhebrew");
@@ -236,9 +213,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "iso-8859-8-i",
-            IE = "no TextDecoder")
-    @NotYetImplemented({CHROME, EDGE, FF, FF_ESR})
+    @Alerts("iso-8859-8-i")
     public void encoding_iso_8859_8i() throws Exception {
         encoding("csiso88598i");
         encoding("iso-8859-8-i");
@@ -249,9 +224,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "iso-8859-10",
-            IE = "no TextDecoder")
-    @NotYetImplemented({CHROME, EDGE, FF, FF_ESR})
+    @Alerts("iso-8859-10")
     public void encoding_iso_8859_10() throws Exception {
         encoding("csisolatin6");
         encoding("iso-8859-10");
@@ -266,8 +239,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "iso-8859-13",
-            IE = "no TextDecoder")
+    @Alerts("iso-8859-13")
     public void encoding_iso_8859_13() throws Exception {
         encoding("iso-8859-13");
         encoding("iso8859-13");
@@ -278,9 +250,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "iso-8859-14",
-            IE = "no TextDecoder")
-    @NotYetImplemented({CHROME, EDGE, FF, FF_ESR})
+    @Alerts("iso-8859-14")
     public void encoding_iso_8859_14() throws Exception {
         encoding("iso-8859-14");
         encoding("iso8859-14");
@@ -291,8 +261,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "iso-8859-15",
-            IE = "no TextDecoder")
+    @Alerts("iso-8859-15")
     public void encoding_iso_8859_15() throws Exception {
         encoding("csisolatin9");
         encoding("iso-8859-15");
@@ -306,8 +275,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "exception",
-            IE = "no TextDecoder")
+    @Alerts("RangeError")
     public void encoding_iso_8859_15_ex() throws Exception {
         encoding("latin9");
     }
@@ -316,9 +284,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "iso-8859-16",
-            IE = "no TextDecoder")
-    @NotYetImplemented({CHROME, EDGE, FF, FF_ESR})
+    @Alerts("iso-8859-16")
     public void encoding_iso_8859_16() throws Exception {
         encoding("iso-8859-16");
     }
@@ -327,8 +293,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "koi8-r",
-            IE = "no TextDecoder")
+    @Alerts("koi8-r")
     public void encoding_koi8_r() throws Exception {
         encoding("cskoi8r");
         encoding("koi");
@@ -341,8 +306,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "koi8-u",
-            IE = "no TextDecoder")
+    @Alerts("koi8-u")
     public void encoding_koi8_u() throws Exception {
         encoding("koi8-u");
     }
@@ -351,8 +315,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "macintosh",
-            IE = "no TextDecoder")
+    @Alerts("macintosh")
     public void encoding_macintosh() throws Exception {
         encoding("csmacintosh");
         encoding("mac");
@@ -364,8 +327,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "windows-874",
-            IE = "no TextDecoder")
+    @Alerts("windows-874")
     public void encoding_windows_874() throws Exception {
         encoding("dos-874");
         encoding("iso-8859-11");
@@ -379,8 +341,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "windows-1250",
-            IE = "no TextDecoder")
+    @Alerts("windows-1250")
     public void encoding_windows_1250() throws Exception {
         encoding("cp1250");
         encoding("windows-1250");
@@ -391,8 +352,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "windows-1251",
-            IE = "no TextDecoder")
+    @Alerts("windows-1251")
     public void encoding_windows_1251() throws Exception {
         encoding("cp1251");
         encoding("windows-1251");
@@ -403,8 +363,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "windows-1252",
-            IE = "no TextDecoder")
+    @Alerts("windows-1252")
     public void encoding_windows_1252() throws Exception {
         encoding("ansi_x3.4-1968");
         encoding("ascii");
@@ -429,8 +388,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "windows-1253",
-            IE = "no TextDecoder")
+    @Alerts("windows-1253")
     public void encoding_windows_1253() throws Exception {
         encoding("cp1253");
         encoding("windows-1253");
@@ -441,8 +399,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "windows-1254",
-            IE = "no TextDecoder")
+    @Alerts("windows-1254")
     public void encoding_windows_1254() throws Exception {
         encoding("cp1254");
         encoding("csisolatin5");
@@ -462,8 +419,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "windows-1255",
-            IE = "no TextDecoder")
+    @Alerts("windows-1255")
     public void encoding_windows_1255() throws Exception {
         encoding("cp1255");
         encoding("windows-1255");
@@ -474,8 +430,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "windows-1256",
-            IE = "no TextDecoder")
+    @Alerts("windows-1256")
     public void encoding_windows_1256() throws Exception {
         encoding("cp1256");
         encoding("windows-1256");
@@ -486,8 +441,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "windows-1257",
-            IE = "no TextDecoder")
+    @Alerts("windows-1257")
     public void encoding_windows_1257() throws Exception {
         encoding("cp1257");
         encoding("windows-1257");
@@ -498,8 +452,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "windows-1258",
-            IE = "no TextDecoder")
+    @Alerts("windows-1258")
     public void encoding_windows_1258() throws Exception {
         encoding("cp1258");
         encoding("windows-1258");
@@ -510,8 +463,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "x-mac-cyrillic",
-            IE = "no TextDecoder")
+    @Alerts("x-mac-cyrillic")
     public void encoding_x_mac_cyrillic() throws Exception {
         encoding("x-mac-cyrillic");
         encoding("x-mac-ukrainian");
@@ -521,8 +473,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "gbk",
-            IE = "no TextDecoder")
+    @Alerts("gbk")
     public void encoding_gbk() throws Exception {
         encoding("chinese");
         encoding("csgb2312");
@@ -539,8 +490,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "gb18030",
-            IE = "no TextDecoder")
+    @Alerts("gb18030")
     public void encoding_gb18030() throws Exception {
         encoding("gb18030");
     }
@@ -549,8 +499,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "exception",
-            IE = "no TextDecoder")
+    @Alerts("RangeError")
     public void encoding_hz_gb_2312() throws Exception {
         encoding("hz-gb-2312");
     }
@@ -559,8 +508,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "big5",
-            IE = "no TextDecoder")
+    @Alerts("big5")
     public void encoding_big5() throws Exception {
         encoding("big5");
         encoding("big5-hkscs");
@@ -573,8 +521,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "euc-jp",
-            IE = "no TextDecoder")
+    @Alerts("euc-jp")
     public void encoding_euc_jp() throws Exception {
         encoding("cseucpkdfmtjapanese");
         encoding("euc-jp");
@@ -585,8 +532,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "iso-2022-jp",
-            IE = "no TextDecoder")
+    @Alerts("iso-2022-jp")
     public void encoding_iso_2022_jp() throws Exception {
         encoding("csiso2022jp");
         encoding("iso-2022-jp");
@@ -596,8 +542,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "shift_jis",
-            IE = "no TextDecoder")
+    @Alerts("shift_jis")
     public void encoding_shift_jis() throws Exception {
         encoding("csshiftjis");
         encoding("ms_kanji");
@@ -612,8 +557,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "euc-kr",
-            IE = "no TextDecoder")
+    @Alerts("euc-kr")
     public void encoding_euc_kr() throws Exception {
         encoding("cseuckr");
         encoding("csksc56011987");
@@ -631,8 +575,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "exception",
-            IE = "no TextDecoder")
+    @Alerts("RangeError")
     public void encoding_iso_2022_kr() throws Exception {
         encoding("csiso2022kr");
         encoding("iso-2022-kr");
@@ -642,8 +585,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "utf-16be",
-            IE = "no TextDecoder")
+    @Alerts("utf-16be")
     public void encoding_utf_16be() throws Exception {
         encoding("utf-16be");
     }
@@ -652,8 +594,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "utf-16le",
-            IE = "no TextDecoder")
+    @Alerts("utf-16le")
     public void encoding_utf_16le() throws Exception {
         encoding("utf-16");
         encoding("utf-16le");
@@ -663,9 +604,7 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "x-user-defined",
-            IE = "no TextDecoder")
-    @NotYetImplemented({CHROME, EDGE, FF, FF_ESR})
+    @Alerts("x-user-defined")
     public void encoding_x_user_defined() throws Exception {
         encoding("x-user-defined");
     }
@@ -674,27 +613,23 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "exception",
-            IE = "no TextDecoder")
+    @Alerts("RangeError")
     public void encoding_replacement() throws Exception {
         encoding("iso-2022-cn");
         encoding("iso-2022-cn-ext");
     }
 
     private void encoding(final String encoding) throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION
             + "    function doTest() {\n"
-            + "      if (typeof TextDecoder === 'undefined') {\n"
-            + "        log('no TextDecoder');\n"
-            + "        return;\n"
-            + "      };\n"
             + "      try {\n"
             + "        enc = new TextDecoder('" + encoding + "');\n"
             + "        log(enc.encoding);\n"
-            + "      } catch(e) { log('exception'); }\n"
+            + "      } catch(e) { logEx(e); }\n"
             + "    }\n"
             + "  </script>\n"
             + "</head>\n"
@@ -708,19 +643,16 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = {"0", "8", "72", "116"},
-            IE = "no TextEncoder")
+    @Alerts({"0", "8", "72", "116"})
     public void encode() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION
             + "    function doTest() {\n"
-            + "      if (typeof TextEncoder === 'undefined') {\n"
-            + "        log('no TextEncoder');\n"
-            + "        return;\n"
-            + "      };\n"
             + "      var enc = new TextEncoder();\n"
+
             + "      var encoded = enc.encode('');\n"
             + "      log(encoded.length);\n"
 
@@ -741,24 +673,24 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "HtmlUnit",
-            IE = "no TextDecoder")
+    @Alerts({"HtmlUnit", "mlU"})
     public void decode() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION
             + "    function doTest() {\n"
-            + "      if (typeof TextDecoder === 'undefined') {\n"
-            + "        log('no TextDecoder');\n"
-            + "        return;\n"
-            + "      };\n"
             + "      var enc = new TextEncoder();\n"
             + "      var encoded = enc.encode('HtmlUnit');\n"
 
             + "      var dec = new TextDecoder('utf-8');\n"
             + "      var decoded = dec.decode(encoded);\n"
             + "      log(decoded);\n"
+
+            + "      var arrayBuffer = encoded.buffer;\n"
+            + "      var typedArray = new Uint8Array(arrayBuffer, 2, 3);\n"
+            + "      log(dec.decode(typedArray));\n"
             + "    }\n"
             + "  </script>\n"
             + "</head>\n"
@@ -772,26 +704,81 @@ public class TextDecoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = {"", "exception"},
-            IE = "no TextDecoder")
+    @Alerts({"", "TypeError"})
     public void decode2() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION
             + "    function doTest() {\n"
-            + "      if (typeof TextDecoder === 'undefined') {\n"
-            + "        log('no TextDecoder');\n"
-            + "        return;\n"
-            + "      };\n"
             + "      var dec = new TextDecoder('utf-8');\n"
             + "      try {\n"
             + "        log(dec.decode(undefined));\n"
-            + "      } catch(e) { log('exception'); }\n"
+            + "      } catch(e) { logEx(e); }\n"
 
             + "      try {\n"
             + "        log(dec.decode(null));\n"
-            + "      } catch(e) { log('exception'); }\n"
+            + "      } catch(e) { logEx(e); }\n"
+            + "    }\n"
+            + "  </script>\n"
+            + "</head>\n"
+            + "<body onload='doTest()'>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts("RangeError")
+    public void decodeReplacement() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<head>\n"
+            + "  <script>\n"
+            + LOG_TITLE_FUNCTION
+            + "    function doTest() {\n"
+            + "      try {\n"
+            + "        var dec = new TextDecoder('iso-2022-kr');\n"
+            + "      } catch(e) { logEx(e); }\n"
+            + "    }\n"
+            + "  </script>\n"
+            + "</head>\n"
+            + "<body onload='doTest()'>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts({"", "ex-null", "TypeError", "\uf7cf!"})
+    public void decodeXuserDefined() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<head>\n"
+            + "  <script>\n"
+            + LOG_TITLE_FUNCTION
+            + "    function doTest() {\n"
+            + "      var dec = new TextDecoder('x-user-defined');\n"
+
+            + "      try {\n"
+            + "        log(dec.decode(undefined));\n"
+            + "      } catch(e) { log('ex-undefined'); logEx(e); }\n"
+
+            + "      try {\n"
+            + "        log(dec.decode(null));\n"
+            + "      } catch(e) { log('ex-null'); logEx(e); }\n"
+
+            + "      try {\n"
+            + "        var bytes = new Uint8Array([ 207, 33]);"
+            + "        log(dec.decode(bytes));\n"
+            + "      } catch(e) { logEx(e); }\n"
             + "    }\n"
             + "  </script>\n"
             + "</head>\n"

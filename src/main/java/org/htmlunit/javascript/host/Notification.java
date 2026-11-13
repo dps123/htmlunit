@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,7 @@
  */
 package org.htmlunit.javascript.host;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
+import org.htmlunit.corejs.javascript.Scriptable;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstant;
 import org.htmlunit.javascript.configuration.JsxConstructor;
@@ -26,29 +22,28 @@ import org.htmlunit.javascript.configuration.JsxStaticFunction;
 import org.htmlunit.javascript.configuration.JsxStaticGetter;
 import org.htmlunit.javascript.host.event.EventTarget;
 
-import org.htmlunit.corejs.javascript.Scriptable;
-
 /**
- * A Notification.
+ * JavaScript host object for {@code Notification}.
  *
- * @see <a href="https://developer.mozilla.org/en/docs/Web/API/notification">
- * MDN - Notification</a>
  * @author Marc Guillemot
  * @author Ronald Brill
  * @author Ahmed Ashour
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/Notification">MDN Documentation</a>
  */
-@JsxClass({CHROME, EDGE, FF, FF_ESR})
+@JsxClass
 public class Notification extends EventTarget {
 
     /**
      * The maximum number of actions supported.
      */
-    @JsxConstant({CHROME, EDGE})
-    public static final short maxActions            = 2;
+    @JsxConstant
+    public static final int maxActions = 2;
 
     /**
-     * JavaScript constructor.
-     * @param title the title
+     * Creates an instance of this object.
+     *
+     * @param title the notification title
      */
     @JsxConstructor
     public void jsConstructor(final String title) {
@@ -57,8 +52,9 @@ public class Notification extends EventTarget {
 
     /**
      * Returns the {@code permission} static property.
+     *
      * @param thisObj the scriptable
-     * @return the {@code permission} static property
+     * @return the current permission level
      */
     @JsxStaticGetter
     public static String getPermission(final Scriptable thisObj) {
@@ -66,7 +62,7 @@ public class Notification extends EventTarget {
     }
 
     /**
-     * Asks the user for permission.
+     * Requests the user's permission to display notifications.
      */
     @JsxStaticFunction
     public static void requestPermission() {

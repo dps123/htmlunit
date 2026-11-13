@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +14,8 @@
  */
 package org.htmlunit.html;
 
+import java.io.Serializable;
+
 import org.w3c.dom.Node;
 import org.w3c.dom.traversal.NodeFilter;
 import org.w3c.dom.traversal.NodeIterator;
@@ -24,7 +26,7 @@ import org.w3c.dom.traversal.NodeIterator;
  * @author Ahmed Ashour
  * @author Ronald Brill
  */
-public class DomNodeIterator implements NodeIterator {
+public class DomNodeIterator implements NodeIterator, Serializable {
 
     private final DomNode root_;
     private final int whatToShow_;
@@ -38,7 +40,7 @@ public class DomNodeIterator implements NodeIterator {
      *
      * @param root The root node at which to begin the {@link NodeIterator}'s traversal
      * @param whatToShow an optional int representing a bitmask created by combining
-     * the constant properties of {@link NodeFilter}
+     *        the constant properties of {@link NodeFilter}
      * @param expandEntityReferences If false, the contents of
      *          EntityReference nodes are not present in the logical view.
      * @param filter an object implementing the {@link NodeFilter} interface
@@ -120,46 +122,28 @@ public class DomNodeIterator implements NodeIterator {
     private DomNode traverse(final boolean next) {
         DomNode node = referenceNode_;
         boolean beforeNode = pointerBeforeReferenceNode_;
+
         do {
             if (next) {
                 if (beforeNode) {
                     beforeNode = false;
                 }
-                else {
-                    final DomNode leftChild = getChild(node, true);
-                    if (leftChild == null) {
-                        final DomNode rightSibling = getSibling(node, false);
-                        if (rightSibling == null) {
-                            node = getFirstUncleNode(node);
-                        }
-                        else {
-                            node = rightSibling;
-                        }
+                else if (node != null) {
+                    final DomNode firstChild = node.getFirstChild();
+                    if (firstChild != null) {
+                        node = firstChild;
                     }
                     else {
-                        node = leftChild;
+                        final DomNode nextSibling = node.getNextSibling();
+                        node = nextSibling == null ? getFirstUncleNode(node) : nextSibling;
                     }
                 }
             }
             else {
                 if (beforeNode) {
-                    final DomNode left = getSibling(node, true);
-                    if (left == null) {
-                        final Node parent = node.getParentNode();
-                        if (parent == null) {
-                            node = null;
-                        }
-                    }
-
-                    DomNode follow = left;
-                    if (follow != null) {
-                        while (follow.hasChildNodes()) {
-                            final DomNode toFollow = getChild(follow, false);
-                            if (toFollow == null) {
-                                break;
-                            }
-                            follow = toFollow;
-                        }
+                    DomNode follow = node == null ? null : node.getPreviousSibling();
+                    while (follow != null && follow.hasChildNodes()) {
+                        follow = follow.getLastChild();
                     }
                     node = follow;
                 }
@@ -168,9 +152,7 @@ public class DomNodeIterator implements NodeIterator {
                 }
             }
         }
-        while (node != null && (!(isNodeVisible(node)) || !isAccepted(node)));
-
-        //apply filter here and loop
+        while (node != null && (!isNodeVisible(node) || !isAccepted(node)));
 
         referenceNode_ = node;
         pointerBeforeReferenceNode_ = beforeNode;
@@ -192,53 +174,19 @@ public class DomNodeIterator implements NodeIterator {
      * Helper method to get the first uncle node in document order (preorder
      * traversal) from the given node.
      */
-    private DomNode getFirstUncleNode(final DomNode node) {
-        if (node == null || node == root_) {
-            return null;
+    private DomNode getFirstUncleNode(final DomNode startNode) {
+        DomNode curr = startNode;
+        while (curr != null && curr != root_) {
+            final DomNode parent = curr.getParentNode();
+            if (parent == null || parent == root_) {
+                return null;
+            }
+            final DomNode uncle = parent.getNextSibling();
+            if (uncle != null) {
+                return uncle;
+            }
+            curr = parent;
         }
-
-        final DomNode parent = node.getParentNode();
-        if (parent == null || parent == root_) {
-            return null;
-        }
-
-        final DomNode uncle = getSibling(parent, false);
-        if (uncle != null) {
-            return uncle;
-        }
-
-        return getFirstUncleNode(parent);
-    }
-
-    private static DomNode getChild(final DomNode node, final boolean lookLeft) {
-        if (node == null) {
-            return null;
-        }
-
-        final DomNode child;
-        if (lookLeft) {
-            child = node.getFirstChild();
-        }
-        else {
-            child = node.getLastChild();
-        }
-
-        return child;
-    }
-
-    private static DomNode getSibling(final DomNode node, final boolean lookLeft) {
-        if (node == null) {
-            return null;
-        }
-
-        final DomNode sibling;
-        if (lookLeft) {
-            sibling = node.getPreviousSibling();
-        }
-        else {
-            sibling = node.getNextSibling();
-        }
-
-        return sibling;
+        return null;
     }
 }

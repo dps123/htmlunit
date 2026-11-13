@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,19 @@
  */
 package org.htmlunit.javascript.host.canvas;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
 import java.io.IOException;
+import java.util.Locale;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
+import org.htmlunit.corejs.javascript.Context;
+import org.htmlunit.corejs.javascript.Function;
+import org.htmlunit.corejs.javascript.Scriptable;
+import org.htmlunit.corejs.javascript.VarScope;
 import org.htmlunit.html.HtmlImage;
 import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
@@ -36,15 +36,13 @@ import org.htmlunit.javascript.host.html.HTMLCanvasElement;
 import org.htmlunit.javascript.host.html.HTMLImageElement;
 import org.htmlunit.platform.Platform;
 import org.htmlunit.platform.canvas.rendering.RenderingBackend;
+import org.htmlunit.platform.canvas.rendering.RenderingBackend.LineCap;
+import org.htmlunit.platform.canvas.rendering.RenderingBackend.LineJoin;
+import org.htmlunit.platform.canvas.rendering.RenderingBackend.TextAlign;
+import org.htmlunit.platform.canvas.rendering.RenderingBackend.TextBaseline;
 import org.htmlunit.platform.canvas.rendering.RenderingBackend.WindingRule;
 import org.htmlunit.protocol.data.DataURLConnection;
 import org.htmlunit.util.MimeType;
-
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.Function;
-import org.htmlunit.corejs.javascript.ScriptRuntime;
-import org.htmlunit.corejs.javascript.Scriptable;
-import org.htmlunit.corejs.javascript.Undefined;
 
 /**
  * A JavaScript object for {@code CanvasRenderingContext2D}.
@@ -53,22 +51,30 @@ import org.htmlunit.corejs.javascript.Undefined;
  * @author Marc Guillemot
  * @author Frank Danek
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D">MDN Documentation</a>
  */
 @JsxClass
 public class CanvasRenderingContext2D extends HtmlUnitScriptable {
 
     private static final Log LOG = LogFactory.getLog(CanvasRenderingContext2D.class);
 
-    private final HTMLCanvasElement canvas_;
+    private HTMLCanvasElement canvas_;
     private RenderingBackend renderingBackend_;
 
     /**
      * Default constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
     public CanvasRenderingContext2D() {
-        canvas_ = null;
-        renderingBackend_ = null;
+        super();
+    }
+
+    /**
+     * JavaScript constructor.
+     */
+    @JsxConstructor
+    public void jsConstructor() {
+        // nothing to do
     }
 
     /**
@@ -76,6 +82,7 @@ public class CanvasRenderingContext2D extends HtmlUnitScriptable {
      * @param canvas the {@link HTMLCanvasElement}
      */
     public CanvasRenderingContext2D(final HTMLCanvasElement canvas) {
+        super();
         canvas_ = canvas;
         renderingBackend_ = null;
     }
@@ -92,7 +99,7 @@ public class CanvasRenderingContext2D extends HtmlUnitScriptable {
 
     /**
      * Specifies the alpha (transparency) value that is applied to shapes and images
-     * before they are drawn onto the canvas..
+     * before they are drawn onto the canvas.
      * @return the {@code globalAlpha} property
      */
     @JsxGetter
@@ -102,7 +109,7 @@ public class CanvasRenderingContext2D extends HtmlUnitScriptable {
 
     /**
      * Sets the {@code globalAlpha} property.
-     * @param globalAlpha the {@code globalAlpha} property
+     * @param globalAlpha the {@code globalAlpha} property value
      */
     @JsxSetter
     public void setGlobalAlpha(final double globalAlpha) {
@@ -114,14 +121,14 @@ public class CanvasRenderingContext2D extends HtmlUnitScriptable {
      * @return the {@code fillStyle} property
      */
     @JsxGetter
-    public Object getFillStyle() {
+    public HtmlUnitScriptable getFillStyle() {
         LOG.info("CanvasRenderingContext2D.getFillStyle() not yet implemented");
         return null;
     }
 
     /**
      * Sets the {@code fillStyle} property.
-     * @param fillStyle the {@code fillStyle} property
+     * @param fillStyle the {@code fillStyle} property value
      */
     @JsxSetter
     public void setFillStyle(final String fillStyle) {
@@ -133,14 +140,14 @@ public class CanvasRenderingContext2D extends HtmlUnitScriptable {
      * @return the {@code strokeStyle} property
      */
     @JsxGetter
-    public Object getStrokeStyle() {
+    public HtmlUnitScriptable getStrokeStyle() {
         LOG.info("CanvasRenderingContext2D.getStrokeStyle() not yet implemented");
         return null;
     }
 
     /**
      * Sets the {@code strokeStyle} property.
-     * @param strokeStyle the {@code strokeStyle} property
+     * @param strokeStyle the {@code strokeStyle} property value
      */
     @JsxSetter
     public void setStrokeStyle(final String strokeStyle) {
@@ -158,14 +165,14 @@ public class CanvasRenderingContext2D extends HtmlUnitScriptable {
 
     /**
      * Sets the {@code lineWidth} property.
-     * @param lineWidth the {@code lineWidth} property
+     * @param lineWidth the {@code lineWidth} property value
      */
     @JsxSetter
     public void setLineWidth(final Object lineWidth) {
-        if (!Undefined.isUndefined(lineWidth)) {
-            final double width = Context.toNumber(lineWidth);
+        if (!JavaScriptEngine.isUndefined(lineWidth)) {
+            final double width = JavaScriptEngine.toNumber(lineWidth);
             if (!Double.isNaN(width)) {
-                getRenderingBackend().setLineWidth((int) width);
+                getRenderingBackend().setLineWidth((float) width);
             }
         }
     }
@@ -237,41 +244,43 @@ public class CanvasRenderingContext2D extends HtmlUnitScriptable {
     /**
      * Creates a new clipping region.
      * @param context the JavaScript context
+     * @param scope the scope
      * @param thisObj the scriptable
      * @param args the arguments passed into the method
      * @param function the function
      */
     @JsxFunction
-    public static void clip(final Context context, final Scriptable thisObj, final Object[] args,
-        final Function function) {
-        if (!(thisObj instanceof CanvasRenderingContext2D)) {
-            throw Context.reportRuntimeError(
-                    "CanvasRenderingContext2D.getImageData() failed - this is not a CanvasRenderingContext2D");
+    public static void clip(final Context context, final VarScope scope,
+            final Scriptable thisObj, final Object[] args, final Function function) {
+        if (!(thisObj instanceof CanvasRenderingContext2D canvas)) {
+            throw JavaScriptEngine.reportRuntimeError(
+                    "CanvasRenderingContext2D.clip() failed - this is not a CanvasRenderingContext2D");
         }
-        final CanvasRenderingContext2D canvas = (CanvasRenderingContext2D) thisObj;
 
         RenderingBackend.WindingRule windingRule = WindingRule.NON_ZERO;
         if (args.length == 1) {
-            final String windingRuleParam = ScriptRuntime.toString(args[0]);
+            final String windingRuleParam = JavaScriptEngine.toString(args[0]);
             if ("evenodd".contentEquals(windingRuleParam)) {
                 windingRule = WindingRule.EVEN_ODD;
             }
             canvas.getRenderingBackend().clip(windingRule, null);
+            return;
         }
 
         if (args.length > 1) {
             if (!(args[0] instanceof Path2D)) {
-                throw Context.reportRuntimeError(
+                throw JavaScriptEngine.reportRuntimeError(
                         "CanvasRenderingContext2D.clip() failed - the first parameter has to be a Path2D");
             }
 
-            final String windingRuleParam = ScriptRuntime.toString(args[1]);
+            final String windingRuleParam = JavaScriptEngine.toString(args[1]);
             if ("evenodd".contentEquals(windingRuleParam)) {
                 windingRule = WindingRule.EVEN_ODD;
             }
 
             LOG.info("CanvasRenderingContext2D.clip(path, fillRule) not yet implemented");
             // canvas.getRenderingBackend().clip(windingRule, (Path2D) args[0]);
+            return;
         }
 
         canvas.getRenderingBackend().clip(WindingRule.NON_ZERO, null);
@@ -287,42 +296,41 @@ public class CanvasRenderingContext2D extends HtmlUnitScriptable {
 
     /**
      * Returns the {@code ImageData} object.
-     * this may accept a variable number of arguments.
+     * This may accept a variable number of arguments.
      * @param context the JavaScript context
+     * @param scope the scope
      * @param thisObj the scriptable
      * @param args the arguments passed into the method
      * @param function the function
      * @return the {@code ImageData} object
      */
     @JsxFunction
-    public static ImageData createImageData(final Context context, final Scriptable thisObj, final Object[] args,
-        final Function function) {
-        if (!(thisObj instanceof CanvasRenderingContext2D)) {
-            throw Context.reportRuntimeError(
-                    "CanvasRenderingContext2D.getImageData() failed - this is not a CanvasRenderingContext2D");
+    public static ImageData createImageData(final Context context, final VarScope scope,
+            final Scriptable thisObj, final Object[] args, final Function function) {
+        if (!(thisObj instanceof CanvasRenderingContext2D canvas)) {
+            throw JavaScriptEngine.reportRuntimeError(
+                    "CanvasRenderingContext2D.createImageData() failed - this is not a CanvasRenderingContext2D");
         }
-        final CanvasRenderingContext2D canvas = (CanvasRenderingContext2D) thisObj;
 
-        if (args.length > 0 && args[0] instanceof ImageData) {
-            final ImageData imageDataParameter = (ImageData) args[0];
+        if (args.length > 0 && args[0] instanceof ImageData imageDataParameter) {
             final ImageData imageData = new ImageData(null,
                     0, 0, imageDataParameter.getWidth(), imageDataParameter.getHeight());
-            imageData.setParentScope(canvas.getParentScope());
+            imageData.setParentScope(scope);
             imageData.setPrototype(canvas.getPrototype(imageData.getClass()));
             return imageData;
         }
 
         if (args.length > 1) {
-            final int width = Math.abs((int) ScriptRuntime.toInteger(args, 0));
-            final int height = Math.abs((int) ScriptRuntime.toInteger(args, 1));
+            final int width = Math.abs((int) JavaScriptEngine.toInteger(args, 0));
+            final int height = Math.abs((int) JavaScriptEngine.toInteger(args, 1));
             final ImageData imageData = new ImageData(null, 0, 0, width, height);
             imageData.setParentScope(canvas.getParentScope());
             imageData.setPrototype(canvas.getPrototype(imageData.getClass()));
             return imageData;
         }
 
-        throw Context.reportRuntimeError(
-                "CanvasRenderingContext2D.getImageData() failed - "
+        throw JavaScriptEngine.reportRuntimeError(
+                "CanvasRenderingContext2D.createImageData() failed - "
                 + "wrong parameters given (" + StringUtils.join(args, ", ") + ")");
     }
 
@@ -330,15 +338,13 @@ public class CanvasRenderingContext2D extends HtmlUnitScriptable {
      * Creates linear gradient.
      * @param x0 the x0
      * @param y0 the y0
-     * @param r0 the r0
      * @param x1 the x1
      * @param y1 the y1
-     * @param r1 the r1
      * @return the new CanvasGradient
      */
     @JsxFunction
-    public CanvasGradient createLinearGradient(final double x0, final double y0, final double r0, final double x1,
-            final Object y1, final Object r1) {
+    public CanvasGradient createLinearGradient(final double x0, final double y0, final double x1,
+            final Object y1) {
         final CanvasGradient canvasGradient = new CanvasGradient();
         canvasGradient.setParentScope(getParentScope());
         canvasGradient.setPrototype(getPrototype(canvasGradient.getClass()));
@@ -392,23 +398,22 @@ public class CanvasRenderingContext2D extends HtmlUnitScriptable {
     public void drawImage(final Object image, final int sx, final int sy, final Object sWidth, final Object sHeight,
             final Object dx, final Object dy, final Object dWidth, final Object dHeight) {
 
-        if (image instanceof HTMLImageElement) {
-            final HTMLImageElement imageElem = (HTMLImageElement) image;
+        if (image instanceof HTMLImageElement imageElem) {
             try {
                 final org.htmlunit.platform.image.ImageData imageData
                             = ((HtmlImage) imageElem.getDomNodeOrDie()).getImageData();
 
                 // 3 arguments
                 //   void ctx.drawImage(image, dx, dy);
-                if (Undefined.isUndefined(sWidth)) {
+                if (JavaScriptEngine.isUndefined(sWidth)) {
                     getRenderingBackend().drawImage(imageData, 0, 0, null, null, sx, sy, null, null);
                 }
 
                 // 5 arguments
                 //   void ctx.drawImage(image, dx, dy, dWidth, dHeight);
-                else if (Undefined.isUndefined(dx)) {
-                    final int dWidthI = ScriptRuntime.toInt32(sWidth);
-                    final int dHeightI = ScriptRuntime.toInt32(sHeight);
+                else if (JavaScriptEngine.isUndefined(dx)) {
+                    final int dWidthI = JavaScriptEngine.toInt32(sWidth);
+                    final int dHeightI = JavaScriptEngine.toInt32(sHeight);
 
                     getRenderingBackend().drawImage(imageData, 0, 0, null, null, sx, sy, dWidthI, dHeightI);
                 }
@@ -416,21 +421,21 @@ public class CanvasRenderingContext2D extends HtmlUnitScriptable {
                 // all 9 arguments
                 //   void ctx.drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
                 else {
-                    final int sWidthI = ScriptRuntime.toInt32(sWidth);
-                    final int sHeightI = ScriptRuntime.toInt32(sHeight);
+                    final int sWidthI = JavaScriptEngine.toInt32(sWidth);
+                    final int sHeightI = JavaScriptEngine.toInt32(sHeight);
 
-                    final int dxI = ScriptRuntime.toInt32(dx);
-                    final int dyI = ScriptRuntime.toInt32(dy);
-                    final int dWidthI = ScriptRuntime.toInt32(dWidth);
-                    final int dHeightI = ScriptRuntime.toInt32(dHeight);
+                    final int dxI = JavaScriptEngine.toInt32(dx);
+                    final int dyI = JavaScriptEngine.toInt32(dy);
+                    final int dWidthI = JavaScriptEngine.toInt32(dWidth);
+                    final int dHeightI = JavaScriptEngine.toInt32(dHeight);
 
                     getRenderingBackend().drawImage(imageData,
                             sx, sy, sWidthI, sHeightI, dxI, dyI, dWidthI, dHeightI);
                 }
             }
-            catch (final IOException ioe) {
-                LOG.info("There is no ImageReader available for you imgage with src '" + imageElem.getSrc() + "'"
-                        + "Please have a look at https://htmlunit.sourceforge.io/images-howto.html "
+            catch (final IOException ex) {
+                LOG.info("There is no ImageReader available for your image with src '" + imageElem.getSrc() + "'. "
+                        + "Please have a look at https://www.htmlunit.org/images-howto.html "
                         + "for a possible solution.");
             }
         }
@@ -442,15 +447,14 @@ public class CanvasRenderingContext2D extends HtmlUnitScriptable {
      * @param type an optional type
      * @return the dataURL
      */
-    public String toDataURL(String type) {
+    public String toDataURL(final String type) {
         try {
-            if (type == null) {
-                type = MimeType.IMAGE_PNG;
-            }
-            return DataURLConnection.DATA_PREFIX + type + ";base64," + getRenderingBackend().encodeToString(type);
+            final String mimeType = type == null ? MimeType.IMAGE_PNG : type;
+            return DataURLConnection.DATA_PREFIX + mimeType + ";base64,"
+                    + getRenderingBackend().encodeToString(mimeType);
         }
-        catch (final IOException ioe) {
-            throw Context.throwAsScriptRuntimeEx(ioe);
+        catch (final IOException ex) {
+            throw JavaScriptEngine.throwAsScriptRuntimeEx(ex);
         }
     }
 
@@ -465,7 +469,7 @@ public class CanvasRenderingContext2D extends HtmlUnitScriptable {
      * @param endAngle the endAngle
      * @param anticlockwise the anticlockwise
      */
-    @JsxFunction({CHROME, EDGE, FF, FF_ESR})
+    @JsxFunction
     public void ellipse(final double x, final double y,
                     final double radiusX, final double radiusY,
                     final double rotation, final double startAngle, final double endAngle,
@@ -475,10 +479,48 @@ public class CanvasRenderingContext2D extends HtmlUnitScriptable {
 
     /**
      * Fills the shape.
+     * @param context the context
+     * @param scope the scope
+     * @param thisObj this object
+     * @param args the arguments
+     * @param function the function
      */
     @JsxFunction
-    public void fill() {
-        getRenderingBackend().fill();
+    public static void fill(final Context context, final VarScope scope,
+            final Scriptable thisObj, final Object[] args, final Function function) {
+        if (!(thisObj instanceof CanvasRenderingContext2D renderingCtx)) {
+            throw JavaScriptEngine.reportRuntimeError(
+                    "CanvasRenderingContext2D.fill() failed - this is not a CanvasRenderingContext2D");
+        }
+
+        // Determine which argument (if any) is the fill rule string.
+        // Signature 1: fill(optional CanvasFillRule fillRule)
+        // Signature 2: fill(Path2D path, optional CanvasFillRule fillRule)
+        String fillRuleStr = null;
+        if (args.length > 1) {
+            fillRuleStr = JavaScriptEngine.toString(args[1]);
+        }
+        else if (args.length > 0) {
+            fillRuleStr = JavaScriptEngine.toString(args[0]);
+        }
+
+        RenderingBackend.WindingRule windingRule = RenderingBackend.WindingRule.NON_ZERO;
+        if (fillRuleStr != null) {
+            if ("evenodd".equals(fillRuleStr)) {
+                windingRule = RenderingBackend.WindingRule.EVEN_ODD;
+            }
+            else if (!"nonzero".equals(fillRuleStr)) {
+                // Per spec: unrecognised values are ignored entirely.
+                // Since fill() has no persistent fill-rule state, we just
+                // use the default nonzero — which is already set above.
+                // Log it for debugging purposes.
+                if (LOG.isWarnEnabled()) {
+                    LOG.warn("fill() called with unrecognised fillRule: '" + fillRuleStr + "', using 'nonzero'.");
+                }
+            }
+        }
+
+        renderingCtx.getRenderingBackend().fill(windingRule);
     }
 
     /**
@@ -523,16 +565,16 @@ public class CanvasRenderingContext2D extends HtmlUnitScriptable {
     /**
      * Dummy placeholder.
      */
-    @JsxFunction
-    public void getLineDash() {
+    @JsxFunction(functionName = "getLineDash")
+    public void lineDash() {
         LOG.info("CanvasRenderingContext2D.getLineDash() not yet implemented");
     }
 
     /**
      * Dummy placeholder.
      */
-    @JsxFunction
-    public void getLineData() {
+    @JsxFunction(functionName = "getLineData")
+    public void lineData() {
         LOG.info("CanvasRenderingContext2D.getLineData() not yet implemented");
     }
 
@@ -561,15 +603,14 @@ public class CanvasRenderingContext2D extends HtmlUnitScriptable {
      */
     @JsxFunction
     public TextMetrics measureText(final Object text) {
-        if (text == null || Undefined.isUndefined(text)) {
-            throw Context.throwAsScriptRuntimeEx(
-                    new RuntimeException("Missing argument for CanvasRenderingContext2D.measureText()."));
+        if (text == null || JavaScriptEngine.isUndefined(text)) {
+            throw JavaScriptEngine.typeError("Missing argument for CanvasRenderingContext2D.measureText().");
         }
 
-        final String textValue = Context.toString(text);
+        final String textValue = JavaScriptEngine.toString(text);
 
         // TODO take font into account
-        final int width = textValue.length() * getBrowserVersion().getPixesPerChar();
+        final int width = textValue.length() * getBrowserVersion().getPixelsPerChar();
 
         final TextMetrics metrics = new TextMetrics(width);
         metrics.setParentScope(getParentScope());
@@ -593,13 +634,13 @@ public class CanvasRenderingContext2D extends HtmlUnitScriptable {
      * @param dx horizontal position (x coordinate) at which to place the image data in the destination canvas
      * @param dy vertical position (y coordinate) at which to place the image data in the destination canvas
      * @param dirtyX horizontal position (x coordinate) of the top-left corner
-     *  from which the image data will be extracted. Defaults to 0.
+     *        from which the image data will be extracted. Defaults to 0.
      * @param dirtyY vertical position (y coordinate) of the top-left corner
-     *  from which the image data will be extracted. Defaults to 0.
+     *        from which the image data will be extracted. Defaults to 0.
      * @param dirtyWidth width of the rectangle to be painted.
-     *  Defaults to the width of the image data.
+     *        Defaults to the width of the image data.
      * @param dirtyHeight height of the rectangle to be painted.
-     *  Defaults to the height of the image data.
+     *        Defaults to the height of the image data.
      */
     @JsxFunction
     public void putImageData(final ImageData imageData,
@@ -610,21 +651,23 @@ public class CanvasRenderingContext2D extends HtmlUnitScriptable {
         int dirtyWidthArg = imageData.getWidth();
         int dirtyHeightArg = imageData.getHeight();
 
-        if (!Undefined.isUndefined(dirtyX)) {
-            dirtyXArg = (int) ScriptRuntime.toInteger(dirtyX);
+        if (!JavaScriptEngine.isUndefined(dirtyX)) {
+            dirtyXArg = (int) JavaScriptEngine.toInteger(dirtyX);
 
-            if (Undefined.isUndefined(dirtyY)
-                    || Undefined.isUndefined(dirtyWidth)
-                    || Undefined.isUndefined(dirtyHeight)) {
-                throw Context.reportRuntimeError(
+            if (JavaScriptEngine.isUndefined(dirtyY)
+                    || JavaScriptEngine.isUndefined(dirtyWidth)
+                    || JavaScriptEngine.isUndefined(dirtyHeight)) {
+                throw JavaScriptEngine.reportRuntimeError(
                         "CanvasRenderingContext2D.putImageData() failed - seven parameters expected");
             }
-            dirtyYArg = (int) ScriptRuntime.toInteger(dirtyY);
-            dirtyWidthArg = (int) ScriptRuntime.toInteger(dirtyWidth);
-            dirtyHeightArg = (int) ScriptRuntime.toInteger(dirtyHeight);
+            dirtyYArg = (int) JavaScriptEngine.toInteger(dirtyY);
+            dirtyWidthArg = (int) JavaScriptEngine.toInteger(dirtyWidth);
+            dirtyHeightArg = (int) JavaScriptEngine.toInteger(dirtyHeight);
         }
 
-        getRenderingBackend().putImageData(imageData, dx, dy, dirtyXArg, dirtyYArg, dirtyWidthArg, dirtyHeightArg);
+        getRenderingBackend().putImageData(
+                imageData.getData().getBuffer().getByteBuffer(), imageData.getWidth(), imageData.getHeight(),
+                dx, dy, dirtyXArg, dirtyYArg, dirtyWidthArg, dirtyHeightArg);
     }
 
     /**
@@ -728,7 +771,7 @@ public class CanvasRenderingContext2D extends HtmlUnitScriptable {
      * @param h the height
      */
     @JsxFunction
-    public void strokeRect(final int x, final int y, final int w, final int h) {
+    public void strokeRect(final double x, final double y, final double w, final double h) {
         getRenderingBackend().strokeRect(x, y, w, h);
     }
 
@@ -763,7 +806,7 @@ public class CanvasRenderingContext2D extends HtmlUnitScriptable {
      * @param y the translation distance in the vertical direction
      */
     @JsxFunction
-    public void translate(final int x, final int y) {
+    public void translate(final double x, final double y) {
         getRenderingBackend().translate(x, y);
     }
 
@@ -774,5 +817,165 @@ public class CanvasRenderingContext2D extends HtmlUnitScriptable {
     @JsxGetter
     public HTMLCanvasElement getCanvas() {
         return canvas_;
+    }
+
+    /**
+     * Returns the the shape used to join two line segments where they meet.
+     * There are three possible values for this property: "round", "bevel",
+     * and "miter". The default is "miter".
+     *
+     * @return the the shape used to join two line segments
+     */
+    @JsxGetter
+    public String getLineJoin() {
+        switch (getRenderingBackend().getLineJoin()) {
+            case ROUND:
+                return "round";
+            case BEVEL:
+                return "bevel";
+            default:
+                return "miter";
+        }
+    }
+
+    /**
+     * Sets the {@code lineJoin} property.
+     * @param lineJoin the {@code lineJoin} property value
+     */
+    @JsxSetter
+    public void setLineJoin(final String lineJoin) {
+        switch (lineJoin) {
+            case "round":
+                getRenderingBackend().setLineJoin(LineJoin.ROUND);
+                break;
+            case "bevel":
+                getRenderingBackend().setLineJoin(LineJoin.BEVEL);
+                break;
+            case "miter":
+                getRenderingBackend().setLineJoin(LineJoin.MITER);
+                break;
+            default:
+                // ignore invalid values per spec
+        }
+    }
+
+    /**
+     * Returns the the shape used to join two line segments where they meet.
+     * There are three possible values for this property: "round", "bevel",
+     * and "miter". The default is "miter".
+     *
+     * @return the the shape used to join two line segments
+     */
+    @JsxGetter
+    public String getLineCap() {
+        switch (getRenderingBackend().getLineCap()) {
+            case BUTT:
+                return "butt";
+            case ROUND:
+                return "round";
+            default:
+                return "square";
+        }
+    }
+
+    /**
+     * Sets the {@code lineCap} property.
+     * @param lineCap the {@code lineCap} property value
+     */
+    @JsxSetter
+    public void setLineCap(final String lineCap) {
+        switch (lineCap) {
+            case "butt":
+                getRenderingBackend().setLineCap(LineCap.BUTT);
+                break;
+            case "round":
+                getRenderingBackend().setLineCap(LineCap.ROUND);
+                break;
+            case "square":
+                getRenderingBackend().setLineCap(LineCap.SQUARE);
+                break;
+            default:
+                // ignore invalid values per spec
+        }
+    }
+
+    /**
+     * Returns the text alignment used when drawing text. The possible values are
+     * "start", "end", "left", "right" and "center". The default is "start".
+     *
+     * @return the text alignment
+     */
+    @JsxGetter
+    public String getTextAlign() {
+        return getRenderingBackend().getTextAlign().name().toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * Sets the {@code textAlign} property; invalid values are ignored.
+     * @param textAlign the {@code textAlign} property value
+     */
+    @JsxSetter
+    public void setTextAlign(final String textAlign) {
+        switch (textAlign) {
+            case "start":
+                getRenderingBackend().setTextAlign(TextAlign.START);
+                break;
+            case "end":
+                getRenderingBackend().setTextAlign(TextAlign.END);
+                break;
+            case "left":
+                getRenderingBackend().setTextAlign(TextAlign.LEFT);
+                break;
+            case "right":
+                getRenderingBackend().setTextAlign(TextAlign.RIGHT);
+                break;
+            case "center":
+                getRenderingBackend().setTextAlign(TextAlign.CENTER);
+                break;
+            default:
+                // ignore invalid values per spec
+        }
+    }
+
+    /**
+     * Returns the text baseline used when drawing text. The possible values are
+     * "top", "hanging", "middle", "alphabetic", "ideographic" and "bottom".
+     * The default is "alphabetic".
+     *
+     * @return the text baseline
+     */
+    @JsxGetter
+    public String getTextBaseline() {
+        return getRenderingBackend().getTextBaseline().name().toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * Sets the {@code textBaseline} property; invalid values are ignored.
+     * @param textBaseline the {@code textBaseline} property value
+     */
+    @JsxSetter
+    public void setTextBaseline(final String textBaseline) {
+        switch (textBaseline) {
+            case "top":
+                getRenderingBackend().setTextBaseline(TextBaseline.TOP);
+                break;
+            case "hanging":
+                getRenderingBackend().setTextBaseline(TextBaseline.HANGING);
+                break;
+            case "middle":
+                getRenderingBackend().setTextBaseline(TextBaseline.MIDDLE);
+                break;
+            case "alphabetic":
+                getRenderingBackend().setTextBaseline(TextBaseline.ALPHABETIC);
+                break;
+            case "ideographic":
+                getRenderingBackend().setTextBaseline(TextBaseline.IDEOGRAPHIC);
+                break;
+            case "bottom":
+                getRenderingBackend().setTextBaseline(TextBaseline.BOTTOM);
+                break;
+            default:
+                // ignore invalid values per spec
+        }
     }
 }

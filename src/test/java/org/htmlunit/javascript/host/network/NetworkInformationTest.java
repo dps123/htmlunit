@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,20 +14,15 @@
  */
 package org.htmlunit.javascript.host.network;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.html.HtmlPageTest;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link NetworkInformation}.
  *
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class NetworkInformationTest extends WebDriverTestCase {
 
     /**
@@ -38,7 +33,7 @@ public class NetworkInformationTest extends WebDriverTestCase {
             CHROME = {"[object NetworkInformation]", "undefined", "undefined"},
             EDGE = {"[object NetworkInformation]", "undefined", "undefined"})
     public void navigatorConnection() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -62,7 +57,7 @@ public class NetworkInformationTest extends WebDriverTestCase {
             CHROME = "undefined",
             EDGE = "undefined")
     public void type() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -89,7 +84,7 @@ public class NetworkInformationTest extends WebDriverTestCase {
             CHROME = "undefined",
             EDGE = "undefined")
     public void downlinkMax() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -116,7 +111,7 @@ public class NetworkInformationTest extends WebDriverTestCase {
             CHROME = "4g",
             EDGE = "4g")
     public void effectiveType() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -143,7 +138,7 @@ public class NetworkInformationTest extends WebDriverTestCase {
             CHROME = "10",
             EDGE = "10")
     public void downlink() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -170,7 +165,7 @@ public class NetworkInformationTest extends WebDriverTestCase {
             CHROME = "50",
             EDGE = "50")
     public void rtt() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION

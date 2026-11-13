@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,35 +19,35 @@ import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Composite;
 import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.Shape;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Arc2D;
 import java.awt.geom.Path2D;
+import java.awt.geom.PathIterator;
 import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
-import java.awt.image.ImageObserver;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 
-import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import org.htmlunit.javascript.host.canvas.ImageData;
 import org.htmlunit.platform.image.ImageIOImageData;
 import org.htmlunit.util.StringUtils;
 
@@ -59,9 +59,9 @@ import org.htmlunit.util.StringUtils;
 public class AwtRenderingBackend implements RenderingBackend {
 
     private static final Log LOG = LogFactory.getLog(AwtRenderingBackend.class);
-    private static int ID_GENERATOR_;
+    private static final AtomicInteger ID_GENERATOR = new AtomicInteger();
 
-    private static final Map<String, Color> knownColors = new HashMap<>();
+    private static final Map<String, Color> KNOWN_COLORS = new HashMap<>();
 
     private final int id_;
     private final BufferedImage image_;
@@ -69,9 +69,16 @@ public class AwtRenderingBackend implements RenderingBackend {
 
     private AffineTransform transformation_;
     private float globalAlpha_;
-    private int lineWidth_;
+    private float lineWidth_;
     private Color fillColor_;
     private Color strokeColor_;
+
+    private LineCap lineCap_;
+    private LineJoin lineJoin_;
+    private float miterLimit_;
+
+    private TextAlign textAlign_;
+    private TextBaseline textBaseline_;
 
     private final List<Path2D> subPaths_;
     private final Deque<SaveState> savedStates_;
@@ -80,163 +87,159 @@ public class AwtRenderingBackend implements RenderingBackend {
         // see https://developer.mozilla.org/en-US/docs/Web/CSS/color_value
 
         // CSS Level 1
-        knownColors.put("black", Color.decode("#000000"));
-        knownColors.put("silver", Color.decode("#c0c0c0"));
-        knownColors.put("gray", Color.decode("#808080"));
-        knownColors.put("white", Color.decode("#ffffff"));
-        knownColors.put("maroon", Color.decode("#800000"));
-        knownColors.put("red", Color.decode("#ff0000"));
-        knownColors.put("purple", Color.decode("#800080"));
-        knownColors.put("fuchsia", Color.decode("#ff00ff"));
-        knownColors.put("green", Color.decode("#008000"));
-        knownColors.put("lime", Color.decode("#00ff00"));
-        knownColors.put("olive", Color.decode("#808000"));
-        knownColors.put("yellow", Color.decode("#ffff00"));
-        knownColors.put("navy", Color.decode("#000080"));
-        knownColors.put("blue", Color.decode("#0000ff"));
-        knownColors.put("teal", Color.decode("#008080"));
-        knownColors.put("aqua", Color.decode("#00ffff"));
+        KNOWN_COLORS.put("black", Color.decode("#000000"));
+        KNOWN_COLORS.put("silver", Color.decode("#c0c0c0"));
+        KNOWN_COLORS.put("gray", Color.decode("#808080"));
+        KNOWN_COLORS.put("white", Color.decode("#ffffff"));
+        KNOWN_COLORS.put("maroon", Color.decode("#800000"));
+        KNOWN_COLORS.put("red", Color.decode("#ff0000"));
+        KNOWN_COLORS.put("purple", Color.decode("#800080"));
+        KNOWN_COLORS.put("fuchsia", Color.decode("#ff00ff"));
+        KNOWN_COLORS.put("green", Color.decode("#008000"));
+        KNOWN_COLORS.put("lime", Color.decode("#00ff00"));
+        KNOWN_COLORS.put("olive", Color.decode("#808000"));
+        KNOWN_COLORS.put("yellow", Color.decode("#ffff00"));
+        KNOWN_COLORS.put("navy", Color.decode("#000080"));
+        KNOWN_COLORS.put("blue", Color.decode("#0000ff"));
+        KNOWN_COLORS.put("teal", Color.decode("#008080"));
+        KNOWN_COLORS.put("aqua", Color.decode("#00ffff"));
 
         // CSS Level 2 (Revision 1)
-        knownColors.put("orange", Color.decode("#ffa500"));
+        KNOWN_COLORS.put("orange", Color.decode("#ffa500"));
 
         // CSS Color Module Level 3
-        knownColors.put("aliceblue", Color.decode("#f0f8ff"));
-        knownColors.put("antiquewhite", Color.decode("#faebd7"));
-        knownColors.put("aquamarine", Color.decode("#7fffd4"));
-        knownColors.put("azure", Color.decode("#f0ffff"));
-        knownColors.put("beige", Color.decode("#f5f5dc"));
-        knownColors.put("bisque", Color.decode("#ffe4c4"));
-        knownColors.put("blanchedalmond", Color.decode("#ffebcd"));
-        knownColors.put("blueviolet", Color.decode("#8a2be2"));
-        knownColors.put("brown", Color.decode("#a52a2a"));
-        knownColors.put("burlywood", Color.decode("#deb887"));
-        knownColors.put("cadetblue", Color.decode("#5f9ea0"));
-        knownColors.put("chartreuse", Color.decode("#7fff00"));
-        knownColors.put("chocolate", Color.decode("#d2691e"));
-        knownColors.put("coral", Color.decode("#ff7f50"));
-        knownColors.put("cornflowerblue", Color.decode("#6495ed"));
-        knownColors.put("cornsilk", Color.decode("#fff8dc"));
-        knownColors.put("crimson", Color.decode("#dc143c"));
-        knownColors.put("cyan", Color.decode("#00ffff")); // synonym of aqua
-        knownColors.put("darkblue", Color.decode("#00008b"));
-        knownColors.put("darkcyan", Color.decode("#008b8b"));
-        knownColors.put("darkgoldenrod", Color.decode("#b8860b"));
-        knownColors.put("darkgray", Color.decode("#a9a9a9"));
-        knownColors.put("darkgreen", Color.decode("#006400"));
-        knownColors.put("darkgrey", Color.decode("#a9a9a9"));
-        knownColors.put("darkkhaki", Color.decode("#bdb76b"));
-        knownColors.put("darkmagenta", Color.decode("#8b008b"));
-        knownColors.put("darkolivegreen", Color.decode("#556b2f"));
-        knownColors.put("darkorange", Color.decode("#ff8c00"));
-        knownColors.put("darkorchid", Color.decode("#9932cc"));
-        knownColors.put("darkred", Color.decode("#8b0000"));
-        knownColors.put("darksalmon", Color.decode("#e9967a"));
-        knownColors.put("darkseagreen", Color.decode("#8fbc8f"));
-        knownColors.put("darkslateblue", Color.decode("#483d8b"));
-        knownColors.put("darkslategray", Color.decode("#2f4f4f"));
-        knownColors.put("darkslategrey", Color.decode("#2f4f4f"));
-        knownColors.put("darkturquoise", Color.decode("#00ced1"));
-        knownColors.put("darkviolet", Color.decode("#9400d3"));
-        knownColors.put("deeppink", Color.decode("#ff1493"));
-        knownColors.put("deepskyblue", Color.decode("#00bfff"));
-        knownColors.put("dimgray", Color.decode("#696969"));
-        knownColors.put("dimgrey", Color.decode("#696969"));
-        knownColors.put("dodgerblue", Color.decode("#1e90ff"));
-        knownColors.put("firebrick", Color.decode("#b22222"));
-        knownColors.put("floralwhite", Color.decode("#fffaf0"));
-        knownColors.put("forestgreen", Color.decode("#228b22"));
-        knownColors.put("gainsboro", Color.decode("#dcdcdc"));
-        knownColors.put("ghostwhite", Color.decode("#f8f8ff"));
-        knownColors.put("gold", Color.decode("#ffd700"));
-        knownColors.put("goldenrod", Color.decode("#daa520"));
-        knownColors.put("greenyellow", Color.decode("#adff2f"));
-        knownColors.put("grey", Color.decode("#808080"));
-        knownColors.put("honeydew", Color.decode("#f0fff0"));
-        knownColors.put("hotpink", Color.decode("#ff69b4"));
-        knownColors.put("indianred", Color.decode("#cd5c5c"));
-        knownColors.put("indigo", Color.decode("#4b0082"));
-        knownColors.put("ivory", Color.decode("#fffff0"));
-        knownColors.put("khaki", Color.decode("#f0e68c"));
-        knownColors.put("lavender", Color.decode("#e6e6fa"));
-        knownColors.put("lavenderblush", Color.decode("#fff0f5"));
-        knownColors.put("lawngreen", Color.decode("#7cfc00"));
-        knownColors.put("lemonchiffon", Color.decode("#fffacd"));
-        knownColors.put("lightblue", Color.decode("#add8e6"));
-        knownColors.put("lightcoral", Color.decode("#f08080"));
-        knownColors.put("lightcyan", Color.decode("#e0ffff"));
-        knownColors.put("lightgoldenrodyellow", Color.decode("#fafad2"));
-        knownColors.put("lightgray", Color.decode("#d3d3d3"));
-        knownColors.put("lightgreen", Color.decode("#90ee90"));
-        knownColors.put("lightgrey", Color.decode("#d3d3d3"));
-        knownColors.put("lightpink", Color.decode("#ffb6c1"));
-        knownColors.put("lightsalmon", Color.decode("#ffa07a"));
-        knownColors.put("lightseagreen", Color.decode("#20b2aa"));
-        knownColors.put("lightskyblue", Color.decode("#87cefa"));
-        knownColors.put("lightslategray", Color.decode("#778899"));
-        knownColors.put("lightslategrey", Color.decode("#778899"));
-        knownColors.put("lightsteelblue", Color.decode("#b0c4de"));
-        knownColors.put("lightyellow", Color.decode("#ffffe0"));
-        knownColors.put("limegreen", Color.decode("#32cd32"));
-        knownColors.put("linen", Color.decode("#faf0e6"));
-        knownColors.put("magenta", Color.decode("#ff00ff")); // synonym of fuchsia
-        knownColors.put("mediumaquamarine", Color.decode("#66cdaa"));
-        knownColors.put("mediumblue", Color.decode("#0000cd"));
-        knownColors.put("mediumorchid", Color.decode("#ba55d3"));
-        knownColors.put("mediumpurple", Color.decode("#9370db"));
-        knownColors.put("mediumseagreen", Color.decode("#3cb371"));
-        knownColors.put("mediumslateblue", Color.decode("#7b68ee"));
-        knownColors.put("mediumspringgreen", Color.decode("#00fa9a"));
-        knownColors.put("mediumturquoise", Color.decode("#48d1cc"));
-        knownColors.put("mediumvioletred", Color.decode("#c71585"));
-        knownColors.put("midnightblue", Color.decode("#191970"));
-        knownColors.put("mintcream", Color.decode("#f5fffa"));
-        knownColors.put("mistyrose", Color.decode("#ffe4e1"));
-        knownColors.put("moccasin", Color.decode("#ffe4b5"));
-        knownColors.put("navajowhite", Color.decode("#ffdead"));
-        knownColors.put("oldlace", Color.decode("#fdf5e6"));
-        knownColors.put("olivedrab", Color.decode("#6b8e23"));
-        knownColors.put("orangered", Color.decode("#ff4500"));
-        knownColors.put("orchid", Color.decode("#da70d6"));
-        knownColors.put("palegoldenrod", Color.decode("#eee8aa"));
-        knownColors.put("palegreen", Color.decode("#98fb98"));
-        knownColors.put("paleturquoise", Color.decode("#afeeee"));
-        knownColors.put("palevioletred", Color.decode("#db7093"));
-        knownColors.put("papayawhip", Color.decode("#ffefd5"));
-        knownColors.put("peachpuff", Color.decode("#ffdab9"));
-        knownColors.put("peru", Color.decode("#cd853f"));
-        knownColors.put("pink", Color.decode("#ffc0cb"));
-        knownColors.put("plum", Color.decode("#dda0dd"));
-        knownColors.put("powderblue", Color.decode("#b0e0e6"));
-        knownColors.put("rosybrown", Color.decode("#bc8f8f"));
-        knownColors.put("royalblue", Color.decode("#4169e1"));
-        knownColors.put("saddlebrown", Color.decode("#8b4513"));
-        knownColors.put("salmon", Color.decode("#fa8072"));
-        knownColors.put("sandybrown", Color.decode("#f4a460"));
-        knownColors.put("seagreen", Color.decode("#2e8b57"));
-        knownColors.put("seashell", Color.decode("#fff5ee"));
-        knownColors.put("sienna", Color.decode("#a0522d"));
-        knownColors.put("skyblue", Color.decode("#87ceeb"));
-        knownColors.put("slateblue", Color.decode("#6a5acd"));
-        knownColors.put("slategray", Color.decode("#708090"));
-        knownColors.put("slategrey", Color.decode("#708090"));
-        knownColors.put("snow", Color.decode("#fffafa"));
-        knownColors.put("springgreen", Color.decode("#00ff7f"));
-        knownColors.put("steelblue", Color.decode("#4682b4"));
-        knownColors.put("tan", Color.decode("#d2b48c"));
-        knownColors.put("thistle", Color.decode("#d8bfd8"));
-        knownColors.put("tomato", Color.decode("#ff6347"));
-        knownColors.put("turquoise", Color.decode("#40e0d0"));
-        knownColors.put("violet", Color.decode("#ee82ee"));
-        knownColors.put("wheat", Color.decode("#f5deb3"));
-        knownColors.put("whitesmoke", Color.decode("#f5f5f5"));
-        knownColors.put("yellowgreen", Color.decode("#9acd32"));
+        KNOWN_COLORS.put("aliceblue", Color.decode("#f0f8ff"));
+        KNOWN_COLORS.put("antiquewhite", Color.decode("#faebd7"));
+        KNOWN_COLORS.put("aquamarine", Color.decode("#7fffd4"));
+        KNOWN_COLORS.put("azure", Color.decode("#f0ffff"));
+        KNOWN_COLORS.put("beige", Color.decode("#f5f5dc"));
+        KNOWN_COLORS.put("bisque", Color.decode("#ffe4c4"));
+        KNOWN_COLORS.put("blanchedalmond", Color.decode("#ffebcd"));
+        KNOWN_COLORS.put("blueviolet", Color.decode("#8a2be2"));
+        KNOWN_COLORS.put("brown", Color.decode("#a52a2a"));
+        KNOWN_COLORS.put("burlywood", Color.decode("#deb887"));
+        KNOWN_COLORS.put("cadetblue", Color.decode("#5f9ea0"));
+        KNOWN_COLORS.put("chartreuse", Color.decode("#7fff00"));
+        KNOWN_COLORS.put("chocolate", Color.decode("#d2691e"));
+        KNOWN_COLORS.put("coral", Color.decode("#ff7f50"));
+        KNOWN_COLORS.put("cornflowerblue", Color.decode("#6495ed"));
+        KNOWN_COLORS.put("cornsilk", Color.decode("#fff8dc"));
+        KNOWN_COLORS.put("crimson", Color.decode("#dc143c"));
+        KNOWN_COLORS.put("cyan", Color.decode("#00ffff")); // synonym of aqua
+        KNOWN_COLORS.put("darkblue", Color.decode("#00008b"));
+        KNOWN_COLORS.put("darkcyan", Color.decode("#008b8b"));
+        KNOWN_COLORS.put("darkgoldenrod", Color.decode("#b8860b"));
+        KNOWN_COLORS.put("darkgray", Color.decode("#a9a9a9"));
+        KNOWN_COLORS.put("darkgreen", Color.decode("#006400"));
+        KNOWN_COLORS.put("darkgrey", Color.decode("#a9a9a9"));
+        KNOWN_COLORS.put("darkkhaki", Color.decode("#bdb76b"));
+        KNOWN_COLORS.put("darkmagenta", Color.decode("#8b008b"));
+        KNOWN_COLORS.put("darkolivegreen", Color.decode("#556b2f"));
+        KNOWN_COLORS.put("darkorange", Color.decode("#ff8c00"));
+        KNOWN_COLORS.put("darkorchid", Color.decode("#9932cc"));
+        KNOWN_COLORS.put("darkred", Color.decode("#8b0000"));
+        KNOWN_COLORS.put("darksalmon", Color.decode("#e9967a"));
+        KNOWN_COLORS.put("darkseagreen", Color.decode("#8fbc8f"));
+        KNOWN_COLORS.put("darkslateblue", Color.decode("#483d8b"));
+        KNOWN_COLORS.put("darkslategray", Color.decode("#2f4f4f"));
+        KNOWN_COLORS.put("darkslategrey", Color.decode("#2f4f4f"));
+        KNOWN_COLORS.put("darkturquoise", Color.decode("#00ced1"));
+        KNOWN_COLORS.put("darkviolet", Color.decode("#9400d3"));
+        KNOWN_COLORS.put("deeppink", Color.decode("#ff1493"));
+        KNOWN_COLORS.put("deepskyblue", Color.decode("#00bfff"));
+        KNOWN_COLORS.put("dimgray", Color.decode("#696969"));
+        KNOWN_COLORS.put("dimgrey", Color.decode("#696969"));
+        KNOWN_COLORS.put("dodgerblue", Color.decode("#1e90ff"));
+        KNOWN_COLORS.put("firebrick", Color.decode("#b22222"));
+        KNOWN_COLORS.put("floralwhite", Color.decode("#fffaf0"));
+        KNOWN_COLORS.put("forestgreen", Color.decode("#228b22"));
+        KNOWN_COLORS.put("gainsboro", Color.decode("#dcdcdc"));
+        KNOWN_COLORS.put("ghostwhite", Color.decode("#f8f8ff"));
+        KNOWN_COLORS.put("gold", Color.decode("#ffd700"));
+        KNOWN_COLORS.put("goldenrod", Color.decode("#daa520"));
+        KNOWN_COLORS.put("greenyellow", Color.decode("#adff2f"));
+        KNOWN_COLORS.put("grey", Color.decode("#808080"));
+        KNOWN_COLORS.put("honeydew", Color.decode("#f0fff0"));
+        KNOWN_COLORS.put("hotpink", Color.decode("#ff69b4"));
+        KNOWN_COLORS.put("indianred", Color.decode("#cd5c5c"));
+        KNOWN_COLORS.put("indigo", Color.decode("#4b0082"));
+        KNOWN_COLORS.put("ivory", Color.decode("#fffff0"));
+        KNOWN_COLORS.put("khaki", Color.decode("#f0e68c"));
+        KNOWN_COLORS.put("lavender", Color.decode("#e6e6fa"));
+        KNOWN_COLORS.put("lavenderblush", Color.decode("#fff0f5"));
+        KNOWN_COLORS.put("lawngreen", Color.decode("#7cfc00"));
+        KNOWN_COLORS.put("lemonchiffon", Color.decode("#fffacd"));
+        KNOWN_COLORS.put("lightblue", Color.decode("#add8e6"));
+        KNOWN_COLORS.put("lightcoral", Color.decode("#f08080"));
+        KNOWN_COLORS.put("lightcyan", Color.decode("#e0ffff"));
+        KNOWN_COLORS.put("lightgoldenrodyellow", Color.decode("#fafad2"));
+        KNOWN_COLORS.put("lightgray", Color.decode("#d3d3d3"));
+        KNOWN_COLORS.put("lightgreen", Color.decode("#90ee90"));
+        KNOWN_COLORS.put("lightgrey", Color.decode("#d3d3d3"));
+        KNOWN_COLORS.put("lightpink", Color.decode("#ffb6c1"));
+        KNOWN_COLORS.put("lightsalmon", Color.decode("#ffa07a"));
+        KNOWN_COLORS.put("lightseagreen", Color.decode("#20b2aa"));
+        KNOWN_COLORS.put("lightskyblue", Color.decode("#87cefa"));
+        KNOWN_COLORS.put("lightslategray", Color.decode("#778899"));
+        KNOWN_COLORS.put("lightslategrey", Color.decode("#778899"));
+        KNOWN_COLORS.put("lightsteelblue", Color.decode("#b0c4de"));
+        KNOWN_COLORS.put("lightyellow", Color.decode("#ffffe0"));
+        KNOWN_COLORS.put("limegreen", Color.decode("#32cd32"));
+        KNOWN_COLORS.put("linen", Color.decode("#faf0e6"));
+        KNOWN_COLORS.put("magenta", Color.decode("#ff00ff")); // synonym of fuchsia
+        KNOWN_COLORS.put("mediumaquamarine", Color.decode("#66cdaa"));
+        KNOWN_COLORS.put("mediumblue", Color.decode("#0000cd"));
+        KNOWN_COLORS.put("mediumorchid", Color.decode("#ba55d3"));
+        KNOWN_COLORS.put("mediumpurple", Color.decode("#9370db"));
+        KNOWN_COLORS.put("mediumseagreen", Color.decode("#3cb371"));
+        KNOWN_COLORS.put("mediumslateblue", Color.decode("#7b68ee"));
+        KNOWN_COLORS.put("mediumspringgreen", Color.decode("#00fa9a"));
+        KNOWN_COLORS.put("mediumturquoise", Color.decode("#48d1cc"));
+        KNOWN_COLORS.put("mediumvioletred", Color.decode("#c71585"));
+        KNOWN_COLORS.put("midnightblue", Color.decode("#191970"));
+        KNOWN_COLORS.put("mintcream", Color.decode("#f5fffa"));
+        KNOWN_COLORS.put("mistyrose", Color.decode("#ffe4e1"));
+        KNOWN_COLORS.put("moccasin", Color.decode("#ffe4b5"));
+        KNOWN_COLORS.put("navajowhite", Color.decode("#ffdead"));
+        KNOWN_COLORS.put("oldlace", Color.decode("#fdf5e6"));
+        KNOWN_COLORS.put("olivedrab", Color.decode("#6b8e23"));
+        KNOWN_COLORS.put("orangered", Color.decode("#ff4500"));
+        KNOWN_COLORS.put("orchid", Color.decode("#da70d6"));
+        KNOWN_COLORS.put("palegoldenrod", Color.decode("#eee8aa"));
+        KNOWN_COLORS.put("palegreen", Color.decode("#98fb98"));
+        KNOWN_COLORS.put("paleturquoise", Color.decode("#afeeee"));
+        KNOWN_COLORS.put("palevioletred", Color.decode("#db7093"));
+        KNOWN_COLORS.put("papayawhip", Color.decode("#ffefd5"));
+        KNOWN_COLORS.put("peachpuff", Color.decode("#ffdab9"));
+        KNOWN_COLORS.put("peru", Color.decode("#cd853f"));
+        KNOWN_COLORS.put("pink", Color.decode("#ffc0cb"));
+        KNOWN_COLORS.put("plum", Color.decode("#dda0dd"));
+        KNOWN_COLORS.put("powderblue", Color.decode("#b0e0e6"));
+        KNOWN_COLORS.put("rosybrown", Color.decode("#bc8f8f"));
+        KNOWN_COLORS.put("royalblue", Color.decode("#4169e1"));
+        KNOWN_COLORS.put("saddlebrown", Color.decode("#8b4513"));
+        KNOWN_COLORS.put("salmon", Color.decode("#fa8072"));
+        KNOWN_COLORS.put("sandybrown", Color.decode("#f4a460"));
+        KNOWN_COLORS.put("seagreen", Color.decode("#2e8b57"));
+        KNOWN_COLORS.put("seashell", Color.decode("#fff5ee"));
+        KNOWN_COLORS.put("sienna", Color.decode("#a0522d"));
+        KNOWN_COLORS.put("skyblue", Color.decode("#87ceeb"));
+        KNOWN_COLORS.put("slateblue", Color.decode("#6a5acd"));
+        KNOWN_COLORS.put("slategray", Color.decode("#708090"));
+        KNOWN_COLORS.put("slategrey", Color.decode("#708090"));
+        KNOWN_COLORS.put("snow", Color.decode("#fffafa"));
+        KNOWN_COLORS.put("springgreen", Color.decode("#00ff7f"));
+        KNOWN_COLORS.put("steelblue", Color.decode("#4682b4"));
+        KNOWN_COLORS.put("tan", Color.decode("#d2b48c"));
+        KNOWN_COLORS.put("thistle", Color.decode("#d8bfd8"));
+        KNOWN_COLORS.put("tomato", Color.decode("#ff6347"));
+        KNOWN_COLORS.put("turquoise", Color.decode("#40e0d0"));
+        KNOWN_COLORS.put("violet", Color.decode("#ee82ee"));
+        KNOWN_COLORS.put("wheat", Color.decode("#f5deb3"));
+        KNOWN_COLORS.put("whitesmoke", Color.decode("#f5f5f5"));
+        KNOWN_COLORS.put("yellowgreen", Color.decode("#9acd32"));
         // CSS Color Module Level 4
-        knownColors.put("rebeccapurple", Color.decode("#663399"));
-    }
-
-    private static synchronized int nextId() {
-        return ID_GENERATOR_++;
+        KNOWN_COLORS.put("rebeccapurple", Color.decode("#663399"));
     }
 
     /**
@@ -245,7 +248,7 @@ public class AwtRenderingBackend implements RenderingBackend {
      * @param imageHeight the height
      */
     public AwtRenderingBackend(final int imageWidth, final int imageHeight) {
-        id_ = nextId();
+        id_ = ID_GENERATOR.getAndIncrement();
         if (LOG.isDebugEnabled()) {
             LOG.debug("[" + id_ + "] AwtRenderingBackend(" + imageWidth + ", " + imageHeight + ")");
         }
@@ -257,12 +260,17 @@ public class AwtRenderingBackend implements RenderingBackend {
         graphics2D_.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
         graphics2D_.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 
+        // without this AWT snaps strokes to pixel boundaries (hence the floor rounding).
+        // With VALUE_STROKE_PURE, strokes are rendered at their exact fractional coordinates,
+        // matching browser sub-pixel behavior.
+        graphics2D_.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
+
         // reset
         fillColor_ = Color.black;
         strokeColor_ = Color.black;
         lineWidth_ = 1;
         transformation_ = new AffineTransform();
-        setGlobalAlpha(1.0);
+        updateGlobalAlpha(1f);
         graphics2D_.setClip(null);
 
         final Font font = new Font("SansSerif", Font.PLAIN, 10);
@@ -271,6 +279,13 @@ public class AwtRenderingBackend implements RenderingBackend {
         graphics2D_.setBackground(new Color(0f, 0f, 0f, 0f));
         graphics2D_.setColor(Color.black);
         graphics2D_.clearRect(0, 0, imageWidth, imageHeight);
+
+        lineCap_ = LineCap.BUTT;
+        lineJoin_ = LineJoin.MITER;
+        miterLimit_ = 10.0f;
+
+        textAlign_ = TextAlign.START;
+        textBaseline_ = TextBaseline.ALPHABETIC;
 
         subPaths_ = new ArrayList<>();
         savedStates_ = new ArrayDeque<>();
@@ -294,10 +309,14 @@ public class AwtRenderingBackend implements RenderingBackend {
         }
 
         if (globalAlpha >= 0 && globalAlpha <= 1) {
-            globalAlpha_ = (float) globalAlpha;
-            final AlphaComposite composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, globalAlpha_);
-            graphics2D_.setComposite(composite);
+            updateGlobalAlpha((float) globalAlpha);
         }
+    }
+
+    private void updateGlobalAlpha(final float globalAlpha) {
+        globalAlpha_ = globalAlpha;
+        final AlphaComposite composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, globalAlpha_);
+        graphics2D_.setComposite(composite);
     }
 
     /**
@@ -323,24 +342,49 @@ public class AwtRenderingBackend implements RenderingBackend {
             LOG.debug("[" + id_ + "] ellipse()");
         }
 
-        final Path2D subPath = getCurrentSubPath();
-        if (subPath != null) {
-            final Point2D p = transformation_.transform(new Point2D.Double(x, y), null);
-            final double startAngleDegree = 360 - (startAngle * 180 / Math.PI);
-            final double endAngleDegree = 360 - (endAngle * 180 / Math.PI);
+        if (startAngle == endAngle) {
+            return;
+        }
 
-            double extendAngle = startAngleDegree - endAngleDegree;
-            extendAngle = Math.min(360, Math.abs(extendAngle));
-            if (anticlockwise && extendAngle < 360) {
-                extendAngle = extendAngle - 360;
+        final Point2D p = transformation_.transform(new Point2D.Double(x, y), null);
+        final AffineTransform transformation = new AffineTransform();
+        transformation.rotate(rotation, p.getX(), p.getY());
+
+        double startAngleDegree = Math.toDegrees(startAngle);
+        double endAngleDegree = Math.toDegrees(endAngle);
+
+        double extendAngle = endAngleDegree - startAngleDegree;
+        final Arc2D arc;
+        if (Math.abs(extendAngle) >= 360) {
+            arc = new Arc2D.Double(p.getX() - radiusX, p.getY() - radiusY, radiusX * 2, radiusY * 2,
+                    0, 360, Arc2D.OPEN);
+        }
+        else {
+            startAngleDegree = reverseAngle(startAngleDegree);
+            endAngleDegree = reverseAngle(endAngleDegree);
+
+            extendAngle = endAngleDegree - startAngleDegree;
+            if (!anticlockwise) {
+                extendAngle = -reverseAngle(extendAngle);
             }
 
-            final AffineTransform transformation = new AffineTransform();
-            transformation.rotate(rotation, p.getX(), p.getY());
-            final Arc2D arc = new Arc2D.Double(p.getX() - radiusX, p.getY() - radiusY, radiusX * 2, radiusY * 2,
-                                            startAngleDegree, extendAngle * -1, Arc2D.OPEN);
-            subPath.append(transformation.createTransformedShape(arc), false);
+            arc = new Arc2D.Double(p.getX() - radiusX, p.getY() - radiusY, radiusX * 2, radiusY * 2,
+                                            startAngleDegree, extendAngle, Arc2D.OPEN);
         }
+
+        // connect=true only if there is already a current point (implicit lineTo behaviour);
+        // connect=false when the subpath is new so we don't get a spurious line from (0,0)
+        // or from the moveTo seed point to the arc's own geometric start.
+        final boolean hasCurrentPoint;
+        if (subPaths_.isEmpty()) {
+            final Path2D subPath = new Path2D.Double();
+            subPaths_.add(subPath);
+            hasCurrentPoint = false;
+        }
+        else {
+            hasCurrentPoint = subPaths_.get(subPaths_.size() - 1).getCurrentPoint() != null;
+        }
+        getCurrentSubPath().append(transformation.createTransformedShape(arc), hasCurrentPoint);
     }
 
     /**
@@ -353,13 +397,12 @@ public class AwtRenderingBackend implements RenderingBackend {
             LOG.debug("[" + id_ + "] bezierCurveTo()");
         }
 
-        final Path2D subPath = getCurrentSubPath();
-        if (subPath != null) {
-            final Point2D cp1 = transformation_.transform(new Point2D.Double(cp1x, cp1y), null);
-            final Point2D cp2 = transformation_.transform(new Point2D.Double(cp2x, cp2y), null);
-            final Point2D p = transformation_.transform(new Point2D.Double(x, y), null);
-            subPath.curveTo(cp1.getX(), cp1.getY(), cp2.getX(), cp2.getY(), p.getX(), p.getY());
-        }
+        final Point2D cp1 = transformation_.transform(new Point2D.Double(cp1x, cp1y), null);
+        final Point2D cp2 = transformation_.transform(new Point2D.Double(cp2x, cp2y), null);
+        final Point2D p = transformation_.transform(new Point2D.Double(x, y), null);
+
+        getCurrentSubPath(cp1.getX(), cp1.getY())
+                .curveTo(cp1.getX(), cp1.getY(), cp2.getX(), cp2.getY(), p.getX(), p.getY());
     }
 
     /**
@@ -372,21 +415,11 @@ public class AwtRenderingBackend implements RenderingBackend {
             LOG.debug("[" + id_ + "] arc()");
         }
 
-        final Path2D subPath = getCurrentSubPath();
-        if (subPath != null) {
-            final Point2D p = transformation_.transform(new Point2D.Double(x, y), null);
-            final double startAngleDegree = 360 - (startAngle * 180 / Math.PI);
-            final double endAngleDegree = 360 - (endAngle * 180 / Math.PI);
+        ellipse(x, y, radius, radius, 0, startAngle, endAngle, anticlockwise);
+    }
 
-            double extendAngle = startAngleDegree - endAngleDegree;
-            extendAngle = Math.min(360, Math.abs(extendAngle));
-            if (anticlockwise && extendAngle < 360) {
-                extendAngle = extendAngle - 360;
-            }
-            final Arc2D arc = new Arc2D.Double(p.getX() - radius, p.getY() - radius, radius * 2, radius * 2,
-                                            startAngleDegree, extendAngle * -1, Arc2D.OPEN);
-            subPath.append(arc, false);
-        }
+    private static double reverseAngle(final double degrees) {
+        return ((-degrees % 360) + 360) % 360;
     }
 
     /**
@@ -398,14 +431,17 @@ public class AwtRenderingBackend implements RenderingBackend {
             LOG.debug("[" + id_ + "] clearRect(" + x + ", " + y + ", " + w + ", " + h + ")");
         }
 
-        final Composite saved = graphics2D_.getComposite();
+        final Composite savedComposite = graphics2D_.getComposite();
+        final Color savedColor = graphics2D_.getColor();
 
-        graphics2D_.setColor(Color.BLACK);
-        graphics2D_.setComposite(AlphaComposite.Clear); // overpaint
-        final Rectangle2D rect = new Rectangle2D.Double(x, y, w, h);
-        graphics2D_.fill(transformation_.createTransformedShape(rect));
-
-        graphics2D_.setComposite(saved);
+        try {
+            graphics2D_.setComposite(AlphaComposite.Clear); // force transparent clear
+            graphics2D_.fill(rectPath(x, y, w, h));
+        }
+        finally {
+            graphics2D_.setComposite(savedComposite);
+            graphics2D_.setColor(savedColor);
+        }
     }
 
     /**
@@ -477,41 +513,9 @@ public class AwtRenderingBackend implements RenderingBackend {
                         }
                     }
 
-                    final Object done = new Object();
-                    final ImageObserver imageObserver = (img1, flags, x, y, width, height) -> {
-
-                        if ((flags & ImageObserver.ALLBITS) == ImageObserver.ALLBITS) {
-                            return true;
-                        }
-
-                        if ((flags & ImageObserver.ABORT) == ImageObserver.ABORT
-                                || (flags & ImageObserver.ERROR) == ImageObserver.ERROR) {
-                            return true;
-                        }
-
-                        synchronized (done) {
-                            done.notify();
-                        }
-
-                        return false;
-                    };
-
-                    synchronized (done) {
-                        final boolean completelyLoaded =
-                                graphics2D_.drawImage(img, dx1, dy1, dx2, dy2, sx, sy, sx2, sy2, imageObserver);
-                        if (!completelyLoaded) {
-                            while (true) {
-                                try {
-                                    done.wait(4 * 1000); // max 4s
-                                    break;
-                                }
-                                catch (final InterruptedException e) {
-                                    LOG.error("[" + id_ + "] AwtRenderingBackend interrupted "
-                                            + "while waiting for drawImage to finish.", e);
-                                }
-                            }
-                        }
-                    }
+                    // the image is already completely decoded (BufferedImage), therefore the drawing is done
+                    // synchronously; no ImageObserver is needed
+                    graphics2D_.drawImage(img, dx1, dy1, dx2, dy2, sx, sy, sx2, sy2, null);
                 }
                 finally {
                     graphics2D_.setTransform(savedTransform);
@@ -536,7 +540,7 @@ public class AwtRenderingBackend implements RenderingBackend {
             ImageIO.write(image_, imageType, bos);
 
             final byte[] imageBytes = bos.toByteArray();
-            return new String(new Base64().encode(imageBytes), StandardCharsets.US_ASCII);
+            return new String(Base64.getEncoder().encode(imageBytes), StandardCharsets.US_ASCII);
         }
     }
 
@@ -544,30 +548,38 @@ public class AwtRenderingBackend implements RenderingBackend {
      * {@inheritDoc}
      */
     @Override
-    public void fill() {
+    public void fill(final RenderingBackend.WindingRule windingRule) {
         if (LOG.isDebugEnabled()) {
-            LOG.debug("[" + id_ + "] fill()");
+            LOG.debug("[" + id_ + "] fill("
+                    + (windingRule == RenderingBackend.WindingRule.EVEN_ODD ? "evenOdd" : "nonZero") + ")");
         }
 
-        graphics2D_.setStroke(new BasicStroke(getLineWidth()));
-        graphics2D_.setColor(fillColor_);
+        final int awtRule = (windingRule == RenderingBackend.WindingRule.EVEN_ODD)
+                ? Path2D.WIND_EVEN_ODD
+                : Path2D.WIND_NON_ZERO;
+
+        // all sub paths together form one shape; filling them one by one
+        // would ignore the winding rule (e.g. a hole made of a second rect)
+        final Path2D shape = new Path2D.Double(awtRule);
         for (final Path2D path2d : subPaths_) {
-            graphics2D_.fill(path2d);
+            shape.append(path2d, false);
         }
+
+        graphics2D_.setColor(fillColor_);
+        graphics2D_.fill(shape);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void fillRect(final int x, final int y, final int w, final int h) {
+    public void fillRect(final double x, final double y, final double w, final double h) {
         if (LOG.isDebugEnabled()) {
             LOG.debug("[" + id_ + "] fillRect(" + x + ", "  + y + ", "  + w + ", "  + h + ")");
         }
 
         graphics2D_.setColor(fillColor_);
-        final Rectangle2D rect = new Rectangle2D.Double(x, y, w, h);
-        graphics2D_.fill(transformation_.createTransformedShape(rect));
+        graphics2D_.fill(rectPath(x, y, w, h));
     }
 
     /**
@@ -583,7 +595,11 @@ public class AwtRenderingBackend implements RenderingBackend {
         try {
             graphics2D_.setTransform(transformation_);
             graphics2D_.setColor(fillColor_);
-            graphics2D_.drawString(text, (int) x, (int) y);
+
+            final FontMetrics metrics = graphics2D_.getFontMetrics();
+            final double drawX = x - textAlignOffset(metrics.getStringBounds(text, graphics2D_).getWidth());
+            final double drawY = y + textBaselineOffset(metrics);
+            graphics2D_.drawString(text, (float) drawX, (float) drawY);
         }
         finally {
             graphics2D_.setTransform(savedTransform);
@@ -601,31 +617,26 @@ public class AwtRenderingBackend implements RenderingBackend {
 
         final byte[] array = new byte[width * height * 4];
         int index = 0;
-        for (int x = sx; x < sx + width; x++) {
-            if (x < 0 || x >= image_.getWidth()) {
-                array[index++] = (byte) 0;
-                array[index++] = (byte) 0;
-                array[index++] = (byte) 0;
-                array[index++] = (byte) 0;
-            }
-            else {
-                for (int y = sy; y < sy + height; y++) {
-                    if (y < 0 || y >= image_.getHeight()) {
-                        array[index++] = (byte) 0;
-                        array[index++] = (byte) 0;
-                        array[index++] = (byte) 0;
-                        array[index++] = (byte) 0;
-                    }
-                    else {
-                        final int color = image_.getRGB(x, y);
-                        array[index++] = (byte) ((color & 0xff0000) >> 16);
-                        array[index++] = (byte) ((color & 0xff00) >> 8);
-                        array[index++] = (byte) (color & 0xff);
-                        array[index++] = (byte) ((color & 0xff000000) >>> 24);
-                    }
+
+        // Canvas ImageData order is row-major
+        for (int y = sy; y < sy + height; y++) {
+            for (int x = sx; x < sx + width; x++) {
+                if (x < 0 || x >= image_.getWidth() || y < 0 || y >= image_.getHeight()) {
+                    array[index++] = (byte) 0;
+                    array[index++] = (byte) 0;
+                    array[index++] = (byte) 0;
+                    array[index++] = (byte) 0;
+                }
+                else {
+                    final int color = image_.getRGB(x, y);
+                    array[index++] = (byte) ((color >> 16) & 0xFF);  // R
+                    array[index++] = (byte) ((color >> 8) & 0xFF);   // G
+                    array[index++] = (byte) (color & 0xFF);          // B
+                    array[index++] = (byte) ((color >>> 24) & 0xFF); // A
                 }
             }
         }
+
         return array;
     }
 
@@ -638,9 +649,12 @@ public class AwtRenderingBackend implements RenderingBackend {
             LOG.debug("[" + id_ + "] lineTo(" + x + ", " + y + ")");
         }
 
+        final Point2D p = transformation_.transform(new Point2D.Double(x, y), null);
         final Path2D subPath = getCurrentSubPath();
-        if (subPath != null) {
-            final Point2D p = transformation_.transform(new Point2D.Double(x, y), null);
+        if (subPath.getCurrentPoint() == null) {
+            subPath.moveTo(p.getX(), p.getY());
+        }
+        else {
             subPath.lineTo(p.getX(), p.getY());
         }
     }
@@ -654,8 +668,18 @@ public class AwtRenderingBackend implements RenderingBackend {
             LOG.debug("[" + id_ + "] moveTo(" + x + ", " + y + ")");
         }
 
-        final Path2D subPath = new Path2D.Double();
         final Point2D p = transformation_.transform(new Point2D.Double(x, y), null);
+
+        if (!subPaths_.isEmpty()) {
+            final Path2D last = subPaths_.get(subPaths_.size() - 1);
+            if (!hasSegments(last)) {
+                last.reset();
+                last.moveTo(p.getX(), p.getY());
+                return;
+            }
+        }
+
+        final Path2D subPath = new Path2D.Double();
         subPath.moveTo(p.getX(), p.getY());
         subPaths_.add(subPath);
     }
@@ -664,52 +688,70 @@ public class AwtRenderingBackend implements RenderingBackend {
      * {@inheritDoc}
      */
     @Override
-    public void putImageData(final ImageData imageData,
+    public void putImageData(final ByteBuffer imageDataBuffer,
+            final int imageDataWidth, final int imageDataHeight,
             final int dx, final int dy, final int dirtyX, final int dirtyY,
             final int dirtyWidth, final int dirtyHeight) {
 
         if (LOG.isDebugEnabled()) {
             LOG.debug("[" + id_ + "] putImageData()");
         }
+        if (imageDataBuffer == null || imageDataWidth <= 0 || imageDataHeight <= 0) {
+            return;
+        }
 
-        final Color orgColor = graphics2D_.getColor();
+        // Normalize dirty rect (negative width/height)
+        int sx = dirtyX;
+        int sy = dirtyY;
+        int sw = dirtyWidth;
+        int sh = dirtyHeight;
+        if (sw < 0) {
+            sx += sw;
+            sw = -sw;
+        }
+        if (sh < 0) {
+            sy += sh;
+            sh = -sh;
+        }
+        if (sw == 0 || sh == 0) {
+            return;
+        }
 
-        final int width = dx + imageData.getWidth();
-        final int height = dy + imageData.getHeight();
-        final int imageWidth = dirtyX + dirtyWidth;
-        final int imageHeight = dirtyY + dirtyHeight;
+        // Clip dirty rect to source bounds
+        final int srcStartX = Math.max(0, sx);
+        final int srcStartY = Math.max(0, sy);
+        final int srcEndX = Math.min(imageDataWidth, sx + sw);
+        final int srcEndY = Math.min(imageDataHeight, sy + sh);
+        if (srcStartX >= srcEndX || srcStartY >= srcEndY) {
+            return;
+        }
 
-        final byte[] bytes = imageData.getData().getBuffer().getBuffer();
-        int byteIdx = 0;
-        int imageX = 0;
-        int imageY = 0;
-        for (int insertY = dy; insertY < height; insertY++) {
-            for (int insertX = dx; insertX < width; insertX++) {
-                if (0 <= insertX && insertX < image_.getWidth()
-                        && 0 <= insertY && insertY < image_.getHeight()
-                        && dirtyX <= imageX && imageX < imageWidth
-                        && dirtyY <= imageY && imageY < imageHeight) {
-                    final int r = bytes[byteIdx++] & 0xFF;
-                    final int g = bytes[byteIdx++] & 0xFF;
-                    final int b = bytes[byteIdx++] & 0xFF;
-                    final int a = bytes[byteIdx++] & 0xFF;
-                    final Color color = new Color(r, g, b, a);
-                    graphics2D_.setColor(color);
-                    graphics2D_.drawLine(insertX, insertY, insertX, insertY);
-                }
-                else {
-                    byteIdx += 4;
-                }
+        final int srcWidth = srcEndX - srcStartX;
+        final int srcHeight = srcEndY - srcStartY;
 
-                imageX++;
-                if (imageX == imageData.getWidth()) {
-                    imageX = 0;
-                    imageY++;
-                }
+        final BufferedImage srcImage = new BufferedImage(srcWidth, srcHeight, BufferedImage.TYPE_INT_ARGB);
+        for (int row = 0; row < srcHeight; row++) {
+            for (int col = 0; col < srcWidth; col++) {
+                final int byteIdx = ((srcStartY + row) * imageDataWidth + (srcStartX + col)) * 4;
+                final int r = imageDataBuffer.get(byteIdx)     & 0xFF;
+                final int g = imageDataBuffer.get(byteIdx + 1) & 0xFF;
+                final int b = imageDataBuffer.get(byteIdx + 2) & 0xFF;
+                final int a = imageDataBuffer.get(byteIdx + 3) & 0xFF;
+                srcImage.setRGB(col, row, (a << 24) | (r << 16) | (g << 8) | b);
             }
         }
 
-        graphics2D_.setColor(orgColor);
+        final Composite savedComposite = graphics2D_.getComposite();
+        final AffineTransform savedTransform = graphics2D_.getTransform();
+        try {
+            graphics2D_.setComposite(AlphaComposite.Src);
+            graphics2D_.setTransform(new AffineTransform());
+            graphics2D_.drawImage(srcImage, dx + srcStartX, dy + srcStartY, null);
+        }
+        finally {
+            graphics2D_.setComposite(savedComposite);
+            graphics2D_.setTransform(savedTransform);
+        }
     }
 
     /**
@@ -722,12 +764,9 @@ public class AwtRenderingBackend implements RenderingBackend {
             LOG.debug("[" + id_ + "] quadraticCurveTo()");
         }
 
-        final Path2D subPath = getCurrentSubPath();
-        if (subPath != null) {
-            final Point2D cp = transformation_.transform(new Point2D.Double(cpx, cpy), null);
-            final Point2D p = transformation_.transform(new Point2D.Double(x, y), null);
-            subPath.quadTo(cp.getX(), cp.getY(), p.getX(), p.getY());
-        }
+        final Point2D cp = transformation_.transform(new Point2D.Double(cpx, cpy), null);
+        final Point2D p = transformation_.transform(new Point2D.Double(x, y), null);
+        getCurrentSubPath(cp.getX(), cp.getY()).quadTo(cp.getX(), cp.getY(), p.getX(), p.getY());
     }
 
     /**
@@ -736,15 +775,16 @@ public class AwtRenderingBackend implements RenderingBackend {
     @Override
     public void rect(final double x, final double y, final double w, final double h) {
         if (LOG.isDebugEnabled()) {
-            LOG.debug("[" + id_ + "] rect()");
+            LOG.debug("[" + id_ + "] rect(" + x + ", "  + y + ", "  + w + ", "  + h + ")");
         }
 
-        final Path2D subPath = getCurrentSubPath();
-        if (subPath != null) {
-            final Point2D p = transformation_.transform(new Point2D.Double(x, y), null);
-            final Rectangle2D rect = new Rectangle2D.Double(p.getX(), p.getY(), w, h);
-            subPath.append(rect, false);
-        }
+        final Point2D p0 = transformation_.transform(new Point2D.Double(x, y), null);
+        subPaths_.add(rectPath(x, y, w, h));
+
+        // Spec requires a fresh subpath seeded at (x, y) after the closed rect
+        final Path2D nextPath = new Path2D.Double();
+        nextPath.moveTo(p0.getX(), p0.getY());
+        subPaths_.add(nextPath);
     }
 
     /**
@@ -793,7 +833,7 @@ public class AwtRenderingBackend implements RenderingBackend {
                 color = toAwtColor(StringUtils.asColorHexadecimal(tmpStyle));
             }
             else {
-                color = knownColors.get(tmpStyle.toLowerCase(Locale.ROOT));
+                color = KNOWN_COLORS.get(tmpStyle.toLowerCase(Locale.ROOT));
             }
         }
         return color;
@@ -803,7 +843,7 @@ public class AwtRenderingBackend implements RenderingBackend {
      * {@inheritDoc}
      */
     @Override
-    public int getLineWidth() {
+    public float getLineWidth() {
         return lineWidth_;
     }
 
@@ -851,7 +891,7 @@ public class AwtRenderingBackend implements RenderingBackend {
      * {@inheritDoc}
      */
     @Override
-    public void setLineWidth(final int lineWidth) {
+    public void setLineWidth(final float lineWidth) {
         if (LOG.isDebugEnabled()) {
             LOG.debug("[" + id_ + "] setLineWidth(" + lineWidth + ")");
         }
@@ -882,10 +922,14 @@ public class AwtRenderingBackend implements RenderingBackend {
             LOG.debug("[" + id_ + "] stroke()");
         }
 
-        graphics2D_.setStroke(new BasicStroke(getLineWidth()));
+        graphics2D_.setStroke(new BasicStroke(getLineWidth(),
+                toAwtLineCap(lineCap_), toAwtLineJoin(lineJoin_), miterLimit_));
         graphics2D_.setColor(strokeColor_);
+
         for (final Path2D path2d : subPaths_) {
-            graphics2D_.draw(path2d);
+            if (hasSegments(path2d)) {
+                graphics2D_.draw(path2d);
+            }
         }
     }
 
@@ -893,14 +937,15 @@ public class AwtRenderingBackend implements RenderingBackend {
      * {@inheritDoc}
      */
     @Override
-    public void strokeRect(final int x, final int y, final int w, final int h) {
+    public void strokeRect(final double x, final double y, final double w, final double h) {
         if (LOG.isDebugEnabled()) {
             LOG.debug("[" + id_ + "] strokeRect(" + x + ", "  + y + ", "  + w + ", "  + h + ")");
         }
 
+        graphics2D_.setStroke(new BasicStroke(getLineWidth(),
+                toAwtLineCap(lineCap_), toAwtLineJoin(lineJoin_), miterLimit_));
         graphics2D_.setColor(strokeColor_);
-        final Rectangle2D rect = new Rectangle2D.Double(x, y, w, h);
-        graphics2D_.draw(transformation_.createTransformedShape(rect));
+        graphics2D_.draw(rectPath(x, y, w, h));
     }
 
     /**
@@ -920,7 +965,7 @@ public class AwtRenderingBackend implements RenderingBackend {
      * {@inheritDoc}
      */
     @Override
-    public void translate(final int x, final int y) {
+    public void translate(final double x, final double y) {
         if (LOG.isDebugEnabled()) {
             LOG.debug("[" + id_ + "] translate()");
         }
@@ -938,29 +983,31 @@ public class AwtRenderingBackend implements RenderingBackend {
             LOG.debug("[" + id_ + "] clip(" + windingRule + ", " + path + ")");
         }
 
-        if (path == null && subPaths_.isEmpty()) {
-            graphics2D_.setClip(null);
+        final Path2D clipPath = new Path2D.Double();
+
+        if (path == null) {
+            if (subPaths_.isEmpty()) {
+                return;
+            }
+            for (final Path2D path2d : subPaths_) {
+                if (hasSegments(path2d)) {
+                    clipPath.append(path2d, false);
+                }
+            }
+        }
+        else {
+            // TODO integrate external Path2D host object once available
             return;
         }
 
-        final Path2D currentPath;
-        if (path == null) {
-            currentPath = subPaths_.get(subPaths_.size() - 1);
-        }
-        else {
-            // currentPath = path.getPath2D();
-            currentPath = null;
-        }
-        currentPath.closePath();
-
         if (windingRule == WindingRule.NON_ZERO) {
-            currentPath.setWindingRule(Path2D.WIND_NON_ZERO);
+            clipPath.setWindingRule(Path2D.WIND_NON_ZERO);
         }
         else {
-            currentPath.setWindingRule(Path2D.WIND_EVEN_ODD);
+            clipPath.setWindingRule(Path2D.WIND_EVEN_ODD);
         }
 
-        graphics2D_.clip(currentPath);
+        graphics2D_.clip(clipPath);
     }
 
     /**
@@ -975,7 +1022,115 @@ public class AwtRenderingBackend implements RenderingBackend {
         if (subPaths_.isEmpty()) {
             return;
         }
-        subPaths_.get(subPaths_.size() - 1).closePath();
+
+        final Path2D current = subPaths_.get(subPaths_.size() - 1);
+
+        // Extract the first point of the current subpath — this is where
+        // the spec requires the new subpath to be seeded after closing.
+        final double[] coords = new double[6];
+        final PathIterator it = current.getPathIterator(null);
+        if (it.isDone()) {
+            return; // empty path, nothing to close
+        }
+        it.currentSegment(coords); // first segment is always SEG_MOVETO
+        final double firstX = coords[0];
+        final double firstY = coords[1];
+
+        current.closePath();
+
+        // Spec: "Create a new subpath with the same first point as the
+        // previous subpath."
+        final Path2D nextPath = new Path2D.Double();
+        nextPath.moveTo(firstX, firstY);
+        subPaths_.add(nextPath);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public LineJoin getLineJoin() {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("[" + id_ + "] getLineJoin()");
+        }
+        return lineJoin_;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void setLineJoin(final LineJoin lineJoin) {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("[" + id_ + "] setLineJoin(" + lineJoin + ")");
+        }
+        lineJoin_ = lineJoin;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public LineCap getLineCap() {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("[" + id_ + "] getLineCap()");
+        }
+        return lineCap_;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void setLineCap(final LineCap lineCap) {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("[" + id_ + "] setLineCap(" + lineCap + ")");
+        }
+        lineCap_ = lineCap;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public TextAlign getTextAlign() {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("[" + id_ + "] getTextAlign()");
+        }
+        return textAlign_;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void setTextAlign(final TextAlign textAlign) {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("[" + id_ + "] setTextAlign(" + textAlign + ")");
+        }
+        textAlign_ = textAlign;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public TextBaseline getTextBaseline() {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("[" + id_ + "] getTextBaseline()");
+        }
+        return textBaseline_;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void setTextBaseline(final TextBaseline textBaseline) {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("[" + id_ + "] setTextBaseline(" + textBaseline + ")");
+        }
+        textBaseline_ = textBaseline;
     }
 
     private Path2D getCurrentSubPath() {
@@ -987,33 +1142,48 @@ public class AwtRenderingBackend implements RenderingBackend {
         return subPaths_.get(subPaths_.size() - 1);
     }
 
-    private static final class SaveState {
-        private final AffineTransform transformation_;
-        private final float globalAlpha_;
-        private final int lineWidth_;
-        private final Color fillColor_;
-        private final Color strokeColor_;
-        private final Shape clip_;
-
-        SaveState(final AwtRenderingBackend backend) {
-            transformation_ = backend.transformation_;
-            globalAlpha_ = backend.globalAlpha_;
-            lineWidth_ = backend.lineWidth_;
-            fillColor_ = backend.fillColor_;
-            strokeColor_ = backend.strokeColor_;
-
-            clip_ = backend.graphics2D_.getClip();
+    private Path2D getCurrentSubPath(final double x, final double y) {
+        if (subPaths_.isEmpty()) {
+            final Path2D subPath = new Path2D.Double();
+            subPaths_.add(subPath);
+            subPath.moveTo(x, y);
+            return subPath;
         }
 
-        void applyOn(final AwtRenderingBackend backend) {
-            backend.transformation_ = transformation_;
-            backend.globalAlpha_ = globalAlpha_;
-            backend.lineWidth_ = lineWidth_;
-            backend.fillColor_ = fillColor_;
-            backend.strokeColor_ = strokeColor_;
-
-            backend.graphics2D_.setClip(clip_);
+        final Path2D subPath = subPaths_.get(subPaths_.size() - 1);
+        if (subPath.getCurrentPoint() == null) {
+            subPath.moveTo(x, y);
         }
+        return subPath;
+    }
+
+    private Path2D rectPath(final double x, final double y, final double w, final double h) {
+        // Build the four corners explicitly from the raw (possibly negative) w/h
+        // so the winding matches the Canvas spec: (x,y) → (x+w,y) → (x+w,y+h) → (x,y+h)
+        // Do NOT use Rectangle2D.Double — it normalises negative dimensions.
+        final Path2D rectPath = new Path2D.Double();
+        final Point2D p0 = transformation_.transform(new Point2D.Double(x, y), null);
+        final Point2D p1 = transformation_.transform(new Point2D.Double(x + w, y), null);
+        final Point2D p2 = transformation_.transform(new Point2D.Double(x + w, y + h), null);
+        final Point2D p3 = transformation_.transform(new Point2D.Double(x, y + h), null);
+        rectPath.moveTo(p0.getX(), p0.getY());
+        rectPath.lineTo(p1.getX(), p1.getY());
+        rectPath.lineTo(p2.getX(), p2.getY());
+        rectPath.lineTo(p3.getX(), p3.getY());
+        rectPath.closePath();
+
+        return rectPath;
+    }
+
+    private static boolean hasSegments(final Path2D path) {
+        final PathIterator it = path.getPathIterator(null);
+        while (!it.isDone()) {
+            if (it.currentSegment(new double[6]) != PathIterator.SEG_MOVETO) {
+                return true;
+            }
+            it.next();
+        }
+        return false;
     }
 
     private static Color toAwtColor(final org.htmlunit.html.impl.Color color) {
@@ -1021,5 +1191,115 @@ public class AwtRenderingBackend implements RenderingBackend {
             return null;
         }
         return new Color(color.getRed(), color.getGreen(), color.getBlue(), color.getAlpha());
+    }
+
+    private static int toAwtLineJoin(final LineJoin lineJoin) {
+        return switch (lineJoin) {
+            case MITER -> BasicStroke.JOIN_MITER;
+            case ROUND -> BasicStroke.JOIN_ROUND;
+            case BEVEL -> BasicStroke.JOIN_BEVEL;
+        };
+    }
+
+    private static int toAwtLineCap(final LineCap lineCap) {
+        return switch (lineCap) {
+            case ROUND -> BasicStroke.CAP_ROUND;
+            case SQUARE -> BasicStroke.CAP_SQUARE;
+            case BUTT -> BasicStroke.CAP_BUTT;
+        };
+    }
+
+    /**
+     * Returns the horizontal offset from the x position given to fillText() to the left
+     * side of the text (as AWT draws the text starting at the left side).
+     * Only left-to-right text is supported; start is left and end is right.
+     *
+     * @param textWidth the width of the text
+     * @return the offset to subtract from x
+     */
+    private double textAlignOffset(final double textWidth) {
+        return switch (textAlign_) {
+            case CENTER -> textWidth / 2;
+            case RIGHT, END -> textWidth;
+            case LEFT, START -> 0;
+        };
+    }
+
+    /**
+     * Returns the vertical offset from the y position given to fillText() to the alphabetic
+     * baseline (as AWT draws the text at the alphabetic baseline).
+     *
+     * @param metrics the metrics of the current font
+     * @return the offset to add to y
+     */
+    private double textBaselineOffset(final FontMetrics metrics) {
+        final int ascent = metrics.getAscent();
+        final int descent = metrics.getDescent();
+        return switch (textBaseline_) {
+            case TOP, HANGING -> ascent;
+            case MIDDLE -> (ascent - descent) / 2.0;
+            case IDEOGRAPHIC, BOTTOM -> -descent;
+            case ALPHABETIC -> 0;
+        };
+    }
+
+    private static final class SaveState {
+        private final AffineTransform transformation_;
+        private final float globalAlpha_;
+        private final float lineWidth_;
+        private final Color fillColor_;
+        private final Color strokeColor_;
+        private final Shape clip_;
+
+        private final LineCap lineCap_;
+        private final LineJoin lineJoin_;
+        private final float miterLimit_;
+
+        private final Font font_;
+        private final TextAlign textAlign_;
+        private final TextBaseline textBaseline_;
+
+        SaveState(final AwtRenderingBackend backend) {
+            transformation_ = new AffineTransform(backend.transformation_);
+            globalAlpha_ = backend.globalAlpha_;
+            lineWidth_ = backend.lineWidth_;
+            fillColor_ = backend.fillColor_;
+            strokeColor_ = backend.strokeColor_;
+
+            lineCap_ = backend.lineCap_;
+            lineJoin_ = backend.lineJoin_;
+            miterLimit_ = backend.miterLimit_;
+
+            // Defensive copy — getClip() can return a live mutable shape
+            // on some Graphics2D implementations
+            final Shape c = backend.graphics2D_.getClip();
+            clip_ = (c == null) ? null : new Path2D.Double(c);
+
+            // Font is immutable so no copy needed
+            font_ = backend.graphics2D_.getFont();
+            textAlign_ = backend.textAlign_;
+            textBaseline_ = backend.textBaseline_;
+        }
+
+        void applyOn(final AwtRenderingBackend backend) {
+            backend.transformation_ = new AffineTransform(transformation_);
+            backend.lineWidth_ = lineWidth_;
+            backend.fillColor_ = fillColor_;
+            backend.strokeColor_ = strokeColor_;
+
+            backend.updateGlobalAlpha(globalAlpha_);
+
+            backend.lineCap_ = lineCap_;
+            backend.lineJoin_ = lineJoin_;
+            backend.miterLimit_ = miterLimit_;
+
+            // Restore clip with another defensive copy so this SaveState
+            // remains reusable if somehow applyOn is called more than once
+            backend.graphics2D_.setClip((clip_ == null) ? null : new Path2D.Double(clip_));
+
+            backend.graphics2D_.setFont(font_);
+            backend.textAlign_ = textAlign_;
+            backend.textBaseline_ = textBaseline_;
+        }
     }
 }

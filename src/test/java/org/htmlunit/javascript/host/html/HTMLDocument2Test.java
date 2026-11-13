@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,9 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.junit.Assert.fail;
-
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import org.htmlunit.CollectingAlertHandler;
 import org.htmlunit.CookieManager;
@@ -29,9 +24,10 @@ import org.htmlunit.ScriptException;
 import org.htmlunit.SimpleWebTestCase;
 import org.htmlunit.WebClient;
 import org.htmlunit.html.HtmlPage;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.util.Cookie;
+import org.htmlunit.http.Cookie;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link HTMLDocument}.
@@ -40,7 +36,6 @@ import org.htmlunit.util.Cookie;
  * @author Marc Guillemot
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class HTMLDocument2Test extends SimpleWebTestCase {
 
     /**
@@ -49,7 +44,8 @@ public class HTMLDocument2Test extends SimpleWebTestCase {
     @Test
     @Alerts({"www.gargoylesoftware.com", "gargoylesoftware.com"})
     public void domain() throws Exception {
-        final String html = "<html><head><title>foo</title><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><title>foo</title><script>\n"
             + "function doTest() {\n"
             + "  alert(document.domain);\n"
             + "  document.domain = 'gargoylesoftware.com';\n"
@@ -59,7 +55,7 @@ public class HTMLDocument2Test extends SimpleWebTestCase {
             + "<body onload='doTest()'>\n"
             + "</body></html>";
 
-        loadPageWithAlerts(html, new URL("http://www.gargoylesoftware.com/"), -1);
+        loadPageWithAlerts(html, new URL("http://www.gargoylesoftware.com/"), null);
     }
 
     /**
@@ -68,7 +64,8 @@ public class HTMLDocument2Test extends SimpleWebTestCase {
     @Test
     @Alerts({"localhost", "gargoylesoftware.com"})
     public void domainFromLocalhost() throws Exception {
-        final String html = "<html><head><title>foo</title><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><title>foo</title><script>\n"
             + "function doTest() {\n"
             + "  alert(document.domain);\n"
             + "  document.domain = 'gargoylesoftware.com';\n"
@@ -79,18 +76,19 @@ public class HTMLDocument2Test extends SimpleWebTestCase {
             + "</body></html>";
 
         getMockWebConnection().setDefaultResponse(html);
-        loadPageWithAlerts(html, new URL("http://localhost"), -1);
+        loadPageWithAlerts(html, new URL("http://localhost"), null);
     }
 
-  /**
-    * @throws Exception if the test fails
-    */
+    /**
+     * @throws Exception if the test fails
+     */
     @Test
     @Alerts({"www.gargoylesoftware.com", "gargoylesoftware.com"})
     public void domainMixedCaseNetscape() throws Exception {
         final URL urlGargoyleUpperCase = new URL("http://WWW.GARGOYLESOFTWARE.COM/");
 
-        final String html = "<html><head><title>foo</title><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><title>foo</title><script>\n"
             + "function doTest() {\n"
             + "  alert(document.domain);\n"
             + "  document.domain = 'GaRgOyLeSoFtWaRe.CoM';\n"
@@ -101,7 +99,7 @@ public class HTMLDocument2Test extends SimpleWebTestCase {
             + "</body></html>";
 
         getMockWebConnection().setDefaultResponse(html);
-        loadPageWithAlerts(html, urlGargoyleUpperCase, -1);
+        loadPageWithAlerts(html, urlGargoyleUpperCase, null);
     }
 
     /**
@@ -110,7 +108,8 @@ public class HTMLDocument2Test extends SimpleWebTestCase {
     @Test
     @Alerts({"www.gargoylesoftware.com", "gargoylesoftware.com"})
     public void domainMixedCase() throws Exception {
-        final String html = "<html><head><title>foo</title><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><title>foo</title><script>\n"
             + "function doTest() {\n"
             + "  alert(document.domain);\n"
             + "  document.domain = 'GaRgOyLeSoFtWaRe.CoM';\n"
@@ -120,7 +119,7 @@ public class HTMLDocument2Test extends SimpleWebTestCase {
             + "<body onload='doTest()'>\n"
             + "</body></html>";
 
-        loadPageWithAlerts(html, new URL("http://www.gargoylesoftware.com/"), -1);
+        loadPageWithAlerts(html, new URL("http://www.gargoylesoftware.com/"), null);
     }
 
     /**
@@ -129,7 +128,8 @@ public class HTMLDocument2Test extends SimpleWebTestCase {
     @Test
     @Alerts({"d4.d3.d2.d1.gargoylesoftware.com", "d4.d3.d2.d1.gargoylesoftware.com", "d1.gargoylesoftware.com"})
     public void domainLong() throws Exception {
-        final String html = "<html><head><title>foo</title><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><title>foo</title><script>\n"
             + "function doTest() {\n"
             + "  alert(document.domain);\n"
             + "  document.domain = 'd4.d3.d2.d1.gargoylesoftware.com';\n"
@@ -142,7 +142,7 @@ public class HTMLDocument2Test extends SimpleWebTestCase {
             + "</body></html>";
 
         getMockWebConnection().setDefaultResponse(html);
-        loadPageWithAlerts(html, new URL("http://d4.d3.d2.d1.gargoylesoftware.com"), -1);
+        loadPageWithAlerts(html, new URL("http://d4.d3.d2.d1.gargoylesoftware.com"), null);
     }
 
     /**
@@ -151,7 +151,8 @@ public class HTMLDocument2Test extends SimpleWebTestCase {
     @Test
     @Alerts({"localhost", "localhost"})
     public void domainSetSelf() throws Exception {
-        final String html = "<html><head><title>foo</title><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><title>foo</title><script>\n"
             + "function doTest() {\n"
             + "  alert(document.domain);\n"
             + "  document.domain = 'localhost';\n"
@@ -162,7 +163,7 @@ public class HTMLDocument2Test extends SimpleWebTestCase {
             + "</body></html>";
 
         getMockWebConnection().setDefaultResponse(html);
-        loadPageWithAlerts(html, new URL("http://localhost"), -1);
+        loadPageWithAlerts(html, new URL("http://localhost"), null);
     }
 
     /**
@@ -170,7 +171,8 @@ public class HTMLDocument2Test extends SimpleWebTestCase {
      */
     @Test
     public void domainTooShort() throws Exception {
-        final String html = "<html><head><title>foo</title><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><title>foo</title><script>\n"
             + "function doTest() {\n"
             + "  alert(document.domain);\n"
             + "  document.domain = 'com';\n"
@@ -187,17 +189,17 @@ public class HTMLDocument2Test extends SimpleWebTestCase {
         catch (final ScriptException ex) {
             return;
         }
-        fail();
+        Assertions.fail();
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"www.gargoylesoftware.com", "www.gargoylesoftware.com"},
-            IE = {"www.gargoylesoftware.com", "www.gargoylesoftware.com", "exception"})
+    @Alerts({"www.gargoylesoftware.com", "www.gargoylesoftware.com"})
     public void domain_set_for_about_blank() throws Exception {
-        final String html = "<html><head><title>foo</title><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><title>foo</title><script>\n"
             + "function doTest() {\n"
             + "  var domain = document.domain;\n"
             + "  alert(domain);\n"
@@ -205,14 +207,14 @@ public class HTMLDocument2Test extends SimpleWebTestCase {
             + "  alert(frameDoc.domain);\n"
             + "  try {\n"
             + "    frameDoc.domain = domain;\n"
-            + "  } catch (e) { alert('exception'); }\n"
+            + "  } catch(e) { alert('exception'); }\n"
             + "}\n"
             + "</script></head>\n"
             + "<body onload='doTest()'>\n"
             + "<iframe src='about:blank'></iframe>\n"
             + "</body></html>";
 
-        loadPageWithAlerts(html, new URL("http://www.gargoylesoftware.com/"), -1);
+        loadPageWithAlerts(html, new URL("http://www.gargoylesoftware.com/"), null);
     }
 
     /**
@@ -223,8 +225,8 @@ public class HTMLDocument2Test extends SimpleWebTestCase {
     public void cookie_read() throws Exception {
         final WebClient webClient = getWebClientWithMockWebConnection();
 
-        final String html
-            = "<html><head><title>First</title><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><title>First</title><script>\n"
             + "function doTest() {\n"
             + "  var cookieSet = document.cookie.split('; ');\n"
             + "  var setSize = cookieSet.length;\n"
@@ -261,8 +263,8 @@ public class HTMLDocument2Test extends SimpleWebTestCase {
     @Test
     @Alerts({"false", "", "", ""})
     public void cookie_write_cookiesDisabled() throws Exception {
-        final String html =
-                "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+              + "html><head><script>\n"
               + "  alert(navigator.cookieEnabled);\n"
               + "  alert(document.cookie);\n"
               + "  document.cookie = 'foo=bar';\n"

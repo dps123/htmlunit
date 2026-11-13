@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,17 +17,21 @@ package org.htmlunit.html;
 import java.util.Map;
 
 import org.htmlunit.SgmlPage;
+import org.htmlunit.util.StringUtils;
 
 /**
  * An abstract cell that provides the implementation for HtmlTableDataCell and HtmlTableHeaderCell.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
- * @author David K. Taylor
- * @author <a href="mailto:cse@dynabean.de">Christian Sell</a>
- * @author Ahmed Ashour
- * @author Frank Danek
  * @see HtmlTableDataCell
  * @see HtmlTableHeaderCell
+ *
+ * @author Mike Bowler
+ * @author David K. Taylor
+ * @author Christian Sell
+ * @author Ahmed Ashour
+ * @author Frank Danek
+ * @author Lai Quang Duong
+ * @author Ronald Brill
  */
 public abstract class HtmlTableCell extends HtmlElement {
 
@@ -44,27 +48,53 @@ public abstract class HtmlTableCell extends HtmlElement {
     }
 
     /**
-     * Returns the value of the colspan attribute, or <code>1</code> if the attribute wasn't specified.
-     * @return the value of the colspan attribute, or <code>1</code> if the attribute wasn't specified
+     * Returns the column span of this cell.
+     *
+     * @return the value of the {@code colspan} attribute, or {@code 1} if the
+     *         attribute was not specified or is invalid
      */
     public int getColumnSpan() {
-        final String spanString = getAttributeDirect("colspan");
+        final String spanString = StringUtils.replaceChars(getAttributeDirect("colspan"), "\r\n\t ", null);
         if (spanString == null || spanString.isEmpty()) {
             return 1;
         }
-        return Integer.parseInt(spanString);
+        try {
+            final int span = (int) Double.parseDouble(spanString);
+            if (span < 1) {
+                return 1;
+            }
+            return Math.min(span, 1_000);
+        }
+        catch (final NumberFormatException e) {
+            return 1;
+        }
     }
 
     /**
-     * Returns the value of the rowspan attribute, or <code>1</code> if the attribute wasn't specified.
-     * @return the value of the rowspan attribute, or <code>1</code> if the attribute wasn't specified
+     * Returns the row span of this cell.
+     *
+     * @return the value of the {@code rowspan} attribute, or {@code 1} if the
+     *         attribute was not specified or is invalid
      */
     public int getRowSpan() {
-        final String spanString = getAttributeDirect("rowspan");
+        final String spanString = StringUtils.replaceChars(getAttributeDirect("rowspan"), "\r\n\t ", null);
         if (spanString == null || spanString.isEmpty()) {
             return 1;
         }
-        return Integer.parseInt(spanString);
+        try {
+            final int span = (int) Double.parseDouble(spanString);
+            if (span < 0) {
+                return 1;
+            }
+            if (span < 1) {
+                return 0;
+            }
+
+            return Math.min(span, 65_534);
+        }
+        catch (final NumberFormatException e) {
+            return 1;
+        }
     }
 
     /**

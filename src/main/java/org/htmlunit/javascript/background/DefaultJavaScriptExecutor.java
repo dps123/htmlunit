@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.htmlunit.WebClient;
 import org.htmlunit.WebWindow;
 
@@ -44,7 +43,8 @@ public class DefaultJavaScriptExecutor implements JavaScriptExecutor {
     /** Logging support. */
     private static final Log LOG = LogFactory.getLog(DefaultJavaScriptExecutor.class);
 
-    /** Creates an EventLoop for the webClient.
+    /**
+     * Creates an EventLoop for the webClient.
      *
      * @param webClient the provided webClient
      */
@@ -81,14 +81,18 @@ public class DefaultJavaScriptExecutor implements JavaScriptExecutor {
         if (eventLoopThread_ == null) {
             return;
         }
+
         try {
             eventLoopThread_.interrupt();
             eventLoopThread_.join(10_000);
         }
         catch (final InterruptedException e) {
-            LOG.warn("InterruptedException while waiting for the eventLoop thread to join ", e);
-            // ignore, this doesn't matter, we want to stop it
+            LOG.warn("InterruptedException while waiting for the eventLoop thread to join", e);
+
+            // restore interrupted status
+            Thread.currentThread().interrupt();
         }
+
         if (eventLoopThread_.isAlive()) {
             if (LOG.isWarnEnabled()) {
                 LOG.warn("Event loop thread "
@@ -99,7 +103,13 @@ public class DefaultJavaScriptExecutor implements JavaScriptExecutor {
             }
 
             // Stop the thread
-            eventLoopThread_.stop();
+            try {
+                eventLoopThread_.stop();
+            }
+            catch (final Exception e) {
+                LOG.warn("JS thread did not interrupt after 10s, maybe there is an endless loop."
+                        + "Please consider setting an JavaScriptTimeout for the WebClient.", e);
+            }
         }
     }
 
@@ -169,7 +179,10 @@ public class DefaultJavaScriptExecutor implements JavaScriptExecutor {
                 Thread.sleep(sleepInterval);
             }
             catch (final InterruptedException e) {
+                // restore interrupted status
                 Thread.currentThread().interrupt();
+
+                break;
             }
         }
     }

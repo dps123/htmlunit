@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,17 @@
  */
 package org.htmlunit;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
+import org.apache.commons.lang3.StringUtils;
 import org.htmlunit.html.HtmlPage;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.HtmlUnitNYI;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link WebWindowListener}.
  *
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class WebWindowListenerTest extends SimpleWebTestCase {
 
     /**
@@ -35,43 +33,208 @@ public class WebWindowListenerTest extends SimpleWebTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @NotYetImplemented
+    @Alerts("changed '(null)' - 'Test 1 [org.htmlunit.TopLevelWindow]'; "
+            + "changed 'Test 1 [org.htmlunit.TopLevelWindow]' - 'Test 2 [org.htmlunit.TopLevelWindow]'; ")
+    @HtmlUnitNYI(CHROME = "changed 'Test 1 [org.htmlunit.TopLevelWindow]' - 'Test 2 [org.htmlunit.TopLevelWindow]'; "
+                    + "changed '(null)' - 'Test 1 [org.htmlunit.TopLevelWindow]'; ",
+            EDGE = "changed 'Test 1 [org.htmlunit.TopLevelWindow]' - 'Test 2 [org.htmlunit.TopLevelWindow]'; "
+                    + "changed '(null)' - 'Test 1 [org.htmlunit.TopLevelWindow]'; ",
+            FF = "changed 'Test 1 [org.htmlunit.TopLevelWindow]' - 'Test 2 [org.htmlunit.TopLevelWindow]'; "
+                    + "changed '(null)' - 'Test 1 [org.htmlunit.TopLevelWindow]'; ",
+            FF_ESR = "changed 'Test 1 [org.htmlunit.TopLevelWindow]' - 'Test 2 [org.htmlunit.TopLevelWindow]'; "
+                    + "changed '(null)' - 'Test 1 [org.htmlunit.TopLevelWindow]'; ")
     public void eventOrder() throws Exception {
-        final String firstHtml
-            = "<html>\n"
+        final String firstHtml = DOCTYPE_HTML
+            + "<html>\n"
             + "<head><title>Test 1</title></head>\n"
             + "<body>\n"
             + "<script type='text/javascript'>\n"
             + "  document.location.href = '" + URL_SECOND + "';\n"
             + "</script>\n"
-            + "<p>Second Page<p>\n"
+            + "<p>First Page<p>\n"
             + "</body></html>";
 
-        final String secondHtml
-            = "<html>\n"
+        final String secondHtml = DOCTYPE_HTML
+            + "<html>\n"
             + "<head><title>Test 2</title></head>\n"
             + "<body><p>Second Page<p></body>\n"
             + "</html>";
 
         getMockWebConnection().setResponse(URL_SECOND, secondHtml);
 
-        final StringBuilder msg = new StringBuilder();
-        getWebClient().addWebWindowListener(new WebWindowListener() {
-            @Override
-            public void webWindowOpened(final WebWindowEvent event) {
-            }
-
-            @Override
-            public void webWindowContentChanged(final WebWindowEvent event) {
-                msg.append("changed '" + ((HtmlPage) event.getNewPage()).getTitleText() + "'; ");
-            }
-            @Override
-            public void webWindowClosed(final WebWindowEvent event) {
-            }
-        });
+        final LoggingWebWindowListener logger = new LoggingWebWindowListener();
+        getWebClient().addWebWindowListener(logger);
 
         loadPage(firstHtml);
-        assertEquals("changed 'Test 1'; changed 'Test 2'; ", msg.toString());
+        assertEquals(getExpectedAlerts()[0], logger.getMsg());
     }
 
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("changed '(null)' - 'Test 1 [org.htmlunit.TopLevelWindow]'; "
+            + "closed 'Test 1 [org.htmlunit.TopLevelWindow]' - '(null)'; "
+            + "opened '(null)' - '(null)'; ")
+    public void eventOrderCloseLast() throws Exception {
+        final String firstHtml = DOCTYPE_HTML
+            + "<html>\n"
+            + "<head><title>Test 1</title></head>\n"
+            + "<body>\n"
+            + "</body></html>";
+
+        final LoggingWebWindowListener logger = new LoggingWebWindowListener();
+        getWebClient().addWebWindowListener(logger);
+
+        loadPage(firstHtml);
+        ((TopLevelWindow) getWebClient().getCurrentWindow()).close();
+
+        assertEquals(getExpectedAlerts()[0], logger.getMsg());
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("changed '(null)' - 'Test 1 [org.htmlunit.TopLevelWindow]'; "
+            + "closed 'Test 1 [org.htmlunit.TopLevelWindow]' - '(null)'; "
+            + "opened '(null)' - '(null)'; ")
+    public void eventOrderReset() throws Exception {
+        final String firstHtml = DOCTYPE_HTML
+            + "<html>\n"
+            + "<head><title>Test 1</title></head>\n"
+            + "<body>\n"
+            + "</body></html>";
+
+        final LoggingWebWindowListener logger = new LoggingWebWindowListener();
+        getWebClient().addWebWindowListener(logger);
+
+        loadPage(firstHtml);
+        getWebClient().reset();
+
+        assertEquals(getExpectedAlerts()[0], logger.getMsg());
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("changed '(null)' - 'Test 1 [org.htmlunit.TopLevelWindow]'; "
+            + "closed 'Test 1 [org.htmlunit.TopLevelWindow]' - '(null)'; ")
+    public void eventOrderCloseWebClient() throws Exception {
+        final String firstHtml = DOCTYPE_HTML
+            + "<html>\n"
+            + "<head><title>Test 1</title></head>\n"
+            + "<body>\n"
+            + "</body></html>";
+
+        final LoggingWebWindowListener logger = new LoggingWebWindowListener();
+        getWebClient().addWebWindowListener(logger);
+
+        loadPage(firstHtml);
+        getWebClient().close();
+
+        assertEquals(getExpectedAlerts()[0], logger.getMsg());
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("opened '(null)' - '(null)'; "
+            + "changed '(null)' - 'about:blank [org.htmlunit.html.FrameWindow]'; "
+            + "changed '(null)' - 'Test 1 [org.htmlunit.TopLevelWindow]'; "
+            + "changed 'about:blank [org.htmlunit.html.FrameWindow]' - 'iFrame [org.htmlunit.html.FrameWindow]'; "
+            + "closed 'iFrame [org.htmlunit.html.FrameWindow]' - '(null)'; "
+            + "closed 'Test 1 [org.htmlunit.TopLevelWindow]' - '(null)'; ")
+    public void eventOrderIFrameCloseWebClient() throws Exception {
+        final String firstHtml = DOCTYPE_HTML
+                + "<html>\n"
+                + "<head><title>Test 1</title></head>\n"
+                + "<body>\n"
+                + "<iframe src='" + URL_SECOND + "'></iframe>\n"
+                + "</body></html>";
+
+        final String iframeContent = DOCTYPE_HTML
+                + "<html>\n"
+                + "<head><title>iFrame</title></head>\n"
+                + "<body>iframe</body>\n"
+                + "</html>";
+
+        getMockWebConnection().setResponse(URL_SECOND, iframeContent);
+
+        final LoggingWebWindowListener logger = new LoggingWebWindowListener();
+        getWebClient().addWebWindowListener(logger);
+
+        loadPage(firstHtml);
+        getWebClient().close();
+
+        assertEquals(getExpectedAlerts()[0], logger.getMsg());
+    }
+
+    private static final class LoggingWebWindowListener implements WebWindowListener {
+        private final StringBuilder msg_ = new StringBuilder();
+
+        @Override
+        public void webWindowOpened(final WebWindowEvent event) {
+            log("opened", event);
+        }
+
+        @Override
+        public void webWindowContentChanged(final WebWindowEvent event) {
+            log("changed", event);
+        }
+        @Override
+        public void webWindowClosed(final WebWindowEvent event) {
+            log("closed", event);
+        }
+
+        private void log(final String prefix, final WebWindowEvent event) {
+            msg_.append(prefix).append(" '");
+            Page page = event.getOldPage();
+            if (page instanceof HtmlPage htmlPage) {
+                if (StringUtils.isNotBlank(htmlPage.getTitleText())) {
+                    msg_.append(htmlPage.getTitleText());
+                }
+                else {
+                    msg_.append(htmlPage.getUrl());
+                }
+                msg_.append(" ");
+            }
+            if (page != null) {
+                msg_.append("[")
+                    .append(page.getEnclosingWindow().getClass().getName())
+                    .append("]");
+            }
+            else {
+                msg_.append("(null)");
+            }
+
+            msg_.append("' - '");
+            page = event.getNewPage();
+            if (page instanceof HtmlPage htmlPage) {
+                if (StringUtils.isNotBlank(htmlPage.getTitleText())) {
+                    msg_.append(htmlPage.getTitleText());
+                }
+                else {
+                    msg_.append(htmlPage.getUrl());
+                }
+                msg_.append(" ");
+            }
+            if (page != null) {
+                msg_.append("[")
+                    .append(page.getEnclosingWindow().getClass().getName())
+                    .append("]");
+            }
+            else {
+                msg_.append("(null)");
+            }
+
+            msg_.append("'; ");
+        }
+
+        public String getMsg() {
+            return msg_.toString();
+        }
+    }
 }

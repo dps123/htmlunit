@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,26 +15,27 @@
 package org.htmlunit;
 
 import java.io.Serializable;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.Collections;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.http.cookie.CookieOrigin;
-
-import org.htmlunit.httpclient.HtmlUnitBrowserCompatCookieSpec;
-import org.htmlunit.util.Cookie;
-import org.htmlunit.util.UrlUtils;
+import org.htmlunit.http.Cookie;
 
 /**
- * Manages cookies for a {@link WebClient}. This class is thread-safe.
- * You can disable Cookies by calling setCookiesEnabled(false). The
- * CookieManager itself takes care of this and ignores all cookie request if
- * disabled. If you override this your methods have to do the same.
+ * Manages cookies for a {@link WebClient}.
+ *
+ * <p>This class is thread-safe: all mutator and accessor operations are
+ * protected via a {@link ReentrantReadWriteLock}.
+ * </p>
+ *
+ * <p>Cookie support can be turned off via {@link #setCookiesEnabled(boolean)}.
+ * While disabled, this manager ignores all cookie operations: additions and
+ * removals become no-ops, and accessors behave as if the cookie store were
+ * empty. Subclasses that override these methods must preserve this contract.
+ * </p>
  *
  * @author Daniel Gredler
  * @author Ahmed Ashour
@@ -42,6 +43,8 @@ import org.htmlunit.util.UrlUtils;
  * @author Ronald Brill
  */
 public class CookieManager implements Serializable {
+
+    private final ReentrantReadWriteLock lock_ = new ReentrantReadWriteLock();
 
     /** Whether or not cookies are enabled. */
     private boolean cookiesEnabled_;
@@ -57,173 +60,179 @@ public class CookieManager implements Serializable {
     }
 
     /**
-     * Enables/disables cookie support. Cookies are enabled by default.
-     * @param enabled {@code true} to enable cookie support, {@code false} otherwise
+     * Enables or disables cookie support. Cookies are enabled by default.
+     * Disabling does not clear existing cookies; it only suppresses all
+     * cookie operations until re-enabled.
+     *
+     * @param enabled {@code true} to enable cookie support, {@code false} to disable it
      */
-    public synchronized void setCookiesEnabled(final boolean enabled) {
-        cookiesEnabled_ = enabled;
+    public void setCookiesEnabled(final boolean enabled) {
+        lock_.writeLock().lock();
+        try {
+            cookiesEnabled_ = enabled;
+        }
+        finally {
+            lock_.writeLock().unlock();
+        }
     }
 
     /**
      * Returns {@code true} if cookies are enabled. Cookies are enabled by default.
+     *
      * @return {@code true} if cookies are enabled, {@code false} otherwise
      */
-    public synchronized boolean isCookiesEnabled() {
-        return cookiesEnabled_;
+    public boolean isCookiesEnabled() {
+        lock_.readLock().lock();
+        try {
+            return cookiesEnabled_;
+        }
+        finally {
+            lock_.readLock().unlock();
+        }
     }
 
     /**
-     * Returns the currently configured cookies, in an unmodifiable set.
-     * If disabled, this returns an empty set.
-     * @return the currently configured cookies, in an unmodifiable set
-     */
-    public synchronized Set<Cookie> getCookies() {
-        if (!isCookiesEnabled()) {
-            return Collections.emptySet();
-        }
-
-        final Set<Cookie> copy = new LinkedHashSet<>(cookies_);
-        return Collections.unmodifiableSet(copy);
-    }
-
-    /**
-     * Helper that builds a CookieOrigin.
-     * @param url the url to be used
-     * @return the new CookieOrigin
-     */
-    public CookieOrigin buildCookieOrigin(final URL url) {
-        final URL normalizedUrl = replaceForCookieIfNecessary(url);
-
-        return new CookieOrigin(
-                normalizedUrl.getHost(),
-                getPort(normalizedUrl),
-                normalizedUrl.getPath(),
-                "https".equals(normalizedUrl.getProtocol()));
-    }
-
-    /**
-     * Clears all cookies that have expired before supplied date.
-     * If disabled, this returns false.
-     * @param date the date to use for comparison when clearing expired cookies
-     * @return whether any cookies were found expired, and were cleared
-     */
-    public synchronized boolean clearExpired(final Date date) {
-        if (!isCookiesEnabled()) {
-            return false;
-        }
-
-        if (date == null) {
-            return false;
-        }
-
-        boolean foundExpired = false;
-        for (final Iterator<Cookie> iter = cookies_.iterator(); iter.hasNext();) {
-            final Cookie cookie = iter.next();
-            if (cookie.getExpires() != null && date.after(cookie.getExpires())) {
-                iter.remove();
-                foundExpired = true;
-            }
-        }
-        return foundExpired;
-    }
-
-    /**
-     * Gets the port of the URL.
-     * This functionality is implemented here as protected method to allow subclass to change it
-     * as workaround to <a href="http://code.google.com/p/googleappengine/issues/detail?id=4784">
-     * Google App Engine bug 4784</a>.
-     * @param url the URL
-     * @return the port use to connect the server
-     */
-    protected int getPort(final URL url) {
-        if (url.getPort() != -1) {
-            return url.getPort();
-        }
-        return url.getDefaultPort();
-    }
-
-    /**
-     * {@link CookieOrigin} doesn't like empty hosts and negative ports,
-     * but these things happen if we're dealing with a local file.
-     * This method allows us to work around this limitation in HttpClient by feeding it a bogus host and port.
+     * Returns a snapshot of the currently configured cookies as an
+     * unmodifiable set. The returned set is a copy and will not reflect
+     * later changes to this manager's cookie store.
      *
-     * @param url the URL to replace if necessary
-     * @return the replacement URL, or the original URL if no replacement was necessary
+     * @return the currently configured cookies, in an unmodifiable set;
+     *         empty if cookie support is disabled
      */
-    public URL replaceForCookieIfNecessary(URL url) {
-        final String protocol = url.getProtocol();
-        final boolean file = "file".equals(protocol);
-        if (file) {
-            try {
-                url = UrlUtils.getUrlWithNewHostAndPort(url,
-                        HtmlUnitBrowserCompatCookieSpec.LOCAL_FILESYSTEM_DOMAIN, 0);
+    public Set<Cookie> getCookies() {
+        lock_.readLock().lock();
+        try {
+            if (!cookiesEnabled_) {
+                return Collections.emptySet();
             }
-            catch (final MalformedURLException e) {
-                throw new RuntimeException(e);
-            }
+
+            final Set<Cookie> copy = new LinkedHashSet<>(cookies_);
+            return Collections.unmodifiableSet(copy);
         }
-        return url;
+        finally {
+            lock_.readLock().unlock();
+        }
     }
 
     /**
-     * Returns the currently configured cookie with the specified name, or {@code null} if one does not exist.
-     * If disabled, this returns null.
-     * @param name the name of the cookie to return
-     * @return the currently configured cookie with the specified name, or {@code null} if one does not exist
+     * Removes all cookies whose expiration date is strictly before the
+     * given date. A cookie expiring at exactly {@code date} is not
+     * considered expired by this comparison (consistent with RFC 6265's
+     * treatment of cookie expiry).
+     *
+     * @param date the date to compare against; if {@code null}, this method
+     *             does nothing and returns {@code false}
+     * @return {@code true} if one or more cookies were found expired and removed;
+     *         {@code false} otherwise, or if cookie support is disabled
      */
-    public synchronized Cookie getCookie(final String name) {
-        if (!isCookiesEnabled()) {
+    public boolean clearExpired(final Date date) {
+        lock_.writeLock().lock();
+        try {
+            if (!cookiesEnabled_ || date == null) {
+                return false;
+            }
+
+            return cookies_.removeIf(cookie ->
+                cookie.getExpires() != null && date.after(cookie.getExpires()));
+        }
+        finally {
+            lock_.writeLock().unlock();
+        }
+    }
+
+    /**
+     * Returns the currently configured cookie with the specified name, or
+     * {@code null} if none exists. If multiple stored cookies happen to
+     * share a name (e.g., differing by domain or path), the first match
+     * encountered in iteration order is returned.
+     *
+     * @param name the cookie name to look up; may be {@code null}
+     * @return the matching cookie, or {@code null} if none exists or cookie
+     *         support is disabled
+     */
+    public Cookie getCookie(final String name) {
+        lock_.readLock().lock();
+        try {
+            if (!cookiesEnabled_) {
+                return null;
+            }
+
+            for (final Cookie cookie : cookies_) {
+                if (Objects.equals(cookie.getName(), name)) {
+                    return cookie;
+                }
+            }
             return null;
         }
-
-        for (final Cookie cookie : cookies_) {
-            if (StringUtils.equals(cookie.getName(), name)) {
-                return cookie;
-            }
+        finally {
+            lock_.readLock().unlock();
         }
-        return null;
     }
 
     /**
-     * Adds the specified cookie.
-     * If disabled, this does nothing.
+     * Adds the specified cookie, replacing any existing cookie considered
+     * equal to it. If the cookie is already expired relative to the current
+     * time, it replaces the old entry (if any) but is not itself re-added —
+     * this is the mechanism by which a cookie can be deleted by supplying a
+     * past expiration date, per RFC 6265.
+     *
      * @param cookie the cookie to add
      */
-    public synchronized void addCookie(final Cookie cookie) {
-        if (!isCookiesEnabled()) {
-            return;
+    public void addCookie(final Cookie cookie) {
+        lock_.writeLock().lock();
+        try {
+            if (!cookiesEnabled_) {
+                return;
+            }
+
+            cookies_.remove(cookie);
+
+            // don't add expired cookie
+            if (cookie.getExpires() == null || cookie.getExpires().after(new Date())) {
+                cookies_.add(cookie);
+            }
         }
-
-        cookies_.remove(cookie);
-
-        // don't add expired cookie
-        if (cookie.getExpires() == null || cookie.getExpires().after(new Date())) {
-            cookies_.add(cookie);
+        finally {
+            lock_.writeLock().unlock();
         }
     }
 
     /**
-     * Removes the specified cookie.
-     * If disabled, this does nothing.
-     * @param cookie the cookie to remove
+     * Removes the specified cookie, if present. Does nothing if cookie support
+     * is disabled.
+     *
+     * @param cookie the cookie to remove; may be {@code null}, in which case
+     *               this method does nothing
      */
-    public synchronized void removeCookie(final Cookie cookie) {
-        if (!isCookiesEnabled()) {
-            return;
-        }
+    public void removeCookie(final Cookie cookie) {
+        lock_.writeLock().lock();
+        try {
+            if (!cookiesEnabled_) {
+                return;
+            }
 
-        cookies_.remove(cookie);
+            cookies_.remove(cookie);
+        }
+        finally {
+            lock_.writeLock().unlock();
+        }
     }
 
     /**
-     * Removes all cookies.
-     * If disabled, this does nothing.
+     * Removes all cookies from this manager. Does nothing if cookie support
+     * is disabled.
      */
-    public synchronized void clearCookies() {
-        if (!isCookiesEnabled()) {
-            return;
-        }
+    public void clearCookies() {
+        lock_.writeLock().lock();
+        try {
+            if (!cookiesEnabled_) {
+                return;
+            }
 
-        cookies_.clear();
+            cookies_.clear();
+        }
+        finally {
+            lock_.writeLock().unlock();
+        }
     }
 }

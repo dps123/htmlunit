@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,25 +14,24 @@
  */
 package org.htmlunit.javascript.host.event;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
 import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
 import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
 
 import java.util.ArrayList;
 
+import org.htmlunit.corejs.javascript.Context;
+import org.htmlunit.corejs.javascript.Function;
+import org.htmlunit.corejs.javascript.Scriptable;
+import org.htmlunit.corejs.javascript.ScriptableObject;
+import org.htmlunit.corejs.javascript.VarScope;
 import org.htmlunit.html.DomNode;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstant;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.host.html.HTMLElement;
-
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.ScriptRuntime;
-import org.htmlunit.corejs.javascript.ScriptableObject;
-import org.htmlunit.corejs.javascript.Undefined;
 
 /**
  * JavaScript object representing a Mouse Event.
@@ -116,7 +115,7 @@ public class MouseEvent extends UIEvent {
     /** The buttons being depressed (if any) when the mouse event was fired. */
     private int buttons_;
 
-    /** Switch to disable label handling if we already processing the event triggered from label processing */
+    /** Switch to disable label handling if we already processing the event triggered from label processing. */
     private boolean processLabelAfterBubbling_ = true;
 
     /** Whether or not the "meta" key was pressed during the firing of the event. */
@@ -126,6 +125,7 @@ public class MouseEvent extends UIEvent {
      * Used to build the prototype.
      */
     public MouseEvent() {
+        super();
         screenX_ = Integer.valueOf(0);
         screenY_ = Integer.valueOf(0);
         setDetail(1);
@@ -137,45 +137,45 @@ public class MouseEvent extends UIEvent {
      * @param type the event type
      * @param details the event details (optional)
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
     @Override
+    @JsxConstructor
     public void jsConstructor(final String type, final ScriptableObject details) {
-        super.jsConstructor(ScriptRuntime.toString(type), details);
-        if (details != null && !Undefined.isUndefined(details)) {
+        super.jsConstructor(JavaScriptEngine.toString(type), details);
+        if (details != null && !JavaScriptEngine.isUndefined(details)) {
             final Object screenX = details.get("screenX", details);
             if (NOT_FOUND != screenX) {
-                screenX_ = ScriptRuntime.toInt32(screenX);
+                screenX_ = JavaScriptEngine.toInt32(screenX);
             }
 
             final Object screenY = details.get("screenY", details);
             if (NOT_FOUND != screenX) {
-                screenY_ = ScriptRuntime.toInt32(screenY);
+                screenY_ = JavaScriptEngine.toInt32(screenY);
             }
 
             final Object clientX = details.get("clientX", details);
             if (NOT_FOUND != clientX) {
-                clientX_ = ScriptRuntime.toInt32(clientX);
+                clientX_ = JavaScriptEngine.toInt32(clientX);
             }
 
             final Object clientY = details.get("clientY", details);
             if (NOT_FOUND != clientX) {
-                clientY_ = ScriptRuntime.toInt32(clientY);
+                clientY_ = JavaScriptEngine.toInt32(clientY);
             }
 
             final Object button = details.get("button", details);
             if (NOT_FOUND != button) {
-                button_ = ScriptRuntime.toInt32(button);
+                button_ = JavaScriptEngine.toInt32(button);
             }
 
             final Object buttons = details.get("buttons", details);
             if (NOT_FOUND != buttons) {
-                buttons_ = ScriptRuntime.toInt32(buttons);
+                buttons_ = JavaScriptEngine.toInt32(buttons);
             }
 
-            setAltKey(ScriptRuntime.toBoolean(details.get("altKey")));
-            setCtrlKey(ScriptRuntime.toBoolean(details.get("ctrlKey")));
-            setMetaKey(ScriptRuntime.toBoolean(details.get("metaKey")));
-            setShiftKey(ScriptRuntime.toBoolean(details.get("shiftKey")));
+            setAltKey(JavaScriptEngine.toBoolean(details.get("altKey")));
+            setCtrlKey(JavaScriptEngine.toBoolean(details.get("ctrlKey")));
+            setMetaKey(JavaScriptEngine.toBoolean(details.get("metaKey")));
+            setShiftKey(JavaScriptEngine.toBoolean(details.get("shiftKey")));
         }
     }
 
@@ -187,9 +187,10 @@ public class MouseEvent extends UIEvent {
      * @param ctrlKey true if CTRL is pressed
      * @param altKey true if ALT is pressed
      * @param button the button code, must be {@link #BUTTON_LEFT}, {@link #BUTTON_MIDDLE} or {@link #BUTTON_RIGHT}
+     * @param detail the detail value
      */
     public MouseEvent(final DomNode domNode, final String type, final boolean shiftKey,
-        final boolean ctrlKey, final boolean altKey, final int button) {
+        final boolean ctrlKey, final boolean altKey, final int button, final int detail) {
 
         super(domNode, type);
         setShiftKey(shiftKey);
@@ -201,12 +202,7 @@ public class MouseEvent extends UIEvent {
         }
         button_ = button;
 
-        if (TYPE_DBL_CLICK.equals(type) || TYPE_CONTEXT_MENU.equals(type)) {
-            setDetail(2);
-        }
-        else {
-            setDetail(1);
-        }
+        setDetail(detail);
     }
 
     /**
@@ -246,7 +242,7 @@ public class MouseEvent extends UIEvent {
     }
 
     /**
-     * Returns the horizontal coordinate of the event relative to whole document..
+     * Returns the horizontal coordinate of the event relative to whole document.
      * @return the horizontal coordinate (currently the same as {@link #getScreenX()})
      * @see <a href="https://developer.mozilla.org/en-US/docs/DOM/event.pageX">Mozilla doc</a>
      */
@@ -340,7 +336,7 @@ public class MouseEvent extends UIEvent {
      * @see <a href="http://unixpapa.com/js/mouse.html">Javascript Madness: Mouse Events</a>
      * @return the button code
      */
-    @JsxGetter
+    @Override
     public int getWhich() {
         return button_ + 1;
     }
@@ -403,11 +399,11 @@ public class MouseEvent extends UIEvent {
         final Context context = Context.getCurrentContext();
         if (context != null) {
             final ArrayList<Event> events = (ArrayList<Event>) context.getThreadLocal(KEY_CURRENT_EVENT);
-            if (events != null && events.size() > 0) {
+            if (events != null && !events.isEmpty()) {
                 final int lastIdx = events.size() - 1;
                 final Event lastEvent = events.get(lastIdx);
-                if (lastEvent instanceof MouseEvent) {
-                    return (MouseEvent) lastEvent;
+                if (lastEvent instanceof MouseEvent event) {
+                    return event;
                 }
             }
         }
@@ -476,14 +472,38 @@ public class MouseEvent extends UIEvent {
      * @return whether or not the "meta" key was pressed during the event firing
      */
     @JsxGetter
-    public boolean getMetaKey() {
+    public boolean isMetaKey() {
         return metaKey_;
     }
 
     /**
-     * @param metaKey whether Meta has been pressed during this event or not
+     * Sets whether the Meta key was pressed during this event.
+     *
+     * @param metaKey whether the Meta key was pressed during this event
      */
     protected void setMetaKey(final boolean metaKey) {
         metaKey_ = metaKey;
+    }
+
+    /**
+     * Returns the current state of the specified modifier key.
+     *
+     * @param context the JavaScript context
+     * @param scope the scope
+     * @param thisObj the scriptable
+     * @param args the arguments passed into the method; the key value of the modifier
+     *        (e.g. {@code Shift} or {@code Control})
+     * @param function the function
+     * @return {@code true} if the modifier is active
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/getModifierState">MDN</a>
+     */
+    @JsxFunction
+    public static boolean getModifierState(final Context context, final VarScope scope,
+            final Scriptable thisObj, final Object[] args, final Function function) {
+        if (!(thisObj instanceof MouseEvent event)) {
+            throw JavaScriptEngine.typeError("Illegal invocation");
+        }
+        return getModifierState("MouseEvent", args,
+                event.isShiftKey(), event.isCtrlKey(), event.isAltKey(), event.isMetaKey());
     }
 }

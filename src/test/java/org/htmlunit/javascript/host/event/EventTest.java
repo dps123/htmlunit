@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,36 +14,26 @@
  */
 package org.htmlunit.javascript.host.event;
 
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.FF;
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.FF_ESR;
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.IE;
-
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.htmlunit.WebDriverTestCase;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.HtmlUnitNYI;
+import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 
-import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.html.HtmlPageTest;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
-import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
-
 /**
  * Tests that when DOM events such as "onclick" have access
  * to an {@link Event} object with context information.
  *
- * @author <a href="mailto:chriseldredge@comcast.net">Chris Eldredge</a>
+ * @author Chris Eldredge
  * @author Ahmed Ashour
  * @author Daniel Gredler
  * @author Marc Guillemot
  * @author Ronald Brill
  * @author Frank Danek
  */
-@RunWith(BrowserRunner.class)
 public class EventTest extends WebDriverTestCase {
 
     private static final String DUMP_EVENT_FUNCTION = "  function dump(event) {\n"
@@ -58,17 +48,16 @@ public class EventTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"[object Event]", "event", "false", "false", "false"},
-            IE = "exception")
+    @Alerts({"[object Event]", "event", "false", "false", "false"})
     public void create_ctor() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
             + "    try {\n"
             + "      var event = new Event('event');\n"
             + "      dump(event);\n"
-            + "    } catch (e) { log('exception') }\n"
+            + "    } catch(e) { logEx(e) }\n"
             + "  }\n"
             + DUMP_EVENT_FUNCTION
             + "</script></head><body onload='test()'>\n"
@@ -81,10 +70,9 @@ public class EventTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"[object Event]", "event", "true", "false", "false"},
-            IE = "exception")
+    @Alerts({"[object Event]", "event", "true", "false", "false"})
     public void create_ctorWithDetails() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -93,7 +81,7 @@ public class EventTest extends WebDriverTestCase {
             + "        'bubbles': true\n"
             + "      });\n"
             + "      dump(event);\n"
-            + "    } catch (e) { log('exception') }\n"
+            + "    } catch(e) { logEx(e) }\n"
             + "  }\n"
             + DUMP_EVENT_FUNCTION
             + "</script></head><body onload='test()'>\n"
@@ -106,10 +94,9 @@ public class EventTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"[object Event]", "event", "true", "false", "false"},
-            IE = "exception")
+    @Alerts({"[object Event]", "event", "true", "false", "false"})
     public void create_ctorWithDetailsBoolAsString() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -118,7 +105,7 @@ public class EventTest extends WebDriverTestCase {
             + "        'bubbles': 'true'\n"
             + "      });\n"
             + "      dump(event);\n"
-            + "    } catch (e) { log('exception') }\n"
+            + "    } catch(e) { logEx(e) }\n"
             + "  }\n"
             + DUMP_EVENT_FUNCTION
             + "</script></head><body onload='test()'>\n"
@@ -131,10 +118,9 @@ public class EventTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"[object Event]", "event", "true", "false", "false"},
-            IE = "exception")
+    @Alerts({"[object Event]", "event", "true", "false", "false"})
     public void create_ctorWithDetailsBoolAsNumber() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -143,7 +129,7 @@ public class EventTest extends WebDriverTestCase {
             + "        'bubbles': 1\n"
             + "      });\n"
             + "      dump(event);\n"
-            + "    } catch (e) { log('exception') }\n"
+            + "    } catch(e) { logEx(e) }\n"
             + "  }\n"
             + DUMP_EVENT_FUNCTION
             + "</script></head><body onload='test()'>\n"
@@ -156,10 +142,9 @@ public class EventTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"[object Event]", "event", "true", "false", "false"},
-            IE = "exception")
+    @Alerts({"[object Event]", "event", "true", "false", "false"})
     public void create_ctorWithDetailsBoolAsObject() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -168,7 +153,7 @@ public class EventTest extends WebDriverTestCase {
             + "        'bubbles': {}\n"
             + "      });\n"
             + "      dump(event);\n"
-            + "    } catch (e) { log('exception') }\n"
+            + "    } catch(e) { logEx(e) }\n"
             + "  }\n"
             + DUMP_EVENT_FUNCTION
             + "</script></head><body onload='test()'>\n"
@@ -181,10 +166,9 @@ public class EventTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"[object Event]", "event", "false", "false", "false"},
-            IE = "exception")
+    @Alerts({"[object Event]", "event", "false", "false", "false"})
     public void create_ctorWithDetailsBoolAsUndefined() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -193,7 +177,7 @@ public class EventTest extends WebDriverTestCase {
             + "        'bubbles': undefined\n"
             + "      });\n"
             + "      dump(event);\n"
-            + "    } catch (e) { log('exception') }\n"
+            + "    } catch(e) { logEx(e) }\n"
             + "  }\n"
             + DUMP_EVENT_FUNCTION
             + "</script></head><body onload='test()'>\n"
@@ -206,10 +190,9 @@ public class EventTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"[object Event]", "event", "false", "false", "false"},
-            IE = "exception")
+    @Alerts({"[object Event]", "event", "false", "false", "false"})
     public void create_ctorWithDetailsBoolAsNull() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -218,7 +201,7 @@ public class EventTest extends WebDriverTestCase {
             + "        'bubbles': null\n"
             + "      });\n"
             + "      dump(event);\n"
-            + "    } catch (e) { log('exception') }\n"
+            + "    } catch(e) { logEx(e) }\n"
             + "  }\n"
             + DUMP_EVENT_FUNCTION
             + "</script></head><body onload='test()'>\n"
@@ -231,17 +214,16 @@ public class EventTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"[object Event]", "", "false", "false", "false"},
-            IE = {"[object Event]", "", "false", "false", "undefined"})
+    @Alerts({"[object Event]", "", "false", "false", "false"})
     public void create_createEvent() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
             + "    try {\n"
             + "      var event = document.createEvent('Event');\n"
             + "      dump(event);\n"
-            + "    } catch (e) { log('exception') }\n"
+            + "    } catch(e) { logEx(e) }\n"
             + "  }\n"
             + DUMP_EVENT_FUNCTION
             + "</script></head><body onload='test()'>\n"
@@ -256,7 +238,7 @@ public class EventTest extends WebDriverTestCase {
     @Test
     @Alerts({"DOM2: [object Event]", "DOM3: [object Event]", "vendor: [object Event]"})
     public void create_createEventForDifferentTypes() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -280,10 +262,9 @@ public class EventTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"[object Event]", "event", "true", "false", "false"},
-            IE = {"[object Event]", "event", "true", "false", "undefined"})
+    @Alerts({"[object Event]", "event", "true", "false", "false"})
     public void initEvent() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -291,7 +272,7 @@ public class EventTest extends WebDriverTestCase {
             + "      var event = document.createEvent('Event');\n"
             + "      event.initEvent('event', true, false);\n"
             + "      dump(event);\n"
-            + "    } catch (e) { log('exception') }\n"
+            + "    } catch(e) { logEx(e) }\n"
             + "  }\n"
             + DUMP_EVENT_FUNCTION
             + "</script></head><body onload='test()'>\n"
@@ -308,8 +289,8 @@ public class EventTest extends WebDriverTestCase {
     @Test
     @Alerts("clickId")
     public void thisDefined() throws Exception {
-        final String content
-            = "<html><head></head><body>\n"
+        final String content = DOCTYPE_HTML
+            + "<html><head></head><body>\n"
             + "<input type='button' id='clickId'/>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -327,8 +308,8 @@ public class EventTest extends WebDriverTestCase {
     @Test
     @Alerts("foo")
     public void setPropOnThisDefined() throws Exception {
-        final String content
-            = "<html><head></head><body>\n"
+        final String content = DOCTYPE_HTML
+            + "<html><head></head><body>\n"
             + "<input type='button' id='clickId'/>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -347,8 +328,8 @@ public class EventTest extends WebDriverTestCase {
     @Test
     @Alerts("defined")
     public void eventArgDefinedByWrapper() throws Exception {
-        final String content
-            = "<html><head>\n"
+        final String content = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "</script>\n"
@@ -365,8 +346,8 @@ public class EventTest extends WebDriverTestCase {
     @Test
     @Alerts("defined")
     public void eventArgDefined() throws Exception {
-        final String content
-            = "<html><head></head>\n"
+        final String content = DOCTYPE_HTML
+            + "<html><head></head>\n"
             + "<body>\n"
             + "<input type='button' id='clickId'/>\n"
             + "<script>\n"
@@ -384,8 +365,8 @@ public class EventTest extends WebDriverTestCase {
     @Test
     @Alerts("pass")
     public void eventTargetSameAsThis() throws Exception {
-        final String content
-            = "<html><head></head>\n"
+        final String content = DOCTYPE_HTML
+            + "<html><head></head>\n"
             + "<body>\n"
             + "<input type='button' id='clickId'/>\n"
             + "<script>\n"
@@ -405,8 +386,8 @@ public class EventTest extends WebDriverTestCase {
     @Test
     @Alerts({"[object HTMLInputElement]", "true"})
     public void eventSrcElementSameAsThis() throws Exception {
-        final String content
-            = "<html><head></head><body>\n"
+        final String content = DOCTYPE_HTML
+            + "<html><head></head><body>\n"
             + "<input type='button' id='clickId'/>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -428,8 +409,8 @@ public class EventTest extends WebDriverTestCase {
     @Test
     @Alerts("pass")
     public void eventCurrentTargetSameAsThis() throws Exception {
-        final String content
-            = "<html><head></head>\n"
+        final String content = DOCTYPE_HTML
+            + "<html><head></head>\n"
             + "<body>\n"
             + "<input type='button' id='clickId'/>\n"
             + "<script>\n"
@@ -450,8 +431,8 @@ public class EventTest extends WebDriverTestCase {
     @Test
     @Alerts({"[object Window]", "[object HTMLDivElement]"})
     public void currentTarget_sameListenerForEltAndWindow() throws Exception {
-        final String content
-            = "<html><head></head><body>\n"
+        final String content = DOCTYPE_HTML
+            + "<html><head></head><body>\n"
             + "<div id='clickId'>click me</div>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -471,15 +452,13 @@ public class EventTest extends WebDriverTestCase {
      */
     @Test
     public void addEventListener_HandlerNull() throws Exception {
-        final String content
-            = "<html><head></head><body>\n"
+        final String content = DOCTYPE_HTML
+            + "<html><head></head><body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "try {\n"
             + "  window.addEventListener('mousedown', null, true);\n"
-            + "} catch (err) {\n"
-            + "  log('error');\n"
-            + "}\n"
+            + "} catch(e) { logEx(e); }\n"
             + "</script>\n"
             + "</body></html>";
         loadPageVerifyTitle2(content);
@@ -536,10 +515,7 @@ public class EventTest extends WebDriverTestCase {
     @Test
     @Alerts(DEFAULT = {"124", "124124"},
             FF = {"1234", "12341234"},
-            FF_ESR = {"1234", "12341234"},
-            IE = {"1234", "12341234"})
-    @HtmlUnitNYI(CHROME = {"1234", "12341234"},
-            EDGE = {"1234", "12341234"})
+            FF_ESR = {"1234", "12341234"})
     public void typing_input_number() throws Exception {
         testTyping("<input type='number'", "");
     }
@@ -554,8 +530,8 @@ public class EventTest extends WebDriverTestCase {
     }
 
     private void testTyping(final String opening, final String closing) throws Exception {
-        final String html =
-              "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "var x = '';\n"
@@ -592,8 +568,8 @@ public class EventTest extends WebDriverTestCase {
     @Test
     @Alerts("frame1")
     public void thisInEventHandler() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -618,8 +594,8 @@ public class EventTest extends WebDriverTestCase {
     @Test
     @Alerts("called")
     public void iframeOnload() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -645,8 +621,8 @@ public class EventTest extends WebDriverTestCase {
     @Test
     @Alerts({"inline", "null"})
     public void iframeOnload2() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "<iframe src='about:blank' name='frame1' id='frame1'></iframe>\n"
             + "<script>\n"
@@ -667,15 +643,15 @@ public class EventTest extends WebDriverTestCase {
     @Test
     @Alerts({"false", "false"})
     public void ieWindowEvent() throws Exception {
-        final String html =
-            "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  log(window.event == null);\n"
             + "  try {\n"
             + "    log(event == null);\n"
-            + "  } catch(e) { log('exception'); }\n"
+            + "  } catch(e) { logEx(e); }\n"
             + "}\n"
             + "</script>\n"
             + "</head><body onload='test()'></body></html>";
@@ -694,8 +670,8 @@ public class EventTest extends WebDriverTestCase {
     @Test
     @Alerts({"1", "2"})
     public void commentInEventHandlerDeclaration() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "</script>\n"
@@ -715,7 +691,8 @@ public class EventTest extends WebDriverTestCase {
     @Test
     @Alerts("null")
     public void nullEventHandler() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -733,11 +710,10 @@ public class EventTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"[object Event]", "load", "false", "false", "false"},
-            IE = {"[object Event]", "load", "false", "false", "undefined"})
+    @Alerts({"[object Event]", "load", "false", "false", "false"})
     public void onload() throws Exception {
-        final String html =
-              "<html><body onload='test(event)'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body onload='test(event)'>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "    function test(e) {\n"
@@ -755,8 +731,8 @@ public class EventTest extends WebDriverTestCase {
     @Test
     @Alerts({"[object Event]", "number"})
     public void timeStamp() throws Exception {
-        final String html =
-              "<html><body onload='test(event)'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body onload='test(event)'>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test(e) {\n"
@@ -805,8 +781,8 @@ public class EventTest extends WebDriverTestCase {
     }
 
     private void testInitEvent(final String eventType) throws Exception {
-        final String html =
-              "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
             + "    var e = document.createEvent('Event');\n"
@@ -815,7 +791,7 @@ public class EventTest extends WebDriverTestCase {
             + "      log(e.type);\n"
             + "      log(e.bubbles);\n"
             + "      log(e.cancelable);\n"
-            + "    } catch(e) { log('e-' + '" + eventType + "'); }\n"
+            + "    } catch(e) { log('e-' + '" + eventType + "'); logEx(e); }\n"
 
             + "    var e = document.createEvent('Event');\n"
             + "    try {\n"
@@ -823,7 +799,7 @@ public class EventTest extends WebDriverTestCase {
             + "      log(e.type);\n"
             + "      log(e.bubbles);\n"
             + "      log(e.cancelable);\n"
-            + "    } catch(e) { log('e2-' + '" + eventType + "'); }\n"
+            + "    } catch(e) { log('e2-' + '" + eventType + "'); logEx(e); }\n"
             + "  }\n"
             + "</script></head>\n"
             + "<body onload='test()'></body></html>";
@@ -837,8 +813,8 @@ public class EventTest extends WebDriverTestCase {
     @Test
     @Alerts({"true", "I was here"})
     public void firedEvent_equals_original_event() throws Exception {
-        final String html =
-            "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -887,8 +863,8 @@ public class EventTest extends WebDriverTestCase {
                       "e-25", "e-26", "e-27", "e-28", "e-29", "4", "e-31", "e-32",
                       "e-33"})
     public void constants() throws Exception {
-        final String html =
-              "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  var constants = [Event.ABORT, Event.ALT_MASK, Event.BACK, Event.BLUR, Event.CHANGE, Event.CLICK, "
@@ -912,15 +888,15 @@ public class EventTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts("exception")
+    @Alerts("TypeError")
     public void text() throws Exception {
-        final String html =
-              "<html><body onload='test(event)'><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body onload='test(event)'><script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test(e) {\n"
             + "    try {\n"
             + "      log(e.TEXT.toString(16));\n"// But Event.TEXT is undefined!!!
-            + "    } catch(e) { log('exception'); }\n"
+            + "    } catch(e) { logEx(e); }\n"
             + "  }\n"
             + "</script>\n"
             + "</body></html>";
@@ -939,7 +915,8 @@ public class EventTest extends WebDriverTestCase {
              "form1: [object HTMLFormElement]", "form2: [object HTMLFormElement]",
              "form1 -> custom", "form2 -> [object HTMLFormElement]"})
     public void nameResolution() throws Exception {
-        final String html = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "var form1 = 'custom';\n"
             + "function testFunc() {\n"
@@ -968,14 +945,16 @@ public class EventTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "activeElement BODY",
-            IE = {"activeElement BODY", "focus BODY", "handler: activeElement BODY"})
+    @Alerts("activeElement BODY")
     // http://code.google.com/p/selenium/issues/detail?id=4665
-    @NotYetImplemented({IE, FF, FF_ESR})
+    @HtmlUnitNYI(FF = {"activeElement BODY", "focus undefined", "handler: activeElement BODY"},
+            FF_ESR = {"activeElement BODY", "focus undefined", "handler: activeElement BODY"})
     public void document_focus() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
+                + LOG_TEXTAREA_FUNCTION
                 + "  function test() {\n"
                 + "    handle(document);\n"
                 + "    log('activeElement ' + document.activeElement.nodeName);\n"
@@ -990,25 +969,24 @@ public class EventTest extends WebDriverTestCase {
                 + "    log(e.type + ' ' + src.nodeName);\n"
                 + "    log('handler: activeElement ' + document.activeElement.nodeName);\n"
                 + "  }\n"
-                + "  function log(x) {\n"
-                + "    document.getElementById('log').value += x + '\\n';\n"
-                + "  }\n"
                 + "</script>\n"
                 + "</head>\n"
                 + "<body onload='test()'>\n"
-                + "  <textarea id='log' cols='80' rows='40'></textarea>\n"
+                + LOG_TEXTAREA
                 + "</body></html>";
 
-        final WebDriver driver = loadPage2(html);
-        final String text = driver.findElement(By.id("log")).getAttribute("value").trim().replaceAll("\r", "");
-        assertEquals(String.join("\n", getExpectedAlerts()), text);
+        loadPageVerifyTextArea2(html);
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts({"focus INPUT", "focus INPUT"})
+    @Alerts(DEFAULT = {"focus INPUT", "focus INPUT"},
+            FF = {"focus #document", "focus INPUT", "focus INPUT"},
+            FF_ESR = {"focus #document", "focus INPUT", "focus INPUT"})
+    @HtmlUnitNYI(FF = {"focus undefined", "focus INPUT", "focus INPUT"},
+            FF_ESR = {"focus undefined", "focus INPUT", "focus INPUT"})
     public void document_input_focus() throws Exception {
         document_input("focus");
     }
@@ -1017,16 +995,17 @@ public class EventTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "blur INPUT",
-            IE = {"blur BODY", "blur INPUT"})
+    @Alerts("blur INPUT")
     public void document_input_blur() throws Exception {
         document_input("blur");
     }
 
     private void document_input(final String event) throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
+                + LOG_TEXTAREA_FUNCTION
                 + "  function test() {\n"
                 + "    handle(document);\n"
                 + "  }\n"
@@ -1039,9 +1018,6 @@ public class EventTest extends WebDriverTestCase {
                 + "      src = e.target;\n"
                 + "    log(e.type + ' ' + src.nodeName);\n"
                 + "  }\n"
-                + "  function log(x) {\n"
-                + "    document.getElementById('log').value += x + '\\n';\n"
-                + "  }\n"
                 + "</script>\n"
                 + "</head>\n"
                 + "<body onload='test()'>\n"
@@ -1049,17 +1025,15 @@ public class EventTest extends WebDriverTestCase {
                 + "    <input id=\"input1\" type=\"text\">\n"
                 + "    <input id=\"input2\" type=\"text\">\n"
                 + "  </div>\n"
-                + "<textarea id='log' cols='80' rows='40'></textarea>\n"
+                + LOG_TEXTAREA
                 + "</body></html>";
 
         final WebDriver driver = loadPage2(html);
-        final WebElement logElement = driver.findElement(By.id("log"));
-        final String initialValue = logElement.getAttribute("value");
+
         driver.findElement(By.id("input1")).click();
         driver.findElement(By.id("input2")).click();
-        final String addedValue = logElement.getAttribute("value").substring(initialValue.length());
-        final String text = addedValue.trim().replaceAll("\r", "");
-        assertEquals(String.join("\n", getExpectedAlerts()), text);
+
+        verifyTextArea2(driver, getExpectedAlerts());
     }
 
     /**
@@ -1069,7 +1043,8 @@ public class EventTest extends WebDriverTestCase {
     @Test
     @Alerts({"2from window", "1from document"})
     public void eventHandlersParentScope() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -1132,7 +1107,8 @@ public class EventTest extends WebDriverTestCase {
     }
 
     private void eventHandlersParentScopeChain(final String startTag, final String endTag) throws Exception {
-        final String html = "<html><html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -1185,7 +1161,8 @@ public class EventTest extends WebDriverTestCase {
     @Test
     @Alerts("from document")
     public void eventHandlers_functionOpen() throws Exception {
-        final String html = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<button id='button1' onclick='identify(open)'>click me</button>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -1214,7 +1191,7 @@ public class EventTest extends WebDriverTestCase {
     @Test
     @Alerts({"false", "boolean"})
     public void defaultPrevented() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -1222,7 +1199,7 @@ public class EventTest extends WebDriverTestCase {
             + "      var event = document.createEvent('Event');\n"
             + "      log(event.defaultPrevented);\n"
             + "      log(typeof event.defaultPrevented);\n"
-            + "    } catch (e) { log('exception') }\n"
+            + "    } catch(e) { logEx(e) }\n"
             + "  }\n"
             + "</script></head><body onload='test()'>\n"
             + "</body></html>";
@@ -1234,10 +1211,9 @@ public class EventTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"true", "boolean"},
-            IE = {"undefined", "undefined"})
+    @Alerts({"true", "boolean"})
     public void returnValue() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -1245,7 +1221,7 @@ public class EventTest extends WebDriverTestCase {
             + "      var event = document.createEvent('Event');\n"
             + "      log(event.returnValue);\n"
             + "      log(typeof event.returnValue);\n"
-            + "    } catch (e) { log('exception') }\n"
+            + "    } catch(e) { logEx(e) }\n"
             + "  }\n"
             + "</script></head><body onload='test()'>\n"
             + "</body></html>";
@@ -1257,18 +1233,13 @@ public class EventTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"true", "boolean", "false - false",
-                       "true", "true - false",
-                       "false", "boolean",
-                       "true", "boolean", "false - false",
-                       "true", "boolean"},
-            IE = {"undefined", "undefined", "false - false",
-                  "undefined", "true - false",
-                  "undefined", "undefined",
-                  "undefined", "undefined", "false - false",
-                  "undefined", "undefined"})
+    @Alerts({"true", "boolean", "false - false",
+             "true", "true - false",
+             "false", "boolean",
+             "true", "boolean", "false - false",
+             "true", "boolean"})
     public void returnValueSetter() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -1294,7 +1265,7 @@ public class EventTest extends WebDriverTestCase {
             + "      event.preventDefault();\n"
             + "      log(event.returnValue);\n"
             + "      log(typeof event.returnValue);\n"
-            + "    } catch (e) { log('exception') }\n"
+            + "    } catch(e) { logEx(e) }\n"
             + "  }\n"
             + "</script></head><body onload='test()'>\n"
             + "</body></html>";
@@ -1306,20 +1277,13 @@ public class EventTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"true", "boolean", "false - false",
-                       "true", "true - false",
-                       "false", "boolean", "false",
-                       "true", "boolean", "false - false",
-                       "true", "boolean", "true",
-                       "true", "boolean", "true - false",
-                       "false", "boolean", "false"},
-            IE = {"undefined", "undefined", "false - false",
-                  "undefined", "true - false",
-                  "false", "boolean", "true",
-                  "undefined", "undefined", "false - false",
-                  "false", "boolean", "true",
-                  "undefined", "undefined", "true - false",
-                  "false", "boolean", "true"})
+    @Alerts({"true", "boolean", "false - false",
+             "true", "true - false",
+             "false", "boolean", "false",
+             "true", "boolean", "false - false",
+             "true", "boolean", "true",
+             "true", "boolean", "true - false",
+             "false", "boolean", "false"})
     public void returnValueSetterFalse() throws Exception {
         returnValueSetterUndefined("false");
     }
@@ -1328,20 +1292,13 @@ public class EventTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"true", "boolean", "false - false",
-                       "true", "true - false",
-                       "true", "boolean", "false",
-                       "true", "boolean", "false - false",
-                       "true", "boolean", "true",
-                       "true", "boolean", "true - false",
-                       "true", "boolean", "false"},
-            IE = {"undefined", "undefined", "false - false",
-                  "undefined", "true - false",
-                  "true", "boolean", "false",
-                  "undefined", "undefined", "false - false",
-                  "true", "boolean", "false",
-                  "undefined", "undefined", "true - false",
-                  "true", "boolean", "false"})
+    @Alerts({"true", "boolean", "false - false",
+             "true", "true - false",
+             "true", "boolean", "false",
+             "true", "boolean", "false - false",
+             "true", "boolean", "true",
+             "true", "boolean", "true - false",
+             "true", "boolean", "false"})
     public void returnValueSetterTrue() throws Exception {
         returnValueSetterUndefined("true");
     }
@@ -1350,20 +1307,13 @@ public class EventTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"true", "boolean", "false - false",
-                       "true", "true - false",
-                       "true", "boolean", "false",
-                       "true", "boolean", "false - false",
-                       "true", "boolean", "true",
-                       "true", "boolean", "true - false",
-                       "true", "boolean", "false"},
-            IE = {"undefined", "undefined", "false - false",
-                  "undefined", "true - false",
-                  "test", "string", "false",
-                  "undefined", "undefined", "false - false",
-                  "test", "string", "false",
-                  "undefined", "undefined", "true - false",
-                  "test", "string", "false"})
+    @Alerts({"true", "boolean", "false - false",
+             "true", "true - false",
+             "true", "boolean", "false",
+             "true", "boolean", "false - false",
+             "true", "boolean", "true",
+             "true", "boolean", "true - false",
+             "true", "boolean", "false"})
     public void returnValueSetterString() throws Exception {
         returnValueSetterUndefined("'test'");
     }
@@ -1372,20 +1322,13 @@ public class EventTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"true", "boolean", "false - false",
-                       "true", "true - false",
-                       "false", "boolean", "false",
-                       "true", "boolean", "false - false",
-                       "true", "boolean", "true",
-                       "true", "boolean", "true - false",
-                       "false", "boolean", "false"},
-            IE = {"undefined", "undefined", "false - false",
-                  "undefined", "true - false",
-                  "0", "number", "true",
-                  "undefined", "undefined", "false - false",
-                  "0", "number", "true",
-                  "undefined", "undefined", "true - false",
-                  "0", "number", "true"})
+    @Alerts({"true", "boolean", "false - false",
+             "true", "true - false",
+             "false", "boolean", "false",
+             "true", "boolean", "false - false",
+             "true", "boolean", "true",
+             "true", "boolean", "true - false",
+             "false", "boolean", "false"})
     public void returnValueSetterZero() throws Exception {
         returnValueSetterUndefined("0");
     }
@@ -1394,20 +1337,13 @@ public class EventTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"true", "boolean", "false - false",
-                       "true", "true - false",
-                       "true", "boolean", "false",
-                       "true", "boolean", "false - false",
-                       "true", "boolean", "true",
-                       "true", "boolean", "true - false",
-                       "true", "boolean", "false"},
-            IE = {"undefined", "undefined", "false - false",
-                  "undefined", "true - false",
-                  "1", "number", "false",
-                  "undefined", "undefined", "false - false",
-                  "1", "number", "false",
-                  "undefined", "undefined", "true - false",
-                  "1", "number", "false"})
+    @Alerts({"true", "boolean", "false - false",
+             "true", "true - false",
+             "true", "boolean", "false",
+             "true", "boolean", "false - false",
+             "true", "boolean", "true",
+             "true", "boolean", "true - false",
+             "true", "boolean", "false"})
     public void returnValueSetterOne() throws Exception {
         returnValueSetterUndefined("1");
     }
@@ -1416,20 +1352,13 @@ public class EventTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"true", "boolean", "false - false",
-                       "true", "true - false",
-                       "true", "boolean", "false",
-                       "true", "boolean", "false - false",
-                       "true", "boolean", "true",
-                       "true", "boolean", "true - false",
-                       "true", "boolean", "false"},
-            IE = {"undefined", "undefined", "false - false",
-                  "undefined", "true - false",
-                  "-1", "number", "false",
-                  "undefined", "undefined", "false - false",
-                  "-1", "number", "false",
-                  "undefined", "undefined", "true - false",
-                  "-1", "number", "false"})
+    @Alerts({"true", "boolean", "false - false",
+             "true", "true - false",
+             "true", "boolean", "false",
+             "true", "boolean", "false - false",
+             "true", "boolean", "true",
+             "true", "boolean", "true - false",
+             "true", "boolean", "false"})
     public void returnValueSetterMinusOne() throws Exception {
         returnValueSetterUndefined("-1");
     }
@@ -1438,26 +1367,19 @@ public class EventTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"true", "boolean", "false - false",
-                       "true", "true - false",
-                       "false", "boolean", "false",
-                       "true", "boolean", "false - false",
-                       "true", "boolean", "true",
-                       "true", "boolean", "true - false",
-                       "false", "boolean", "false"},
-            IE = {"undefined", "undefined", "false - false",
-                  "undefined", "true - false",
-                  "undefined", "undefined", "true",
-                  "undefined", "undefined", "false - false",
-                  "undefined", "undefined", "true",
-                  "undefined", "undefined", "true - false",
-                  "undefined", "undefined", "true"})
+    @Alerts({"true", "boolean", "false - false",
+             "true", "true - false",
+             "false", "boolean", "false",
+             "true", "boolean", "false - false",
+             "true", "boolean", "true",
+             "true", "boolean", "true - false",
+             "false", "boolean", "false"})
     public void returnValueSetterUndefined() throws Exception {
         returnValueSetterUndefined("undefined");
     }
 
     private void returnValueSetterUndefined(final String value) throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html>\n"
             + "  <head></head>\n"
             + "  <body onload='test()'>\n"
@@ -1495,7 +1417,7 @@ public class EventTest extends WebDriverTestCase {
 
             + "          event.returnValue = !event.returnValue;\n"
             + "          log(event.returnValue);\n"
-            + "        } catch (e) { log('exception') }\n"
+            + "        } catch(e) { logEx(e) }\n"
             + "      }\n"
 
             + "      triggerClick.addEventListener('click', function (event) {\n"
@@ -1524,15 +1446,11 @@ public class EventTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"false - false", "true - false", "true - true",
-                       "false - false", "false - false", "false - false",
-                       "false - false", "true - false"},
-            IE = {"false - false", "true - false", "true - false",
-                  "false - false", "false - false", "false - false",
-                  "false - false", "true - false"})
-    @NotYetImplemented(IE)
+    @Alerts({"false - false", "true - false", "true - true",
+             "false - false", "false - false", "false - false",
+             "false - false", "true - false"})
     public void preventDefault() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
@@ -1563,7 +1481,7 @@ public class EventTest extends WebDriverTestCase {
 
             + "          event.initEvent('click', 'true', 'true');\n"
             + "          log(event.cancelable + ' - ' + event.defaultPrevented);\n"
-            + "        } catch (e) { log('exception') }\n"
+            + "        } catch(e) { logEx(e) }\n"
             + "      }\n"
             + "    </script>\n"
             + "  </head>\n"
@@ -1580,8 +1498,8 @@ public class EventTest extends WebDriverTestCase {
     @Test
     @Alerts("OK")
     public void domEventNameUsedAsFunctionName() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -1592,6 +1510,196 @@ public class EventTest extends WebDriverTestCase {
             + "</head>\n"
             + "<body onload='onclick()'>\n"
             + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts(DEFAULT = {"[object Event]", "scroll", "false", "false", "false"},
+            FF = {"[object UIEvent]", "scroll", "false", "true", "false"},
+            FF_ESR = {"[object UIEvent]", "scroll", "false", "true", "false"})
+    public void scrollEventFromScrollIntoView() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + DUMP_EVENT_FUNCTION
+            + "</script>\n"
+            + "</head>\n"
+
+            + "<body>\n"
+            + "  <div id='container' style='overflow-y: scroll; height: 100px;'>\n"
+            + "    <div style='height: 1000px;'>spacer</div>\n"
+            + "    <div id='target' style='background: red;'>Target</div>\n"
+            + "  </div>\n"
+
+            + "  <script>\n"
+            + "    var c = document.getElementById('container');\n"
+            + "    c.addEventListener('scroll', function(e) { dump(e); });\n"
+
+            + "    var s = document.getElementById('target');"
+            + "    s.scrollIntoView();\n"
+            + "  </script>\n"
+            + "</body>\n"
+            + "</html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts(DEFAULT = {"[object Event]", "scroll", "true", "false", "false"},
+            FF = {"[object UIEvent]", "scroll", "true", "true", "false"},
+            FF_ESR = {"[object UIEvent]", "scroll", "true", "true", "false"})
+    public void scrollEventWindowFromScrollIntoView() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + DUMP_EVENT_FUNCTION
+            + "</script>\n"
+            + "</head>\n"
+
+            + "<body>\n"
+            + "  <div id='container' style='height: 10000px;'>\n"
+            + "  </div>\n"
+            + "  <div id='target' style='background: red;'>Target</div>\n"
+
+            + "  <script>\n"
+            + "    window.addEventListener('scroll', function(e) { dump(e); });\n"
+
+            + "    var s = document.getElementById('target');"
+            + "    s.scrollIntoView();\n"
+            + "  </script>\n"
+            + "</body>\n"
+            + "</html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts(DEFAULT = {"[object Event]", "scroll", "true", "false", "false"},
+            FF = {"[object UIEvent]", "scroll", "true", "true", "false"},
+            FF_ESR = {"[object UIEvent]", "scroll", "true", "true", "false"})
+    public void scrollEventFromScrollBy() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + DUMP_EVENT_FUNCTION
+            + "</script>\n"
+            + "</head>\n"
+
+            + "<body>\n"
+            + "  <div style='height: 1000px;'></div>\n"
+
+            + "  <script>\n"
+            + "    document.addEventListener('scroll', function(e) { dump(e) });\n"
+            + "    window.scrollBy(10, 20);\n"
+            + "  </script>\n"
+            + "</body>\n"
+            + "</html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts(DEFAULT = {"[object Event]", "scroll", "true", "false", "false"},
+            FF = {"[object UIEvent]", "scroll", "true", "true", "false"},
+            FF_ESR = {"[object UIEvent]", "scroll", "true", "true", "false"})
+    public void scrollEventWindowFromScrollBy() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + DUMP_EVENT_FUNCTION
+            + "</script>\n"
+            + "</head>\n"
+
+            + "<body>\n"
+            + "  <div style='height: 1000px;'></div>\n"
+
+            + "  <script>\n"
+            + "    window.addEventListener('scroll', function(e) { dump(e) });\n"
+            + "    window.scrollBy(10, 20);\n"
+            + "  </script>\n"
+            + "</body>\n"
+            + "</html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts(DEFAULT = {"[object Event]", "scroll", "true", "false", "false"},
+            FF = {"[object UIEvent]", "scroll", "true", "true", "false"},
+            FF_ESR = {"[object UIEvent]", "scroll", "true", "true", "false"})
+    public void scrollEventFromScrollTo() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + DUMP_EVENT_FUNCTION
+            + "</script>\n"
+            + "</head>\n"
+
+            + "<body>\n"
+            + "  <div style='height: 1000px;'></div>\n"
+
+            + "  <script>\n"
+            + "    document.addEventListener('scroll', function(e) { dump(e) });\n"
+            + "    window.scrollTo(10, 20);\n"
+            + "  </script>\n"
+            + "</body>\n"
+            + "</html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts(DEFAULT = {"[object Event]", "scroll", "true", "false", "false"},
+            FF = {"[object UIEvent]", "scroll", "true", "true", "false"},
+            FF_ESR = {"[object UIEvent]", "scroll", "true", "true", "false"})
+    public void scrollEventWindowFromScrollTo() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + DUMP_EVENT_FUNCTION
+            + "</script>\n"
+            + "</head>\n"
+
+            + "<body>\n"
+            + "  <div style='height: 1000px;'></div>\n"
+
+            + "  <script>\n"
+            + "    window.addEventListener('scroll', function(e) { dump(e) });\n"
+            + "    window.scrollTo(10, 20);\n"
+            + "  </script>\n"
+            + "</body>\n"
+            + "</html>";
 
         loadPageVerifyTitle2(html);
     }

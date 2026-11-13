@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,6 @@
  */
 package org.htmlunit;
 
-import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.nio.charset.StandardCharsets.UTF_16BE;
 import static java.nio.charset.StandardCharsets.UTF_16LE;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -31,34 +30,24 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.BOMInputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.http.HttpStatus;
-
-import org.htmlunit.DefaultPageCreator.PageType;
+import org.htmlunit.http.HttpStatus;
 import org.htmlunit.util.EncodingSniffer;
+import org.htmlunit.util.MimeType;
 import org.htmlunit.util.NameValuePair;
+import org.htmlunit.util.StringUtils;
 
 /**
  * A response from a web server.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author Brad Clarke
  * @author Noboru Sinohara
  * @author Marc Guillemot
  * @author Ahmed Ashour
  * @author Ronald Brill
+ * @author Lai Quang Duong
  */
 public class WebResponse implements Serializable {
-
-    /** Forwarder to HttpStatus.SC_OK. */
-    public static final int OK = HttpStatus.SC_OK;
-    /** Forwarder to HttpStatus.SC_FORBIDDEN. */
-    public static final int FORBIDDEN = HttpStatus.SC_FORBIDDEN;
-    /** Forwarder to HttpStatus.SC_NOT_FOUND. */
-    public static final int NOT_FOUND = HttpStatus.SC_NOT_FOUND;
-    /** Forwarder to HttpStatus.SC_NO_CONTENT. */
-    public static final int NO_CONTENT = HttpStatus.SC_NO_CONTENT;
-    /** Forwarder to HttpStatus.SC_INTERNAL_SERVER_ERROR. */
-    public static final int INTERNAL_SERVER_ERROR = HttpStatus.SC_INTERNAL_SERVER_ERROR;
 
     private static final Log LOG = LogFactory.getLog(WebResponse.class);
     private static final ByteOrderMark[] BOM_HEADERS = {
@@ -69,12 +58,14 @@ public class WebResponse implements Serializable {
     private final long loadTime_;
     private final WebResponseData responseData_;
     private final WebRequest request_;
-    private boolean defaultCharsetUtf8_;
+    private boolean wasContentCharsetTentative_;
+    private boolean wasBlocked_;
+    private String blockReason_;
 
     /**
-     * Constructs with all data.
+     * Constructs a web response.
      *
-     * @param responseData      Data that was send back
+     * @param responseData      the response data
      * @param url               Where this response came from
      * @param requestMethod     the method used to get this response
      * @param loadTime          How long the response took to be sent
@@ -85,9 +76,9 @@ public class WebResponse implements Serializable {
     }
 
     /**
-     * Constructs with all data.
+     * Constructs a web response.
      *
-     * @param responseData      Data that was send back
+     * @param responseData      the response data
      * @param request           the request used to get this response
      * @param loadTime          How long the response took to be sent
      */
@@ -100,14 +91,15 @@ public class WebResponse implements Serializable {
 
     /**
      * Returns the request used to load this response.
-     * @return the request used to load this response
+     *
+     * @return the associated {@link WebRequest}
      */
     public WebRequest getWebRequest() {
         return request_;
     }
 
     /**
-     * Returns the response headers as a list of {@link NameValuePair}s.
+     * Returns the response headers.
      * @return the response headers as a list of {@link NameValuePair}s
      */
     public List<NameValuePair> getResponseHeaders() {
@@ -129,7 +121,7 @@ public class WebResponse implements Serializable {
     }
 
     /**
-     * Returns the status code that was returned by the server.
+     * Returns the HTTP status code.
      * @return the status code that was returned by the server
      */
     public int getStatusCode() {
@@ -137,7 +129,7 @@ public class WebResponse implements Serializable {
     }
 
     /**
-     * Returns the status message that was returned from the server.
+     * Returns the HTTP status message.
      * @return the status message that was returned from the server
      */
     public String getStatusMessage() {
@@ -145,8 +137,9 @@ public class WebResponse implements Serializable {
     }
 
     /**
-     * Returns the content type returned from the server, e.g. "text/html".
-     * @return the content type returned from the server, e.g. "text/html"
+     * Returns the response content type.
+     * @return the content type, or an empty string if the {@code Content-Type}
+     *         header is absent
      */
     public String getContentType() {
         final String contentTypeHeader = getResponseHeaderValue(HttpHeader.CONTENT_TYPE_LC);
@@ -162,53 +155,110 @@ public class WebResponse implements Serializable {
     }
 
     /**
-     * Returns the content charset specified explicitly in the header or in the content,
+     * Returns the content charset specified explicitly in the {@code Content-Type} header
      * or {@code null} if none was specified.
-     * @return the content charset specified explicitly in the header or in the content,
-     *         or {@code null} if none was specified
+     * @return the content charset specified in the header or {@code null} if none was specified
      */
-    public Charset getContentCharsetOrNull() {
-        try (InputStream is = getContentAsStream()) {
-            return EncodingSniffer.sniffEncoding(getResponseHeaders(), is);
-        }
-        catch (final IOException e) {
-            LOG.warn("Error trying to sniff encoding.", e);
+    public Charset getHeaderContentCharset() {
+        final String contentType = getResponseHeaderValue(HttpHeader.CONTENT_TYPE_LC);
+        if (contentType == null) {
             return null;
         }
+
+        final int index = contentType.indexOf(';');
+        if (index == -1 || index == 0) {
+            return null;
+        }
+        if (StringUtils.isBlank(contentType.substring(0, index))) {
+            return null;
+        }
+
+        return EncodingSniffer.extractEncodingFromContentType(contentType);
     }
 
     /**
      * Returns the content charset for this response, even if no charset was specified explicitly.
+     * <p>
      * This method always returns a valid charset. This method first checks the {@code Content-Type}
-     * header; if not found, it checks the request charset; as a last resort, this method
-     * returns {@link java.nio.charset.StandardCharsets#ISO_8859_1}.
-     * If no charset is defined for an xml response, then UTF-8 is used
-     * @see <a href="http://www.w3.org/TR/xml/#charencoding">Character Encoding</a>
+     * header or the content BOM for a viable charset. If not found, it attempts to determine the
+     * charset based on the type of the content. As a last resort, this method returns the
+     * value of {@link org.htmlunit.WebRequest#getDefaultResponseContentCharset()} which is
+     * {@link java.nio.charset.StandardCharsets#UTF_8} by default.
+     * </p>
      * @return the content charset for this response
      */
     public Charset getContentCharset() {
-        Charset charset = getContentCharsetOrNull();
-        if (charset == null) {
-            final String contentType = getContentType();
+        wasContentCharsetTentative_ = false;
 
-            // xml pages are using a different content type
-            if (null != contentType
-                && (defaultCharsetUtf8_
-                    || PageType.XML == DefaultPageCreator.determinePageType(contentType))) {
-                return UTF_8;
+        try (InputStream is = getContentAsStreamWithBomIfApplicable()) {
+            if (is == null) {
+                return getWebRequest().getDefaultResponseContentCharset();
+            }
+
+            if (is instanceof BOMInputStream stream) {
+                final String bomCharsetName = stream.getBOMCharsetName();
+                if (bomCharsetName != null) {
+                    return Charset.forName(bomCharsetName);
+                }
+            }
+
+            Charset charset = getHeaderContentCharset();
+            if (charset != null) {
+                return charset;
+            }
+
+            final String contentType = getContentType();
+            switch (DefaultPageCreator.determinePageType(contentType)) {
+                case HTML -> {
+                    charset = EncodingSniffer.sniffEncodingFromMetaTag(is);
+                    wasContentCharsetTentative_ = true;
+                }
+                case XML -> {
+                    charset = EncodingSniffer.sniffEncodingFromXmlDeclaration(is);
+                    if (charset == null) {
+                        charset = UTF_8;
+                    }
+                }
+                default -> {
+                    if (MimeType.TEXT_CSS.equals(contentType)) {
+                        charset = EncodingSniffer.sniffEncodingFromCssDeclaration(is);
+                    }
+                }
+            }
+
+            if (charset != null) {
+                return charset;
             }
         }
-
-        if (charset == null) {
-            charset = ISO_8859_1;
+        catch (final IOException e) {
+            LOG.warn("Error trying to sniff encoding.", e);
+            wasContentCharsetTentative_ = true;
         }
-        return charset;
+        return getWebRequest().getDefaultResponseContentCharset();
+    }
+
+    /**
+     * Returns whether the charset of the previous call to {@link #getContentCharset()} was "tentative".
+     * <p>
+     * A charset is classed as "tentative" if its detection is prone to false positive/negatives.
+     * </p>
+     * <p>
+     * For example, HTML meta-tag sniffing can be fooled by text that looks-like-a-meta-tag inside
+     * JavaScript code (false positive) or if the meta-tag is after the first 1024 bytes (false negative).
+     * </p>
+     * @return {@code true} if tentative; {@code false} if the charset was determined with confidence
+     *
+     * @see <a href="https://html.spec.whatwg.org/multipage/parsing.html#concept-encoding-confidence">
+     *     https://html.spec.whatwg.org/multipage/parsing.html#concept-encoding-confidence</a>
+     */
+    public boolean wasContentCharsetTentative() {
+        return wasContentCharsetTentative_;
     }
 
     /**
      * Returns the response content as a string, using the charset/encoding specified in the server response.
      * @return the response content as a string, using the charset/encoding specified in the server response
-     * or null if the content retrieval was failing
+     *         or {@code null} if content retrieval failed
      */
     public String getContentAsString() {
         return getContentAsString(getContentCharset());
@@ -217,44 +267,28 @@ public class WebResponse implements Serializable {
     /**
      * Returns the response content as a string, using the specified charset,
      * rather than the charset/encoding specified in the server response.
-     * If there is a bom header the charset parameter will be overwritten by the bom.
+     * If there is a BOM header, the charset parameter will be overwritten by the BOM.
      * @param encoding the charset/encoding to use to convert the response content into a string
-     * @return the response content as a string or null if the content retrieval was failing
+     * @return the response content as a string or {@code null} if content retrieval failed
      */
     public String getContentAsString(final Charset encoding) {
-        return getContentAsString(encoding, false);
-    }
-
-    /**
-     * <span style="color:red">INTERNAL API - SUBJECT TO CHANGE AT ANY TIME - USE AT YOUR OWN RISK.</span><br>
-     *
-     * Returns the response content as a string, using the specified charset,
-     * rather than the charset/encoding specified in the server response.
-     * If there is a bom header the charset parameter will be overwritten by the bom.
-     * @param encoding the charset/encoding to use to convert the response content into a string
-     * @param ignoreUtf8Bom if true utf8 bom header will be ignored
-     * @return the response content as a string or null if the content retrieval was failing
-     */
-    public String getContentAsString(final Charset encoding, final boolean ignoreUtf8Bom) {
         if (responseData_ != null) {
             try (InputStream in = responseData_.getInputStreamWithBomIfApplicable(BOM_HEADERS)) {
-                if (in instanceof BOMInputStream) {
-                    try (BOMInputStream bomIn = (BOMInputStream) in) {
-                        // there seems to be a bug in BOMInputStream
-                        // we have to call this before hasBOM(ByteOrderMark)
-                        if (bomIn.hasBOM()) {
-                            if (!ignoreUtf8Bom && bomIn.hasBOM(ByteOrderMark.UTF_8)) {
-                                return IOUtils.toString(bomIn, UTF_8);
-                            }
-                            if (bomIn.hasBOM(ByteOrderMark.UTF_16BE)) {
-                                return IOUtils.toString(bomIn, UTF_16BE);
-                            }
-                            if (bomIn.hasBOM(ByteOrderMark.UTF_16LE)) {
-                                return IOUtils.toString(bomIn, UTF_16LE);
-                            }
+                if (in instanceof BOMInputStream bomIn) {
+                    // there seems to be a bug in BOMInputStream
+                    // we have to call this before hasBOM(ByteOrderMark)
+                    if (bomIn.hasBOM()) {
+                        if (bomIn.hasBOM(ByteOrderMark.UTF_8)) {
+                            return IOUtils.toString(bomIn, UTF_8);
                         }
-                        return IOUtils.toString(bomIn, encoding);
+                        if (bomIn.hasBOM(ByteOrderMark.UTF_16BE)) {
+                            return IOUtils.toString(bomIn, UTF_16BE);
+                        }
+                        if (bomIn.hasBOM(ByteOrderMark.UTF_16LE)) {
+                            return IOUtils.toString(bomIn, UTF_16LE);
+                        }
                     }
+                    return IOUtils.toString(bomIn, encoding);
                 }
 
                 return IOUtils.toString(in, encoding);
@@ -267,7 +301,7 @@ public class WebResponse implements Serializable {
     }
 
     /**
-     * Returns length of the content data.
+     * Returns the length of the content data.
      * @return the length
      */
     public long getContentLength() {
@@ -280,7 +314,7 @@ public class WebResponse implements Serializable {
     /**
      * Returns the response content as an input stream.
      * @return the response content as an input stream
-     * @throws IOException in case of IOProblems
+     * @throws IOException in case of I/O problems
      */
     public InputStream getContentAsStream() throws IOException {
         return responseData_.getInputStream();
@@ -289,8 +323,12 @@ public class WebResponse implements Serializable {
     /**
      * <span style="color:red">INTERNAL API - SUBJECT TO CHANGE AT ANY TIME - USE AT YOUR OWN RISK.</span><br>
      *
-     * @return the associated InputStream wrapped with a bom input stream if applicable
-     * @throws IOException in case of IO problems
+     * Returns the response content as an {@link InputStream}, wrapped in a
+     * {@link BOMInputStream} so that any leading byte-order mark is detected
+     * and skipped automatically.
+     *
+     * @return the input stream, or {@code null} if no response data is available
+     * @throws IOException in case of I/O problems
      */
     public InputStream getContentAsStreamWithBomIfApplicable() throws IOException {
         if (responseData_ != null) {
@@ -317,36 +355,60 @@ public class WebResponse implements Serializable {
     }
 
     /**
-     * Mark this response for using UTF-8 as default charset.
-     */
-    public void defaultCharsetUtf8() {
-        defaultCharsetUtf8_ = true;
-    }
-
-    /**
-     * @return true if the 2xx
+     * Returns whether the response has a successful HTTP status code.
+     *
+     * @return {@code true} if the status code is in the 2xx range
      */
     public boolean isSuccess() {
         final int statusCode = getStatusCode();
-        return statusCode >= HttpStatus.SC_OK && statusCode < HttpStatus.SC_MULTIPLE_CHOICES;
+        return statusCode >= HttpStatus.OK_200 && statusCode < HttpStatus.MULTIPLE_CHOICES_300;
     }
 
     /**
-     * @return true if the 2xx or 305
+     * Returns whether the response has a successful HTTP status code or a use-proxy redirection.
+     *
+     * @return {@code true} if the status code is in the 2xx range or 305
      */
     public boolean isSuccessOrUseProxy() {
         final int statusCode = getStatusCode();
-        return (statusCode >= HttpStatus.SC_OK && statusCode < HttpStatus.SC_MULTIPLE_CHOICES)
-                || statusCode == HttpStatus.SC_USE_PROXY;
+        return (statusCode >= HttpStatus.OK_200 && statusCode < HttpStatus.MULTIPLE_CHOICES_300)
+                || statusCode == HttpStatus.USE_PROXY_305;
     }
 
     /**
-     * @return true if the 2xx or 305
+     * Returns whether the response has a successful HTTP status code, a proxy redirection, or a not-modified status.
+     *
+     * @return {@code true} if the status code is in the 2xx range, 304 (Not Modified), or 305 (Use Proxy)
      */
     public boolean isSuccessOrUseProxyOrNotModified() {
-        final int statusCode = getStatusCode();
-        return (statusCode >= HttpStatus.SC_OK && statusCode < HttpStatus.SC_MULTIPLE_CHOICES)
-                || statusCode == HttpStatus.SC_USE_PROXY
-                || statusCode == HttpStatus.SC_NOT_MODIFIED;
+        return isSuccessOrUseProxy() || getStatusCode() == HttpStatus.NOT_MODIFIED_304;
+    }
+
+    /**
+     * Returns whether the request was blocked.
+     *
+     * @return {@code true} if the request was blocked
+     */
+    public boolean wasBlocked() {
+        return wasBlocked_;
+    }
+
+    /**
+     * Returns the reason for blocking or null.
+     *
+     * @return the reason for blocking, or {@code null} if the request was not blocked
+     */
+    public String getBlockReason() {
+        return blockReason_;
+    }
+
+    /**
+     * Sets the wasBlocked state to true.
+     *
+     * @param blockReason the reason
+     */
+    public void markAsBlocked(final String blockReason) {
+        wasBlocked_ = true;
+        blockReason_ = blockReason;
     }
 }

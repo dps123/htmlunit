@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,35 +14,52 @@
  */
 package org.htmlunit.javascript.host;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.htmlunit.BrowserVersionFeatures.JS_NAVIGATOR_DO_NOT_TRACK_UNSPECIFIED;
 import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
 import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
 import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
 import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
 
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 
-import org.apache.commons.lang3.StringUtils;
-
-import org.htmlunit.PluginConfiguration;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.htmlunit.FormEncodingType;
+import org.htmlunit.HttpHeader;
+import org.htmlunit.HttpMethod;
 import org.htmlunit.WebClient;
+import org.htmlunit.WebRequest;
+import org.htmlunit.WebRequest.HttpHint;
+import org.htmlunit.WebWindow;
+import org.htmlunit.corejs.javascript.Scriptable;
+import org.htmlunit.corejs.javascript.typedarrays.NativeArrayBufferView;
+import org.htmlunit.html.HtmlPage;
+import org.htmlunit.html.csp.ContentSecurityPolicy;
 import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
+import org.htmlunit.javascript.host.file.Blob;
 import org.htmlunit.javascript.host.geo.Geolocation;
 import org.htmlunit.javascript.host.media.MediaDevices;
 import org.htmlunit.javascript.host.network.NetworkInformation;
-
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.Scriptable;
+// TODO verify actual package - not visible from XMLHttpRequest.java's import list,
+// which suggests it may already share a package with XMLHttpRequest rather than
+// living here; adjust this import (and the FormData branch below) accordingly.
+import org.htmlunit.javascript.host.xml.FormData;
+import org.htmlunit.util.StringUtils;
+import org.htmlunit.util.UrlUtils;
 
 /**
- * A JavaScript object for {@code Navigator}.
+ * JavaScript host object for {@code Navigator}.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author Daniel Gredler
  * @author Chris Erskine
  * @author Ahmed Ashour
@@ -50,24 +67,28 @@ import org.htmlunit.corejs.javascript.Scriptable;
  * @author Frank Danek
  * @author Ronald Brill
  *
- * @see <a href="http://msdn.microsoft.com/en-us/library/ms535867.aspx">MSDN documentation</a>
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/Navigator">MDN Documentation</a>
  */
 @JsxClass
 public class Navigator extends HtmlUnitScriptable {
+
+    private static final Log LOG = LogFactory.getLog(Navigator.class);
 
     private PluginArray plugins_;
     private MimeTypeArray mimeTypes_;
     private MediaDevices mediaDevices_;
 
     /**
-     * Creates an instance.
+     * Creates an instance of this object.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public Navigator() {
+    @JsxConstructor
+    public void jsConstructor() {
+        // nothing to do
     }
 
     /**
      * Returns the {@code appCodeName} property.
+     *
      * @return the {@code appCodeName} property
      */
     @JsxGetter
@@ -76,16 +97,8 @@ public class Navigator extends HtmlUnitScriptable {
     }
 
     /**
-     * Returns the {@code appMinorVersion} property.
-     * @return the {@code appMinorVersion} property
-     */
-    @JsxGetter(IE)
-    public String getAppMinorVersion() {
-        return getBrowserVersion().getApplicationMinorVersion();
-    }
-
-    /**
      * Returns the {@code appName} property.
+     *
      * @return the {@code appName} property
      */
     @JsxGetter
@@ -95,6 +108,7 @@ public class Navigator extends HtmlUnitScriptable {
 
     /**
      * Returns the {@code appVersion} property.
+     *
      * @return the {@code appVersion} property
      */
     @JsxGetter
@@ -104,16 +118,8 @@ public class Navigator extends HtmlUnitScriptable {
 
     /**
      * Returns the language of the browser.
-     * @return the language
-     */
-    @JsxGetter(IE)
-    public String getBrowserLanguage() {
-        return getLanguage();
-    }
-
-    /**
-     * Returns the language of the browser.
-     * @return the language
+     *
+     * @return the browser language
      */
     @JsxGetter
     public String getLanguage() {
@@ -121,32 +127,34 @@ public class Navigator extends HtmlUnitScriptable {
     }
 
     /**
-     * Returns the language of the browser.
-     * @return the language
+     * Returns the preferred languages of the browser as an array.
+     *
+     * @return the languages array
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public Scriptable getLanguages() {
         final String acceptLang = getBrowserVersion().getAcceptLanguageHeader();
-        if (StringUtils.isEmpty(acceptLang)) {
-            return Context.getCurrentContext().newArray(this, 0);
+        if (StringUtils.isEmptyOrNull(acceptLang)) {
+            return JavaScriptEngine.newArray(getParentScope(), 0);
         }
 
         final ArrayList<String> res = new ArrayList<>();
-        final String[] parts = StringUtils.split(acceptLang, ",");
+        final String[] parts = StringUtils.splitAtComma(acceptLang);
         for (final String part : parts) {
-            if (!StringUtils.isEmpty(part)) {
+            if (!StringUtils.isEmptyOrNull(part)) {
                 final String lang = StringUtils.substringBefore(part, ";").trim();
-                if (!StringUtils.isEmpty(part)) {
+                if (!StringUtils.isEmptyOrNull(part)) {
                     res.add(lang);
                 }
             }
         }
 
-        return Context.getCurrentContext().newArray(this, res.toArray());
+        return JavaScriptEngine.newArray(getParentScope(), res.toArray());
     }
 
     /**
      * Returns the {@code cookieEnabled} property.
+     *
      * @return the {@code cookieEnabled} property
      */
     @JsxGetter
@@ -155,16 +163,8 @@ public class Navigator extends HtmlUnitScriptable {
     }
 
     /**
-     * Returns the {@code cpuClass} property.
-     * @return the {@code cpuClass} property
-     */
-    @JsxGetter(IE)
-    public String getCpuClass() {
-        return getBrowserVersion().getCpuClass();
-    }
-
-    /**
      * Returns the {@code onLine} property.
+     *
      * @return the {@code onLine} property
      */
     @JsxGetter
@@ -174,6 +174,7 @@ public class Navigator extends HtmlUnitScriptable {
 
     /**
      * Returns the {@code platform} property.
+     *
      * @return the {@code platform} property
      */
     @JsxGetter
@@ -183,6 +184,7 @@ public class Navigator extends HtmlUnitScriptable {
 
     /**
      * Returns the {@code product} property.
+     *
      * @return the {@code product} property
      */
     @JsxGetter
@@ -192,26 +194,19 @@ public class Navigator extends HtmlUnitScriptable {
 
     /**
      * Returns the build number of the current browser.
-     * @see <a href="https://developer.mozilla.org/en/navigator.productSub">Mozilla Doc</a>
-     * @return false
+     *
+     * @return the {@code productSub} property
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/Navigator/productSub">MDN Documentation</a>
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public String getProductSub() {
         return getBrowserVersion().getProductSub();
     }
 
     /**
-     * Returns the property {@code systemLanguage}.
-     * @return the property {@code systemLanguag}
-     */
-    @JsxGetter(IE)
-    public String getSystemLanguage() {
-        return getBrowserVersion().getSystemLanguage();
-    }
-
-    /**
-     * Returns the property {@code userAgent}.
-     * @return the property {@code userAgent}
+     * Returns the {@code userAgent} property.
+     *
+     * @return the {@code userAgent} property
      */
     @JsxGetter
     public String getUserAgent() {
@@ -219,96 +214,141 @@ public class Navigator extends HtmlUnitScriptable {
     }
 
     /**
-     * Returns the property {@code userLanguage}.
-     * @return the property {@code userLanguage}
-     */
-    @JsxGetter(IE)
-    public String getUserLanguage() {
-        return getBrowserVersion().getUserLanguage();
-    }
-
-    /**
-     * Returns an empty array because HtmlUnit does not support embedded objects.
-     * @return an empty array
+     * Returns the list of browser plugins.
+     *
+     * @return the {@code plugins} array
      */
     @JsxGetter
-    public Object getPlugins() {
-        initPlugins();
+    public PluginArray getPlugins() {
+        initPluginsAndMimeTypes();
         return plugins_;
     }
 
-    private void initPlugins() {
+    private void initPluginsAndMimeTypes() {
+        // https://developer.mozilla.org/en-US/docs/Web/API/Navigator/plugins
+        // Recent versions of the specification hard-code the returned list.
+        // If inline viewing of PDF files is supported the property lists five standard plugins.
+        // If inline PDF viewing is not supported then an empty list is returned.
         if (plugins_ != null) {
             return;
         }
         plugins_ = new PluginArray();
-        plugins_.setParentScope(this);
+        plugins_.setParentScope(getParentScope());
         plugins_.setPrototype(getPrototype(PluginArray.class));
 
+        Plugin plugin = new Plugin("PDF Viewer", "Portable Document Format", "internal-pdf-viewer");
+        plugin.setParentScope(getParentScope());
+        plugin.setPrototype(getPrototype(Plugin.class));
+
+        // https://developer.mozilla.org/en-US/docs/Web/API/Navigator/mimeTypes
+        // Recent versions of the specification hard-code the returned set of MIME types.
+        // If PDF files can be displayed inline then application/pdf and text/pdf are listed,
+        // otherwise an empty list is returned.
         mimeTypes_ = new MimeTypeArray();
-        mimeTypes_.setParentScope(this);
+        mimeTypes_.setParentScope(getParentScope());
         mimeTypes_.setPrototype(getPrototype(MimeTypeArray.class));
 
-        for (final PluginConfiguration pluginConfig : getBrowserVersion().getPlugins()) {
-            final Plugin plugin = new Plugin(pluginConfig.getName(), pluginConfig.getDescription(),
-                    pluginConfig.getVersion(), pluginConfig.getFilename());
-            plugin.setParentScope(this);
-            plugin.setPrototype(getPrototype(Plugin.class));
-            plugins_.add(plugin);
+        final MimeType mimeTypeAppPdf = new MimeType("application/pdf", "Portable Document Format", "pdf", plugin);
+        mimeTypeAppPdf.setParentScope(getParentScope());
+        mimeTypeAppPdf.setPrototype(getPrototype(MimeType.class));
+        mimeTypes_.add(mimeTypeAppPdf);
 
-            for (final PluginConfiguration.MimeType mimeTypeConfig : pluginConfig.getMimeTypes()) {
-                final MimeType mimeType = new MimeType(mimeTypeConfig.getType(), mimeTypeConfig.getDescription(),
-                    mimeTypeConfig.getSuffixes(), plugin);
-                mimeType.setParentScope(this);
-                mimeType.setPrototype(getPrototype(MimeType.class));
-                mimeTypes_.add(mimeType);
-                plugin.add(mimeType);
-            }
-        }
+        final MimeType mimeTypeTxtPdf = new MimeType("text/pdf", "Portable Document Format", "pdf", plugin);
+        mimeTypeTxtPdf.setParentScope(getParentScope());
+        mimeTypeTxtPdf.setPrototype(getPrototype(MimeType.class));
+        mimeTypes_.add(mimeTypeTxtPdf);
+
+        plugin.add(mimeTypeAppPdf);
+        plugin.add(mimeTypeTxtPdf);
+        plugins_.add(plugin);
+
+        // all the others
+        plugin = new Plugin("Chrome PDF Viewer", "Portable Document Format", "internal-pdf-viewer");
+        plugin.setParentScope(getParentScope());
+        plugin.setPrototype(getPrototype(Plugin.class));
+        plugin.add(mimeTypeAppPdf);
+        plugin.add(mimeTypeTxtPdf);
+        plugins_.add(plugin);
+
+        plugin = new Plugin("Chromium PDF Viewer", "Portable Document Format", "internal-pdf-viewer");
+        plugin.setParentScope(getParentScope());
+        plugin.setPrototype(getPrototype(Plugin.class));
+        plugin.add(mimeTypeAppPdf);
+        plugin.add(mimeTypeTxtPdf);
+        plugins_.add(plugin);
+
+        plugin = new Plugin("Microsoft Edge PDF Viewer", "Portable Document Format", "internal-pdf-viewer");
+        plugin.setParentScope(getParentScope());
+        plugin.setPrototype(getPrototype(Plugin.class));
+        plugin.add(mimeTypeAppPdf);
+        plugin.add(mimeTypeTxtPdf);
+        plugins_.add(plugin);
+
+        plugin = new Plugin("WebKit built-in PDF", "Portable Document Format", "internal-pdf-viewer");
+        plugin.setParentScope(getParentScope());
+        plugin.setPrototype(getPrototype(Plugin.class));
+        plugin.add(mimeTypeAppPdf);
+        plugin.add(mimeTypeTxtPdf);
+        plugins_.add(plugin);
     }
 
     /**
      * Returns the {@code mimeTypes} property.
+     *
      * @return the {@code mimeTypes} property
      */
     @JsxGetter
-    public Object getMimeTypes() {
-        initPlugins();
+    public MimeTypeArray getMimeTypes() {
+        initPluginsAndMimeTypes();
         return mimeTypes_;
     }
 
     /**
-     * Indicates if Java is enabled.
-     * @return true/false (see {@link org.htmlunit.WebClientOptions#isAppletEnabled()}
+     * Returns whether Java is enabled. Always returns {@code false}.
+     *
+     * @return {@code false}
      */
     @JsxFunction
     public boolean javaEnabled() {
-        return getWindow().getWebWindow().getWebClient().getOptions().isAppletEnabled();
+        return false;
     }
 
     /**
-     * Returns {@code false} always as data tainting support is not enabled in HtmlUnit.
-     * @return false
+     * Returns {@code false} as data tainting support is not enabled in HtmlUnit.
+     *
+     * @return {@code false}
      */
-    @JsxFunction({FF, FF_ESR, IE})
+    @JsxFunction({FF, FF_ESR})
     public boolean taintEnabled() {
         return false;
     }
 
     /**
      * Returns the {@code geolocation} property.
+     *
      * @return the {@code geolocation} property
      */
     @JsxGetter
     public Geolocation getGeolocation() {
         final Geolocation geolocation = new Geolocation();
-        geolocation.setPrototype(getPrototype(geolocation.getClass()));
         geolocation.setParentScope(getParentScope());
+        geolocation.setPrototype(getPrototype(geolocation.getClass()));
         return geolocation;
     }
 
     /**
+     * Returns whether the browser supports inline display of PDF files when navigating to them.
+     *
+     * @return {@code true} if inline PDF viewing is supported
+     */
+    @JsxGetter
+    public boolean isPdfViewerEnabled() {
+        return true;
+    }
+
+    /**
      * Returns the {@code buildID} property.
+     *
      * @return the {@code buildID} property
      */
     @JsxGetter({FF, FF_ESR})
@@ -318,6 +358,7 @@ public class Navigator extends HtmlUnitScriptable {
 
     /**
      * Returns the {@code vendor} property.
+     *
      * @return the {@code vendor} property
      */
     @JsxGetter
@@ -327,18 +368,20 @@ public class Navigator extends HtmlUnitScriptable {
 
     /**
      * Returns the {@code vendorSub} property.
+     *
      * @return the {@code vendorSub} property
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public String getVendorSub() {
         return "";
     }
 
     /**
      * Returns the {@code doNotTrack} property.
+     *
      * @return the {@code doNotTrack} property
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public Object getDoNotTrack() {
         final WebClient client = getWindow().getWebWindow().getWebClient();
         if (client.getOptions().isDoNotTrackEnabled()) {
@@ -352,6 +395,7 @@ public class Navigator extends HtmlUnitScriptable {
 
     /**
      * Returns the {@code oscpu} property.
+     *
      * @return the {@code oscpu} property
      */
     @JsxGetter({FF, FF_ESR})
@@ -361,6 +405,7 @@ public class Navigator extends HtmlUnitScriptable {
 
     /**
      * Returns the {@code connection} property.
+     *
      * @return the {@code connection} property
      */
     @JsxGetter({CHROME, EDGE})
@@ -372,10 +417,11 @@ public class Navigator extends HtmlUnitScriptable {
     }
 
     /**
-     * Returns the {@code mimeTypes} property.
-     * @return the {@code mimeTypes} property
+     * Returns the {@code mediaDevices} property.
+     *
+     * @return the {@code mediaDevices} property
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public MediaDevices getMediaDevices() {
         if (mediaDevices_ == null) {
             mediaDevices_ = new MediaDevices();
@@ -383,5 +429,131 @@ public class Navigator extends HtmlUnitScriptable {
             mediaDevices_.setParentScope(getParentScope());
         }
         return mediaDevices_;
+    }
+
+    /**
+     * The {@code sendBeacon()} method.
+     * <p>
+     * Note: real browsers queue the beacon and return immediately, continuing to
+     * attempt delivery even after the page unloads. This implementation instead sends
+     * the request synchronously (mirroring how {@code HyperlinkElementSupport} already
+     * handles hyperlink-auditing/{@code ping} requests and swallows any network error,
+     * since there is no caller left to report it to by the time
+     * a real browser would encounter it either.
+     * </p>
+     *
+     * @param url the URL to send the data to
+     * @param data the data to send; USVString, {@link Blob}, {@link URLSearchParams},
+     *             {@code FormData}, and ArrayBufferView are supported, per spec
+     * @return {@code true} if the browser successfully queued the data for transfer,
+     *         {@code false} otherwise (e.g. the URL could not be resolved)
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/Navigator/sendBeacon">
+     *      MDN Documentation</a>
+     */
+    @JsxFunction
+    public boolean sendBeacon(final String url, final Object data) {
+        final Window window = getWindow();
+        final WebWindow webWindow = window.getWebWindow();
+        final HtmlPage page = (HtmlPage) webWindow.getEnclosedPage();
+        final URL pageUrl = page.getUrl();
+
+        final URL targetUrl;
+        try {
+            // upgrade-insecure-requests of the Content-Security-Policy
+            targetUrl = ContentSecurityPolicy.upgradeInsecureRequest(page, page.getFullyQualifiedUrl(url));
+        }
+        catch (final MalformedURLException e) {
+            if (LOG.isInfoEnabled()) {
+                LOG.info("sendBeacon(): invalid url '" + url + "'", e);
+            }
+            return false;
+        }
+
+        // like Chrome: a beacon blocked by the Content-Security-Policy is reported
+        // as queued (Firefox returns false)
+        if (!ContentSecurityPolicy.allowsConnection(page, targetUrl, targetUrl)) {
+            return true;
+        }
+
+        final WebRequest request = new WebRequest(targetUrl, HttpMethod.POST);
+
+        // a beacon is always a POST, so per Fetch's "Origin header" rules this is
+        // added unconditionally, same as HyperlinkElementSupport's ping request
+        try {
+            request.setRefererHeader(pageUrl);
+            request.setAdditionalHeader(HttpHeader.ORIGIN,
+                    UrlUtils.getUrlWithProtocolAndAuthority(pageUrl).toExternalForm());
+        }
+        catch (final MalformedURLException e) {
+            if (LOG.isInfoEnabled()) {
+                LOG.info("sendBeacon(): invalid origin url '" + pageUrl + "'", e);
+            }
+        }
+
+        // Sec-Fetch-* support (https://www.w3.org/TR/fetch-metadata/): a beacon has no
+        // destination and is always no-cors, matching hyperlink-auditing (ping) requests.
+        request.setFetchDestination(WebRequest.FetchDestination.EMPTY);
+        request.setFetchModeOverride(WebRequest.FetchMode.NO_CORS);
+        request.setRequestingUrl(pageUrl);
+
+        fillRequestBody(request, data);
+
+        final WebClient webClient = webWindow.getWebClient();
+        try {
+            webClient.loadWebResponse(request);
+        }
+        catch (final IOException e) {
+            if (LOG.isInfoEnabled()) {
+                LOG.info("sendBeacon(): request failed", e);
+            }
+            // per spec this still returns true - queuing succeeded even if delivery didn't
+        }
+        return true;
+    }
+
+    /**
+     * Fills in the request body for {@link #sendBeacon(String, Object)}, dispatching on
+     * the data's type the same way {@code XMLHttpRequest#prepareRequestContent} does for
+     * the body types the Beacon spec actually allows (unlike XHR, this excludes
+     * {@code Document} types).
+     *
+     * @param request the request to fill in
+     * @param data the data passed to {@code sendBeacon()}, possibly {@code null}/undefined
+     */
+    private static void fillRequestBody(final WebRequest request, final Object data) {
+        if (data == null || JavaScriptEngine.isUndefined(data)) {
+            return;
+        }
+
+        if (data instanceof FormData formData) {
+            formData.fillRequest(request);
+        }
+        else if (data instanceof URLSearchParams params) {
+            params.fillRequest(request);
+            request.setCharset(UTF_8);
+            request.addHint(HttpHint.IncludeCharsetInContentTypeHeader);
+        }
+        else if (data instanceof Blob blob) {
+            blob.fillRequest(request);
+        }
+        else if (data instanceof NativeArrayBufferView view) {
+            request.setRequestBody(
+                UTF_8.decode(
+                    view.getBuffer()
+                        .getByteBuffer()
+                        .position(view.getByteOffset())
+                        .limit(view.getByteOffset() + view.getByteLength())
+                ).toString());
+            request.setEncodingType(null);
+        }
+        else {
+            final String body = JavaScriptEngine.toString(data);
+            if (!body.isEmpty()) {
+                request.setRequestBody(body);
+                request.setEncodingType(FormEncodingType.TEXT_PLAIN);
+                request.setCharset(UTF_8);
+                request.addHint(HttpHint.IncludeCharsetInContentTypeHeader);
+            }
+        }
     }
 }

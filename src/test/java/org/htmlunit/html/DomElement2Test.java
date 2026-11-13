@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,22 +14,19 @@
  */
 package org.htmlunit.html;
 
+import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.SimpleWebTestCase;
-import org.htmlunit.junit.BrowserRunner;
 import org.htmlunit.util.MimeType;
 import org.htmlunit.xml.XmlPage;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link DomElement}.
  *
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public final class DomElement2Test extends SimpleWebTestCase {
 
     /**
@@ -37,7 +34,8 @@ public final class DomElement2Test extends SimpleWebTestCase {
      */
     @Test
     public void isMouseOver() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head></head>\n"
                 + "<body>\n"
                 + "  <div id='d1'>\n"
@@ -106,5 +104,41 @@ public final class DomElement2Test extends SimpleWebTestCase {
         count.set(0);
         root.getChildren().forEach(e -> count.incrementAndGet());
         assertEquals(3, count.get());
+    }
+
+    @Test
+    public void childElementsIterator_removeFirstElement() throws Exception {
+        final String html = "<div id='outer'><p id='a'/><p id='b'/><p id='c'/></div>";
+        final HtmlPage page = loadPage(html);
+        final DomElement outer = page.getHtmlElementById("outer");
+
+        assertEquals(1, page.getElementsById("a").size());
+
+        final Iterator<DomElement> it = outer.getChildElements().iterator();
+        it.next();
+        it.remove();
+
+        assertEquals(2, outer.getChildElementCount());
+        assertEquals(0, page.getElementsById("a").size());
+    }
+
+    @Test
+    public void childElementsIterator_removeLastElement() throws Exception {
+        final String html = "<div id='outer'><p id='a'/><p id='b'/><p id='c'/></div>";
+        final HtmlPage page = loadPage(html);
+        final DomElement outer = page.getHtmlElementById("outer");
+
+        assertEquals(1, page.getElementsById("c").size());
+
+        final Iterator<DomElement> it = outer.getChildElements().iterator();
+        DomElement last = null;
+        while (it.hasNext()) {
+            last = it.next();
+        }
+        assertEquals("c", last.getId());
+        it.remove();
+
+        assertEquals(2, outer.getChildElementCount());
+        assertEquals(0, page.getElementsById("c").size());
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,24 +35,20 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.htmlunit.FormEncodingType;
 import org.htmlunit.HttpMethod;
 import org.htmlunit.WebConnection;
 import org.htmlunit.WebRequest;
 import org.htmlunit.WebResponse;
 import org.htmlunit.WebResponseData;
-
-import org.htmlunit.corejs.javascript.ContextAction;
-import org.htmlunit.corejs.javascript.ContextFactory;
-import org.htmlunit.corejs.javascript.Script;
+import org.htmlunit.javascript.JavaScriptEngine;
 
 /**
- * Wrapper around a "real" WebConnection that will use the wrapped web connection
- * to do the real job and save all received responses
+ * Wrapper around a "real" {@link WebConnection} that uses the wrapped connection
+ * to perform the actual work and saves all received responses
  * in the temp directory with an overview page.<br>
  * <br>
- * This may be useful at conception time to understand what is "browsed".<br>
+ * This may be useful during development to understand what is being browsed.<br>
  * <br>
  * Example:
  * <pre>
@@ -60,10 +56,10 @@ import org.htmlunit.corejs.javascript.Script;
  * final WebConnection connection = new DebuggingWebConnection(client.getWebConnection(), "myTest");
  * client.setWebConnection(connection);
  * </pre>
- * In this example an overview page will be generated under the name myTest/index.html in the temp directory
- * and all received responses will be saved into the myTest folder.<br>
+ * In this example an overview page will be generated under the name {@code myTest/index.html} in the temp directory
+ * and all received responses will be saved into the {@code myTest} folder.<br>
  * <br>
- * <em>This class is only intended as a help during the conception.</em>
+ * <em>This class is only intended as a debugging aid during development.</em>
  *
  * @author Marc Guillemot
  * @author Ahmed Ashour
@@ -82,10 +78,11 @@ public class DebuggingWebConnection extends WebConnectionWrapper {
 
     /**
      * Wraps a web connection to have a report generated of the received responses.
-     * @param webConnection the webConnection that do the real work
-     * @param dirName the name of the directory to create in the tmp folder to save received responses.
-     * If this folder already exists, it will be deleted first.
-     * @throws IOException in case of problems writing the files
+     *
+     * @param webConnection the web connection that does the real work
+     * @param dirName the name of the directory to create in the temp folder to save received responses;
+     *        if this folder already exists, it will be deleted first
+     * @throws IOException if there is a problem writing the files
      */
     public DebuggingWebConnection(final WebConnection webConnection,
             final String dirName) throws IOException {
@@ -104,7 +101,7 @@ public class DebuggingWebConnection extends WebConnectionWrapper {
     }
 
     /**
-     * Calls the wrapped webconnection and save the received response.
+     * Calls the wrapped web connection and saves the received response.
      * {@inheritDoc}
      */
     @Override
@@ -119,8 +116,9 @@ public class DebuggingWebConnection extends WebConnectionWrapper {
 
     /**
      * Tries to uncompress the JavaScript code in the provided response.
+     *
      * @param response the response to uncompress
-     * @return a new response with uncompressed JavaScript code or the original response in case of failure
+     * @return a new response with uncompressed JavaScript code, or the original response if uncompression fails
      */
     protected WebResponse uncompressJavaScript(final WebResponse response) {
         final WebRequest request = response.getWebRequest();
@@ -129,15 +127,9 @@ public class DebuggingWebConnection extends WebConnectionWrapper {
 
         // skip if it is already formatted? => TODO
 
-        final ContextFactory factory = new ContextFactory();
-        final ContextAction<Object> action = cx -> {
-            cx.setOptimizationLevel(-1);
-            final Script script = cx.compileString(scriptSource, scriptName, 0, null);
-            return cx.decompileScript(script, 4);
-        };
-
         try {
-            final String decompileScript = (String) factory.call(action);
+            final String decompileScript = JavaScriptEngine.uncompressJavaScript(scriptSource, scriptName);
+
             final List<NameValuePair> responseHeaders = new ArrayList<>(response.getResponseHeaders());
             for (int i = responseHeaders.size() - 1; i >= 0; i--) {
                 if ("content-encoding".equalsIgnoreCase(responseHeaders.get(i).getName())) {
@@ -158,23 +150,23 @@ public class DebuggingWebConnection extends WebConnectionWrapper {
 
     /**
      * Adds a mark that will be visible in the HTML result page generated by this class.
-     * @param mark the text
+     *
+     * @param mark the text of the mark
      * @throws IOException if a problem occurs writing the file
      */
-    public void addMark(String mark) throws IOException {
-        if (mark != null) {
-            mark = mark.replace("\"", "\\\"");
-        }
-        appendToJSFile("tab[tab.length] = \"" + mark + "\";\n");
+    public void addMark(final String mark) throws IOException {
+        final String escapedMark = mark == null ? null : mark.replace("\"", "\\\"");
+        appendToJSFile("tab[tab.length] = \"" + escapedMark + "\";\n");
         if (LOG.isInfoEnabled()) {
-            LOG.info("--- " + mark + " ---");
+            LOG.info("--- " + escapedMark + " ---");
         }
     }
 
     /**
-     * Saves the response content in the temp dir and adds it to the summary page.
+     * Saves the response content in the temp directory and adds it to the summary page.
+     *
      * @param response the response to save
-     * @param request the request used to get the response
+     * @param request the request used to obtain the response
      * @throws IOException if a problem occurs writing the file
      */
     protected void saveResponse(final WebResponse response, final WebRequest request)
@@ -187,7 +179,7 @@ public class DebuggingWebConnection extends WebConnectionWrapper {
             try (OutputStream fos = Files.newOutputStream(file.toPath())) {
                 length = IOUtils.copy(input, fos);
             }
-            catch (final EOFException e) {
+            catch (final EOFException ignored) {
                 // ignore
             }
         }
@@ -199,17 +191,17 @@ public class DebuggingWebConnection extends WebConnectionWrapper {
 
         final StringBuilder bduiler = new StringBuilder();
         bduiler.append("tab[tab.length] = {code: ").append(response.getStatusCode())
-                .append(", ").append("fileName: '").append(file.getName()).append("', ")
-                .append("contentType: '").append(response.getContentType()).append("', ")
-                .append("method: '").append(request.getHttpMethod().name()).append("', ");
+                .append(", fileName: '").append(file.getName()).append("', ")
+                .append("contentType: '").append(response.getContentType())
+                .append("', method: '").append(request.getHttpMethod().name()).append("', ");
         if (request.getHttpMethod() == HttpMethod.POST && request.getEncodingType() == FormEncodingType.URL_ENCODED) {
             bduiler.append("postParameters: ").append(nameValueListToJsMap(request.getRequestParameters()))
                 .append(", ");
         }
-        bduiler.append("url: '").append(escapeJSString(url.toString())).append("', ")
-                .append("loadTime: ").append(response.getLoadTime()).append(", ")
-                .append("responseSize: ").append(length).append(", ")
-                .append("responseHeaders: ").append(nameValueListToJsMap(response.getResponseHeaders()))
+        bduiler.append("url: '").append(escapeJSString(url.toString()))
+                .append("', loadTime: ").append(response.getLoadTime())
+                .append(", responseSize: ").append(length)
+                .append(", responseHeaders: ").append(nameValueListToJsMap(response.getResponseHeaders()))
                 .append("};\n");
         appendToJSFile(bduiler.toString());
     }
@@ -238,9 +230,10 @@ public class DebuggingWebConnection extends WebConnectionWrapper {
     }
 
     /**
-     * Indicates if the response contains JavaScript content.
+     * Returns whether the response contains JavaScript content.
+     *
      * @param contentType the response's content type
-     * @return {@code false} if it is not recognized as JavaScript
+     * @return {@code false} if the content type is not recognized as JavaScript
      */
     static boolean isJavaScript(final String contentType) {
         return contentType.contains("javascript") || contentType.contains("ecmascript")
@@ -248,17 +241,19 @@ public class DebuggingWebConnection extends WebConnectionWrapper {
     }
 
     /**
-     * Indicates if it should try to format responses recognized as JavaScript.
-     * @return default is {@code false} to deliver the original content
+     * Returns whether JavaScript responses should be uncompressed before saving.
+     *
+     * @return {@code true} if JavaScript responses should be uncompressed; default is {@code true}
      */
     public boolean isUncompressJavaScript() {
         return uncompressJavaScript_;
     }
 
     /**
-     * Indicates that responses recognized as JavaScript should be formatted or not.
-     * Formatting is interesting for debugging when the original script is compressed on a single line.
-     * It allows to better follow with a debugger and to obtain more interesting error messages.
+     * Sets whether responses recognized as JavaScript should be uncompressed.
+     * Uncompressing is useful for debugging when the original script is minified to a single line,
+     * as it produces more readable output and more useful error messages.
+     *
      * @param decompress {@code true} if JavaScript responses should be uncompressed
      */
     public void setUncompressJavaScript(final boolean decompress) {
@@ -273,16 +268,17 @@ public class DebuggingWebConnection extends WebConnectionWrapper {
     }
 
     /**
-     * Computes the best file to save the response to the given URL.
+     * Computes the best file name to save the response for the given URL.
+     *
      * @param url the requested URL
-     * @param extension the preferred extension
+     * @param extension the preferred file extension
      * @return the file to create
      * @throws IOException if a problem occurs creating the file
      */
     private File createFile(final URL url, final String extension) throws IOException {
         String name = url.getPath().replaceFirst("/$", "").replaceAll(".*/", "");
-        name = StringUtils.substringBefore(name, "?"); // remove query
-        name = StringUtils.substringBefore(name, ";"); // remove additional info
+        name = org.htmlunit.util.StringUtils.substringBefore(name, "?"); // remove query
+        name = org.htmlunit.util.StringUtils.substringBefore(name, ";"); // remove additional info
         name = StringUtils.substring(name, 0, 30); // avoid exceptions due to too long file names
         name = org.htmlunit.util.StringUtils.sanitizeForFileName(name);
         if (!name.endsWith(extension)) {
@@ -307,9 +303,11 @@ public class DebuggingWebConnection extends WebConnectionWrapper {
     }
 
     /**
-     * Produces a String that will produce a JS map like "{'key1': 'value1', 'key 2': 'value2'}".
-     * @param headers a list of {@link NameValuePair}
-     * @return the JS String
+     * Produces a JavaScript map literal string from a list of {@link NameValuePair}s,
+     * e.g. {@code {'key1': 'value1', 'key 2': 'value2'}}.
+     *
+     * @param headers a list of {@link NameValuePair}s
+     * @return the JavaScript map literal string
      */
     static String nameValueListToJsMap(final List<NameValuePair> headers) {
         if (headers == null || headers.isEmpty()) {
@@ -326,8 +324,9 @@ public class DebuggingWebConnection extends WebConnectionWrapper {
     }
 
     /**
-     * Creates the summary file and the JavaScript file that will be updated for each received response
-     * @throws IOException if a problem occurs writing the file
+     * Creates the summary file and the JavaScript file that will be updated for each received response.
+     *
+     * @throws IOException if a problem occurs writing the files
      */
     private void createOverview() throws IOException {
         FileUtils.writeStringToFile(javaScriptFile_, "var tab = [];\n", ISO_8859_1);

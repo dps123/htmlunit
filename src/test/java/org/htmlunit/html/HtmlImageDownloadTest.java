@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,28 +14,22 @@
  */
 package org.htmlunit.html;
 
-import static org.junit.Assert.fail;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectOutputStream;
 import java.net.URL;
 
-import javax.imageio.ImageReader;
-
 import org.apache.commons.io.IOUtils;
-import org.junit.After;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.HttpHeader;
 import org.htmlunit.WebClient;
 import org.htmlunit.WebResponse;
 import org.htmlunit.WebServerTestCase;
-import org.htmlunit.junit.BrowserRunner;
 import org.htmlunit.platform.image.ImageData;
 import org.htmlunit.platform.image.ImageIOImageData;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link HtmlImage}.
@@ -44,17 +38,17 @@ import org.htmlunit.platform.image.ImageIOImageData;
  * @author Ahmed Ashour
  * @author Marc Guillemot
  * @author Lukas Botsch
+ * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class HtmlImageDownloadTest extends WebServerTestCase {
-    private static final String base_file_path_ = "src/test/resources/org/htmlunit/html";
 
     /**
-     * Constructor.
-     * @throws Exception if an exception occurs
+     * Starts the web server prior to test execution.
+     * @throws Exception if an error occurs
      */
-    public HtmlImageDownloadTest() throws Exception {
-        startWebServer(base_file_path_);
+    @BeforeEach
+    public void setUp() throws Exception {
+        startWebServer("src/test/resources/org/htmlunit/html");
     }
 
     /**
@@ -107,10 +101,9 @@ public class HtmlImageDownloadTest extends WebServerTestCase {
         htmlImage.setAttribute("src", url);
         try {
             htmlImage.getImageData();
-            fail("it was not an image!");
+            Assertions.fail("it was not an image!");
         }
-        catch (final IOException ioe) {
-            // Correct behavior
+        catch (final IOException expected) {
         }
     }
 
@@ -137,14 +130,11 @@ public class HtmlImageDownloadTest extends WebServerTestCase {
         final HtmlImage htmlImage = getHtmlElementToTest("image1");
 
         final ImageData imageData = htmlImage.getImageData();
-        final ImageReader imageReader = htmlImage.getImageReader();
 
         htmlImage.setAttribute("src", htmlImage.getSrcAttribute() + "#changed");
 
         assertFalse("Src attribute changed but ImageData was not reloaded",
                 imageData.equals(htmlImage.getImageData()));
-        assertFalse("Src attribute changed but ImageReader was not reloaded",
-                imageReader.equals(htmlImage.getImageReader()));
     }
 
     /**
@@ -161,22 +151,12 @@ public class HtmlImageDownloadTest extends WebServerTestCase {
     }
 
     /**
-     * {@inheritDoc}
-     */
-    @Override
-    @After
-    public void tearDown() throws Exception {
-        Thread.sleep(100);
-        super.tearDown();
-    }
-
-    /**
      * @throws Exception if the test fails
      */
     @Test
     public void serialize() throws Exception {
         final HtmlImage htmlImage = getHtmlElementToTest("image1");
-        htmlImage.getImageReader();
+        htmlImage.getImageData();
 
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             try (ObjectOutputStream out = new ObjectOutputStream(baos)) {

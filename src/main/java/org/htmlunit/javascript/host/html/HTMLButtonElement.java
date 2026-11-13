@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,7 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
-
+import org.htmlunit.html.DomElement;
 import org.htmlunit.html.HtmlButton;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
@@ -27,16 +22,17 @@ import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.configuration.JsxSetter;
 import org.htmlunit.javascript.host.dom.NodeList;
-import org.htmlunit.javascript.host.dom.TextRange;
 
 /**
  * The JavaScript object that represents a {@link HtmlButton} (&lt;button type=...&gt;).
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author Marc Guillemot
  * @author Ahmed Ashour
  * @author Ronald Brill
  * @author Frank Danek
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLButtonElement">MDN Documentation</a>
  */
 @JsxClass(domClass = HtmlButton.class)
 public class HTMLButtonElement extends HTMLElement {
@@ -45,10 +41,12 @@ public class HTMLButtonElement extends HTMLElement {
     private NodeList labels_;
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public HTMLButtonElement() {
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
@@ -59,7 +57,7 @@ public class HTMLButtonElement extends HTMLElement {
      */
     @JsxSetter
     public void setType(final String newType) {
-        getDomNodeOrDie().setAttribute("type", newType);
+        getDomNodeOrDie().setAttribute(DomElement.TYPE_ATTRIBUTE, newType);
     }
 
     /**
@@ -68,28 +66,19 @@ public class HTMLButtonElement extends HTMLElement {
      */
     @JsxGetter
     public String getType() {
-        return ((HtmlButton) getDomNodeOrDie()).getType();
+        return getDomNodeOrDie().getType();
     }
 
     /**
      * Returns the labels associated with the element.
      * @return the labels associated with the element
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public NodeList getLabels() {
         if (labels_ == null) {
             labels_ = new LabelsNodeList(getDomNodeOrDie());
         }
         return labels_;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    @JsxFunction(IE)
-    public TextRange createTextRange() {
-        return super.createTextRange();
     }
 
     /**
@@ -114,7 +103,7 @@ public class HTMLButtonElement extends HTMLElement {
      * {@inheritDoc} Overridden to modify browser configurations.
      */
     @Override
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public boolean isDisabled() {
         return super.isDisabled();
     }
@@ -123,7 +112,7 @@ public class HTMLButtonElement extends HTMLElement {
      * {@inheritDoc} Overridden to modify browser configurations.
      */
     @Override
-    @JsxSetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxSetter
     public void setDisabled(final boolean disabled) {
         super.setDisabled(disabled);
     }
@@ -157,15 +146,25 @@ public class HTMLButtonElement extends HTMLElement {
 
     /**
      * Checks whether the element has any constraints and whether it satisfies them.
-     * @return if the element is valid
+     * @return {@code true} if the element is valid
      */
     @JsxFunction
     public boolean checkValidity() {
-        return getDomNodeOrDie().isValid();
+        return ValidatableHTMLElement.doCheckValidity(getDomNodeOrDie());
     }
 
     /**
-     * @return a ValidityState with the validity states that this element is in.
+     * Performs the same validity checking steps as the checkValidity() method.
+     * @return {@code true} if the element is valid
+     */
+    @JsxFunction
+    public boolean reportValidity() {
+        return ValidatableHTMLElement.doReportValidity(getDomNodeOrDie());
+    }
+
+    /**
+     * Returns a {@link ValidityState} object representing the validity states of this element.
+     * @return a {@link ValidityState} object representing the validity states of this element
      */
     @JsxGetter
     public ValidityState getValidity() {
@@ -177,11 +176,27 @@ public class HTMLButtonElement extends HTMLElement {
     }
 
     /**
-     * @return always false
+     * Returns the message describing why the element's value fails constraint
+     * validation, or "" if it's valid or barred from validation.
+     * @return the validation message
      */
     @JsxGetter
-    public boolean getWillValidate() {
-        return ((HtmlButton) getDomNodeOrDie()).willValidate();
+    public String getValidationMessage() {
+        return ValidatableHTMLElement.getValidationMessage(getDomNodeOrDie());
+    }
+
+    @Override
+    public HtmlButton getDomNodeOrDie() {
+        return (HtmlButton) super.getDomNodeOrDie();
+    }
+
+    /**
+     * Returns whether this element will be validated when the form is submitted.
+     * @return always {@code false}
+     */
+    @JsxGetter
+    public boolean isWillValidate() {
+        return getDomNodeOrDie().willValidate();
     }
 
     /**
@@ -190,24 +205,24 @@ public class HTMLButtonElement extends HTMLElement {
      */
     @JsxFunction
     public void setCustomValidity(final String message) {
-        ((HtmlButton) getDomNodeOrDie()).setCustomValidity(message);
+        getDomNodeOrDie().setCustomValidity(message);
     }
 
     /**
      * Returns the value of the property {@code formnovalidate}.
-     * @return the value of this property
+     * @return the value of the {@code formnovalidate} property
      */
     @JsxGetter
     public boolean isFormNoValidate() {
-        return ((HtmlButton) getDomNodeOrDie()).isFormNoValidate();
+        return getDomNodeOrDie().isFormNoValidate();
     }
 
     /**
      * Sets the value of the property {@code formnovalidate}.
-     * @param value the new value
+     * @param value the new value of the {@code formnovalidate} property
      */
     @JsxSetter
     public void setFormNoValidate(final boolean value) {
-        ((HtmlButton) getDomNodeOrDie()).setFormNoValidate(value);
+        getDomNodeOrDie().setFormNoValidate(value);
     }
 }

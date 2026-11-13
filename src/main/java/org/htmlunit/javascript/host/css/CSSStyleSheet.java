@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,64 +14,31 @@
  */
 package org.htmlunit.javascript.host.css;
 
-import static org.htmlunit.BrowserVersionFeatures.CSS_PSEUDO_SELECTOR_MS_PLACEHHOLDER;
-import static org.htmlunit.BrowserVersionFeatures.CSS_PSEUDO_SELECTOR_PLACEHOLDER_SHOWN;
-import static org.htmlunit.BrowserVersionFeatures.QUERYSELECTOR_CSS3_PSEUDO_REQUIRE_ATTACHED_NODE;
-import static org.htmlunit.BrowserVersionFeatures.STYLESHEET_ADD_RULE_RETURNS_POS;
-import static org.htmlunit.BrowserVersionFeatures.STYLESHEET_HREF_EMPTY_IS_NULL;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
-
 import java.io.IOException;
 import java.io.StringReader;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.htmlunit.corejs.javascript.VarScope;
+import org.htmlunit.css.CssStyleSheet;
 import org.htmlunit.cssparser.dom.AbstractCSSRuleImpl;
 import org.htmlunit.cssparser.dom.CSSCharsetRuleImpl;
 import org.htmlunit.cssparser.dom.CSSRuleListImpl;
-import org.htmlunit.cssparser.parser.CSSException;
 import org.htmlunit.cssparser.parser.InputSource;
-import org.htmlunit.cssparser.parser.condition.Condition;
-import org.htmlunit.cssparser.parser.condition.NotPseudoClassCondition;
-import org.htmlunit.cssparser.parser.selector.ChildSelector;
-import org.htmlunit.cssparser.parser.selector.DescendantSelector;
-import org.htmlunit.cssparser.parser.selector.DirectAdjacentSelector;
-import org.htmlunit.cssparser.parser.selector.ElementSelector;
-import org.htmlunit.cssparser.parser.selector.GeneralAdjacentSelector;
-import org.htmlunit.cssparser.parser.selector.Selector;
-import org.htmlunit.cssparser.parser.selector.SelectorList;
-import org.w3c.dom.DOMException;
-
-import org.htmlunit.css.CssStyleSheet;
-import org.htmlunit.html.DomNode;
-import org.htmlunit.html.HtmlLink;
-import org.htmlunit.html.HtmlPage;
-import org.htmlunit.html.HtmlStyle;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
-import org.htmlunit.javascript.host.Window;
-import org.htmlunit.javascript.host.html.HTMLDocument;
 import org.htmlunit.javascript.host.html.HTMLElement;
-
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.Scriptable;
+import org.w3c.dom.DOMException;
 
 /**
  * A JavaScript object for {@code CSSStyleSheet}.
  *
- * @see <a href="http://msdn2.microsoft.com/en-us/library/ms535871.aspx">MSDN doc</a>
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleSheet">MDN Documentation</a>
  * @author Marc Guillemot
  * @author Daniel Gredler
  * @author Ahmed Ashour
@@ -85,14 +52,8 @@ public class CSSStyleSheet extends StyleSheet {
 
     private static final Log LOG = LogFactory.getLog(CSSStyleSheet.class);
 
-    private static final Pattern NTH_NUMERIC = Pattern.compile("\\d+");
-    private static final Pattern NTH_COMPLEX = Pattern.compile("[+-]?\\d*n\\w*([+-]\\w\\d*)?");
-
     /** The parsed stylesheet which this host object wraps. */
-    private final CssStyleSheet styleSheet_;
-
-    /** The HTML element which owns this stylesheet. */
-    private final HTMLElement ownerNode_;
+    private CssStyleSheet styleSheet_;
 
     /** The collection of rules defined in this style sheet. */
     private CSSRuleList cssRules_;
@@ -101,10 +62,19 @@ public class CSSStyleSheet extends StyleSheet {
     /**
      * Creates a new empty stylesheet.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
     public CSSStyleSheet() {
+        super(null);
         styleSheet_ = new CssStyleSheet(null, (InputSource) null, null);
-        ownerNode_ = null;
+    }
+
+    /**
+     * Creates a new empty stylesheet.
+     */
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
+        styleSheet_ = new CssStyleSheet(null, (InputSource) null, null);
     }
 
     /**
@@ -114,11 +84,12 @@ public class CSSStyleSheet extends StyleSheet {
      * @param uri this stylesheet's URI (used to resolved contained @import rules)
      */
     public CSSStyleSheet(final HTMLElement element, final InputSource source, final String uri) {
-        setParentScope(element.getWindow());
+        super(element);
+
+        setParentScope(getTopLevelScope(element.getParentScope()));
         setPrototype(getPrototype(CSSStyleSheet.class));
 
         styleSheet_ = new CssStyleSheet(element.getDomNodeOrDie(), source, uri);
-        ownerNode_ = element;
     }
 
     /**
@@ -128,7 +99,7 @@ public class CSSStyleSheet extends StyleSheet {
      * @param uri this stylesheet's URI (used to resolved contained @import rules)
      */
     public CSSStyleSheet(final HTMLElement element, final String styleSheet, final String uri) {
-        final Window win = element.getWindow();
+        super(element);
 
         CssStyleSheet css = null;
         try (InputSource source = new InputSource(new StringReader(styleSheet))) {
@@ -138,11 +109,10 @@ public class CSSStyleSheet extends StyleSheet {
             LOG.error(e.getMessage(), e);
         }
 
-        setParentScope(win);
+        setParentScope(element.getParentScope());
         setPrototype(getPrototype(CSSStyleSheet.class));
 
         styleSheet_ = css;
-        ownerNode_ = element;
     }
 
     /**
@@ -151,12 +121,13 @@ public class CSSStyleSheet extends StyleSheet {
      * @param parentScope the parent scope
      * @param cssStyleSheet the CSS stylesheet which this stylesheet host object represents
      */
-    public CSSStyleSheet(final HTMLElement element, final Scriptable parentScope,
+    public CSSStyleSheet(final HTMLElement element, final VarScope parentScope,
             final CssStyleSheet cssStyleSheet) {
+        super(element);
+
         setParentScope(parentScope);
         setPrototype(getPrototype(CSSStyleSheet.class));
         styleSheet_ = cssStyleSheet;
-        ownerNode_ = element;
     }
 
     /**
@@ -168,28 +139,10 @@ public class CSSStyleSheet extends StyleSheet {
     }
 
     /**
-     * Returns the owner node.
-     * @return the owner node
-     */
-    @JsxGetter
-    public HTMLElement getOwnerNode() {
-        return ownerNode_;
-    }
-
-    /**
-     * Returns the owner element, same as {@link #getOwnerNode()}.
-     * @return the owner element
-     */
-    @JsxGetter(IE)
-    public HTMLElement getOwningElement() {
-        return ownerNode_;
-    }
-
-    /**
      * Retrieves the collection of rules defined in this style sheet.
      * @return the collection of rules defined in this style sheet
      */
-    @JsxGetter({CHROME, EDGE, IE})
+    @JsxGetter
     public CSSRuleList getRules() {
         return getCssRules();
     }
@@ -202,40 +155,6 @@ public class CSSStyleSheet extends StyleSheet {
     public CSSRuleList getCssRules() {
         initCssRules();
         return cssRules_;
-    }
-
-    /**
-     * Returns the URL of the stylesheet.
-     * @return the URL of the stylesheet
-     */
-    @JsxGetter
-    public String getHref() {
-        if (ownerNode_ != null) {
-            final DomNode node = ownerNode_.getDomNodeOrDie();
-            if (node instanceof HtmlStyle) {
-                return null;
-            }
-            if (node instanceof HtmlLink) {
-                // <link rel="stylesheet" type="text/css" href="..." />
-                final HtmlLink link = (HtmlLink) node;
-                final String href = link.getHrefAttribute();
-                if ("".equals(href) && getBrowserVersion().hasFeature(STYLESHEET_HREF_EMPTY_IS_NULL)) {
-                    return null;
-                }
-                // Expand relative URLs.
-                try {
-                    final HtmlPage page = (HtmlPage) link.getPage();
-                    final URL url = page.getFullyQualifiedUrl(href);
-                    return url.toExternalForm();
-                }
-                catch (final MalformedURLException e) {
-                    // Log the error and fall through to the return values below.
-                    LOG.warn(e.getMessage(), e);
-                }
-            }
-        }
-
-        return getUri();
     }
 
     /**
@@ -264,10 +183,10 @@ public class CSSStyleSheet extends StyleSheet {
                     return position;
                 }
                 catch (final DOMException ex) {
-                    throw Context.throwAsScriptRuntimeEx(ex);
+                    throw JavaScriptEngine.asJavaScriptException(getWindow(), ex.getMessage(), ex.code);
                 }
             }
-            throw Context.throwAsScriptRuntimeEx(e);
+            throw JavaScriptEngine.asJavaScriptException(getWindow(), e.getMessage(), e.code);
         }
     }
 
@@ -288,8 +207,8 @@ public class CSSStyleSheet extends StyleSheet {
                 continue;
             }
 
-            final CSSRule cssRule = org.htmlunit.javascript.host.css.CSSRule.create(this, rule);
-            if (null == cssRule) {
+            final CSSRule cssRule = CSSRule.create(this, rule);
+            if (cssRule == null) {
                 cssRulesIndexFix_.add(pos);
             }
             else {
@@ -302,14 +221,15 @@ public class CSSStyleSheet extends StyleSheet {
         getCssStyleSheet().getWrappedSheet().resetRuleIndex();
     }
 
-    private int fixIndex(int index) {
+    private int fixIndex(final int index) {
+        int fixed = index;
         for (final int fix : cssRulesIndexFix_) {
-            if (fix > index) {
-                return index;
+            if (fix > fixed) {
+                return fixed;
             }
-            index++;
+            fixed++;
         }
-        return index;
+        return fixed;
     }
 
     /**
@@ -325,16 +245,16 @@ public class CSSStyleSheet extends StyleSheet {
             refreshCssRules();
         }
         catch (final DOMException e) {
-            throw Context.throwAsScriptRuntimeEx(e);
+            throw JavaScriptEngine.asJavaScriptException(getWindow(), e.getMessage(), e.code);
         }
     }
 
     /**
      * Adds a new rule.
-     * @see <a href="http://msdn.microsoft.com/en-us/library/aa358796.aspx">MSDN</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleSheet/addRule">MDN Documentation</a>
      * @param selector the selector name
      * @param rule the rule
-     * @return always return -1 as of MSDN documentation
+     * @return always -1
      */
     @JsxFunction
     public int addRule(final String selector, final String rule) {
@@ -354,11 +274,8 @@ public class CSSStyleSheet extends StyleSheet {
                 refreshCssRules();
             }
             catch (final DOMException ex) {
-                throw Context.throwAsScriptRuntimeEx(ex);
+                throw JavaScriptEngine.asJavaScriptException(getWindow(), ex.getMessage(), ex.code);
             }
-        }
-        if (getBrowserVersion().hasFeature(STYLESHEET_ADD_RULE_RETURNS_POS)) {
-            return getCssStyleSheet().getWrappedSheet().getCssRules().getLength() - 1;
         }
         return -1;
     }
@@ -366,7 +283,7 @@ public class CSSStyleSheet extends StyleSheet {
     /**
      * Deletes an existing rule.
      * @param position the position of the rule to be deleted
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms531195(v=VS.85).aspx">MSDN</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleSheet/removeRule">MDN Documentation</a>
      */
     @JsxFunction
     public void removeRule(final int position) {
@@ -376,7 +293,7 @@ public class CSSStyleSheet extends StyleSheet {
             refreshCssRules();
         }
         catch (final DOMException e) {
-            throw Context.throwAsScriptRuntimeEx(e);
+            throw JavaScriptEngine.throwAsScriptRuntimeEx(e);
         }
     }
 
@@ -385,132 +302,9 @@ public class CSSStyleSheet extends StyleSheet {
      * For inline styles this is the page uri.
      * @return this stylesheet's URI (used to resolved contained @import rules)
      */
+    @Override
     public String getUri() {
         return getCssStyleSheet().getUri();
-    }
-
-    /**
-     * Validates the list of selectors.
-     * @param selectorList the selectors
-     * @param documentMode see {@link HTMLDocument#getDocumentMode()}
-     * @param domNode the dom node the query should work on
-     * @throws CSSException if a selector is invalid
-     */
-    public static void validateSelectors(final SelectorList selectorList, final int documentMode,
-                final DomNode domNode) throws CSSException {
-        for (final Selector selector : selectorList) {
-            if (!isValidSelector(selector, documentMode, domNode)) {
-                throw new CSSException("Invalid selector: " + selector);
-            }
-        }
-    }
-
-    /**
-     * @param documentMode see {@link HTMLDocument#getDocumentMode()}
-     */
-    private static boolean isValidSelector(final Selector selector, final int documentMode, final DomNode domNode) {
-        switch (selector.getSelectorType()) {
-            case ELEMENT_NODE_SELECTOR:
-                final List<Condition> conditions = ((ElementSelector) selector).getConditions();
-                if (conditions != null) {
-                    for (final Condition condition : conditions) {
-                        if (!isValidCondition(condition, documentMode, domNode)) {
-                            return false;
-                        }
-                    }
-                }
-                return true;
-            case DESCENDANT_SELECTOR:
-                final DescendantSelector ds = (DescendantSelector) selector;
-                return isValidSelector(ds.getAncestorSelector(), documentMode, domNode)
-                        && isValidSelector(ds.getSimpleSelector(), documentMode, domNode);
-            case CHILD_SELECTOR:
-                final ChildSelector cs = (ChildSelector) selector;
-                return isValidSelector(cs.getAncestorSelector(), documentMode, domNode)
-                        && isValidSelector(cs.getSimpleSelector(), documentMode, domNode);
-            case DIRECT_ADJACENT_SELECTOR:
-                final DirectAdjacentSelector das = (DirectAdjacentSelector) selector;
-                return isValidSelector(das.getSelector(), documentMode, domNode)
-                        && isValidSelector(das.getSimpleSelector(), documentMode, domNode);
-            case GENERAL_ADJACENT_SELECTOR:
-                final GeneralAdjacentSelector gas = (GeneralAdjacentSelector) selector;
-                return isValidSelector(gas.getSelector(), documentMode, domNode)
-                        && isValidSelector(gas.getSimpleSelector(), documentMode, domNode);
-            default:
-                if (LOG.isWarnEnabled()) {
-                    LOG.warn("Unhandled CSS selector type '"
-                                + selector.getSelectorType() + "'. Accepting it silently.");
-                }
-                return true; // at least in a first time to break less stuff
-        }
-    }
-
-    /**
-     * @param documentMode see {@link HTMLDocument#getDocumentMode()}
-     */
-    private static boolean isValidCondition(final Condition condition, final int documentMode, final DomNode domNode) {
-        switch (condition.getConditionType()) {
-            case ATTRIBUTE_CONDITION:
-            case ID_CONDITION:
-            case LANG_CONDITION:
-            case ONE_OF_ATTRIBUTE_CONDITION:
-            case BEGIN_HYPHEN_ATTRIBUTE_CONDITION:
-            case CLASS_CONDITION:
-            case PREFIX_ATTRIBUTE_CONDITION:
-            case SUBSTRING_ATTRIBUTE_CONDITION:
-            case SUFFIX_ATTRIBUTE_CONDITION:
-                return true;
-            case NOT_PSEUDO_CLASS_CONDITION:
-                final NotPseudoClassCondition notPseudoCondition = (NotPseudoClassCondition) condition;
-                final SelectorList selectorList = notPseudoCondition.getSelectors();
-                for (final Selector selector : selectorList) {
-                    if (!isValidSelector(selector, documentMode, domNode)) {
-                        return false;
-                    }
-                }
-                return true;
-            case PSEUDO_CLASS_CONDITION:
-                String value = condition.getValue();
-                if (value.endsWith(")")) {
-                    if (value.endsWith("()")) {
-                        return false;
-                    }
-                    value = value.substring(0, value.indexOf('(') + 1) + ')';
-                }
-                if (documentMode < 9) {
-                    return CssStyleSheet.CSS2_PSEUDO_CLASSES.contains(value);
-                }
-
-                if (!CssStyleSheet.CSS2_PSEUDO_CLASSES.contains(value)
-                        && domNode.hasFeature(QUERYSELECTOR_CSS3_PSEUDO_REQUIRE_ATTACHED_NODE)
-                        && !domNode.isAttachedToPage()
-                        && !domNode.hasChildNodes()) {
-                    throw new CSSException("Syntax Error");
-                }
-
-                if ("nth-child()".equals(value)) {
-                    final String arg = StringUtils.substringBetween(condition.getValue(), "(", ")").trim();
-                    return "even".equalsIgnoreCase(arg) || "odd".equalsIgnoreCase(arg)
-                            || NTH_NUMERIC.matcher(arg).matches()
-                            || NTH_COMPLEX.matcher(arg).matches();
-                }
-
-                if ("placeholder-shown".equals(value)) {
-                    return domNode.hasFeature(CSS_PSEUDO_SELECTOR_PLACEHOLDER_SHOWN);
-                }
-
-                if ("-ms-input-placeholder".equals(value)) {
-                    return domNode.hasFeature(CSS_PSEUDO_SELECTOR_MS_PLACEHHOLDER);
-                }
-
-                return CssStyleSheet.CSS4_PSEUDO_CLASSES.contains(value);
-            default:
-                if (LOG.isWarnEnabled()) {
-                    LOG.warn("Unhandled CSS condition type '"
-                                + condition.getConditionType() + "'. Accepting it silently.");
-                }
-                return true;
-        }
     }
 
     private void initCssRules() {

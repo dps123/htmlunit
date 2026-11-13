@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,38 +14,30 @@
  */
 package org.htmlunit.javascript.host;
 
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.CHROME;
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.EDGE;
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.FF;
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.FF_ESR;
-
 import java.net.URL;
+import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.openqa.selenium.By;
-import org.openqa.selenium.JavascriptExecutor;
-import org.openqa.selenium.NoAlertPresentException;
-import org.openqa.selenium.WebDriver;
 
 import org.htmlunit.HttpHeader;
 import org.htmlunit.HttpMethod;
 import org.htmlunit.MockWebConnection;
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.BuggyWebDriver;
-import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
-import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.HtmlUnitNYI;
+import org.htmlunit.util.ArrayUtils;
 import org.htmlunit.util.MimeType;
 import org.htmlunit.util.NameValuePair;
+import org.junit.jupiter.api.Test;
+import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.WebDriver;
 
 /**
  * Tests for {@link Location}.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author Michael Ottati
  * @author Marc Guillemot
  * @author Daniel Gredler
@@ -53,8 +45,9 @@ import org.htmlunit.util.NameValuePair;
  * @author Ronald Brill
  * @author Frank Danek
  * @author Atsushi Nakagawa
+ * @author Lai Quang Duong
+ * @author Kanoko Yamamoto
  */
-@RunWith(BrowserRunner.class)
 public class Location2Test extends WebDriverTestCase {
 
     /**
@@ -64,8 +57,8 @@ public class Location2Test extends WebDriverTestCase {
     @Test
     @Alerts("§§URL§§")
     public void documentLocationGet() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
@@ -84,8 +77,8 @@ public class Location2Test extends WebDriverTestCase {
     @Test
     @Alerts("ok")
     public void documentLocationSet() throws Exception {
-        final String html1 =
-              "<html>\n"
+        final String html1 = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <title>test1</title>\n"
             + "  <script>\n"
@@ -96,8 +89,8 @@ public class Location2Test extends WebDriverTestCase {
             + "</head>\n"
             + "<body onload='test()'></body>\n"
             + "</html>";
-        final String html2 =
-              "<html>\n"
+        final String html2 = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION
@@ -121,8 +114,8 @@ public class Location2Test extends WebDriverTestCase {
     @Test
     @Alerts("§§URL§§")
     public void documentLocationHref() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
@@ -139,10 +132,10 @@ public class Location2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"", "about:blank", "blank", "", "about:", ""},
-            IE = {"", "about:blank", "/blank", "", "about:", ""})
+    @Alerts({"", "about:blank", "blank", "", "about:", ""})
     public void about_blank_attributes() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
@@ -166,15 +159,10 @@ public class Location2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"#hash", "about:blank?query#hash", "blank", "", "about:", "?query"},
-            FF = "exception",
-            FF_ESR = "exception",
-            IE = "exception")
-    @HtmlUnitNYI(FF = {"", "about:blank", "blank", "", "about:", ""},
-            FF_ESR = {"", "about:blank", "blank", "", "about:", ""},
-            IE = {"", "about:blank", "/blank", "", "about:", ""})
-    public void about_blank_query_hash_attributes() throws Exception {
-        final String html = "<html>\n"
+    @Alerts({"", "about:blank?query", "blank", "", "about:", "?query"})
+    public void about_blank_query_attributes() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION
@@ -188,7 +176,140 @@ public class Location2Test extends WebDriverTestCase {
             + "        log(location.port);\n"
             + "        log(location.protocol);\n"
             + "        log(location.search);\n"
-            + "      } catch(e) { log('exception'); }\n"
+            + "      } catch(e) { logEx(e); }\n"
+            + "    }\n"
+            + "  </script>\n"
+            + "</head>\n"
+            + "<body onload='doTest()'>\n"
+            + "  <iframe src='about:blank?query'></iframe>\n"
+            + "</body>\n"
+            + "</html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"", "about:blank?", "blank", "", "about:", ""})
+    public void about_blank_emptyquery_attributes() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<head>\n"
+            + "  <script>\n"
+            + LOG_TITLE_FUNCTION
+            + "    function doTest() {\n"
+            + "      try {\n"
+            + "        var doc = frames[0].document;\n"
+            + "        var location = doc.location;\n"
+            + "        log(location.hash);\n"
+            + "        log(location.href);\n"
+            + "        log(location.pathname);\n"
+            + "        log(location.port);\n"
+            + "        log(location.protocol);\n"
+            + "        log(location.search);\n"
+            + "      } catch(e) { logEx(e); }\n"
+            + "    }\n"
+            + "  </script>\n"
+            + "</head>\n"
+            + "<body onload='doTest()'>\n"
+            + "  <iframe src='about:blank?'></iframe>\n"
+            + "</body>\n"
+            + "</html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"#hash", "about:blank#hash", "blank", "", "about:", ""})
+    public void about_blank_hash_attributes() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<head>\n"
+            + "  <script>\n"
+            + LOG_TITLE_FUNCTION
+            + "    function doTest() {\n"
+            + "      try {\n"
+            + "        var doc = frames[0].document;\n"
+            + "        var location = doc.location;\n"
+            + "        log(location.hash);\n"
+            + "        log(location.href);\n"
+            + "        log(location.pathname);\n"
+            + "        log(location.port);\n"
+            + "        log(location.protocol);\n"
+            + "        log(location.search);\n"
+            + "      } catch(e) { logEx(e); }\n"
+            + "    }\n"
+            + "  </script>\n"
+            + "</head>\n"
+            + "<body onload='doTest()'>\n"
+            + "  <iframe src='about:blank#hash'></iframe>\n"
+            + "</body>\n"
+            + "</html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"#hash", "about:blank?#hash", "blank", "", "about:", ""})
+    public void about_blank_emptyquery_hash_attributes() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<head>\n"
+            + "  <script>\n"
+            + LOG_TITLE_FUNCTION
+            + "    function doTest() {\n"
+            + "      try {\n"
+            + "        var doc = frames[0].document;\n"
+            + "        var location = doc.location;\n"
+            + "        log(location.hash);\n"
+            + "        log(location.href);\n"
+            + "        log(location.pathname);\n"
+            + "        log(location.port);\n"
+            + "        log(location.protocol);\n"
+            + "        log(location.search);\n"
+            + "      } catch(e) { logEx(e); }\n"
+            + "    }\n"
+            + "  </script>\n"
+            + "</head>\n"
+            + "<body onload='doTest()'>\n"
+            + "  <iframe src='about:blank?#hash'></iframe>\n"
+            + "</body>\n"
+            + "</html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"#hash", "about:blank?query#hash", "blank", "", "about:", "?query"})
+    public void about_blank_query_hash_attributes() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<head>\n"
+            + "  <script>\n"
+            + LOG_TITLE_FUNCTION
+            + "    function doTest() {\n"
+            + "      try {\n"
+            + "        var doc = frames[0].document;\n"
+            + "        var location = doc.location;\n"
+            + "        log(location.hash);\n"
+            + "        log(location.href);\n"
+            + "        log(location.pathname);\n"
+            + "        log(location.port);\n"
+            + "        log(location.protocol);\n"
+            + "        log(location.search);\n"
+            + "      } catch(e) { logEx(e); }\n"
             + "    }\n"
             + "  </script>\n"
             + "</head>\n"
@@ -204,11 +325,10 @@ public class Location2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"", "about:blank", "#foo", "about:blank#foo"},
-            IE = {"", "about:blank", "", "about:blank"})
-    @HtmlUnitNYI(IE = {"", "about:blank", "#foo", "about:blank#foo"})
+    @Alerts({"", "about:blank", "#foo", "about:blank#foo"})
     public void about_blank_set_hash() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION
@@ -222,7 +342,7 @@ public class Location2Test extends WebDriverTestCase {
             + "        location.hash = 'foo';\n"
             + "        log(location.hash);\n"
             + "        log(location.href);\n"
-            + "      } catch(e) { log('exception'); }\n"
+            + "      } catch(e) { logEx(e); }\n"
             + "    }\n"
             + "  </script>\n"
             + "</head>\n"
@@ -238,12 +358,54 @@ public class Location2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"#a%20b", "§§URL§§#a%20b", "#a%20b", "§§URL§§#a%20b", "#abc;,/?:@&=+$-_.!~*()ABC123foo",
-                       "#%25%20%5E%5B%5D%7C%22%3C%3E%7B%7D%5C"},
-            IE = {"#a b", "§§URL§§#a b", "#a%20b", "§§URL§§#a%20b", "#abc;,/?:@&=+$-_.!~*()ABC123foo",
-                  "#%25%20%5E%5B%5D%7C%22%3C%3E%7B%7D%5C"})
+    @Alerts("?foobar")
+    public void search() throws Exception {
+        checkSearch(URL_FIRST + "?foobar");
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts("")
+    public void emptySearch() throws Exception {
+        checkSearch(URL_FIRST + "?");
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts("")
+    public void noSearch() throws Exception {
+        checkSearch(URL_FIRST.toExternalForm());
+    }
+
+    private void checkSearch(final String url) throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body onload='test()'>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  log(document.location.search);\n"
+            + "}\n"
+            + "</script>\n"
+            + "</body></html>";
+
+        getMockWebConnection().setDefaultResponse(html);
+        loadPage2(html, new URL(url));
+        verifyTitle2(getWebDriver(), getExpectedAlerts());
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"#a%20b", "§§URL§§#a%20b", "#a%20b", "§§URL§§#a%20b", "#abc;,/?:@&=+$-_.!~*()ABC123foo",
+             "#%25%20%5E%5B%5D%7C%22%3C%3E%7B%7D%5C"})
     public void hashEncoding() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -270,9 +432,13 @@ public class Location2Test extends WebDriverTestCase {
      */
     @Test
     @Alerts({"#myDataTable=foo%3Dojkoj", "§§URL§§#myDataTable=foo%3Dojkoj"})
-    @NotYetImplemented({CHROME, EDGE, FF, FF_ESR})
+    @HtmlUnitNYI(CHROME = {"#myDataTable=foo=ojkoj", "§§URL§§#myDataTable=foo%3Dojkoj"},
+            EDGE = {"#myDataTable=foo=ojkoj", "§§URL§§#myDataTable=foo%3Dojkoj"},
+            FF = {"#myDataTable=foo=ojkoj", "§§URL§§#myDataTable=foo%3Dojkoj"},
+            FF_ESR = {"#myDataTable=foo=ojkoj", "§§URL§§#myDataTable=foo%3Dojkoj"})
     public void hashEncoding2() throws Exception {
-        final String html = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "window.location.hash = 'myDataTable=foo%3Dojkoj';\n"
@@ -288,10 +454,10 @@ public class Location2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"#%C3%BC%C3%B6%C3%A4", "§§URL§§#%C3%BC%C3%B6%C3%A4"},
-            IE = {"#üöä", "§§URL§§#üöä"})
+    @Alerts({"#%C3%BC%C3%B6%C3%A4", "§§URL§§#%C3%BC%C3%B6%C3%A4"})
     public void hashEncoding3() throws Exception {
-        final String html = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "window.location.hash = 'üöä';\n"
@@ -307,8 +473,7 @@ public class Location2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "#%3Ca%3Efoobar%3C/a%3E",
-            IE = "#<a>foobar</a>")
+    @Alerts("#%3Ca%3Efoobar%3C/a%3E")
     public void hash() throws Exception {
         checkHash(URL_FIRST + "?#<a>foobar</a>");
     }
@@ -317,8 +482,7 @@ public class Location2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "",
-            IE = "#")
+    @Alerts("")
     public void emptyHash() throws Exception {
         checkHash(URL_FIRST + "#");
     }
@@ -333,7 +497,8 @@ public class Location2Test extends WebDriverTestCase {
     }
 
     private void checkHash(final String url) throws Exception {
-        final String html = "<html><body onload='test()'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body onload='test()'>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -353,8 +518,8 @@ public class Location2Test extends WebDriverTestCase {
     @Test
     @Alerts({"#hello", "#hi"})
     public void setHash2() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -376,7 +541,8 @@ public class Location2Test extends WebDriverTestCase {
      */
     @Test
     public void setHrefWithOnlyHash() throws Exception {
-        final String html = "<html><body><script>document.location.href = '#x';</script></body></html>";
+        final String html = DOCTYPE_HTML
+                + "<html><body><script>document.location.href = '#x';</script></body></html>";
         loadPage2(html);
     }
 
@@ -398,15 +564,16 @@ public class Location2Test extends WebDriverTestCase {
      */
     @Test
     public void replace() throws Exception {
-        final String html
-            = "<html><head><title>First</title><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><title>First</title><script>\n"
             + "function doTest() {\n"
             + "  location.replace('" + URL_SECOND + "');\n"
             + "}\n"
             + "</script></head><body onload='doTest()'>\n"
             + "</body></html>";
 
-        final String secondContent = "<html><head><title>Second</title></head><body></body></html>";
+        final String secondContent = DOCTYPE_HTML
+                + "<html><head><title>Second</title></head><body></body></html>";
 
         getMockWebConnection().setResponse(URL_SECOND, secondContent);
         final WebDriver driver = loadPage2(html);
@@ -420,17 +587,19 @@ public class Location2Test extends WebDriverTestCase {
      */
     @Test
     public void replaceLastInHistory() throws Exception {
-        final String startContent = "<html><head><title>First Page</title></head><body></body></html>";
+        final String startContent = DOCTYPE_HTML
+                + "<html><head><title>First Page</title></head><body></body></html>";
 
-        final String secondContent
-            = "<html><head><title>Second Page</title><script>\n"
+        final String secondContent = DOCTYPE_HTML
+            + "<html><head><title>Second Page</title><script>\n"
             + "function doTest() {\n"
             + "  location.replace('" + URL_THIRD + "');\n"
             + "}\n"
             + "</script></head><body onload='doTest()'>\n"
             + "</body></html>";
 
-        final String thirdContent = "<html><head><title>Third Page§</title></head><body></body></html>";
+        final String thirdContent = DOCTYPE_HTML
+                + "<html><head><title>Third Page§</title></head><body></body></html>";
 
         getMockWebConnection().setResponse(URL_SECOND, secondContent);
         getMockWebConnection().setResponse(URL_THIRD, thirdContent);
@@ -452,8 +621,10 @@ public class Location2Test extends WebDriverTestCase {
     @Test
     @Alerts("on-load")
     public void replaceOnload() throws Exception {
-        final String html
-            = "<html><head><title>First</title><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><title>First</title>\n"
+            + "<script>\n"
+            + LOG_WINDOW_NAME_FUNCTION
             + "function doTest() {\n"
             + "  location.replace('" + URL_SECOND + "');\n"
             + "}\n"
@@ -461,12 +632,15 @@ public class Location2Test extends WebDriverTestCase {
             + "<body onload='doTest()'>\n"
             + "</body></html>";
 
-        final String secondContent = "<html><head><title>Second</title></head>\n"
-                + "<body onload='alert(\"on-load\")'></body></html>";
+        final String secondContent = DOCTYPE_HTML
+                + "<html><head><title>Second</title></head>\n"
+                + "<body onload='window.top.name += \"on-load\" + \"\\u00a7\";'></body></html>";
 
         getMockWebConnection().setResponse(URL_SECOND, secondContent);
-        final WebDriver driver = loadPageWithAlerts2(html);
 
+        final WebDriver driver = loadPage2(html);
+
+        verifyWindowName2(DEFAULT_WAIT_TIME, driver, getExpectedAlerts());
         assertTitle(driver, "Second");
         assertEquals(2, getMockWebConnection().getRequestCount());
     }
@@ -477,15 +651,16 @@ public class Location2Test extends WebDriverTestCase {
      */
     @Test
     public void replaceFirstInHistory() throws Exception {
-        final String firstContent
-            = "<html><head><title>First Page</title><script>\n"
+        final String firstContent = DOCTYPE_HTML
+            + "<html><head><title>First Page</title><script>\n"
             + "function doTest() {\n"
             + "  location.replace('" + URL_SECOND + "');\n"
             + "}\n"
             + "</script></head><body onload='doTest()'>\n"
             + "</body></html>";
 
-        final String secondContent = "<html><head><title>Second Page</title></head><body></body></html>";
+        final String secondContent = DOCTYPE_HTML
+                + "<html><head><title>Second Page</title></head><body></body></html>";
 
         getMockWebConnection().setResponse(URL_SECOND, secondContent);
 
@@ -498,15 +673,16 @@ public class Location2Test extends WebDriverTestCase {
      */
     @Test
     public void assign() throws Exception {
-        final String firstContent
-            = "<html><head><title>First</title><script>\n"
+        final String firstContent = DOCTYPE_HTML
+            + "<html><head><title>First</title><script>\n"
             + "  function test() {\n"
             + "    location.assign('" + URL_SECOND + "');\n"
             + "  }\n"
             + "</script></head><body onload='test()'>\n"
             + "</body></html>";
 
-        final String secondContent = "<html><head><title>Second</title></head><body></body></html>";
+        final String secondContent = DOCTYPE_HTML
+                + "<html><head><title>Second</title></head><body></body></html>";
 
         getMockWebConnection().setResponse(URL_SECOND, secondContent);
 
@@ -520,8 +696,9 @@ public class Location2Test extends WebDriverTestCase {
     @Test
     @Alerts("on-load")
     public void assignOnload() throws Exception {
-        final String firstContent
-            = "<html><head><title>First</title><script>\n"
+        final String firstContent = DOCTYPE_HTML
+            + "<html><head><title>First</title><script>\n"
+            + LOG_WINDOW_NAME_FUNCTION
             + "  function test() {\n"
             + "    location.assign('" + URL_SECOND + "');\n"
             + "  }\n"
@@ -529,12 +706,15 @@ public class Location2Test extends WebDriverTestCase {
             + "<body onload='test()'>\n"
             + "</body></html>";
 
-        final String secondContent = "<html><head><title>Second</title></head>\n"
-                + "<body onload='alert(\"on-load\");'></body></html>";
+        final String secondContent = DOCTYPE_HTML
+                + "<html><head><title>Second</title></head>\n"
+                + "<body onload='window.top.name += \"on-load\" + \"\\u00a7\";'></body></html>";
 
         getMockWebConnection().setResponse(URL_SECOND, secondContent);
-        final WebDriver driver = loadPageWithAlerts2(firstContent);
 
+        final WebDriver driver = loadPage2(firstContent);
+
+        verifyWindowName2(DEFAULT_WAIT_TIME, driver, getExpectedAlerts());
         assertTitle(driver, "Second");
         assertEquals(2, getMockWebConnection().getRequestCount());
     }
@@ -544,15 +724,16 @@ public class Location2Test extends WebDriverTestCase {
      */
     @Test
     public void assingByEquals() throws Exception {
-        final String firstContent
-            = "<html><head><title>First</title><script>\n"
+        final String firstContent = DOCTYPE_HTML
+            + "<html><head><title>First</title><script>\n"
             + "  function test() {\n"
             + "    location = '" + URL_SECOND + "';\n"
             + "  }\n"
             + "</script></head><body onload='test()'>\n"
             + "</body></html>";
 
-        final String secondContent = "<html><head><title>Second</title></head><body></body></html>";
+        final String secondContent = DOCTYPE_HTML
+                + "<html><head><title>Second</title></head><body></body></html>";
 
         getMockWebConnection().setResponse(URL_SECOND, secondContent);
 
@@ -566,8 +747,9 @@ public class Location2Test extends WebDriverTestCase {
     @Test
     @Alerts("on-load")
     public void assingByEqualsOnload() throws Exception {
-        final String firstContent
-            = "<html><head><title>First</title><script>\n"
+        final String firstContent = DOCTYPE_HTML
+            + "<html><head><title>First</title><script>\n"
+            + LOG_WINDOW_NAME_FUNCTION
             + "  function test() {\n"
             + "    location  = '" + URL_SECOND + "';\n"
             + "  }\n"
@@ -575,12 +757,15 @@ public class Location2Test extends WebDriverTestCase {
             + "<body onload='test()'>\n"
             + "</body></html>";
 
-        final String secondContent = "<html><head><title>Second</title></head>\n"
-                + "<body onload='alert(\"on-load\");'></body></html>";
+        final String secondContent = DOCTYPE_HTML
+                + "<html><head><title>Second</title></head>\n"
+                + "<body onload='window.top.name += \"on-load\" + \"\\u00a7\";'></body></html>";
 
         getMockWebConnection().setResponse(URL_SECOND, secondContent);
-        final WebDriver driver = loadPageWithAlerts2(firstContent);
 
+        final WebDriver driver = loadPage2(firstContent);
+
+        verifyWindowName2(DEFAULT_WAIT_TIME, driver, getExpectedAlerts());
         assertTitle(driver, "Second");
         assertEquals(2, getMockWebConnection().getRequestCount());
     }
@@ -590,8 +775,8 @@ public class Location2Test extends WebDriverTestCase {
      */
     @Test
     public void changeLocationToNonHtml() throws Exception {
-        final String html =
-              "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "  <script>\n"
             + "      document.location.href = 'foo.txt';\n"
             + "  </script>\n"
@@ -609,8 +794,8 @@ public class Location2Test extends WebDriverTestCase {
     @Test
     @Alerts("foo")
     public void jsLocation() throws Exception {
-        final String html =
-              "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION
             + "      document.location.href = 'javascript:log(\"foo\")';\n"
@@ -627,7 +812,8 @@ public class Location2Test extends WebDriverTestCase {
     @Test
     @Alerts({"§§URL§§", "§§URL§§", "§§URL§§"})
     public void testToString() throws Exception {
-        final String html = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  var l = window.location;\n"
@@ -647,8 +833,8 @@ public class Location2Test extends WebDriverTestCase {
     @Test
     @Alerts("1 2 3")
     public void href_postponed() throws Exception {
-        final String firstHtml =
-            "<html><head><script>\n"
+        final String firstHtml = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + "function test() {\n"
             + "  document.title += ' 1';\n"
             + "  self.frames['frame1'].document.location.href = '" + URL_SECOND + "';\n"
@@ -658,7 +844,8 @@ public class Location2Test extends WebDriverTestCase {
             + "<body onload='test()'>\n"
             + "  <iframe name='frame1' id='frame1'/>\n"
             + "</body></html>";
-        final String secondHtml = "<html><body><script>top.document.title += ' 3';</script></body></html>";
+        final String secondHtml = DOCTYPE_HTML
+                + "<html><body><script>top.document.title += ' 3';</script></body></html>";
 
         getMockWebConnection().setResponse(URL_SECOND, secondHtml);
 
@@ -673,8 +860,8 @@ public class Location2Test extends WebDriverTestCase {
     @Test
     @Alerts({"", "foo3.html", "foo2.html"})
     public void onlick_set_location_WithHref() throws Exception {
-        final String html =
-            "<html><head></head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head></head>\n"
             + "<body>\n"
             + "  <a href='foo2.html' onclick='document.location = \"foo3.html\"'>click me</a>\n"
             + "</body></html>";
@@ -682,7 +869,7 @@ public class Location2Test extends WebDriverTestCase {
         getMockWebConnection().setDefaultResponse("");
         final WebDriver driver = loadPage2(html);
 
-        assertEquals(new String[] {}, getMockWebConnection().getRequestedUrls(URL_FIRST));
+        assertEquals(ArrayUtils.EMPTY_STRING_ARRAY, getMockWebConnection().getRequestedUrls(URL_FIRST));
         driver.findElement(By.tagName("a")).click();
 
         assertEquals(getExpectedAlerts(), getMockWebConnection().getRequestedUrls(URL_FIRST));
@@ -695,8 +882,8 @@ public class Location2Test extends WebDriverTestCase {
     @Test
     @Alerts({"", "foo3.html"})
     public void onlick_set_location_WithoutHref() throws Exception {
-        final String html =
-            "<html><head></head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head></head>\n"
             + "<body>\n"
             + "  <a onclick='document.location = \"foo3.html\"'>click me</a>\n"
             + "</body></html>";
@@ -713,11 +900,10 @@ public class Location2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"supported", "onhashchange §§URL§§#1 §§URL§§"},
-            IE = {"supported", "onhashchange undefined undefined"})
+    @Alerts({"supported", "onhashchange §§URL§§#1 §§URL§§"})
     public void onHashChange() throws Exception {
-        final String html =
-            "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + " if ('onhashchange' in window) { log('supported') }\n"
@@ -750,8 +936,8 @@ public class Location2Test extends WebDriverTestCase {
     @Test
     @Alerts("onhashchange #/foo")
     public void getNextPageWithOnlyHashChangeShouldTriggerHashChangeEvent() throws Exception {
-        final String html =
-            "<html><body><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body><script>\n"
             + LOG_TITLE_FUNCTION
             + " window.onhashchange = function(event) {\n"
             + "    log('onhashchange ' + window.location.hash);\n"
@@ -768,11 +954,10 @@ public class Location2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"supported", "onhashchange §§URL§§#1  §§URL§§"},
-            IE = {"supported", "onhashchange undefined  undefined"})
+    @Alerts({"supported", "onhashchange §§URL§§#1  §§URL§§"})
     public void onHashChangeJS() throws Exception {
-        final String html =
-            "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_WINDOW_NAME_FUNCTION
             + " if ('onhashchange' in window) { log('supported') }\n"
@@ -793,9 +978,10 @@ public class Location2Test extends WebDriverTestCase {
         expandExpectedAlertsVariables(URL_FIRST);
         final WebDriver driver = loadPage2(html);
         verifyWindowName2(driver, getExpectedAlerts()[0]);
-        Thread.sleep(100);
+        sleepRealBrowser(100);
 
         driver.findElement(By.id("click")).click();
+        sleepRealBrowser(100);
         verifyWindowName2(driver, getExpectedAlerts());
     }
 
@@ -803,20 +989,21 @@ public class Location2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("§§URL§§test.html")
-    //real browsers don't show the alert, since it is quickly closed through JavaScript
-    @NotYetImplemented
-    @BuggyWebDriver(IE = "§§URL§§")
+    @Alerts({"opened", "closed", "href changed", "§§URL§§test.html"})
     public void locationAfterOpenClosePopup() throws Exception {
-        final String html =
-              "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <title>test</title>\n"
             + "  <script>\n"
+            + LOG_SESSION_STORAGE_FUNCTION
             + "    function test() {\n"
             + "      var win = window.open('" + URL_SECOND + "','test','',true);\n"
+            + "      log('opened');\n"
             + "      win.close();\n"
+            + "      log('closed');\n"
             + "      location.href = 'test.html';\n"
+            + "      log('href changed');\n"
             + "    }\n"
             + "  </script>\n"
             + "</head>\n"
@@ -824,18 +1011,19 @@ public class Location2Test extends WebDriverTestCase {
             + "  <button id='click' onclick='test()'>Test</button>\n"
             + "</body>\n"
             + "</html>";
-        final String popup =
-                "<html>\n"
+        final String popup = DOCTYPE_HTML
+              + "<html>\n"
               + "<head>\n"
               + "  <title>popup with script</title>\n"
               + "  <script>\n"
-              + "    alert('the root of all evil');\n"
+              + LOG_SESSION_STORAGE_FUNCTION
+              + "    log('the root of all evil');\n"
               + "  </script>\n"
               + "</head>\n"
               + "<body>Popup</body>\n"
               + "</html>";
-        final String target =
-              "<html>\n"
+        final String target = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <title>target</title>\n"
             + "</head>\n"
@@ -848,14 +1036,11 @@ public class Location2Test extends WebDriverTestCase {
         expandExpectedAlertsVariables(URL_FIRST);
         final WebDriver driver = loadPage2(html);
         driver.findElement(By.id("click")).click();
-        try {
-            assertEquals(getExpectedAlerts()[0], driver.getCurrentUrl());
-        }
-        finally {
-            // TODO [IE] when run with real IE the window is closed and all following tests are broken
-            releaseResources();
-            shutDownAll();
-        }
+
+        sleepRealBrowser(400);
+
+        verifySessionStorage2(driver, getExpectedAlerts()[0], getExpectedAlerts()[1], getExpectedAlerts()[2]);
+        assertEquals(getExpectedAlerts()[3], driver.getCurrentUrl());
     }
 
     /**
@@ -864,13 +1049,15 @@ public class Location2Test extends WebDriverTestCase {
     @Test
     @Alerts("§§URL§§")
     public void refererHeaderWhenSettingLocation() throws Exception {
-        final String html = "<html><head><title>Base</title></head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head><title>Base</title></head>\n"
                 + "<body>\n"
                 + "  <a id='link' href='content.html' target='content'>Link</a>\n"
                 + "  <a id='jsLink' href='#' onclick=\"javascript:window.location='content.html';\">jsLink</a>\n"
                 + "</body></html>";
 
-        final String content = "<html><head><title>Content</title></head><body><p>content</p></body></html>";
+        final String content = DOCTYPE_HTML
+                + "<html><head><title>Content</title></head><body><p>content</p></body></html>";
 
         final MockWebConnection conn = getMockWebConnection();
         conn.setResponse(new URL(URL_FIRST, "content.html"), content);
@@ -882,8 +1069,9 @@ public class Location2Test extends WebDriverTestCase {
 
         // click an anchor with href and target
         driver.findElement(By.id("link")).click();
+
         // because real browsers are doing the open async, we have to be a bit patient
-        Thread.sleep(DEFAULT_WAIT_TIME);
+        sleepRealBrowser(DEFAULT_WAIT_TIME.toMillis());
 
         assertEquals(2, conn.getRequestCount());
         Map<String, String> lastAdditionalHeaders = conn.getLastAdditionalHeaders();
@@ -902,23 +1090,83 @@ public class Location2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("§§URL§§menu.html")
-    public void refererHeaderWhenSettingFrameLocation() throws Exception {
-        final String html = "<html><head><title>Frameset</title></head>\n"
+    @Alerts({"§§URL§§path1/newContent.html", "§§URL§§path1/menu.html"})
+    public void settingRelativeLocation() throws Exception {
+        final String html = DOCTYPE_HTML
+                + "<html><head><title>Frameset</title></head>\n"
                 + "<frameset rows='20%,80%'>\n"
-                + "  <frame src='menu.html' name='menu'>\n"
-                + "  <frame src='content.html' name='content'>\n"
+                + "  <frame src='path1/menu.html' name='menu'>\n"
+                + "  <frame src='path2/content.html' name='content'>\n"
                 + "</frameset></html>";
 
-        final String menu = "<html><head><title>Menu</title></head>\n"
+        final String menu = DOCTYPE_HTML
+                + "<html><head><title>Menu</title></head>\n"
                 + "<body>\n"
                 + "  <a id='link' href='newContent.html' target='content'>Link</a>\n"
                 + "  <a id='jsLink' href='#' "
                         + "onclick=\"javascript:top.content.location='newContent.html';\">jsLink</a>\n"
                 + "</body></html>";
 
-        final String content = "<html><head><title>Content</title></head><body><p>content</p></body></html>";
-        final String newContent = "<html><head><title>New Content</title></head><body><p>new content</p></body></html>";
+        final String content = DOCTYPE_HTML
+                + "<html><head><title>Content</title></head><body><p>content</p></body></html>";
+        final String newContent = DOCTYPE_HTML
+                + "<html><head><title>New Content</title></head><body><p>new content</p></body></html>";
+
+        final MockWebConnection conn = getMockWebConnection();
+        conn.setResponse(new URL(URL_FIRST, "path1/menu.html"), menu);
+        conn.setResponse(new URL(URL_FIRST, "path2/content.html"), content);
+        conn.setResponse(new URL(URL_FIRST, "path1/newContent.html"), newContent);
+
+        expandExpectedAlertsVariables(URL_FIRST);
+        final WebDriver driver = loadPage2(html);
+
+        assertEquals(3, conn.getRequestCount());
+
+        // click an anchor with href and target
+        driver.switchTo().frame(0);
+        driver.findElement(By.id("link")).click();
+        sleepRealBrowser(400);
+
+        assertEquals(4, conn.getRequestCount());
+        assertEquals(getExpectedAlerts()[0], conn.getLastWebRequest().getUrl());
+        Map<String, String> lastAdditionalHeaders = conn.getLastAdditionalHeaders();
+        assertEquals(getExpectedAlerts()[1], lastAdditionalHeaders.get(HttpHeader.REFERER));
+
+        // click an anchor with onclick which sets frame.location
+        driver.findElement(By.id("jsLink")).click();
+        sleepRealBrowser(400);
+
+        assertEquals(5, conn.getRequestCount());
+        assertEquals(getExpectedAlerts()[0], conn.getLastWebRequest().getUrl());
+        lastAdditionalHeaders = conn.getLastAdditionalHeaders();
+        assertEquals(getExpectedAlerts()[1], lastAdditionalHeaders.get(HttpHeader.REFERER));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"§§URL§§newContent.html", "§§URL§§menu.html"})
+    public void refererHeaderWhenSettingFrameLocation() throws Exception {
+        final String html = DOCTYPE_HTML
+                + "<html><head><title>Frameset</title></head>\n"
+                + "<frameset rows='20%,80%'>\n"
+                + "  <frame src='menu.html' name='menu'>\n"
+                + "  <frame src='content.html' name='content'>\n"
+                + "</frameset></html>";
+
+        final String menu = DOCTYPE_HTML
+                + "<html><head><title>Menu</title></head>\n"
+                + "<body>\n"
+                + "  <a id='link' href='newContent.html' target='content'>Link</a>\n"
+                + "  <a id='jsLink' href='#' "
+                        + "onclick=\"javascript:top.content.location='newContent.html';\">jsLink</a>\n"
+                + "</body></html>";
+
+        final String content = DOCTYPE_HTML
+                + "<html><head><title>Content</title></head><body><p>content</p></body></html>";
+        final String newContent = DOCTYPE_HTML
+                + "<html><head><title>New Content</title></head><body><p>new content</p></body></html>";
 
         final MockWebConnection conn = getMockWebConnection();
         conn.setResponse(new URL(URL_FIRST, "menu.html"), menu);
@@ -933,38 +1181,59 @@ public class Location2Test extends WebDriverTestCase {
         // click an anchor with href and target
         driver.switchTo().frame(0);
         driver.findElement(By.id("link")).click();
+        sleepRealBrowser(400);
+
         assertEquals(4, conn.getRequestCount());
+        assertEquals(getExpectedAlerts()[0], conn.getLastWebRequest().getUrl());
         Map<String, String> lastAdditionalHeaders = conn.getLastAdditionalHeaders();
-        assertEquals(getExpectedAlerts()[0], lastAdditionalHeaders.get(HttpHeader.REFERER));
+        assertEquals(getExpectedAlerts()[1], lastAdditionalHeaders.get(HttpHeader.REFERER));
 
         // click an anchor with onclick which sets frame.location
         driver.findElement(By.id("jsLink")).click();
-        Thread.sleep(100);
+        sleepRealBrowser(400);
+
         assertEquals(5, conn.getRequestCount());
+        assertEquals(getExpectedAlerts()[0], conn.getLastWebRequest().getUrl());
         lastAdditionalHeaders = conn.getLastAdditionalHeaders();
-        assertEquals(getExpectedAlerts()[0], lastAdditionalHeaders.get(HttpHeader.REFERER));
+        assertEquals(getExpectedAlerts()[1], lastAdditionalHeaders.get(HttpHeader.REFERER));
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("§§ORIGIN§§")
+    @Alerts("§§URL§§")
     public void origin() throws Exception {
-        final String html =
-                "<html><body><script>\n"
-                + "  alert(window.location.origin);\n"
+        final String html = DOCTYPE_HTML
+                + "<html><body><script>\n"
+                + LOG_TITLE_FUNCTION
+                + "  log(window.location.origin);\n"
                 + "</script></body></html>";
 
-        final String[] expectedAlerts = getExpectedAlerts();
         final URL url = URL_FIRST;
         final String origin = url.getProtocol() + "://" + url.getHost() + ':' + url.getPort();
-        for (int i = 0; i < expectedAlerts.length; i++) {
-            expectedAlerts[i] = expectedAlerts[i].replaceAll("§§ORIGIN§§", origin);
-        }
+        expandExpectedAlertsVariables(origin);
 
-        final WebDriver driver = loadPage2(html);
-        verifyAlerts(driver, expectedAlerts);
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("§§URL§§")
+    public void documentOrigin() throws Exception {
+        final String html = DOCTYPE_HTML
+                + "<html><body><script>\n"
+                + LOG_TITLE_FUNCTION
+                + "  log(document.location.origin);\n"
+                + "</script></body></html>";
+
+        final URL url = URL_FIRST;
+        final String origin = url.getProtocol() + "://" + url.getHost() + ':' + url.getPort();
+        expandExpectedAlertsVariables(origin);
+
+        loadPageVerifyTitle2(html);
     }
 
     /**
@@ -975,8 +1244,8 @@ public class Location2Test extends WebDriverTestCase {
             CHROME = "§§URL§§a.html?p1=sieben&p2",
             EDGE = "§§URL§§a.html?p1=sieben&p2")
     public void reloadGet() throws Exception {
-        final String html =
-              "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head></head>\n"
             + "  <body>\n"
             + "    <a href='javascript:window.location.reload(true);' id='link'>reload</a>\n"
@@ -988,6 +1257,8 @@ public class Location2Test extends WebDriverTestCase {
         assertEquals(1, getMockWebConnection().getRequestCount());
 
         driver.findElement(By.id("link")).click();
+        sleepRealBrowser(400);
+
         assertEquals(2, getMockWebConnection().getRequestCount());
 
         assertEquals(HttpMethod.GET, getMockWebConnection().getLastWebRequest().getHttpMethod());
@@ -1011,16 +1282,211 @@ public class Location2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"3", "null", "§§URL§§/"},
-            CHROME = {"3", "§§URL§§", "§§URL§§/second/a.html?urlParam=urlVal"},
-            EDGE = {"3", "§§URL§§", "§§URL§§/second/a.html?urlParam=urlVal"},
-            FF = {"3", "§§URL§§", "§§URL§§/"},
-            FF_ESR = {"3", "§§URL§§", "§§URL§§/"})
-    // FF opens a confirmation window for the post
-    @BuggyWebDriver(FF_ESR = {"2", "null", "§§URL§§/"})
+    @Alerts(DEFAULT = "§§URL§§a.html",
+            FF = "null",
+            FF_ESR = "null")
+    public void reloadGetNoHash() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "  <head></head>\n"
+            + "  <body>\n"
+            + "    <button onclick='window.location.reload();' id='reload'>reload</button>\n"
+            + "    <button onclick='window.document.title=window.location.toString();' "
+                        + "id='log'>log location</button>\n"
+            + "  </body>\n"
+            + "</html>";
+
+        getMockWebConnection().setDefaultResponse(html);
+        final WebDriver driver = loadPage2(html, new URL(URL_FIRST + "a.html"));
+        assertEquals(1, getMockWebConnection().getRequestCount());
+
+        driver.findElement(By.id("reload")).click();
+        assertEquals(2, getMockWebConnection().getRequestCount());
+
+        assertEquals(HttpMethod.GET, getMockWebConnection().getLastWebRequest().getHttpMethod());
+        assertEquals(URL_FIRST + "a.html", getMockWebConnection().getLastWebRequest().getUrl());
+        expandExpectedAlertsVariables(URL_FIRST);
+        final Map<String, String> additionalHeaders = getMockWebConnection().getLastAdditionalHeaders();
+        assertNull(additionalHeaders.get(HttpHeader.ORIGIN));
+        assertEquals(getExpectedAlerts()[0], "" + additionalHeaders.get(HttpHeader.REFERER));
+        assertEquals("localhost:" + PORT, additionalHeaders.get(HttpHeader.HOST));
+
+        assertEquals(URL_FIRST + "a.html", driver.getCurrentUrl());
+        driver.findElement(By.id("log")).click();
+        assertEquals(URL_FIRST + "a.html", driver.getTitle());
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts(DEFAULT = { "1", "2", "§§URL§§a.html", "§§URL§§a.html", "§§URL§§a.html#1",
+                        "load",
+                        "1 http://localhost:§§PORT§§/a.html",
+                        "2 http://localhost:§§PORT§§/a.html#1",
+                        "3 http://localhost:§§PORT§§/a.html#1",
+                        "load",
+                        "4 http://localhost:§§PORT§§/a.html#1"},
+            FF = { "1", "2", "§§URL§§a.html", "null", "§§URL§§a.html#1",
+                   "load",
+                   "1 http://localhost:§§PORT§§/a.html",
+                   "2 http://localhost:§§PORT§§/a.html#1",
+                   "3 http://localhost:§§PORT§§/a.html#1",
+                   "load",
+                   "4 http://localhost:§§PORT§§/a.html#1"},
+            FF_ESR = { "1", "2", "§§URL§§a.html", "null", "§§URL§§a.html#1",
+                       "load",
+                       "1 http://localhost:§§PORT§§/a.html",
+                       "2 http://localhost:§§PORT§§/a.html#1",
+                       "3 http://localhost:§§PORT§§/a.html#1",
+                       "load",
+                        "4 http://localhost:§§PORT§§/a.html#1"})
+    public void reloadGetHashDetails() throws Exception {
+        shutDownAll();
+
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "  <head>\n"
+            + "    <script>\n"
+            + LOG_SESSION_STORAGE_FUNCTION
+            + "      function test() {\n"
+            + "        log('1 ' + window.location);\n"
+            + "        window.location.hash='1';\n"
+            + "        log('2 ' + window.location);\n"
+            + "        window.location.reload();\n"
+            + "        log('3 ' + window.location);"
+            + "      }\n"
+            + "      log('load');\n"
+            + "    </script>\n"
+            + "  </head>\n"
+            + "  <body>\n"
+            + "    <button onclick='test()' id='reload'>reload</button>\n"
+            + "    <button onclick='log(\"4 \" + window.location.toString());' id='log'>log location</button>\n"
+            + "  </body>\n"
+            + "</html>";
+        expandExpectedAlertsVariables(URL_FIRST);
+
+        getMockWebConnection().setDefaultResponse(html);
+        final WebDriver driver = loadPage2(html, new URL(URL_FIRST + "a.html"));
+        assertEquals(Integer.parseInt(getExpectedAlerts()[0]), getMockWebConnection().getRequestCount());
+
+        driver.findElement(By.id("reload")).click();
+        // real ff seems to process the reload a bit async
+        assertEquals(Integer.parseInt(getExpectedAlerts()[1]), () -> getMockWebConnection().getRequestCount(), Duration.ofMillis(100));
+
+        assertEquals(HttpMethod.GET, getMockWebConnection().getLastWebRequest().getHttpMethod());
+
+        assertEquals(getExpectedAlerts()[2], getMockWebConnection().getLastWebRequest().getUrl());
+        final Map<String, String> additionalHeaders = getMockWebConnection().getLastAdditionalHeaders();
+        assertNull(additionalHeaders.get(HttpHeader.ORIGIN));
+        assertEquals(getExpectedAlerts()[3], "" + additionalHeaders.get(HttpHeader.REFERER));
+        assertEquals("localhost:" + PORT, additionalHeaders.get(HttpHeader.HOST));
+
+        assertEquals(getExpectedAlerts()[4], driver.getCurrentUrl());
+        driver.findElement(By.id("log")).click();
+
+        verifySessionStorage2(driver, Arrays.copyOfRange(getExpectedAlerts(), 5, getExpectedAlerts().length));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts(DEFAULT = "§§URL§§a.html",
+            FF = "null",
+            FF_ESR = "null")
+    public void reloadGetHash() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "  <head></head>\n"
+            + "  <body>\n"
+            + "    <button onclick='window.location.hash=\"1\";' id='changeHash'>change hash</button>\n"
+            + "    <button onclick='window.location.reload();' id='reload'>reload</button>\n"
+            + "    <button onclick='window.document.title=window.location.toString();' id='log'>log location</button>\n"
+            + "  </body>\n"
+            + "</html>";
+
+        getMockWebConnection().setDefaultResponse(html);
+        final WebDriver driver = loadPage2(html, new URL(URL_FIRST + "a.html"));
+        assertEquals(1, getMockWebConnection().getRequestCount());
+
+        // make sure changing the hash itself does not trigger the reload
+        driver.findElement(By.id("changeHash")).click();
+        assertEquals(1, getMockWebConnection().getRequestCount());
+
+        // reload
+        driver.findElement(By.id("reload")).click();
+        assertEquals(2, getMockWebConnection().getRequestCount());
+
+        assertEquals(HttpMethod.GET, getMockWebConnection().getLastWebRequest().getHttpMethod());
+        assertEquals(URL_FIRST + "a.html", getMockWebConnection().getLastWebRequest().getUrl());
+        expandExpectedAlertsVariables(URL_FIRST);
+        final Map<String, String> additionalHeaders = getMockWebConnection().getLastAdditionalHeaders();
+        assertNull(additionalHeaders.get(HttpHeader.ORIGIN));
+        assertEquals(getExpectedAlerts()[0], "" + additionalHeaders.get(HttpHeader.REFERER));
+        assertEquals("localhost:" + PORT, additionalHeaders.get(HttpHeader.HOST));
+
+        assertEquals(URL_FIRST + "a.html#1", driver.getCurrentUrl());
+        driver.findElement(By.id("log")).click();
+        assertEquals(URL_FIRST + "a.html#1", driver.getTitle());
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts(DEFAULT = "§§URL§§a.html",
+            FF = "null",
+            FF_ESR = "null")
+    public void reloadGetHashChanged() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "  <head></head>\n"
+            + "  <body>\n"
+            + "    <button onclick='window.location.hash=\"1\";' id='changeHash'>change hash</button>\n"
+            + "    <button onclick='window.location.reload();' id='reload'>reload</button>\n"
+            + "    <button onclick='window.document.title=window.location.toString();' id='log'>log location</button>\n"
+            + "  </body>\n"
+            + "</html>";
+
+        getMockWebConnection().setDefaultResponse(html);
+        final WebDriver driver = loadPage2(html, new URL(URL_FIRST + "a.html#abc"));
+        assertEquals(1, getMockWebConnection().getRequestCount());
+
+        // make sure changing the hash itself does not trigger the reload
+        driver.findElement(By.id("changeHash")).click();
+        assertEquals(1, getMockWebConnection().getRequestCount());
+
+        // reload
+        driver.findElement(By.id("reload")).click();
+        assertEquals(2, getMockWebConnection().getRequestCount());
+
+        assertEquals(HttpMethod.GET, getMockWebConnection().getLastWebRequest().getHttpMethod());
+        assertEquals(URL_FIRST + "a.html", getMockWebConnection().getLastWebRequest().getUrl());
+        expandExpectedAlertsVariables(URL_FIRST);
+        final Map<String, String> additionalHeaders = getMockWebConnection().getLastAdditionalHeaders();
+        assertNull(additionalHeaders.get(HttpHeader.ORIGIN));
+        assertEquals(getExpectedAlerts()[0], "" + additionalHeaders.get(HttpHeader.REFERER));
+        assertEquals("localhost:" + PORT, additionalHeaders.get(HttpHeader.HOST));
+
+        assertEquals(URL_FIRST + "a.html#1", driver.getCurrentUrl());
+        driver.findElement(By.id("log")).click();
+        assertEquals(URL_FIRST + "a.html#1", driver.getTitle());
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts(DEFAULT = {"1", "2", "3", "a.html?urlParam=urlVal",
+                       "4", "http://§§URL§§", "http://§§URL§§/second/a.html?urlParam=urlVal", "§§URL§§"},
+            FF = {"1", "2", "3", "a.html?urlParam=urlVal",
+                  "4", "http://§§URL§§", "http://§§URL§§/", "§§URL§§"},
+            FF_ESR = {"1", "2", "3", "a.html?urlParam=urlVal",
+                      "4", "http://§§URL§§", "http://§§URL§§/", "§§URL§§"})
     public void reloadPost() throws Exception {
-        final String form =
-                "<html>\n"
+        final String form = DOCTYPE_HTML
+              + "<html>\n"
               + "  <head></head>\n"
               + "  <body>\n"
               + "    <form method='POST' name='form' action='" + URL_SECOND + "a.html?urlParam=urlVal'>\n"
@@ -1031,8 +1497,8 @@ public class Location2Test extends WebDriverTestCase {
               + "  </body>\n"
               + "</html>";
 
-        final String html =
-              "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head></head>\n"
             + "  <body>\n"
             + "    <a href='javascript:window.location.reload(true);' id='link'>reload</a>\n"
@@ -1042,27 +1508,23 @@ public class Location2Test extends WebDriverTestCase {
         getMockWebConnection().setDefaultResponse(html);
 
         final WebDriver driver = loadPage2(form, URL_FIRST);
-        assertEquals(1, getMockWebConnection().getRequestCount());
-        driver.findElement(By.id("enter")).click();
-
-        assertEquals(2, getMockWebConnection().getRequestCount());
-
-        driver.findElement(By.id("link")).click();
-
-        // works only in the debugger
-        try {
-            driver.switchTo().alert().accept();
-        }
-        catch (final NoAlertPresentException e) {
-            // ignore
-        }
         assertEquals(Integer.parseInt(getExpectedAlerts()[0]), getMockWebConnection().getRequestCount());
 
+        driver.findElement(By.id("enter")).click();
+        sleepRealBrowser(400);
+
+        assertEquals(Integer.parseInt(getExpectedAlerts()[1]), getMockWebConnection().getRequestCount());
+
+        driver.findElement(By.id("link")).click();
+        sleepRealBrowser(400);
+
+        assertEquals(Integer.parseInt(getExpectedAlerts()[2]), getMockWebConnection().getRequestCount());
+
         assertEquals(HttpMethod.POST, getMockWebConnection().getLastWebRequest().getHttpMethod());
-        assertEquals(URL_SECOND + "a.html?urlParam=urlVal", getMockWebConnection().getLastWebRequest().getUrl());
+        assertEquals(URL_SECOND + getExpectedAlerts()[3], getMockWebConnection().getLastWebRequest().getUrl());
 
         final List<NameValuePair> params = getMockWebConnection().getLastWebRequest().getRequestParameters();
-        assertEquals(4, params.size());
+        assertEquals(Integer.parseInt(getExpectedAlerts()[4]), params.size());
 
         assertEquals("urlParam", params.get(0).getName());
         assertEquals("urlVal", params.get(0).getValue());
@@ -1075,11 +1537,11 @@ public class Location2Test extends WebDriverTestCase {
         assertEquals("sub", params.get(3).getName());
         assertEquals("ok", params.get(3).getValue());
 
-        expandExpectedAlertsVariables("http://localhost:" + PORT);
+        expandExpectedAlertsVariables("localhost:" + PORT);
         final Map<String, String> additionalHeaders = getMockWebConnection().getLastAdditionalHeaders();
-        assertEquals(getExpectedAlerts()[1], "" + additionalHeaders.get(HttpHeader.ORIGIN));
-        assertEquals(getExpectedAlerts()[2], additionalHeaders.get(HttpHeader.REFERER));
-        assertEquals("localhost:" + PORT, additionalHeaders.get(HttpHeader.HOST));
+        assertEquals(getExpectedAlerts()[5], additionalHeaders.get(HttpHeader.ORIGIN));
+        assertEquals(getExpectedAlerts()[6], additionalHeaders.get(HttpHeader.REFERER));
+        assertEquals(getExpectedAlerts()[7], additionalHeaders.get(HttpHeader.HOST));
     }
 
     /**
@@ -1089,7 +1551,7 @@ public class Location2Test extends WebDriverTestCase {
     @Test
     @Alerts({"§§URL§§upper.html", "§§URL§§lower.html"})
     public void reloadAcrossFrames() throws Exception {
-        final String framesetContent = ""
+        final String framesetContent = DOCTYPE_HTML
             + "<html>\n"
             + "  <frameset rows='100,*'>\n"
             + "    <frame name='upper' src='upper.html'/>\n"
@@ -1097,8 +1559,9 @@ public class Location2Test extends WebDriverTestCase {
             + "  </frameset>\n"
             + "</html>";
 
-        final String upperContent = "<html><body><h1>upper</h1></body></html>";
-        final String lowerContent = ""
+        final String upperContent = DOCTYPE_HTML
+            + "<html><body><h1>upper</h1></body></html>";
+        final String lowerContent = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + "function test() {\n"
@@ -1139,21 +1602,20 @@ public class Location2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "ancestorOrigins,assign,hash,host,hostname,href,origin,"
+    @Alerts("ancestorOrigins,assign,hash,host,hostname,href,origin,"
+            + "pathname,port,protocol,reload,replace,search,toString")
+    @HtmlUnitNYI(
+            CHROME = "assign,hash,host,hostname,href,origin,"
+                    + "pathname,port,protocol,reload,replace,search,toString",
+            EDGE = "assign,hash,host,hostname,href,origin,"
                     + "pathname,port,protocol,reload,replace,search,toString",
             FF = "assign,hash,host,hostname,href,origin,"
-               + "pathname,port,protocol,reload,replace,search,toString",
+                    + "pathname,port,protocol,reload,replace,search,toString",
             FF_ESR = "assign,hash,host,hostname,href,origin,"
-                   + "pathname,port,protocol,reload,replace,search,toString",
-            IE = "assign,hash,host,hostname,href,origin,"
-               + "pathname,port,protocol,reload,replace,search,toString")
-    @HtmlUnitNYI(CHROME = "assign,hash,host,hostname,href,origin,"
-                        + "pathname,port,protocol,reload,replace,search,toString",
-                 EDGE = "assign,hash,host,hostname,href,origin,"
-                      + "pathname,port,protocol,reload,replace,search,toString")
+                    + "pathname,port,protocol,reload,replace,search,toString")
     public void keys() throws Exception {
-        final String html
-            = "<html><head></head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head></head>\n"
             + "<body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -1171,12 +1633,10 @@ public class Location2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "",
-            IE = "assign,hash,host,hostname,href,origin,"
-               + "pathname,port,protocol,reload,replace,search,toString")
+    @Alerts("")
     public void protoKeys() throws Exception {
-        final String html
-            = "<html><head></head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head></head>\n"
             + "<body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -1194,36 +1654,22 @@ public class Location2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"assign - {\"writable\":false,\"enumerable\":true,\"configurable\":false}",
-                       "hash - {\"enumerable\":true,\"configurable\":false}",
-                       "host - {\"enumerable\":true,\"configurable\":false}",
-                       "hostname - {\"enumerable\":true,\"configurable\":false}",
-                       "href - {\"enumerable\":true,\"configurable\":false}",
-                       "origin - {\"enumerable\":true,\"configurable\":false}",
-                       "pathname - {\"enumerable\":true,\"configurable\":false}",
-                       "port - {\"enumerable\":true,\"configurable\":false}",
-                       "protocol - {\"enumerable\":true,\"configurable\":false}",
-                       "reload - {\"writable\":false,\"enumerable\":true,\"configurable\":false}",
-                       "replace - {\"writable\":false,\"enumerable\":true,\"configurable\":false}",
-                       "search - {\"enumerable\":true,\"configurable\":false}",
-                       "toString - {\"writable\":false,\"enumerable\":true,\"configurable\":false}"},
-            IE = {})
-    @HtmlUnitNYI(IE = {"assign - {\"writable\":false,\"enumerable\":true,\"configurable\":false}",
-                       "hash - {\"enumerable\":true,\"configurable\":false}",
-                       "host - {\"enumerable\":true,\"configurable\":false}",
-                       "hostname - {\"enumerable\":true,\"configurable\":false}",
-                       "href - {\"enumerable\":true,\"configurable\":false}",
-                       "origin - {\"enumerable\":true,\"configurable\":false}",
-                       "pathname - {\"enumerable\":true,\"configurable\":false}",
-                       "port - {\"enumerable\":true,\"configurable\":false}",
-                       "protocol - {\"enumerable\":true,\"configurable\":false}",
-                       "reload - {\"writable\":false,\"enumerable\":true,\"configurable\":false}",
-                       "replace - {\"writable\":false,\"enumerable\":true,\"configurable\":false}",
-                       "search - {\"enumerable\":true,\"configurable\":false}",
-                       "toString - {\"writable\":false,\"enumerable\":true,\"configurable\":false}"})
+    @Alerts({"assign - {\"writable\":false,\"enumerable\":true,\"configurable\":false}",
+             "hash - {\"enumerable\":true,\"configurable\":false}",
+             "host - {\"enumerable\":true,\"configurable\":false}",
+             "hostname - {\"enumerable\":true,\"configurable\":false}",
+             "href - {\"enumerable\":true,\"configurable\":false}",
+             "origin - {\"enumerable\":true,\"configurable\":false}",
+             "pathname - {\"enumerable\":true,\"configurable\":false}",
+             "port - {\"enumerable\":true,\"configurable\":false}",
+             "protocol - {\"enumerable\":true,\"configurable\":false}",
+             "reload - {\"writable\":false,\"enumerable\":true,\"configurable\":false}",
+             "replace - {\"writable\":false,\"enumerable\":true,\"configurable\":false}",
+             "search - {\"enumerable\":true,\"configurable\":false}",
+             "toString - {\"writable\":false,\"enumerable\":true,\"configurable\":false}"})
     public void ownPropertyDescriptor() throws Exception {
-        final String html
-            = "<html><head></head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head></head>\n"
             + "<body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -1237,5 +1683,83 @@ public class Location2Test extends WebDriverTestCase {
 
         expandExpectedAlertsVariables(URL_FIRST);
         loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Verifies that modifying <tt>window.location.hash</tt> works, but that it doesn't
+     * force the page to reload from the server. This is very important for the Dojo
+     * unit tests, which will keep reloading themselves if the page gets reloaded.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"", "#b"})
+    public void setHash() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "</script>\n"
+            + "</head>\n"
+            + "<body>\n"
+            + "<a id='a' onclick='log(location.hash);location.hash=\"b\";log(location.hash);'>go</a>\n"
+            + "<h2 id='b'>...</h2>\n"
+            + "</body>\n"
+            + "</html>";
+
+        final WebDriver driver = loadPage2(html);
+        driver.findElement(By.id("a")).click();
+
+        verifyTitle2(driver, getExpectedAlerts());
+
+        assertEquals(URL_FIRST, getMockWebConnection().getLastWebRequest().getUrl());
+        assertEquals(1, getMockWebConnection().getRequestCount());
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("§§URL§§#newHash")
+    public void setHashUpdatesPageUrl() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "</script>\n"
+            + "</head>\n"
+            + "<body>\n"
+            + "<a id='a' onclick='location.hash=\"newHash\"'>go</a>'>go</a>\n"
+            + "</body>\n"
+            + "</html>";
+
+        final WebDriver driver = loadPage2(html);
+        driver.findElement(By.id("a")).click();
+
+        expandExpectedAlertsVariables(URL_FIRST);
+
+        assertEquals(getExpectedAlerts()[0], driver.getCurrentUrl());
+        assertEquals(1, getMockWebConnection().getRequestCount());
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"about:blank", "about:blank#foo", "about:blank#foo"})
+    public void setHashAboutBlank() throws Exception {
+        WebDriver driver = getWebDriver();
+        driver.get("about:blank");
+
+        assertEquals(getExpectedAlerts()[0], driver.getCurrentUrl());
+        assertEquals(0, getMockWebConnection().getRequestCount());
+
+        ((JavascriptExecutor) driver).executeScript("location.hash = 'foo'");
+        assertEquals(getExpectedAlerts()[1], driver.getCurrentUrl());
+        assertEquals(0, getMockWebConnection().getRequestCount());
+
+        driver.navigate().refresh();
+        assertEquals(getExpectedAlerts()[2], driver.getCurrentUrl());
+        assertEquals(0, getMockWebConnection().getRequestCount());
     }
 }

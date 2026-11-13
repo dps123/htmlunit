@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,32 +17,28 @@ package org.htmlunit.html;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.SimpleWebTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link HtmlSubmitInput}.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author Marc Guillemot
  * @author Ahmed Ashour
+ * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class HtmlSubmitInput2Test extends SimpleWebTestCase {
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {},
-            IE = "Submit Query")
+    @Alerts({})
     public void defaultValue() throws Exception {
-        final String html =
-            "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + "  function test() {\n"
             + "    alert(document.getElementById('myId').value);\n"
@@ -56,8 +52,15 @@ public class HtmlSubmitInput2Test extends SimpleWebTestCase {
             + "</body></html>";
 
         final HtmlPage page = loadPageWithAlerts(html);
-        assertTrue(page.asNormalizedText().indexOf("Submit Query") > -1);
-        assertFalse(page.asXml().indexOf("Submit Query") > -1);
+        HtmlSubmitInput submit = page.getHtmlElementById("myId");
+
+        assertEquals("", submit.getValueAttribute());
+        assertEquals("", submit.getValue());
+
+        assertTrue(page.asNormalizedText().contains("Submit Query"));
+        assertEquals("Submit Query", submit.asNormalizedText());
+
+        assertFalse(page.asXml().contains("Submit Query"));
     }
 
     /**
@@ -66,8 +69,8 @@ public class HtmlSubmitInput2Test extends SimpleWebTestCase {
     @Test
     @Alerts("")
     public void emptyValue() throws Exception {
-        final String html =
-            "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + "  function test() {\n"
             + "    alert(document.getElementById('myId').value);\n"
@@ -81,8 +84,48 @@ public class HtmlSubmitInput2Test extends SimpleWebTestCase {
             + "</body></html>";
 
         final HtmlPage page = loadPageWithAlerts(html);
-        assertFalse(page.asNormalizedText().indexOf("Submit Query") > -1);
-        assertTrue(page.asXml().indexOf("value=\"\"") > -1);
+        HtmlSubmitInput submit = page.getHtmlElementById("myId");
+
+        assertEquals("", submit.getValueAttribute());
+        assertEquals("", submit.getValue());
+
+        assertFalse(page.asNormalizedText().contains("Submit Query"));
+        assertEquals("", submit.asNormalizedText());
+
+        assertTrue(page.asXml().contains("value=\"\""));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("Press Me")
+    public void value() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + "  function test() {\n"
+            + "    alert(document.getElementById('myId').value);\n"
+            + "  }\n"
+            + "</script>\n"
+            + "</head>\n"
+            + "<body onload='test()'>\n"
+            + "<form action='" + URL_SECOND + "'>\n"
+            + "  <input type='submit' id='myId' value='Press Me'>\n"
+            + "</form>\n"
+            + "</body></html>";
+
+        final HtmlPage page = loadPageWithAlerts(html);
+        HtmlSubmitInput submit = page.getHtmlElementById("myId");
+
+        assertEquals("Press Me", submit.getValueAttribute());
+        assertEquals("Press Me", submit.getValue());
+
+        assertTrue(page.asNormalizedText().contains("Press Me"));
+        assertFalse(page.asNormalizedText().contains("Submit Query"));
+        assertEquals("Press Me", submit.asNormalizedText());
+
+        assertTrue(page.asXml().contains("value=\"Press Me\""));
     }
 
     /**
@@ -91,8 +134,8 @@ public class HtmlSubmitInput2Test extends SimpleWebTestCase {
     @Test
     @Alerts("1")
     public void onclick() throws Exception {
-        final String html =
-            "<html><head></head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head></head>\n"
             + "<body>\n"
             + "<form>\n"
             + "  <input id='myInput'>\n"
@@ -114,7 +157,8 @@ public class HtmlSubmitInput2Test extends SimpleWebTestCase {
      */
     @Test
     public void asXmlNoEscape() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<meta http-equiv='Content-Type' content='text/html; charset=Cp1251'>\n"
             + "</head><body>\n"
             + "<input type='submit' value='&#1083;'/>\n"

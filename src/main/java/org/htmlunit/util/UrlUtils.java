@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ package org.htmlunit.util;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import java.io.UnsupportedEncodingException;
+import java.io.ByteArrayOutputStream;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -28,9 +28,6 @@ import java.nio.charset.Charset;
 import java.util.BitSet;
 import java.util.Locale;
 import java.util.Objects;
-
-import org.apache.commons.codec.DecoderException;
-import org.apache.commons.codec.net.URLCodec;
 
 import org.htmlunit.WebAssert;
 import org.htmlunit.protocol.AnyHandler;
@@ -160,7 +157,6 @@ public final class UrlUtils {
         pchar.set(',');
 
         final BitSet segment = new BitSet(256);
-        segment.or(pchar);
         segment.set(';');
         segment.or(pchar);
 
@@ -168,12 +164,8 @@ public final class UrlUtils {
         pathSegments.set('/');
         pathSegments.or(segment);
 
-        final BitSet absPath = new BitSet(256);
-        absPath.set('/');
-        absPath.or(pathSegments);
-
         final BitSet allowedAbsPath = new BitSet(256);
-        allowedAbsPath.or(absPath);
+        allowedAbsPath.or(pathSegments);
 
         final BitSet allowedFragment = new BitSet(256);
         allowedFragment.or(uric);
@@ -233,12 +225,12 @@ public final class UrlUtils {
     public static URL toUrlUnsafe(final String url) throws MalformedURLException {
         WebAssert.notNull("url", url);
 
-        final String protocol = org.apache.commons.lang3.StringUtils.substringBefore(url, ":").toLowerCase(Locale.ROOT);
+        final String protocol = StringUtils.substringBefore(url, ":").toLowerCase(Locale.ROOT);
 
         if (protocol.isEmpty() || UrlUtils.isNormalUrlProtocol(protocol)) {
             final URL response = new URL(url);
             if (response.getProtocol().startsWith("http")
-                    && org.apache.commons.lang3.StringUtils.isEmpty(response.getHost())) {
+                    && StringUtils.isEmptyOrNull(response.getHost())) {
                 throw new MalformedURLException("Missing host name in url: " + url);
             }
             return response;
@@ -249,7 +241,7 @@ public final class UrlUtils {
         }
 
         if (ABOUT.equals(protocol)) {
-            if (org.apache.commons.lang3.StringUtils.equalsIgnoreCase(ABOUT_BLANK, url)) {
+            if (ABOUT_BLANK.equalsIgnoreCase(url)) {
                 return URL_ABOUT_BLANK;
             }
             return new URL(null, url, ABOUT_HANDLER);
@@ -270,11 +262,10 @@ public final class UrlUtils {
      * <code>"http://first/?a=b c"</code> to <code>"http://first/?a=b%20c"</code>.</p>
      *
      * @param url the URL to encode
-     * @param minimalQueryEncoding whether or not to perform minimal query encoding, like IE does
      * @param charset the charset
      * @return the encoded URL
      */
-    public static URL encodeUrl(final URL url, final boolean minimalQueryEncoding, final Charset charset) {
+    public static URL encodeUrl(final URL url, final Charset charset) {
         if (!isNormalUrlProtocol(url.getProtocol())) {
             return url; // javascript:, about:, data: and anything not supported like foo:
         }
@@ -286,12 +277,7 @@ public final class UrlUtils {
             }
             String query = url.getQuery();
             if (query != null) {
-                if (minimalQueryEncoding) {
-                    query = org.apache.commons.lang3.StringUtils.replace(query, " ", "%20");
-                }
-                else {
-                    query = encode(query, QUERY_ALLOWED_CHARS, charset);
-                }
+                query = encode(query, QUERY_ALLOWED_CHARS, charset);
             }
             String anchor = url.getRef();
             if (anchor != null) {
@@ -354,10 +340,10 @@ public final class UrlUtils {
     public static String decode(final String escaped) {
         try {
             final byte[] bytes = escaped.getBytes(US_ASCII);
-            final byte[] bytes2 = URLCodec.decodeUrl(bytes);
+            final byte[] bytes2 = decodeUrl(bytes);
             return new String(bytes2, UTF_8);
         }
-        catch (final DecoderException e) {
+        catch (final IllegalArgumentException e) {
             // Should never happen.
             throw new RuntimeException(e);
         }
@@ -373,7 +359,7 @@ public final class UrlUtils {
      */
     private static String encode(final String unescaped, final BitSet allowed, final Charset charset) {
         final byte[] bytes = unescaped.getBytes(charset);
-        final byte[] bytes2 = URLCodec.encodeUrl(allowed, bytes);
+        final byte[] bytes2 = encodeUrl(allowed, bytes);
         return encodePercentSign(bytes2);
     }
 
@@ -382,16 +368,15 @@ public final class UrlUtils {
      * string that is not followed by two hexadecimal characters.
      * @param input the input bytes
      * @return the given input string where every occurrence of <code>%</code> in
-     * invalid escape sequences has been replace by <code>%25</code>
+     *         invalid escape sequences has been replace by <code>%25</code>
      */
-    @SuppressWarnings("PMD.UselessParentheses")
     private static String encodePercentSign(final byte[] input) {
         if (input == null) {
             return null;
         }
 
         final StringBuilder result = new StringBuilder(new String(input, US_ASCII));
-        int state = -0;
+        int state = 0;
         int offset = 0;
         for (int i = 0; i < input.length; i++) {
             final byte b = input[i];
@@ -545,7 +530,7 @@ public final class UrlUtils {
     public static URL getUrlWithNewUserName(final URL u, final String newUserName) throws MalformedURLException {
         String newUserInfo = newUserName == null ? "" : newUserName;
         final String userInfo = u.getUserInfo();
-        if (org.apache.commons.lang3.StringUtils.isNotBlank(userInfo)) {
+        if (StringUtils.isNotBlank(userInfo)) {
             final int colonIdx = userInfo.indexOf(':');
             if (colonIdx > -1) {
                 newUserInfo = newUserInfo + userInfo.substring(colonIdx);
@@ -564,18 +549,24 @@ public final class UrlUtils {
      */
     public static URL getUrlWithNewUserPassword(final URL u, final String newUserPassword)
             throws MalformedURLException {
-        String newUserInfo = newUserPassword == null ? "" : ':' + newUserPassword;
+        final StringBuilder newUserInfo = new StringBuilder();
+
         final String userInfo = u.getUserInfo();
-        if (org.apache.commons.lang3.StringUtils.isNotBlank(userInfo)) {
+        if (StringUtils.isNotBlank(userInfo)) {
             final int colonIdx = userInfo.indexOf(':');
             if (colonIdx > -1) {
-                newUserInfo = userInfo.substring(0, colonIdx) + newUserInfo;
+                newUserInfo.append(userInfo, 0, colonIdx);
             }
             else {
-                newUserInfo = userInfo + newUserInfo;
+                newUserInfo.append(userInfo);
             }
         }
-        return createNewUrl(u.getProtocol(), newUserInfo.isEmpty() ? null : newUserInfo,
+
+        if (newUserPassword != null) {
+            newUserInfo.append(':').append(newUserPassword);
+        }
+
+        return createNewUrl(u.getProtocol(), newUserInfo.isEmpty() ? null : newUserInfo.toString(),
                 u.getHost(), u.getPort(), u.getPath(), u.getRef(), u.getQuery());
     }
 
@@ -652,15 +643,13 @@ public final class UrlUtils {
         final StringBuilder s = new StringBuilder(len);
         s.append(protocol).append(':');
         if (authority != null && !authority.isEmpty()) {
-            s.append("//");
-            s.append(authority);
+            s.append("//").append(authority);
         }
         if (path != null) {
             s.append(path);
         }
         if (query != null) {
-            s.append('?');
-            s.append(query);
+            s.append('?').append(query);
         }
         if (ref != null) {
             if (ref.isEmpty() || ref.charAt(0) != '#') {
@@ -710,10 +699,66 @@ public final class UrlUtils {
     }
 
     /**
+     * Removes the characters the URL parser ignores
+     * (see https://url.spec.whatwg.org/#concept-basic-url-parser).
+     * <ul>
+     *   <li>If input contains any leading or trailing C0 control or space, validation error.
+     *     Remove any leading and trailing C0 control or space from input.</li>
+     *   <li>If input contains any ASCII tab or newline, validation error.
+     *     Remove all ASCII tab or newline from input.</li>
+     * </ul>
+     *
+     * @param input the URL string
+     * @return the cleaned URL string; the input itself if there is nothing to remove
+     */
+    private static String removeIgnoredCharacters(final String input) {
+        final int length = input.length();
+        StringBuilder sb = null;
+        boolean before = true;
+        int trailing = 0;
+
+        for (int i = 0; i < length; i++) {
+            final char c = input.charAt(i);
+            boolean remove = false;
+
+            if (c == '\t' || c == '\r' || c == '\n') {
+                remove = true;
+            }
+            else if ('\u0000' <= c && c <= '\u0020') {
+                if (before) {
+                    remove = true;
+                }
+                else {
+                    trailing++;
+                }
+            }
+            else {
+                before = false;
+                trailing = 0;
+            }
+
+            if (remove) {
+                if (sb == null) {
+                    sb = new StringBuilder(input.substring(0, i));
+                }
+            }
+            else if (sb != null) {
+                sb.append(c);
+            }
+        }
+
+        if (sb == null) {
+            return trailing > 0 ? input.substring(0, length - trailing) : input;
+        }
+        return trailing > 0 ? sb.substring(0, sb.length() - trailing) : sb.toString();
+    }
+
+    /**
      * Parses a given specification using the algorithm depicted in
-     * <a href="http://www.faqs.org/rfcs/rfc1808.html">RFC1808</a>:
+     * <a href="http://www.faqs.org/rfcs/rfc1808.html">RFC1808</a>.
      * <p>
      * Section 2.4: Parsing a URL
+     * </p>
      * <p>
      *   An accepted method for parsing URLs is useful to clarify the
      *   generic-RL syntax of Section 2.2 and to describe the algorithm for
@@ -723,73 +768,15 @@ public final class UrlUtils {
      *   rules assume that the URL has already been separated from any
      *   surrounding text and copied to a "parse string". The rules are
      *   listed in the order in which they would be applied by the parser.
-     *
-     * @param spec The specification to parse.
+     * </p>
+     * @param input The specification to parse.
      * @return the parsed specification.
      */
-    @SuppressWarnings("PMD.UselessParentheses")
-    private static Url parseUrl(String spec) {
+    private static Url parseUrl(final String input) {
+        final String spec = removeIgnoredCharacters(input);
         final Url url = new Url();
         int startIndex = 0;
         int endIndex = spec.length();
-
-        // see https://url.spec.whatwg.org/#concept-basic-url-parser
-        //   * If input contains any leading or trailing C0 control or space, validation error.
-        //     Remove any leading and trailing C0 control or space from input.
-        //   * If input contains any ASCII tab or newline, validation error.
-        //     Remove all ASCII tab or newline from input.
-
-        if (endIndex > startIndex) {
-            StringBuilder sb = null;
-            boolean before = true;
-            int trailing = 0;
-
-            for (int i = 0; i < endIndex; i++) {
-                final char c = spec.charAt(i);
-                boolean remove = false;
-
-                if (c == '\t' | c == '\r' | c == '\n') {
-                    remove = true;
-                }
-                else if ('\u0000' <= c && c <= '\u0020') {
-                    if (before) {
-                        remove = true;
-                    }
-                    else {
-                        trailing++;
-                    }
-                }
-                else {
-                    before &= false;
-                    trailing = 0;
-                }
-
-                if (remove) {
-                    if (sb == null) {
-                        sb = new StringBuilder(spec.substring(0, i));
-                    }
-                }
-                else if (sb != null) {
-                    sb.append(c);
-                }
-            }
-
-            if (sb == null) {
-                if (trailing > 0) {
-                    endIndex = spec.length() - trailing;
-                    spec = spec.substring(0, endIndex);
-                }
-            }
-            else {
-                if (trailing > 0) {
-                    spec = sb.substring(0, sb.length() - trailing);
-                }
-                else {
-                    spec = sb.toString();
-                }
-                endIndex = spec.length();
-            }
-        }
 
         // Section 2.4.1: Parsing the Fragment Identifier
         //
@@ -924,17 +911,18 @@ public final class UrlUtils {
      * Returns true if specified string is a valid scheme name.
      * <p>
      * https://tools.ietf.org/html/rfc1738
+     * </p>
      * <p>
      * Scheme names consist of a sequence of characters. The lower case
      * letters "a"--"z", digits, and the characters plus ("+"), period
      * ("."), and hyphen ("-") are allowed. For resiliency, programs
      * interpreting URLs should treat upper case letters as equivalent to
      * lower case in scheme names (e.g., allow "HTTP" as well as "http").
+     * </p>
      *
      * @param scheme the scheme string to check
      * @return true if valid
      */
-    @SuppressWarnings("PMD.UselessParentheses")
     public static boolean isValidScheme(final String scheme) {
         final int length = scheme.length();
         if (length < 1) {
@@ -964,10 +952,34 @@ public final class UrlUtils {
     }
 
     /**
+     * Returns true if specified string is a special scheme.
+     * see <a href='https://url.spec.whatwg.org/#special-scheme'>
+     * https://url.spec.whatwg.org/#special-scheme</a>
+     *
+     * @param scheme the scheme string to check
+     * @return true if special
+     */
+    public static boolean isSpecialScheme(final String scheme) {
+        final int length = scheme.length();
+        if (length < 2 || length > 5) {
+            return false;
+        }
+
+        final String schemeLC = scheme.toLowerCase(Locale.ROOT);
+        return "ftp".equals(schemeLC)
+                || "file".equals(schemeLC)
+                || "http".equals(schemeLC)
+                || "https".equals(schemeLC)
+                || "ws".equals(schemeLC)
+                || "wss".equals(schemeLC);
+    }
+
+    /**
      * Resolves a given relative URL against a base URL using the algorithm
-     * depicted in <a href="http://www.faqs.org/rfcs/rfc1808.html">RFC1808</a>:
+     * depicted in <a href="http://www.faqs.org/rfcs/rfc1808.html">RFC1808</a>.
      * <p>
      * Section 4: Resolving Relative URLs
+     * </p>
      * <p>
      *   This section describes an example algorithm for resolving URLs within
      *   a context in which the URLs may be relative, such that the result is
@@ -976,6 +988,7 @@ public final class UrlUtils {
      *   original author, it does guarantee that any valid URL (relative or
      *   absolute) can be consistently transformed to an absolute form given a
      *   valid base URL.
+     * </p>
      *
      * @param baseUrl     The base URL in which to resolve the specification.
      * @param relativeUrl The relative URL to resolve against the base URL.
@@ -983,6 +996,7 @@ public final class UrlUtils {
      */
     private static Url resolveUrl(final Url baseUrl, final String relativeUrl) {
         final Url url = parseUrl(relativeUrl);
+
         // Step 1: The base URL is established according to the rules of
         //         Section 3.  If the base URL is the empty string (unknown),
         //         the embedded URL is interpreted as an absolute URL and
@@ -990,6 +1004,7 @@ public final class UrlUtils {
         if (baseUrl == null) {
             return url;
         }
+
         // Step 2: Both the base and embedded URLs are parsed into their
         //         component parts as described in Section 2.4.
         //      a) If the embedded URL is entirely empty, it inherits the
@@ -1006,6 +1021,7 @@ public final class UrlUtils {
         //      c) Otherwise, the embedded URL inherits the scheme of
         //         the base URL.
         url.scheme_ = baseUrl.scheme_;
+
         // Step 3: If the embedded URL's <net_loc> is non-empty, we skip to
         //         Step 7.  Otherwise, the embedded URL inherits the <net_loc>
         //         (if any) of the base URL.
@@ -1013,12 +1029,14 @@ public final class UrlUtils {
             return url;
         }
         url.location_ = baseUrl.location_;
+
         // Step 4: If the embedded URL path is preceded by a slash "/", the
         //         path is not relative and we skip to Step 7.
         if (url.path_ != null && !url.path_.isEmpty() && url.path_.charAt(0) == '/') {
-            url.path_ = removeLeadingSlashPoints(url.path_);
+            url.path_ = normalizeDotSegments(url.path_);
             return url;
         }
+
         // Step 5: If the embedded URL path is empty (and not preceded by a
         //         slash), then the embedded URL inherits the base URL path,
         //         and
@@ -1040,6 +1058,7 @@ public final class UrlUtils {
             url.query_ = baseUrl.query_;
             return url;
         }
+
         // Step 6: The last segment of the base URL's path (anything
         //         following the rightmost slash "/", or the entire path if no
         //         slash is present) is removed and the embedded URL's path is
@@ -1060,23 +1079,45 @@ public final class UrlUtils {
         }
 
         path = path.concat(url.path_);
-        //      a) All occurrences of "./", where "." is a complete path
-        //         segment, are removed.
-        int pathSegmentIndex;
+        url.path_ = normalizeDotSegments(path);
 
+        // Step 7: The resulting URL components, including any inherited from
+        //         the base URL, are recombined to give the absolute form of
+        //         the embedded URL.
+        return url;
+    }
+
+    /**
+     * Applies the RFC1808 Section 4, Step 6 dot-segment removal rules (a)-(d)
+     * to {@code path}, followed by the browser-specific leading-"../" collapse.
+     * Used both for the merged base+relative path in Step 6 itself, and for an
+     * embedded URL whose own path is already absolute (Step 4) -- an absolute
+     * path reference needs the same normalization a merged path gets, it just
+     * isn't merged with anything first.
+     *
+     * @param mergedPath the path to normalize; must already be the final path to
+     *     clean up (already merged with the base path, if applicable)
+     * @return the normalized path
+     */
+    private static String normalizeDotSegments(final String mergedPath) {
+        String path = mergedPath;
+
+        // a) All occurrences of "./", where "." is a complete path
+        //    segment, are removed.
+        int pathSegmentIndex;
         while ((pathSegmentIndex = path.indexOf("/./")) >= 0) {
             path = path.substring(0, pathSegmentIndex + 1).concat(path.substring(pathSegmentIndex + 3));
         }
-        //      b) If the path ends with "." as a complete path segment,
-        //         that "." is removed.
+        // b) If the path ends with "." as a complete path segment,
+        //    that "." is removed.
         if (path.endsWith("/.")) {
             path = path.substring(0, path.length() - 1);
         }
-        //      c) All occurrences of "<segment>/../", where <segment> is a
-        //         complete path segment not equal to "..", are removed.
-        //         Removal of these path segments is performed iteratively,
-        //         removing the leftmost matching pattern on each iteration,
-        //         until no matching pattern remains.
+        // c) All occurrences of "<segment>/../", where <segment> is a
+        //    complete path segment not equal to "..", are removed.
+        //    Removal of these path segments is performed iteratively,
+        //    removing the leftmost matching pattern on each iteration,
+        //    until no matching pattern remains.
         while ((pathSegmentIndex = path.indexOf("/../")) > 0) {
             final String pathSegment = path.substring(0, pathSegmentIndex);
             final int slashIndex = pathSegment.lastIndexOf('/');
@@ -1090,9 +1131,9 @@ public final class UrlUtils {
                 path = path.substring(pathSegmentIndex + 4);
             }
         }
-        //      d) If the path ends with "<segment>/..", where <segment> is a
-        //         complete path segment not equal to "..", that
-        //         "<segment>/.." is removed.
+        // d) If the path ends with "<segment>/..", where <segment> is a
+        //    complete path segment not equal to "..", that
+        //    "<segment>/.." is removed.
         if (path.endsWith("/..")) {
             final String pathSegment = path.substring(0, path.length() - 3);
             final int slashIndex = pathSegment.lastIndexOf('/');
@@ -1102,17 +1143,11 @@ public final class UrlUtils {
             }
         }
 
-        path = removeLeadingSlashPoints(path);
-
-        url.path_ = path;
-        // Step 7: The resulting URL components, including any inherited from
-        //         the base URL, are recombined to give the absolute form of
-        //         the embedded URL.
-        return url;
+        return removeLeadingSlashPoints(path);
     }
 
     /**
-     * "../" after the leading "/" should be removed as browsers do (not in RFC)
+     * "../" after the leading "/" should be removed as browsers do (not in RFC).
      */
     private static String removeLeadingSlashPoints(final String path) {
         int i = 1;
@@ -1129,8 +1164,6 @@ public final class UrlUtils {
 
     /**
      * Class <code>Url</code> represents a Uniform Resource Locator.
-     *
-     * @author Martin Tamme
      */
     private static class Url {
 
@@ -1145,6 +1178,7 @@ public final class UrlUtils {
          * Creates a <code>Url</code> object.
          */
         Url() {
+            super();
         }
 
         /**
@@ -1172,27 +1206,22 @@ public final class UrlUtils {
             final StringBuilder sb = new StringBuilder();
 
             if (scheme_ != null) {
-                sb.append(scheme_);
-                sb.append(':');
+                sb.append(scheme_).append(':');
             }
             if (location_ != null) {
-                sb.append("//");
-                sb.append(location_);
+                sb.append("//").append(location_);
             }
             if (path_ != null) {
                 sb.append(path_);
             }
             if (parameters_ != null) {
-                sb.append(';');
-                sb.append(parameters_);
+                sb.append(';').append(parameters_);
             }
             if (query_ != null) {
-                sb.append('?');
-                sb.append(query_);
+                sb.append('?').append(query_);
             }
             if (fragment_ != null) {
-                sb.append('#');
-                sb.append(fragment_);
+                sb.append('#').append(fragment_);
             }
             return sb.toString();
         }
@@ -1211,7 +1240,6 @@ public final class UrlUtils {
      * @param u2 a URL object
      * @return true if u1 and u2 refer to the same file
      */
-    @SuppressWarnings("PMD.UselessParentheses")
     public static boolean sameFile(final URL u1, final URL u2) {
         if (u1 == u2) {
             return true;
@@ -1255,10 +1283,10 @@ public final class UrlUtils {
                 f1 = u1.toURI().normalize().toURL().getFile();
                 f2 = u2.toURI().normalize().toURL().getFile();
             }
-            catch (final RuntimeException re) {
-                throw re;
+            catch (final RuntimeException e) {
+                throw e;
             }
-            catch (final Exception e) {
+            catch (final Exception ignored) {
                 // ignore
             }
         }
@@ -1291,7 +1319,7 @@ public final class UrlUtils {
                 try {
                     f = url.toURI().normalize().toURL().getFile();
                 }
-                catch (final Exception e) {
+                catch (final Exception ignored) {
                     // ignore
                 }
             }
@@ -1323,13 +1351,11 @@ public final class UrlUtils {
         final StringBuilder buffer = new StringBuilder();
         if (host != null) {
             if (scheme != null) {
-                buffer.append(scheme);
-                buffer.append("://");
+                buffer.append(scheme).append("://");
             }
             buffer.append(host);
             if (port > 0) {
-                buffer.append(':');
-                buffer.append(port);
+                buffer.append(':').append(port);
             }
         }
         if (path == null || path.isEmpty() || path.charAt(0) != '/') {
@@ -1339,27 +1365,23 @@ public final class UrlUtils {
             buffer.append(path);
         }
         if (query != null) {
-            buffer.append('?');
-            buffer.append(query);
+            buffer.append('?').append(query);
         }
         return new URI(buffer.toString());
     }
 
     /**
+     * Returns the encoded string.
+     *
      * @param part the part to encode
-     * @return the ecoded string
+     * @return the encoded string
      */
     public static String encodeQueryPart(final String part) {
         if (part == null || part.isEmpty()) {
             return "";
         }
 
-        try {
-            return URLEncoder.encode(part, "UTF-8");
-        }
-        catch (final UnsupportedEncodingException e) {
-            return part;
-        }
+        return URLEncoder.encode(part, UTF_8);
     }
 
     /**
@@ -1376,4 +1398,155 @@ public final class UrlUtils {
         return url;
     }
 
+    /**
+     * Decodes an array of URL safe 7-bit characters into an array of original bytes.
+     * Escaped characters are converted back to their original representation.
+     * @param bytes array of URL safe characters
+     * @param removeWhitespace if true don't add whitespace chars to the output
+     * @return array of original bytes
+     * @throws IllegalArgumentException in case of error
+     */
+    public static byte[] decodeDataUrl(final byte[] bytes, final boolean removeWhitespace)
+                            throws IllegalArgumentException  {
+        // adapted from apache commons codec
+        if (bytes == null) {
+            return null;
+        }
+        final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        for (int i = 0; i < bytes.length; i++) {
+            int b = bytes[i];
+            if (b == '%') {
+                try {
+                    final int u = digit16(bytes[++i]);
+                    final int l = digit16(bytes[++i]);
+                    b = (u << 4) + l;
+                }
+                catch (final ArrayIndexOutOfBoundsException e) {
+                    throw new IllegalArgumentException("Invalid URL encoding: ", e);
+                }
+            }
+            if (removeWhitespace
+                    && (b == 9 || b == 10 || b == 12 || b == 13 || b == 32)) {
+                continue;
+            }
+
+            buffer.write(b);
+        }
+        return buffer.toByteArray();
+    }
+
+    /**
+     * Decodes an array of URL safe 7-bit characters into an array of original bytes.
+     * Escaped characters are converted back to their original representation.
+     * @param bytes array of URL safe characters
+     * @return array of original bytes
+     * @throws IllegalArgumentException in case of error
+     */
+    public static byte[] decodeUrl(final byte[] bytes) throws IllegalArgumentException {
+        // adapted from apache commons codec
+        if (bytes == null) {
+            return null;
+        }
+        final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        for (int i = 0; i < bytes.length; i++) {
+            final int b = bytes[i];
+            if (b == '+') {
+                buffer.write(' ');
+            }
+            else if (b == '%') {
+                try {
+                    final int u = digit16(bytes[++i]);
+                    final int l = digit16(bytes[++i]);
+                    buffer.write((char) ((u << 4) + l));
+                }
+                catch (final ArrayIndexOutOfBoundsException e) {
+                    throw new IllegalArgumentException("Invalid URL encoding: ", e);
+                }
+            }
+            else {
+                buffer.write(b);
+            }
+        }
+        return buffer.toByteArray();
+    }
+
+    private static int digit16(final byte b) throws IllegalArgumentException  {
+        final int i = Character.digit((char) b, 16);
+        if (i == -1) {
+            throw new IllegalArgumentException("Invalid URL encoding: not a valid digit (radix 16): " + b);
+        }
+        return i;
+    }
+
+    /**
+     * Encodes an array of bytes into an array of URL safe 7-bit characters. Unsafe characters are escaped.
+     * @param urlsafe bitset of characters deemed URL safe
+     * @param bytes  array of bytes to convert to URL safe characters
+     * @return array of bytes containing URL safe characters
+     */
+    public static byte[] encodeUrl(final BitSet urlsafe, final byte[] bytes) {
+        // adapted from apache commons codec
+        if (bytes == null) {
+            return null;
+        }
+
+        final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        for (final byte c : bytes) {
+            int b = c;
+            if (b < 0) {
+                b = 256 + b;
+            }
+            if (urlsafe.get(b)) {
+                if (b == ' ') {
+                    b = '+';
+                }
+                buffer.write(b);
+            }
+            else {
+                buffer.write('%');
+                final char hex1 = hexDigit(b >> 4);
+                final char hex2 = hexDigit(b);
+                buffer.write(hex1);
+                buffer.write(hex2);
+            }
+        }
+        return buffer.toByteArray();
+    }
+
+    private static char hexDigit(final int b) {
+        return Character.toUpperCase(Character.forDigit(b & 0xF, 16));
+    }
+
+    /**
+     * Determines whether two URLs share the same origin according to the Same-Origin Policy.
+     * Two URLs are considered to have the same origin if they have the same protocol (scheme),
+     * host, and port.
+     *
+     * <p>The method handles default ports correctly by using the URL's default port when
+     * the explicit port is -1 (indicating no port was specified).
+     * </p>
+     *
+     * @param originUrl the first URL to compare (must not be null)
+     * @param newUrl the second URL to compare (must not be null)
+     * @return {@code true} if both URLs have the same host and effective port; {@code false} otherwise
+     */
+    public static boolean isSameOrigin(final URL originUrl, final URL newUrl) {
+        if (!originUrl.getProtocol().equals(newUrl.getProtocol())) {
+            return false;
+        }
+
+        if (!originUrl.getHost().equalsIgnoreCase(newUrl.getHost())) {
+            return false;
+        }
+
+        int originPort = originUrl.getPort();
+        if (originPort == -1) {
+            originPort = originUrl.getDefaultPort();
+        }
+        int newPort = newUrl.getPort();
+        if (newPort == -1) {
+            newPort = newUrl.getDefaultPort();
+        }
+        return originPort == newPort;
+    }
 }

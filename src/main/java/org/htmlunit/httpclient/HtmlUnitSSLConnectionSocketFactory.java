@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,14 +18,9 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.security.GeneralSecurityException;
-import java.security.KeyManagementException;
 import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
@@ -47,7 +42,6 @@ import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.ssl.SSLContexts;
-
 import org.htmlunit.WebClientOptions;
 
 /**
@@ -55,11 +49,13 @@ import org.htmlunit.WebClientOptions;
  * This looks rather like a hack than like clean code but at the time of the writing it seems to
  * be the easiest way to provide SOCKS proxy support for HTTPS.
  *
+ * @author Daniel Gredler
  * @author Nicolas Belisle
  * @author Ahmed Ashour
  * @author Martin Huber
  * @author Marc Guillemot
  * @author Ronald Brill
+ * @author Vadzim Miliantsei
  */
 public final class HtmlUnitSSLConnectionSocketFactory extends SSLConnectionSocketFactory {
     private static final String SSL3ONLY = "htmlunit.SSL3Only";
@@ -89,28 +85,35 @@ public final class HtmlUnitSSLConnectionSocketFactory extends SSLConnectionSocke
             final String[] sslClientProtocols = options.getSSLClientProtocols();
             final String[] sslClientCipherSuites = options.getSSLClientCipherSuites();
 
+            SSLContext sslContext = options.getSSLContext();
             final boolean useInsecureSSL = options.isUseInsecureSSL();
 
-            if (!useInsecureSSL) {
-                final KeyStore keyStore = options.getSSLClientCertificateStore();
-                final KeyStore trustStore = options.getSSLTrustStore();
+            if (useInsecureSSL) {
+                // we need insecure SSL + SOCKS awareness
+                String protocol = options.getSSLInsecureProtocol();
+                if (protocol == null) {
+                    protocol = "SSL";
+                }
+                if (sslContext == null) {
+                    sslContext = SSLContext.getInstance(protocol);
+                    sslContext.init(getKeyManagers(options),
+                            new X509ExtendedTrustManager[] {new InsecureTrustManager()}, null);
+                }
 
-                return new HtmlUnitSSLConnectionSocketFactory(keyStore,
-                        keyStore == null ? null : options.getSSLClientCertificatePassword(),
-                        trustStore, useInsecureSSL,
-                        sslClientProtocols, sslClientCipherSuites);
+                return new HtmlUnitSSLConnectionSocketFactory(sslContext, NoopHostnameVerifier.INSTANCE,
+                                true, sslClientProtocols, sslClientCipherSuites);
             }
 
-            // we need insecure SSL + SOCKS awareness
-            String protocol = options.getSSLInsecureProtocol();
-            if (protocol == null) {
-                protocol = "SSL";
-            }
-            final SSLContext sslContext = SSLContext.getInstance(protocol);
-            sslContext.init(getKeyManagers(options), new X509ExtendedTrustManager[] {new InsecureTrustManager()}, null);
+            final KeyStore keyStore = options.getSSLClientCertificateStore();
+            final char[] keyStorePassword = keyStore == null ? null : options.getSSLClientCertificatePassword();
+            final KeyStore trustStore = options.getSSLTrustStore();
 
-            return new HtmlUnitSSLConnectionSocketFactory(sslContext, NoopHostnameVerifier.INSTANCE,
-                                            useInsecureSSL, sslClientProtocols, sslClientCipherSuites);
+            if (sslContext == null) {
+                sslContext = SSLContexts.custom()
+                        .loadKeyMaterial(keyStore, keyStorePassword).loadTrustMaterial(trustStore, null).build();
+            }
+            return new HtmlUnitSSLConnectionSocketFactory(sslContext, new DefaultHostnameVerifier(),
+                            false, sslClientProtocols, sslClientCipherSuites);
         }
         catch (final GeneralSecurityException e) {
             throw new RuntimeException(e);
@@ -121,17 +124,6 @@ public final class HtmlUnitSSLConnectionSocketFactory extends SSLConnectionSocke
             final HostnameVerifier hostnameVerifier, final boolean useInsecureSSL,
             final String[] supportedProtocols, final String[] supportedCipherSuites) {
         super(sslContext, supportedProtocols, supportedCipherSuites, hostnameVerifier);
-        useInsecureSSL_ = useInsecureSSL;
-    }
-
-    private HtmlUnitSSLConnectionSocketFactory(final KeyStore keystore, final char[] keystorePassword,
-            final KeyStore truststore, final boolean useInsecureSSL,
-            final String[] supportedProtocols, final String[] supportedCipherSuites)
-        throws NoSuchAlgorithmException, KeyManagementException, KeyStoreException, UnrecoverableKeyException {
-        super(SSLContexts.custom()
-                .loadKeyMaterial(keystore, keystorePassword).loadTrustMaterial(truststore, null).build(),
-                supportedProtocols, supportedCipherSuites,
-                new DefaultHostnameVerifier());
         useInsecureSSL_ = useInsecureSSL;
     }
 
@@ -165,18 +157,19 @@ public final class HtmlUnitSSLConnectionSocketFactory extends SSLConnectionSocke
             final Socket underlying = SocksConnectionSocketFactory.createSocketWithSocksProxy(socksProxy);
             underlying.setReuseAddress(true);
 
-            final SocketAddress socksProxyAddress = new InetSocketAddress(socksProxy.getHostName(),
-                    socksProxy.getPort());
             try {
                 //underlying.setSoTimeout(soTimeout);
                 underlying.connect(remoteAddress, connectTimeout);
             }
             catch (final SocketTimeoutException ex) {
-                throw new ConnectTimeoutException("Connect to " + socksProxyAddress + " timed out");
+                final ConnectTimeoutException cex =
+                        new ConnectTimeoutException("Connect to " + socksProxy.toURI() + " timed out");
+                cex.initCause(ex);
+                throw cex;
             }
 
-            final Socket sslSocket = getSSLSocketFactory().createSocket(underlying, socksProxy.getHostName(),
-                    socksProxy.getPort(), true);
+            final Socket sslSocket = getSSLSocketFactory().createSocket(underlying, remoteAddress.getHostName(),
+                    remoteAddress.getPort(), true);
             configureSocket((SSLSocket) sslSocket, context);
             return sslSocket;
         }
@@ -221,6 +214,7 @@ public final class HtmlUnitSSLConnectionSocketFactory extends SSLConnectionSocke
         if (options.getSSLClientCertificateStore() == null) {
             return null;
         }
+
         try {
             final KeyStore keyStore = options.getSSLClientCertificateStore();
             final KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(
@@ -237,10 +231,6 @@ public final class HtmlUnitSSLConnectionSocketFactory extends SSLConnectionSocke
 /**
  * A completely insecure (yet very easy to use) x509 trust manager. This manager trusts all servers
  * and all clients, regardless of credentials or lack thereof.
- *
- * @author Daniel Gredler
- * @author Marc Guillemot
- * @author Ronald Brill
  */
 class InsecureTrustManager extends X509ExtendedTrustManager {
     private final Set<X509Certificate> acceptedIssuers_ = new HashSet<>();

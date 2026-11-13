@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,33 +18,113 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.SimpleWebTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
+import org.htmlunit.junit.annotation.Alerts;
 import org.htmlunit.util.NameValuePair;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link HtmlButton}.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author David K. Taylor
  * @author Brad Clarke
  * @author Marc Guillemot
  * @author Ahmed Ashour
+ * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class HtmlButtonTest extends SimpleWebTestCase {
 
     /**
      * @throws Exception if the test fails
      */
     @Test
+    @Alerts("Press Me")
+    public void normalizedText() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + "  function test() {\n"
+            + "    alert(document.getElementById('myId').innerText);\n"
+            + "  }\n"
+            + "</script>\n"
+            + "</head>\n"
+            + "<body onload='test()'>\n"
+            + "<form action='" + URL_SECOND + "'>\n"
+            + "  <button id='myId'>Press Me</button>\n"
+            + "  <input type='button' id='myId' value=''>\n"
+            + "</form>\n"
+            + "</body></html>";
+
+        final HtmlPage page = loadPageWithAlerts(html);
+        HtmlButton button = page.getHtmlElementById("myId");
+
+        assertEquals("Press Me", page.asNormalizedText());
+        assertEquals("Press Me", button.asNormalizedText());
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("")
+    public void normalizedTextEmptyContent() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + "  function test() {\n"
+            + "    alert(document.getElementById('myId').innerText);\n"
+            + "  }\n"
+            + "</script>\n"
+            + "</head>\n"
+            + "<body onload='test()'>\n"
+            + "<form action='" + URL_SECOND + "'>\n"
+            + "  <button id='myId' ></button>\n"
+            + "  <input type='button' id='myId' value=''>\n"
+            + "</form>\n"
+            + "</body></html>";
+
+        final HtmlPage page = loadPageWithAlerts(html);
+        HtmlButton button = page.getHtmlElementById("myId");
+
+        assertEquals("", page.asNormalizedText());
+        assertEquals("", button.asNormalizedText());
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("B utton linetwo")
+    public void whitespaceInContent() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + "  function test() {\n"
+            + "    alert(document.getElementById('myId').innerText);\n"
+            + "  }\n"
+            + "</script>\n"
+            + "</head>\n"
+            + "<body onload='test()'>\n"
+            + "<form action='" + URL_SECOND + "'>\n"
+            + "  <button id='myId' >  B\tutton    \n linetwo </button>\n"
+            + "</form>\n"
+            + "</body></html>";
+
+        final HtmlPage page = loadPageWithAlerts(html);
+        HtmlButton button = page.getHtmlElementById("myId");
+
+        assertEquals("B utton linetwo", page.asNormalizedText());
+        assertEquals("B utton linetwo", button.asNormalizedText());
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
     public void buttonClick_onClick() throws Exception {
-        final String htmlContent
-            = "<html><head><title>foo</title></head><body>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html><head><title>foo</title></head><body>\n"
             + "<form id='form1' onSubmit='alert(\"bar\")' onReset='alert(\"reset\")'>\n"
             + "  <button type='button' name='button' id='button' "
             + "onClick='alert(\"foo\")'>Push me</button>\n"
@@ -67,8 +147,8 @@ public class HtmlButtonTest extends SimpleWebTestCase {
      */
     @Test
     public void submitClick_onClick() throws Exception {
-        final String htmlContent
-            = "<html><head><title>foo</title></head><body>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html><head><title>foo</title></head><body>\n"
             + "<form id='form1' onSubmit='alert(\"bar\")' onReset='alert(\"reset\")'>\n"
             + "  <button type='submit' name='button' id='button' "
             + "onClick='alert(\"foo\")'>Push me</button>\n"
@@ -90,8 +170,8 @@ public class HtmlButtonTest extends SimpleWebTestCase {
      */
     @Test
     public void buttonTypeSubmit() throws Exception {
-        final String htmlContent
-            = "<html><head><title>foo</title></head><body>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html><head><title>foo</title></head><body>\n"
             + "<form id='form1' method='post' onSubmit='alert(\"bar\")' onReset='alert(\"reset\")'>\n"
             + "  <button type='submit' name='button' id='button' value='foo'"
             + "    >Push me</button>\n"
@@ -106,9 +186,7 @@ public class HtmlButtonTest extends SimpleWebTestCase {
         assertEquals(expectedAlerts, collectedAlerts);
 
         assertNotSame(page, secondPage);
-        final List<NameValuePair> expectedParameters = Arrays.asList(new NameValuePair[]{
-            new NameValuePair("button", "foo")
-        });
+        final List<NameValuePair> expectedParameters = Arrays.asList(new NameValuePair("button", "foo"));
         final List<NameValuePair> collectedParameters = getMockConnection(secondPage).getLastParameters();
 
         assertEquals(expectedParameters, collectedParameters);
@@ -120,8 +198,8 @@ public class HtmlButtonTest extends SimpleWebTestCase {
     @Test
     @Alerts("")
     public void defaultButtonTypeNotSet() throws Exception {
-        final String html
-            = "<html><head><title>First</title></head><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><title>First</title></head><body>\n"
             + "<form id='form1' action='" + URL_SECOND + "' method='post'>\n"
             + "  <button name='button' id='button' value='pushme'>PushMe</button>\n"
             + "</form></body></html>";
@@ -138,8 +216,8 @@ public class HtmlButtonTest extends SimpleWebTestCase {
     @Test
     @Alerts("Submit")
     public void defaultButtonTypeSubmit() throws Exception {
-        final String html
-            = "<html><head><title>First</title></head><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><title>First</title></head><body>\n"
             + "<form id='form1' action='" + URL_SECOND + "' method='post'>\n"
             + "  <button name='button' id='button' type='Submit' value='pushme'>PushMe</button>\n"
             + "</form></body></html>";
@@ -156,8 +234,8 @@ public class HtmlButtonTest extends SimpleWebTestCase {
     @Test
     @Alerts("invalid")
     public void defaultButtonTypeInvalid() throws Exception {
-        final String html
-            = "<html><head><title>First</title></head><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><title>First</title></head><body>\n"
             + "<form id='form1' action='" + URL_SECOND + "' method='post'>\n"
             + "  <button name='button' id='button' type='invalid' value='pushme'>PushMe</button>\n"
             + "</form></body></html>";
@@ -173,8 +251,8 @@ public class HtmlButtonTest extends SimpleWebTestCase {
      */
     @Test
     public void asXml() throws Exception {
-        final String html
-            = "<html><body><title>foo</title>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body><title>foo</title>\n"
             + "<button></button>\n"
             + "</body></html>";
 

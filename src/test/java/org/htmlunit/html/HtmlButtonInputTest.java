@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,20 +17,118 @@ package org.htmlunit.html;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.SimpleWebTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link HtmlButtonInput}.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
+ * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class HtmlButtonInputTest extends SimpleWebTestCase {
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({})
+    public void defaultValue() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + "  function test() {\n"
+            + "    alert(document.getElementById('myId').value);\n"
+            + "  }\n"
+            + "</script>\n"
+            + "</head>\n"
+            + "<body onload='test()'>\n"
+            + "<form action='foo.html'>\n"
+            + "  <input type='button' id='myId'>\n"
+            + "</form>\n"
+            + "</body></html>";
+
+        final HtmlPage page = loadPageWithAlerts(html);
+        HtmlButtonInput submit = page.getHtmlElementById("myId");
+
+        assertEquals("", submit.getValueAttribute());
+        assertEquals("", submit.getValue());
+
+        assertFalse(page.asNormalizedText().contains("Submit Query"));
+        assertFalse(page.asNormalizedText().contains("Reset"));
+        assertEquals("", submit.asNormalizedText());
+
+        assertFalse(page.asXml().contains("Submit Query"));
+        assertFalse(page.asXml().contains("Reset"));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("")
+    public void emptyValue() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + "  function test() {\n"
+            + "    alert(document.getElementById('myId').value);\n"
+            + "  }\n"
+            + "</script>\n"
+            + "</head>\n"
+            + "<body onload='test()'>\n"
+            + "<form action='" + URL_SECOND + "'>\n"
+            + "  <input type='button' id='myId' value=''>\n"
+            + "</form>\n"
+            + "</body></html>";
+
+        final HtmlPage page = loadPageWithAlerts(html);
+        HtmlButtonInput submit = page.getHtmlElementById("myId");
+
+        assertEquals("", submit.getValueAttribute());
+        assertEquals("", submit.getValue());
+
+        assertFalse(page.asNormalizedText().contains("Submit Query"));
+        assertFalse(page.asNormalizedText().contains("Reset"));
+        assertEquals("", submit.asNormalizedText());
+
+        assertFalse(page.asXml().contains("Submit Query"));
+        assertFalse(page.asXml().contains("Reset"));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("Press Me")
+    public void value() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + "  function test() {\n"
+            + "    alert(document.getElementById('myId').value);\n"
+            + "  }\n"
+            + "</script>\n"
+            + "</head>\n"
+            + "<body onload='test()'>\n"
+            + "<form action='" + URL_SECOND + "'>\n"
+            + "  <input type='button' id='myId' value='Press Me'>\n"
+            + "</form>\n"
+            + "</body></html>";
+
+        final HtmlPage page = loadPageWithAlerts(html);
+        HtmlButtonInput submit = page.getHtmlElementById("myId");
+
+        assertEquals("Press Me", submit.getValueAttribute());
+        assertEquals("Press Me", submit.getValue());
+
+        assertTrue(page.asNormalizedText().contains("Press Me"));
+        assertFalse(page.asNormalizedText().contains("Submit Query"));
+        assertEquals("Press Me", submit.asNormalizedText());
+
+        assertTrue(page.asXml().contains("value=\"Press Me\""));
+    }
 
     /**
      * @throws Exception if the test fails
@@ -38,8 +136,8 @@ public class HtmlButtonInputTest extends SimpleWebTestCase {
     @Test
     @Alerts("foo")
     public void click_onClick() throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1' onSubmit='alert(\"bar\")'>\n"

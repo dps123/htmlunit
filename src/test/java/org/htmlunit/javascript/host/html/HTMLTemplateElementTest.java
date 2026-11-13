@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,36 +14,30 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link HTMLTemplateElement}.
  *
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class HTMLTemplateElementTest extends WebDriverTestCase {
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "false",
-            IE = "exception")
+    @Alerts("false")
     public void prototype() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  try {\n"
             + "    log(HTMLTemplateElement.prototype == null);\n"
-            + "  } catch (e) { log('exception'); }\n"
+            + "  } catch(e) { logEx(e); }\n"
             + "</script>\n"
             + "</body></html>";
 
@@ -54,11 +48,10 @@ public class HTMLTemplateElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "true",
-            IE = "false")
+    @Alerts("true")
     public void contentCheck() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION
@@ -66,7 +59,7 @@ public class HTMLTemplateElementTest extends WebDriverTestCase {
             + "        try {\n"
             + "          var template = document.createElement('template');\n"
             + "          log('content' in template);\n"
-            + "        } catch (e) { log('exception'); }\n"
+            + "        } catch(e) { logEx(e); }\n"
             + "      }\n"
             + "    </script>\n"
             + "  </head>\n"
@@ -80,14 +73,13 @@ public class HTMLTemplateElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"[object DocumentFragment]", "0-0",
-                       "[object DocumentFragment]", "0-0",
-                       "[object DocumentFragment]", "0-1",
-                       "[object DocumentFragment]", "0-2"},
-            IE = "not available")
+    @Alerts({"[object DocumentFragment]", "0-0",
+             "[object DocumentFragment]", "0-0",
+             "[object DocumentFragment]", "0-1",
+             "[object DocumentFragment]", "0-2"})
     public void content() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION
@@ -125,11 +117,46 @@ public class HTMLTemplateElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"[object DocumentFragment]", "0-0", "1-0"},
-            IE = "not available")
+    @Alerts({"true", "true", "true", "true"})
+    public void contentSame() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "  <head>\n"
+            + "    <script>\n"
+            + LOG_TITLE_FUNCTION
+            + "      function test() {\n"
+            + "        var template = document.createElement('template');\n"
+            + "        log(template.content === template.content);\n"
+
+            + "        template = document.getElementById('tEmpty');\n"
+            + "        log(template.content === template.content);\n"
+
+            + "        template = document.getElementById('tText');\n"
+            + "        log(template.content === template.content);\n"
+
+            + "        template = document.getElementById('tDiv');\n"
+            + "        log(template.content === template.content);\n"
+            + "      }\n"
+            + "    </script>\n"
+            + "  </head>\n"
+            + "  <body onload='test()'>\n"
+            + "    <template id='tEmpty'></template>\n"
+            + "    <template id='tText'>HtmlUnit</template>\n"
+            + "    <template id='tDiv'><div>HtmlUnit</div><div>is great</div></template>\n"
+            + "  </body>\n"
+            + "</html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"[object DocumentFragment]", "0-0", "1-0"})
     public void appendChild() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION
@@ -159,11 +186,10 @@ public class HTMLTemplateElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"", "", "<p></p>", "", "HtmlUnit", "<div>HtmlUnit</div><div>is great</div>"},
-            IE = {"", "<div></div>", "", "HtmlUnit", "<div>HtmlUnit</div><div>is great</div>"})
+    @Alerts({"", "", "<p></p>", "", "HtmlUnit", "<div>HtmlUnit</div><div>is great</div>"})
     public void innerHTML() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION
@@ -210,8 +236,8 @@ public class HTMLTemplateElementTest extends WebDriverTestCase {
     @Alerts({"<template></template>", "<template>HtmlUnit</template>",
              "<template><div>HtmlUnit</div><div>is great</div></template>"})
     public void innerHTMLIncludingTemplate() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION
@@ -241,21 +267,13 @@ public class HTMLTemplateElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"<template></template>", "<template></template>",
-                       "<template><p></p></template>", "<template id=\"tEmpty\"></template>",
-                       "<template id=\"tText\">HtmlUnit</template>",
-                       "<template id=\"tDiv\"><div>HtmlUnit</div><div>is great</div></template>"},
-            IE = {"<?XML:NAMESPACE PREFIX = \"PUBLIC\" NS = \"URN:COMPONENT\" /><template></template>",
-                  "<template><div></div></template>", "<template id=\"tEmpty\"></template>",
-                  "<template id=\"tText\">HtmlUnit</template>",
-                  "<template id=\"tDiv\"><div>HtmlUnit</div><div>is great</div></template>"})
-    @HtmlUnitNYI(IE = {"<template></template>", "<template><div></div></template>",
-                       "<template id=\"tEmpty\"></template>",
-                       "<template id=\"tText\">HtmlUnit</template>",
-                       "<template id=\"tDiv\"><div>HtmlUnit</div><div>is great</div></template>"})
+    @Alerts({"<template></template>", "<template></template>",
+             "<template><p></p></template>", "<template id=\"tEmpty\"></template>",
+             "<template id=\"tText\">HtmlUnit</template>",
+             "<template id=\"tDiv\"><div>HtmlUnit</div><div>is great</div></template>"})
     public void outerHTML() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION
@@ -298,11 +316,10 @@ public class HTMLTemplateElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"myTemplate", "null"},
-            IE = {"myTemplate", "[object HTMLDivElement]"})
+    @Alerts({"myTemplate", "null"})
     public void getElementById() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION
@@ -329,11 +346,10 @@ public class HTMLTemplateElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"myTemplate", "0"},
-            IE = {"myTemplate", "2"})
+    @Alerts({"myTemplate", "0"})
     public void getElementsByTagName() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION
@@ -360,11 +376,10 @@ public class HTMLTemplateElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"myTemplate", "0"},
-            IE = {"myTemplate", "3"})
+    @Alerts({"myTemplate", "0"})
     public void childNodes() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION

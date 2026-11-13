@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import org.htmlunit.javascript.configuration.JavaScriptConfigurationTest;
  * Use to generate test cases similar to the ones in the 'general' package.
  *
  * @author Ahmed Ashour
+ * @author Ronald Brill
  */
 public final class ElementTestSource {
 
@@ -49,12 +50,12 @@ public final class ElementTestSource {
                     final Field field2 = c.getDeclaredField("TAG_NAME2");
                     namesMap.put(field2.get(null).toString(), c.getName());
                 }
-                catch (final Exception e) {
-                    //ignore
+                catch (final Exception ignored) {
+                    // ignore
                 }
             }
-            catch (final Exception e) {
-                //ignore
+            catch (final Exception ignored) {
+                // ignore
             }
         }
         for (final String tag : DefaultElementFactory.SUPPORTED_TAGS_) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,9 @@
  */
 package org.htmlunit.javascript.host.arrays;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for ArrayBuffer.
@@ -28,7 +25,6 @@ import org.htmlunit.junit.BrowserRunner.Alerts;
  * @author Frank Danek
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class ArrayBufferTest extends WebDriverTestCase {
 
     /**
@@ -37,8 +33,8 @@ public class ArrayBufferTest extends WebDriverTestCase {
     @Test
     @Alerts("0")
     public void ctorLengthZero() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -55,17 +51,17 @@ public class ArrayBufferTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("exception true")
+    @Alerts("RangeError")
     public void ctorLengthNegative() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  try {\n"
             + "    var buff = new ArrayBuffer(-1);\n"
             + "    log(buff.byteLength);\n"
-            + "  } catch(e) { log('exception ' + (e instanceof RangeError)); }"
+            + "  } catch(e) { logEx(e); }"
             + "}\n"
             + "</script></head><body onload='test()'>\n"
             + "</body></html>";
@@ -79,8 +75,8 @@ public class ArrayBufferTest extends WebDriverTestCase {
     @Test
     @Alerts("5")
     public void byteLength() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -99,8 +95,8 @@ public class ArrayBufferTest extends WebDriverTestCase {
     @Test
     @Alerts({"1234", "1234", "6789", "1234"})
     public void slice() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -134,7 +130,7 @@ public class ArrayBufferTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("exception")
+    @Alerts("RangeError")
     public void sliceInvalidStartIndexDouble() throws Exception {
         sliceInvalidIndex("2.14");
     }
@@ -152,7 +148,7 @@ public class ArrayBufferTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("exception")
+    @Alerts("RangeError")
     public void sliceInvalidStartIndexTrue() throws Exception {
         sliceInvalidIndex("true");
     }
@@ -239,8 +235,8 @@ public class ArrayBufferTest extends WebDriverTestCase {
     }
 
     private void sliceInvalidIndex(final String index) throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -254,9 +250,7 @@ public class ArrayBufferTest extends WebDriverTestCase {
             + "    for(var i = 0; i < y.length; i++) {\n"
             + "      log(y[i]);\n"
             + "    }\n"
-            + "  } catch(e) {\n"
-            + "    log('exception');\n"
-            + "  }\n"
+            + "  } catch(e) {logEx(e);}\n"
             + "}\n"
             + "</script></head><body onload='test()'>\n"
             + "</body></html>";
@@ -270,8 +264,8 @@ public class ArrayBufferTest extends WebDriverTestCase {
     @Test
     @Alerts("0")
     public void nullConstructor() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,10 @@
  */
 package org.htmlunit.general;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.HtmlUnitNYI;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests the result of {@code element.childNodes.length}.
@@ -30,11 +27,11 @@ import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
  * @author Marc Guillemot
  * @author Frank Danek
  */
-@RunWith(BrowserRunner.class)
 public class ElementChildNodesTest extends WebDriverTestCase {
 
     private static String test(final String tagName) {
-        return "<html><head>\n"
+        return DOCTYPE_HTML
+                + "<html><head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
                 + "function test() {\n"
@@ -348,9 +345,7 @@ public class ElementChildNodesTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"3", "2", "2", "3", "2", "3"},
-            FF = {"3", "2", "2", "3", "2", "2"},
-            FF_ESR = {"3", "2", "2", "3", "2", "2"})
+    @Alerts({"3", "2", "2", "3", "2", "2"})
     public void command() throws Exception {
         loadPageVerifyTitle2(test("command"));
     }
@@ -416,12 +411,7 @@ public class ElementChildNodesTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "0", "1", "1", "0", "1"},
-            IE = {"3", "2", "2", "3", "2", "2"})
-    @HtmlUnitNYI(CHROME = {"3", "2", "2", "3", "2", "2"},
-            EDGE = {"3", "2", "2", "3", "2", "2"},
-            FF = {"3", "2", "2", "3", "2", "2"},
-            FF_ESR = {"3", "2", "2", "3", "2", "2"})
+    @Alerts({"1", "0", "1", "1", "0", "1"})
     public void dialog() throws Exception {
         loadPageVerifyTitle2(test("dialog"));
     }
@@ -669,6 +659,17 @@ public class ElementChildNodesTest extends WebDriverTestCase {
     }
 
     /**
+     * Test {@link org.htmlunit.html.HtmlHeadingGroup}.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"1", "0", "1", "1", "0", "1"})
+    public void hgroup() throws Exception {
+        loadPageVerifyTitle2(test("hgroup"));
+    }
+
+    /**
      * Test {@link org.htmlunit.html.HtmlHorizontalRule}.
      *
      * @throws Exception if the test fails
@@ -740,9 +741,7 @@ public class ElementChildNodesTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"3", "2", "2", "3", "2", "2"},
-            IE = {"1", "0", "1", "1", "0", "1"})
-    @HtmlUnitNYI(IE = {"3", "2", "2", "3", "2", "2"})
+    @Alerts({"3", "2", "2", "3", "2", "2"})
     public void isindex() throws Exception {
         loadPageVerifyTitle2(test("isindex"));
     }
@@ -850,8 +849,7 @@ public class ElementChildNodesTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "0", "1", "1", "0", "1"},
-            IE = {"3", "2", "2", "3", "2", "2"})
+    @Alerts({"1", "0", "1", "1", "0", "1"})
     public void main() throws Exception {
         loadPageVerifyTitle2(test("main"));
     }
@@ -1165,6 +1163,39 @@ public class ElementChildNodesTest extends WebDriverTestCase {
     }
 
     /**
+     * Test {@link org.htmlunit.html.HtmlRtc}.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"3", "2", "2", "3", "2", "2"})
+    public void rtc() throws Exception {
+        loadPageVerifyTitle2(test("rtc"));
+    }
+
+    /**
+     * Test {@link org.htmlunit.html.HtmlRb}.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"3", "2", "2", "3", "2", "2"})
+    public void rb() throws Exception {
+        loadPageVerifyTitle2(test("rb"));
+    }
+
+    /**
+     * Test HtmlRbc.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"3", "2", "2", "3", "2", "2"})
+    public void rbc() throws Exception {
+        loadPageVerifyTitle2(test("rbc"));
+    }
+
+    /**
      * Test {@link org.htmlunit.html.HtmlRp}.
      *
      * @throws Exception if the test fails
@@ -1355,7 +1386,11 @@ public class ElementChildNodesTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts({"3", "2", "2", "3", "3", "2"})
+    @Alerts({"1", "0", "1", "1", "0", "1"})
+    @HtmlUnitNYI(CHROME = {"3", "2", "2", "3", "3", "2"},
+            EDGE = {"3", "2", "2", "3", "3", "2"},
+            FF = {"3", "2", "2", "3", "3", "2"},
+            FF_ESR = {"3", "2", "2", "3", "3", "2"})
     public void table() throws Exception {
         loadPageVerifyTitle2(test("table"));
     }
@@ -1633,5 +1668,14 @@ public class ElementChildNodesTest extends WebDriverTestCase {
     @Alerts({"3", "2", "2", "3", "2", "2"})
     public void slot() throws Exception {
         loadPageVerifyTitle2(test("slot"));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"3", "2", "2", "3", "2", "2"})
+    public void arbitrary() throws Exception {
+        loadPageVerifyTitle2(test("abcdefg"));
     }
 }

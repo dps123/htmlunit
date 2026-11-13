@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,10 @@
  */
 package org.htmlunit.javascript.host.dom;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
+import org.htmlunit.junit.annotation.Alerts;
 import org.htmlunit.util.MimeType;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link Attr}.
@@ -31,17 +28,16 @@ import org.htmlunit.util.MimeType;
  * @author Ronald Brill
  * @author Frank Danek
  */
-@RunWith(BrowserRunner.class)
 public class AttrTest extends WebDriverTestCase {
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts({"true", "exception thrown"})
+    @Alerts({"true", "TypeError"})
     public void specified() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
             + "  try {\n"
@@ -50,9 +46,7 @@ public class AttrTest extends WebDriverTestCase {
             + "    log(o1.getAttributeNode('value').specified);\n"
             + "    var o2 = s.options[1];\n"
             + "    log(o2.getAttributeNode('value').specified);\n"
-            + "  } catch(e) {\n"
-            + "    log('exception thrown');\n"
-            + "  }\n"
+            + "  } catch(e) { logEx(e); }\n"
             + "}\n"
             + "</script></head><body onload='doTest()'>\n"
             + "<form name='form1'>\n"
@@ -74,8 +68,8 @@ public class AttrTest extends WebDriverTestCase {
     @Test
     @Alerts({"true", "true"})
     public void specified2() throws Exception {
-        final String html
-            = "<html><body onload='test()'><div id='div' class='test'></div>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body onload='test()'><div id='div' class='test'></div>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -94,8 +88,8 @@ public class AttrTest extends WebDriverTestCase {
     @Test
     @Alerts("[object HTMLOptionElement]")
     public void ownerElement() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
             + "  var s = document.getElementById('testSelect');\n"
@@ -120,8 +114,8 @@ public class AttrTest extends WebDriverTestCase {
     @Test
     @Alerts({"undefined", "undefined", "undefined"})
     public void isId() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  var d = document.getElementById('d');\n"
@@ -141,11 +135,10 @@ public class AttrTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"undefined", "undefined", "undefined", "undefined", "undefined"},
-            IE = {"false", "true", "false", "true", "true"})
+    @Alerts({"undefined", "undefined", "undefined", "undefined", "undefined"})
     public void expando() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  var d = document.getElementById('d');\n"
@@ -168,11 +161,10 @@ public class AttrTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "false")
+    @Alerts("undefined")
     public void expandoEvent() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  var d = document.getElementById('d');\n"
@@ -193,8 +185,8 @@ public class AttrTest extends WebDriverTestCase {
     @Test
     @Alerts("test()")
     public void textContent() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  var a = document.body.getAttributeNode('onload');\n"
@@ -212,8 +204,8 @@ public class AttrTest extends WebDriverTestCase {
     @Test
     @Alerts({"null", "null", "null", "null"})
     public void getAttributeNodeUndefinedAttribute() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  var elem = document.getElementById('myDiv');\n"
@@ -235,8 +227,8 @@ public class AttrTest extends WebDriverTestCase {
     @Test
     @Alerts({"null", "null", "null", "null"})
     public void getAttributesUndefinedAttribute() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  var elem = document.getElementById('myDiv');\n"
@@ -258,7 +250,8 @@ public class AttrTest extends WebDriverTestCase {
     @Test
     @Alerts({"[object Attr]", "", "[object Attr]", ""})
     public void value() throws Exception {
-        final String html = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
             + "    var attr = document.createAttribute('hi');\n"
@@ -287,8 +280,7 @@ public class AttrTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"[object Attr]", "§§URL§§"},
-            IE = {"[object Attr]", "undefined"})
+    @Alerts({"[object Attr]", "§§URL§§"})
     public void html_baseURI() throws Exception {
         html("baseURI");
     }
@@ -306,8 +298,7 @@ public class AttrTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"[object Attr]", "testattr"},
-            IE = {"[object Attr]", "testAttr"})
+    @Alerts({"[object Attr]", "testattr"})
     public void html_localName() throws Exception {
         html("localName");
     }
@@ -322,8 +313,8 @@ public class AttrTest extends WebDriverTestCase {
     }
 
     private void html(final String methodName) throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -356,8 +347,7 @@ public class AttrTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"[object Attr]", "§§URL§§foo.xml"},
-            IE = {"[object Attr]", "undefined"})
+    @Alerts({"[object Attr]", "§§URL§§foo.xml"})
     public void xml_baseURI() throws Exception {
         expandExpectedAlertsVariables(URL_FIRST);
         xml("baseURI");
@@ -391,8 +381,8 @@ public class AttrTest extends WebDriverTestCase {
     }
 
     private void xml(final String methodName) throws Exception {
-        final String html =
-              "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION

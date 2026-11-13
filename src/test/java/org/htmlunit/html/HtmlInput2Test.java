@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,16 +18,13 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.htmlunit.WebDriverTestCase;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.BuggyWebDriver;
+import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
-
-import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.BuggyWebDriver;
 
 /**
  * Tests for {@link HtmlInput}.
@@ -35,7 +32,6 @@ import org.htmlunit.junit.BrowserRunner.BuggyWebDriver;
  * @author Ronald Brill
  * @author Frank Danek
  */
-@RunWith(BrowserRunner.class)
 public final class HtmlInput2Test extends WebDriverTestCase {
     private static final String TEST_ID = "clickId";
 
@@ -43,10 +39,10 @@ public final class HtmlInput2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts({"null", "error", "handler", "null", "error"})
+    @Alerts({"null", "TypeError", "handler", "null", "TypeError"})
     public void onchangeDirectCall() throws Exception {
-        final String html =
-            "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function handler() { log('handler');}\n"
@@ -56,7 +52,7 @@ public final class HtmlInput2Test extends WebDriverTestCase {
             + "      log(elem.onchange);\n"
             + "      elem.onchange();\n"
             + "      log('onchange called');\n"
-            + "    } catch (e) {log('error')}\n"
+            + "    } catch(e) { logEx(e) }\n"
 
             + "    elem.onchange = handler;\n"
             + "    elem.onchange();\n"
@@ -66,7 +62,7 @@ public final class HtmlInput2Test extends WebDriverTestCase {
             + "      log(elem.onchange);\n"
             + "      elem.onchange();\n"
             + "      log('onchange called');\n"
-            + "    } catch (e) {log('error')}\n"
+            + "    } catch(e) { logEx(e) }\n"
 
             + "  }\n"
             + "</script>\n"
@@ -83,8 +79,8 @@ public final class HtmlInput2Test extends WebDriverTestCase {
     @Test
     @Alerts({"function handler() {}", "null"})
     public void onchangeNull() throws Exception {
-        final String html =
-            "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function handler() {}\n"
@@ -131,8 +127,7 @@ public final class HtmlInput2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"mousedown; onfocus; mouseup; onclick; onchange;", ""},
-            IE = {"mousedown; onfocus; mouseup; onchange; onclick;", ""})
+    @Alerts({"mousedown; onfocus; mouseup; onclick; onchange;", ""})
     public void clickCheckboxEventSequence() throws Exception {
         testClickEventSequence("<input type='checkbox' id='" + TEST_ID + "'>Check", false);
     }
@@ -154,8 +149,7 @@ public final class HtmlInput2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"mousedown; onfocus; mouseup; onclick; onchange;", ""},
-            IE = {"mousedown; onfocus; mouseup; onchange; onclick;", ""})
+    @Alerts({"mousedown; onfocus; mouseup; onclick; onchange;", ""})
     public void clickRadioEventSequence() throws Exception {
         testClickEventSequence("<input type='radio' name='test' id='" + TEST_ID + "'>Check", false);
     }
@@ -192,8 +186,7 @@ public final class HtmlInput2Test extends WebDriverTestCase {
     @BuggyWebDriver(CHROME = {"onfocus; onchange; mouseup; onclick;", ""},
                     EDGE = {"onfocus; onchange; mouseup; onclick;", ""},
                     FF = {"mousedown; onfocus; onchange; mouseup; onclick;", ""},
-                    FF_ESR = {"mousedown; onfocus; onchange; mouseup; onclick;", ""},
-                    IE = {"mousedown; onchange; mouseup; onclick; onfocus;", ""})
+                    FF_ESR = {"mousedown; onfocus; onchange; mouseup; onclick;", ""})
     public void clickOptionEventSequence() throws Exception {
         testClickEventSequence("<select size='2'><option id='" + TEST_ID + "'>1</option></select>", false);
     }
@@ -207,7 +200,8 @@ public final class HtmlInput2Test extends WebDriverTestCase {
             tag = StringUtils.replaceOnce(tag, "onclick')", "onclick');return false;");
         }
 
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "<script>\n"
                 + "  function log(x) {\n"
                 + "    document.getElementById('log_').value += x + '; ';\n"
@@ -229,12 +223,12 @@ public final class HtmlInput2Test extends WebDriverTestCase {
         final WebElement log = driver.findElement(By.id("log_"));
 
         driver.findElement(By.id(TEST_ID)).click();
-        alerts.add(log.getAttribute("value").trim());
+        alerts.add(log.getDomProperty("value").trim());
 
         log.clear();
         driver.findElement(By.id("next")).click();
 
-        alerts.add(log.getAttribute("value").trim());
+        alerts.add(log.getDomProperty("value").trim());
         assertEquals(getExpectedAlerts(), alerts);
     }
 
@@ -244,8 +238,8 @@ public final class HtmlInput2Test extends WebDriverTestCase {
     @Test
     @Alerts("something")
     public void placeholder() throws Exception {
-        final String html =
-            "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -266,8 +260,8 @@ public final class HtmlInput2Test extends WebDriverTestCase {
     @Test
     @Alerts("text")
     public void badInputType() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -283,13 +277,13 @@ public final class HtmlInput2Test extends WebDriverTestCase {
 
     /**
      * Tests that clicking a radio button will select it.
-     * @exception Exception If the test fails
+     * @throws Exception If the test fails
      */
     @Test
     @Alerts({"undefined", "undefined", "undefined", "undefined", "undefined"})
     public void select() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -308,6 +302,78 @@ public final class HtmlInput2Test extends WebDriverTestCase {
             + "<input type='submit' name='button' value='foo'/>\n"
             + "<textarea name='t'></textarea>\n"
             + "</form></body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"true", "true", "",
+             "true", "true", "",
+             "true", "true", "",
+             "true", "true", ""})
+    public void setReadOnly() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var form = document.getElementById('form1');\n"
+            + "    for (var i = 0; i < form.elements.length; i++) {\n"
+            + "      form.elements[i].readOnly = true;\n"
+            + "      log(form.elements[i].readOnly);\n"
+            + "      log(form.elements[i].hasAttribute('readonly'));\n"
+            + "      log(form.elements[i].getAttribute('readonly'));\n"
+            + "    }\n"
+            + "  }\n"
+            + "</script>\n"
+            + "</head><body onload='test()'>\n"
+            + "<form id='form1'>\n"
+            + "<input type='radio' name='foo' value='1'/>\n"
+            + "<input type='password' name='pwd'/>\n"
+            + "<input type='checkbox' name='cb'/>\n"
+            + "<input type='submit' name='button' value='foo'/>\n"
+            + "</form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"true", "false", "false", "null",
+             "true", "false", "false", "null",
+             "true", "false", "false", "null",
+             "true", "false", "false", "null"})
+    public void removeReadOnly() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    var form = document.getElementById('form1');\n"
+            + "    for (var i = 0; i < form.elements.length; i++) {\n"
+            + "      log(form.elements[i].readOnly);\n"
+
+            + "      form.elements[i].readOnly = false;\n"
+            + "      log(form.elements[i].readOnly);\n"
+            + "      log(form.elements[i].hasAttribute('readonly'));\n"
+            + "      log(form.elements[i].getAttribute('readonly'));\n"
+            + "    }\n"
+            + "  }\n"
+            + "</script>\n"
+            + "</head><body onload='test()'>\n"
+            + "<form id='form1'>\n"
+            + "<input type='radio' name='foo' value='1' readonly/>\n"
+            + "<input type='password' name='pwd' readonly/>\n"
+            + "<input type='checkbox' name='cb' readonly/>\n"
+            + "<input type='submit' name='button' value='foo' readonly/>\n"
+            + "</form>\n"
+            + "</body></html>";
 
         loadPageVerifyTitle2(html);
     }

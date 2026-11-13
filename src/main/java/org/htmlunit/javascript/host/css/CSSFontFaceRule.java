@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,7 @@
  */
 package org.htmlunit.javascript.host.css;
 
-import static org.htmlunit.BrowserVersionFeatures.CSS_CSSTEXT_IE_STYLE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
-import org.apache.commons.lang3.StringUtils;
 import org.htmlunit.cssparser.dom.CSSFontFaceRuleImpl;
-
-import org.htmlunit.BrowserVersion;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 
@@ -34,6 +25,8 @@ import org.htmlunit.javascript.configuration.JsxConstructor;
  * @author Ronald Brill
  * @author Frank Danek
  * @author Ahmed Ashour
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/CSSFontFaceRule">MDN Documentation</a>
  */
 @JsxClass
 public class CSSFontFaceRule extends CSSRule {
@@ -42,12 +35,13 @@ public class CSSFontFaceRule extends CSSRule {
      * Creates a new instance.
      */
     public CSSFontFaceRule() {
+        super();
     }
 
     /**
      * Creates an instance.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
+    @JsxConstructor
     @Override
     public void jsConstructor() {
         super.jsConstructor();
@@ -66,23 +60,7 @@ public class CSSFontFaceRule extends CSSRule {
      * {@inheritDoc}
      */
     @Override
-    public short getType() {
+    public int getType() {
         return FONT_FACE_RULE;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getCssText() {
-        String cssText = super.getCssText();
-        final BrowserVersion browserVersion = getBrowserVersion();
-        if (browserVersion.hasFeature(CSS_CSSTEXT_IE_STYLE)) {
-            cssText = StringUtils.replace(cssText, "{ ", "{\n\t");
-            cssText = StringUtils.replace(cssText, "; }", ";\n}\n");
-            cssText = StringUtils.replace(cssText, "; ", ";\n\t");
-            cssText = REPLACEMENT_IE.matcher(cssText).replaceFirst("url($1)");
-        }
-        return cssText;
     }
 }

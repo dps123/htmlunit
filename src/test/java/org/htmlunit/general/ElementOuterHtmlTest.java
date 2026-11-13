@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,9 @@
  */
 package org.htmlunit.general;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests the result of <code>document.createElement(elementName).outerHTML</code>.
@@ -27,11 +24,11 @@ import org.htmlunit.junit.BrowserRunner.Alerts;
  * @author Ahmed Ashour
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class ElementOuterHtmlTest extends WebDriverTestCase {
 
     private void test(final String elementName) throws Exception {
-        final String html = "<!DOCTYPE html><html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "  <script>\n"
                 + LOG_TITLE_FUNCTION
                 + "    function test() {\n"
@@ -150,8 +147,7 @@ public class ElementOuterHtmlTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "<basefont>",
-            IE = "<basefont></basefont>")
+    @Alerts("<basefont>")
     public void basefont() throws Exception {
         test("basefont");
     }
@@ -565,6 +561,15 @@ public class ElementOuterHtmlTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
+    @Alerts("<hgroup></hgroup>")
+    public void hgroup() throws Exception {
+        test("hgroup");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
     @Alerts("<hr>")
     public void hr() throws Exception {
         test("hr");
@@ -619,6 +624,34 @@ public class ElementOuterHtmlTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
+    @Alerts("<rtc></rtc>")
+    public void rtc() throws Exception {
+        test("rtc");
+    }
+
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("<rb></rb>")
+    public void rb() throws Exception {
+        test("rb");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("<rbc></rbc>")
+    public void rbc() throws Exception {
+        test("rbc");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
     @Alerts("<rp></rp>")
     public void rp() throws Exception {
         test("rp");
@@ -628,8 +661,7 @@ public class ElementOuterHtmlTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "<image></image>",
-            IE = "<img>")
+    @Alerts("<image></image>")
     public void image() throws Exception {
         test("image");
     }
@@ -656,8 +688,7 @@ public class ElementOuterHtmlTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "<isindex></isindex>",
-            IE = "<isindex>")
+    @Alerts("<isindex></isindex>")
     public void isindex() throws Exception {
         test("isindex");
     }
@@ -837,8 +868,7 @@ public class ElementOuterHtmlTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "<nextid></nextid>",
-            IE = "<nextid>")
+    @Alerts("<nextid></nextid>")
     public void nextid() throws Exception {
         test("nextid");
     }
@@ -1288,15 +1318,6 @@ public class ElementOuterHtmlTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("<abcdefg></abcdefg>")
-    public void arbitrary() throws Exception {
-        test("abcdefg");
-    }
-
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
     @Alerts("<input>")
     public void input() throws Exception {
         test("input");
@@ -1345,5 +1366,14 @@ public class ElementOuterHtmlTest extends WebDriverTestCase {
     @Alerts("<slot></slot>")
     public void slot() throws Exception {
         test("slot");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("<abcdefg></abcdefg>")
+    public void arbitrary() throws Exception {
+        test("abcdefg");
     }
 }

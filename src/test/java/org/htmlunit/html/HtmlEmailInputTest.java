@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +14,13 @@
  */
 package org.htmlunit.html;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.htmlunit.WebDriverTestCase;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.htmlunit.HtmlUnitDriver;
-
-import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
 
 /**
  * Tests for {@link HtmlEmailInput}.
@@ -33,7 +29,6 @@ import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
  * @author Ronald Brill
  * @author Anton Demydenko
  */
-@RunWith(BrowserRunner.class)
 public class HtmlEmailInputTest extends WebDriverTestCase {
 
     /**
@@ -42,7 +37,8 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
     @Test
     @Alerts({"--null", "--null", "--null"})
     public void defaultValues() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -53,7 +49,7 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
             + "      input = document.createElement('input');\n"
             + "      input.type = 'email';\n"
             + "      log(input.value + '-' + input.defaultValue + '-' + input.getAttribute('value'));\n"
-            + "    } catch(e)  { log('exception'); }\n"
+            + "    } catch(e)  { logEx(e); }\n"
 
             + "    var builder = document.createElement('div');\n"
             + "    builder.innerHTML = '<input type=\"email\">';\n"
@@ -76,7 +72,8 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
     @Test
     @Alerts({"--null", "--null", "--null"})
     public void defaultValuesAfterClone() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -89,7 +86,7 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
             + "      input.type = 'email';\n"
             + "      input = input.cloneNode(false);\n"
             + "      log(input.value + '-' + input.defaultValue + '-' + input.getAttribute('value'));\n"
-            + "    } catch(e)  { log('exception'); }\n"
+            + "    } catch(e)  { logEx(e); }\n"
 
             + "    var builder = document.createElement('div');\n"
             + "    builder.innerHTML = '<input type=\"email\">';\n"
@@ -114,8 +111,8 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
     @Test
     @Alerts("")
     public void getVisibleText() throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1'>\n"
@@ -138,10 +135,10 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("")
+    @Alerts({"dave@aol.com", ""})
     public void clearInput() throws Exception {
-        final String htmlContent
-                = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head></head>\n"
                 + "<body>\n"
                 + "<form id='form1'>\n"
@@ -152,17 +149,22 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
         final WebDriver driver = loadPage2(htmlContent);
         final WebElement element = driver.findElement(By.id("tester"));
 
+        assertEquals(getExpectedAlerts()[0], element.getDomAttribute("value"));
+        assertEquals(getExpectedAlerts()[0], element.getDomProperty("value"));
+
         element.clear();
-        assertEquals(getExpectedAlerts()[0], element.getAttribute("value"));
+        assertEquals(getExpectedAlerts()[0], element.getDomAttribute("value"));
+        assertEquals(getExpectedAlerts()[1], element.getDomProperty("value"));
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
+    @Alerts("hello")
     public void typing() throws Exception {
-        final String htmlContent
-            = "<html><head><title>foo</title></head><body>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html><head><title>foo</title></head><body>\n"
             + "<form id='form1'>\n"
             + "  <input type='email' id='foo'>\n"
             + "</form></body></html>";
@@ -171,7 +173,8 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
 
         final WebElement input = driver.findElement(By.id("foo"));
         input.sendKeys("hello");
-        assertEquals("hello", input.getAttribute("value"));
+        assertEquals(getExpectedAlerts()[0], input.getDomProperty("value"));
+        assertNull(input.getDomAttribute("value"));
     }
 
     /**
@@ -180,7 +183,8 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
     @Test
     @Alerts("--")
     public void minMaxStep() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -204,16 +208,12 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"abc@eemail.com",
-                       "false",
-                       "false-false-true-false-false-false-false-false-false-false-false",
-                       "true",
-                       "§§URL§§", "1"},
-            IE = {"abc@eemail.com",
-                  "false",
-                  "undefined-false-true-false-false-false-false-undefined-false-false-false",
-                  "true",
-                  "§§URL§§", "1"})
+    @Alerts({"abc@eemail.com",
+             "abc@eemail.com",
+             "false",
+             "false-false-true-false-false-false-false-false-false-false-false",
+             "true",
+             "§§URL§§", "1"})
     public void patternValidationInvalid() throws Exception {
         validation("<input type='email' pattern='.+@email.com' id='e1' name='k' value='abc@eemail.com'>\n",
                     "", null);
@@ -223,21 +223,12 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"abc@email.com",
-                       "true",
-                       "false-false-false-false-false-false-false-false-false-true-false",
-                       "true",
-                       "§§URL§§?k=abc%40email.com", "2"},
-            IE = {"abc@email.com",
-                  "true",
-                  "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                  "true",
-                  "§§URL§§?k=abc@email.com", "2"})
-    @HtmlUnitNYI(IE = {"abc@email.com",
-                       "true",
-                       "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                       "true",
-                       "§§URL§§?k=abc%40email.com", "2"})
+    @Alerts({"abc@email.com",
+             "abc@email.com",
+             "true",
+             "false-false-false-false-false-false-false-false-false-true-false",
+             "true",
+             "§§URL§§?k=abc%40email.com", "2"})
     public void patternValidationValid() throws Exception {
         validation("<input type='email' pattern='.+@email.com' "
                 + "id='e1' name='k' value='abc@email.com'>\n", "", null);
@@ -247,16 +238,12 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"",
-                       "true",
-                       "false-false-false-false-false-false-false-false-false-true-false",
-                       "true",
-                       "§§URL§§?k=", "2"},
-            IE = {"",
-                  "true",
-                  "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                  "true",
-                  "§§URL§§?k=", "2"})
+    @Alerts({"",
+             "",
+             "true",
+             "false-false-false-false-false-false-false-false-false-true-false",
+             "true",
+             "§§URL§§?k=", "2"})
     public void patternValidationEmpty() throws Exception {
         validation("<input type='email' pattern='.+@email.com' id='e1' name='k' value=''>\n", "", null);
     }
@@ -265,21 +252,12 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"",
-                       "true",
-                       "false-false-false-false-false-false-false-false-false-true-false",
-                       "true",
-                       "§§URL§§?k=", "2"},
-            IE = {" ",
-                  "false",
-                  "undefined-false-true-false-false-false-false-undefined-true-false-false",
-                  "true",
-                  "§§URL§§", "1"})
-    @HtmlUnitNYI(IE = {" ",
-                       "true",
-                       "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                       "true",
-                       "§§URL§§?k=+", "2"})
+    @Alerts({" ",
+             "",
+             "true",
+             "false-false-false-false-false-false-false-false-false-true-false",
+             "true",
+             "§§URL§§?k=", "2"})
     public void patternValidationBlank() throws Exception {
         validation("<input type='email' pattern='.+@email.com' id='e1' name='k' value=' '>\n", "", null);
     }
@@ -288,21 +266,12 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"",
-                       "true",
-                       "false-false-false-false-false-false-false-false-false-true-false",
-                       "true",
-                       "§§URL§§?k=", "2"},
-            IE = {"  \t",
-                  "false",
-                  "undefined-false-true-false-false-false-false-undefined-true-false-false",
-                  "true",
-                  "§§URL§§", "1"})
-    @HtmlUnitNYI(IE = {"  \t",
-                       "true",
-                       "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                       "true",
-                       "§§URL§§?k=++%09", "2"})
+    @Alerts({"  \t",
+             "",
+             "true",
+             "false-false-false-false-false-false-false-false-false-true-false",
+             "true",
+             "§§URL§§?k=", "2"})
     public void patternValidationWhitespace() throws Exception {
         validation("<input type='email' pattern='.+@email.com' id='e1' name='k' value='  \t'>\n", "", null);
     }
@@ -311,21 +280,12 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"abc@email.com",
-                       "true",
-                       "false-false-false-false-false-false-false-false-false-true-false",
-                       "true",
-                       "§§URL§§?k=abc%40email.com", "2"},
-            IE = {"",
-                  "false",
-                  "undefined-false-true-false-false-false-false-undefined-true-false-false",
-                  "true",
-                  "§§URL§§", "1"})
-    @HtmlUnitNYI(IE = {" abc@email.com ",
-                       "false",
-                       "undefined-false-true-false-false-false-false-undefined-false-false-false",
-                       "true",
-                       "§§URL§§", "1"})
+    @Alerts({" abc@email.com ",
+             "abc@email.com",
+             "true",
+             "false-false-false-false-false-false-false-false-false-true-false",
+             "true",
+             "§§URL§§?k=abc%40email.com", "2"})
     public void patternValidationTrimInitial() throws Exception {
         validation("<input type='email' pattern='.+@email.com' id='e1' name='k' value=' abc@email.com '>\n", "", null);
     }
@@ -334,41 +294,12 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"abc@email.com",
-                       "true",
-                       "false-false-false-false-false-false-false-false-false-true-false",
-                       "true",
-                       "§§URL§§?k=abc%40email.com", "2"},
-            FF = {"abc@email.com",
-                  "false",
-                  "false-false-false-false-false-false-false-false-true-false-false",
-                  "true",
-                  "§§URL§§", "1"},
-            FF_ESR = {" abc@email.com",
-                      "false",
-                      "false-false-false-false-false-false-false-false-true-false-false",
-                      "true",
-                      "§§URL§§", "1"},
-            IE = {"  \t",
-                  "false",
-                  "undefined-false-true-false-false-false-false-undefined-true-false-false",
-                  "true",
-                  "§§URL§§", "1"})
-    @HtmlUnitNYI(FF = {"abc@email.com",
-                       "true",
-                       "false-false-false-false-false-false-false-false-false-true-false",
-                       "true",
-                       "§§URL§§?k=abc%40email.com", "2"},
-                 FF_ESR = {"abc@email.com",
-                           "true",
-                           "false-false-false-false-false-false-false-false-false-true-false",
-                           "true",
-                           "§§URL§§?k=abc%40email.com", "2"},
-                 IE = {" abc@email.com",
-                       "false",
-                       "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                       "true",
-                       "§§URL§§", "1"})
+    @Alerts({"null",
+             "abc@email.com",
+             "true",
+             "false-false-false-false-false-false-false-false-false-true-false",
+             "true",
+             "§§URL§§?k=abc%40email.com", "2"})
     public void patternValidationTrimType() throws Exception {
         validation("<input type='email' pattern='.+@email.com' id='e1' name='k'>\n", "", " abc@email.com");
     }
@@ -377,21 +308,12 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"a@b.com",
-                       "false",
-                       "false-false-false-false-false-false-false-true-false-false-false",
-                       "true",
-                       "§§URL§§", "1"},
-            IE = {"a@b.com",
-                  "true",
-                  "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                  "true",
-                  "§§URL§§?k=a@b.com", "2"})
-    @HtmlUnitNYI(IE = {"a@b.com",
-                       "true",
-                       "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                       "true",
-                       "§§URL§§?k=a%40b.com", "2"})
+    @Alerts({"null",
+             "a@b.com",
+             "false",
+             "false-false-false-false-false-false-false-true-false-false-false",
+             "true",
+             "§§URL§§", "1"})
     public void minLengthValidationInvalid() throws Exception {
         validation("<input type='email' minlength='10' id='e1' name='k'>\n", "", "a@b.com");
     }
@@ -400,21 +322,12 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"a@b.com",
-                       "true",
-                       "false-false-false-false-false-false-false-false-false-true-false",
-                       "true",
-                       "§§URL§§?k=a%40b.com", "2"},
-            IE = {"a@b.com",
-                  "true",
-                  "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                  "true",
-                  "§§URL§§?k=a@b.com", "2"})
-    @HtmlUnitNYI(IE = {"a@b.com",
-                       "true",
-                       "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                       "true",
-                       "§§URL§§?k=a%40b.com", "2"})
+    @Alerts({"a@b.com",
+             "a@b.com",
+             "true",
+             "false-false-false-false-false-false-false-false-false-true-false",
+             "true",
+             "§§URL§§?k=a%40b.com", "2"})
     public void minLengthValidationInvalidInitial() throws Exception {
         validation("<input type='email' minlength='10' id='e1' name='k' value='a@b.com'>\n", "", null);
     }
@@ -423,16 +336,12 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"",
-                       "true",
-                       "false-false-false-false-false-false-false-false-false-true-false",
-                       "true",
-                       "§§URL§§?k=", "2"},
-            IE = {"",
-                  "true",
-                  "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                  "true",
-                  "§§URL§§?k=", "2"})
+    @Alerts({"null",
+             "",
+             "true",
+             "false-false-false-false-false-false-false-false-false-true-false",
+             "true",
+             "§§URL§§?k=", "2"})
     public void minLengthValidationInvalidNoInitial() throws Exception {
         validation("<input type='email' minlength='10' id='e1' name='k'>\n", "", null);
     }
@@ -441,21 +350,12 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"a@b.com",
-                       "true",
-                       "false-false-false-false-false-false-false-false-false-true-false",
-                       "true",
-                       "§§URL§§?k=a%40b.com", "2"},
-            IE = {"a@b.com",
-                  "true",
-                  "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                  "true",
-                  "§§URL§§?k=a@b.com", "2"})
-    @HtmlUnitNYI(IE = {"a@b.com",
-                       "true",
-                       "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                       "true",
-                       "§§URL§§?k=a%40b.com", "2"})
+    @Alerts({"null",
+             "a@b.com",
+             "true",
+             "false-false-false-false-false-false-false-false-false-true-false",
+             "true",
+             "§§URL§§?k=a%40b.com", "2"})
     public void minLengthValidationValid() throws Exception {
         validation("<input type='email' minlength='5' id='e1' name='k'>\n", "", "a@b.com");
     }
@@ -464,21 +364,12 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"a@b.c",
-                       "true",
-                       "false-false-false-false-false-false-false-false-false-true-false",
-                       "true",
-                       "§§URL§§?k=a%40b.c", "2"},
-            IE = {"a@b.c",
-                  "true",
-                  "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                  "true",
-                  "§§URL§§?k=a@b.c", "2"})
-    @HtmlUnitNYI(IE = {"a@b.c",
-                       "true",
-                       "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                       "true",
-                       "§§URL§§?k=a%40b.c", "2"})
+    @Alerts({"null",
+             "a@b.c",
+             "true",
+             "false-false-false-false-false-false-false-false-false-true-false",
+             "true",
+             "§§URL§§?k=a%40b.c", "2"})
     public void maxLengthValidationValid() throws Exception {
         validation("<input type='email' maxlength='5' id='e1' name='k'>\n", "", "a@b.com");
     }
@@ -487,21 +378,12 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"a@ema",
-                       "true",
-                       "false-false-false-false-false-false-false-false-false-true-false",
-                       "true",
-                       "§§URL§§?k=a%40ema", "2"},
-            IE = {"a@ema",
-                  "true",
-                  "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                  "true",
-                  "§§URL§§?k=a@ema", "2"})
-    @HtmlUnitNYI(IE = {"a@ema",
-                       "true",
-                       "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                       "true",
-                       "§§URL§§?k=a%40ema", "2"})
+    @Alerts({"null",
+             "a@ema",
+             "true",
+             "false-false-false-false-false-false-false-false-false-true-false",
+             "true",
+             "§§URL§§?k=a%40ema", "2"})
     public void maxLengthValidationInvalid() throws Exception {
         validation("<input type='email' maxlength='5' id='e1' name='k'>\n", "", "a@email.com");
     }
@@ -510,21 +392,12 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"a@email.com",
-                       "true",
-                       "false-false-false-false-false-false-false-false-false-true-false",
-                       "true",
-                       "§§URL§§?k=a%40email.com", "2"},
-            IE = {"a@email.com",
-                  "true",
-                  "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                  "true",
-                  "§§URL§§?k=a@email.com", "2"})
-    @HtmlUnitNYI(IE = {"a@email.com",
-                       "true",
-                       "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                       "true",
-                       "§§URL§§?k=a%40email.com", "2"})
+    @Alerts({"a@email.com",
+             "a@email.com",
+             "true",
+             "false-false-false-false-false-false-false-false-false-true-false",
+             "true",
+             "§§URL§§?k=a%40email.com", "2"})
     public void maxLengthValidationInvalidInitial() throws Exception {
         validation("<input type='email' maxlength='5' id='e1' name='k' value='a@email.com'>\n", "", null);
     }
@@ -535,8 +408,8 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
     @Test
     @Alerts({"true", "false", "true", "false", "true"})
     public void willValidate() throws Exception {
-        final String html =
-                "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "  <script>\n"
                 + LOG_TITLE_FUNCTION
                 + "    function test() {\n"
@@ -565,16 +438,12 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"",
-                       "true",
-                       "false-false-false-false-false-false-false-false-false-true-false",
-                       "true",
-                       "§§URL§§?k=", "2"},
-            IE = {"",
-                  "true",
-                  "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                  "true",
-                  "§§URL§§?k=", "2"})
+    @Alerts({"null",
+             "",
+             "true",
+             "false-false-false-false-false-false-false-false-false-true-false",
+             "true",
+             "§§URL§§?k=", "2"})
     public void validationEmpty() throws Exception {
         validation("<input type='email' id='e1' name='k'>\n", "", null);
     }
@@ -583,16 +452,12 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"",
-                       "false",
-                       "false-true-false-false-false-false-false-false-false-false-false",
-                       "true",
-                       "§§URL§§", "1"},
-            IE = {"",
-                  "false",
-                  "undefined-true-false-false-false-false-false-undefined-false-false-false",
-                  "true",
-                  "§§URL§§", "1"})
+    @Alerts({"null",
+             "",
+             "false",
+             "false-true-false-false-false-false-false-false-false-false-false",
+             "true",
+             "§§URL§§", "1"})
     public void validationCustomValidity() throws Exception {
         validation("<input type='email' id='e1' name='k'>\n", "elem.setCustomValidity('Invalid');", null);
     }
@@ -601,16 +466,12 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"",
-                       "false",
-                       "false-true-false-false-false-false-false-false-false-false-false",
-                       "true",
-                       "§§URL§§", "1"},
-            IE = {"",
-                  "false",
-                  "undefined-true-false-false-false-false-false-undefined-false-false-false",
-                  "true",
-                  "§§URL§§", "1"})
+    @Alerts({"null",
+             "",
+             "false",
+             "false-true-false-false-false-false-false-false-false-false-false",
+             "true",
+             "§§URL§§", "1"})
     public void validationBlankCustomValidity() throws Exception {
         validation("<input type='email' id='e1' name='k'>\n", "elem.setCustomValidity(' ');\n", null);
     }
@@ -619,16 +480,12 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"",
-                       "true",
-                       "false-false-false-false-false-false-false-false-false-true-false",
-                       "true",
-                       "§§URL§§?k=", "2"},
-            IE = {"",
-                  "true",
-                  "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                  "true",
-                  "§§URL§§?k=", "2"})
+    @Alerts({"null",
+             "",
+             "true",
+             "false-false-false-false-false-false-false-false-false-true-false",
+             "true",
+             "§§URL§§?k=", "2"})
     public void validationResetCustomValidity() throws Exception {
         validation("<input type='email' id='e1' name='k'>\n",
                 "elem.setCustomValidity('Invalid');elem.setCustomValidity('');", null);
@@ -638,16 +495,12 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"",
-                       "false",
-                       "false-false-false-false-false-false-false-false-false-false-true",
-                       "true",
-                       "§§URL§§", "1"},
-            IE = {"",
-                  "false",
-                  "undefined-false-false-false-false-false-false-undefined-false-false-true",
-                  "true",
-                  "§§URL§§", "1"})
+    @Alerts({"null",
+             "",
+             "false",
+             "false-false-false-false-false-false-false-false-false-false-true",
+             "true",
+             "§§URL§§", "1"})
     public void validationRequired() throws Exception {
         validation("<input type='email' id='e1' name='k' required>\n", "", null);
     }
@@ -656,21 +509,12 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"",
-                       "true",
-                       "false-false-false-false-false-false-false-false-false-true-false",
-                       "true",
-                       "§§URL§§?k=test%40abc.edu", "2"},
-            IE = {"",
-                  "true",
-                  "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                  "true",
-                  "§§URL§§?k=test@abc.edu", "2"})
-    @HtmlUnitNYI(IE = {"",
-                       "true",
-                       "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                       "true",
-                       "§§URL§§?k=test%40abc.edu", "2"})
+    @Alerts({"null",
+             "",
+             "true",
+             "false-false-false-false-false-false-false-false-false-true-false",
+             "true",
+             "§§URL§§?k=test%40abc.edu", "2"})
     public void validationRequiredValueSet() throws Exception {
         validation("<input type='email' id='e1' name='k' required>\n", "elem.value='test@abc.edu';", null);
     }
@@ -679,24 +523,20 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"",
-                       "false",
-                       "false-false-true-false-false-false-false-false-false-false-false",
-                       "true",
-                       "§§URL§§", "1"},
-            IE = {"",
-                  "false",
-                  "undefined-false-true-false-false-false-false-undefined-false-false-false",
-                  "true",
-                  "§§URL§§", "1"})
+    @Alerts({"null",
+             "",
+             "false",
+             "false-false-true-false-false-false-false-false-false-false-false",
+             "true",
+             "§§URL§§", "1"})
     public void validationPattern() throws Exception {
         validation("<input type='email' id='e1' name='k' pattern='.+@email.com'>\n",
                     "elem.value='abc@eemail.com';", null);
     }
 
     private void validation(final String htmlPart, final String jsPart, final String sendKeys) throws Exception {
-        final String html =
-                "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "  <script>\n"
                 + LOG_TITLE_FUNCTION
                 + "    function logValidityState(s) {\n"
@@ -729,8 +569,8 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
                 + "  </form>\n"
                 + "</body></html>";
 
-        final String secondContent
-            = "<html><head><title>second</title></head><body>\n"
+        final String secondContent = DOCTYPE_HTML
+                + "<html><head><title>second</title></head><body>\n"
                 + "  <p>hello world</p>\n"
                 + "</body></html>";
 
@@ -743,13 +583,16 @@ public class HtmlEmailInputTest extends WebDriverTestCase {
         if (sendKeys != null) {
             foo.sendKeys(sendKeys);
         }
-        assertEquals(getExpectedAlerts()[0], foo.getAttribute("value"));
+        assertEquals(getExpectedAlerts()[0], "" + foo.getDomAttribute("value"));
+        assertEquals(getExpectedAlerts()[1], foo.getDomProperty("value"));
 
         driver.findElement(By.id("myTest")).click();
-        verifyTitle2(driver, getExpectedAlerts()[1], getExpectedAlerts()[2], getExpectedAlerts()[3]);
+        verifyTitle2(driver, getExpectedAlerts()[2], getExpectedAlerts()[3], getExpectedAlerts()[4]);
 
         driver.findElement(By.id("myButton")).click();
-        assertEquals(getExpectedAlerts()[4], getMockWebConnection().getLastWebRequest().getUrl());
-        assertEquals(Integer.parseInt(getExpectedAlerts()[5]), getMockWebConnection().getRequestCount());
+        sleepRealBrowser(400);
+
+        assertEquals(getExpectedAlerts()[5], getMockWebConnection().getLastWebRequest().getUrl());
+        assertEquals(Integer.parseInt(getExpectedAlerts()[6]), getMockWebConnection().getRequestCount());
     }
 }

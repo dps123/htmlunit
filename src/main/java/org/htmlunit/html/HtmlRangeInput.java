@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,8 @@ package org.htmlunit.html;
 
 import java.util.Map;
 
-import org.apache.commons.lang3.StringUtils;
-
 import org.htmlunit.SgmlPage;
+import org.htmlunit.util.StringUtils;
 
 /**
  * Wrapper for the HTML element "input" where type is "range".
@@ -47,19 +46,25 @@ public class HtmlRangeInput extends HtmlInput implements LabelableElement {
             final double max = getMaxNumeric();
             if (max < min) {
                 setValue(min);
+                unmarkValueDirty();
                 return;
             }
 
             final double val = min + ((max - min) / 2);
             setValue(val);
+            unmarkValueDirty();
         }
         else {
             setValue(value);
+            unmarkValueDirty();
         }
     }
 
     /**
-     * @return the min as double
+     * Returns the numeric value of the {@code min} attribute.
+     *
+     * @return the value of the {@code min} attribute as a {@code double}, or
+     *         {@code 0} if the attribute is not defined or cannot be parsed
      */
     public double getMinNumeric() {
         final String min = getAttributeDirect("min");
@@ -75,7 +80,10 @@ public class HtmlRangeInput extends HtmlInput implements LabelableElement {
     }
 
     /**
-     * @return the max as double
+     * Returns the numeric value of the {@code max} attribute.
+     *
+     * @return the value of the {@code max} attribute as a {@code double}, or
+     *         {@code 100} if the attribute is not defined or cannot be parsed
      */
     public double getMaxNumeric() {
         final String max = getAttributeDirect("max");
@@ -91,7 +99,10 @@ public class HtmlRangeInput extends HtmlInput implements LabelableElement {
     }
 
     /**
-     * @return the max as double
+     * Returns the numeric value of the {@code step} attribute.
+     *
+     * @return the value of the {@code step} attribute as a {@code double}, or
+     *         {@code 1} if the attribute is not defined or cannot be parsed
      */
     public double getStepNumeric() {
         final String step = getAttributeDirect("step");
@@ -120,7 +131,7 @@ public class HtmlRangeInput extends HtmlInput implements LabelableElement {
     @Override
     public void setValue(final String newValue) {
         try {
-            if (StringUtils.isNotEmpty(newValue)) {
+            if (!StringUtils.isEmptyOrNull(newValue)) {
                 setValue(Double.parseDouble(newValue));
             }
             else {
@@ -131,7 +142,7 @@ public class HtmlRangeInput extends HtmlInput implements LabelableElement {
                 setValue(min + ((max - min) / 2));
             }
         }
-        catch (final NumberFormatException e) {
+        catch (final NumberFormatException ignored) {
             // ignore
         }
     }
@@ -168,6 +179,61 @@ public class HtmlRangeInput extends HtmlInput implements LabelableElement {
         }
     }
 
+    @Override
+    protected void valueAttributeChanged(final String attributeValue, final boolean isValueDirty) {
+        if (isValueDirty) {
+            return;
+        }
+
+        try {
+            if (!org.htmlunit.util.StringUtils.isEmptyOrNull(attributeValue)) {
+                setRawValue(Double.parseDouble(attributeValue));
+            }
+            else {
+                final double min = getMinNumeric();
+                final double max = getMaxNumeric();
+
+                // place in the middle
+                setRawValue(min + ((max - min) / 2));
+            }
+        }
+        catch (final NumberFormatException ignored) {
+            // ignore
+        }
+    }
+
+    private void setRawValue(final double newValue) {
+        double value = newValue;
+
+        final double min = getMinNumeric();
+        final double max = getMaxNumeric();
+
+        if (value > max) {
+            value = max;
+        }
+        else {
+            if (value < min) {
+                value = min;
+            }
+        }
+
+        final double step = getStepNumeric();
+        value = value - min;
+        int fact = (int) (value / step);
+        final double rest = value % step;
+        if (rest >= step / 2) {
+            fact++;
+        }
+        value = min + step * fact;
+
+        if (!Double.isInfinite(value) && value == Math.floor(value)) {
+            setRawValue(Integer.toString((int) value));
+        }
+        else {
+            setRawValue(Double.toString(value));
+        }
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -197,7 +263,7 @@ public class HtmlRangeInput extends HtmlInput implements LabelableElement {
                 final double value = Double.parseDouble(getRawValue());
                 return getMinNumeric() <= value;
             }
-            catch (final NumberFormatException e) {
+            catch (final NumberFormatException ignored) {
                 // ignore
             }
         }
@@ -217,7 +283,7 @@ public class HtmlRangeInput extends HtmlInput implements LabelableElement {
                 final int value = Integer.parseInt(getRawValue());
                 return getMaxNumeric() >= value;
             }
-            catch (final NumberFormatException e) {
+            catch (final NumberFormatException ignored) {
                 // ignore
             }
         }

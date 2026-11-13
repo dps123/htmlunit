@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,8 +13,6 @@
  * limitations under the License.
  */
 package org.htmlunit.html;
-
-import static org.htmlunit.BrowserVersionFeatures.JS_INPUT_SET_VALUE_MOVE_SELECTION_TO_START;
 
 import java.util.Map;
 
@@ -50,14 +48,12 @@ public abstract class HtmlSelectableTextInput extends HtmlInput implements Selec
      */
     @Override
     public void setValue(final String newValue) {
+        final String oldValue = getValue();
         super.setValue(newValue);
 
         final SgmlPage page = getPage();
-        if (page != null && page.isHtmlPage()) {
-            int pos = 0;
-            if (!hasFeature(JS_INPUT_SET_VALUE_MOVE_SELECTION_TO_START)) {
-                pos = newValue.length();
-            }
+        if (page != null && page.isHtmlPage() && !newValue.equals(oldValue)) {
+            final int pos = newValue.length();
             setSelectionStart(pos);
             setSelectionEnd(pos);
         }
@@ -86,6 +82,7 @@ public abstract class HtmlSelectableTextInput extends HtmlInput implements Selec
     protected void typeDone(final String newValue, final boolean notifyAttributeChangeListeners) {
         if (!isMinMaxLengthSupported() || newValue.length() <= getMaxLength()) {
             setRawValue(newValue);
+            markValueDirty();
         }
     }
 
@@ -94,7 +91,7 @@ public abstract class HtmlSelectableTextInput extends HtmlInput implements Selec
      */
     @Override
     public void setText(final String text) {
-        setRawValue(text);
+        setValue(text);
     }
 
     /**
@@ -151,16 +148,6 @@ public abstract class HtmlSelectableTextInput extends HtmlInput implements Selec
     @Override
     public void setSelectionEnd(final int selectionEnd) {
         selectionDelegate_.setSelectionEnd(selectionEnd);
-    }
-
-    /**
-     * {@inheritDoc}
-     * @see HtmlInput#reset()
-     */
-    @Override
-    public void reset() {
-        super.reset();
-        setSelectionEnd(0);
     }
 
     /**

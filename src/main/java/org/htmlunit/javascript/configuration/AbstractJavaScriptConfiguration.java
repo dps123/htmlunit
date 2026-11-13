@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,12 +18,11 @@ import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
 import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
 import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
 import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
 
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -32,17 +31,16 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.htmlunit.BrowserVersion;
-import org.htmlunit.javascript.HtmlUnitScriptable;
-
-import org.htmlunit.corejs.javascript.Context;
 import org.htmlunit.corejs.javascript.SymbolKey;
+import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
+import org.htmlunit.util.StringUtils;
 
 /**
  * An abstract container for all the JavaScript configuration information.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author Chris Erskine
  * @author Ahmed Ashour
  * @author Ronald Brill
@@ -54,24 +52,31 @@ public abstract class AbstractJavaScriptConfiguration {
 
     private Map<Class<?>, Class<? extends HtmlUnitScriptable>> domJavaScriptMap_;
 
-    private final Map<String, ClassConfiguration> configuration_;
+    private final ArrayList<ClassConfiguration> configuration_;
+    private ClassConfiguration globalThisConfiguration_;
 
     /**
      * Constructor.
      * @param browser the browser version to use
+     * @param globalThisClass the globalThis class for faster access
      */
-    protected AbstractJavaScriptConfiguration(final BrowserVersion browser) {
-        configuration_ = new ConcurrentHashMap<>(getClasses().length);
+    protected AbstractJavaScriptConfiguration(final BrowserVersion browser, final Class<?> globalThisClass) {
+        configuration_ = new ArrayList<>(getClasses().length);
 
         for (final Class<? extends HtmlUnitScriptable> klass : getClasses()) {
             final ClassConfiguration config = getClassConfiguration(klass, browser);
             if (config != null) {
-                configuration_.put(config.getClassName(), config);
+                configuration_.add(config);
+                if (klass == globalThisClass) {
+                    globalThisConfiguration_ = config;
+                }
             }
         }
     }
 
     /**
+     * Returns the classes configured by this configuration.
+     *
      * @return the classes configured by this configuration
      */
     protected abstract Class<? extends HtmlUnitScriptable>[] getClasses();
@@ -81,7 +86,7 @@ public abstract class AbstractJavaScriptConfiguration {
      * @return the class configurations
      */
     public Iterable<ClassConfiguration> getAll() {
-        return configuration_.values();
+        return configuration_;
     }
 
     /**
@@ -100,9 +105,6 @@ public abstract class AbstractJavaScriptConfiguration {
             }
             else if (browserVersion.isEdge()) {
                 expectedBrowser = EDGE;
-            }
-            else if (browserVersion.isIE()) {
-                expectedBrowser = IE;
             }
             else if (browserVersion.isFirefoxESR()) {
                 expectedBrowser = FF_ESR;
@@ -133,7 +135,8 @@ public abstract class AbstractJavaScriptConfiguration {
 
                 final String extendedClassName;
                 final Class<?> superClass = klass.getSuperclass();
-                if (superClass == HtmlUnitScriptable.class) {
+                if (superClass.getAnnotation(JsxClass.class) == null
+                        && superClass.getAnnotation(JsxClasses.class) == null) {
                     extendedClassName = "";
                 }
                 else {
@@ -152,12 +155,14 @@ public abstract class AbstractJavaScriptConfiguration {
                     }
                 }
 
-                final ClassConfiguration classConfiguration =
-                        new ClassConfiguration(klass, domClasses.toArray(new Class<?>[0]), isJsObject,
-                                className, extendedClassName);
+                if (domClasses.size() > 0) {
+                    final ClassConfiguration classConfiguration =
+                            new ClassConfiguration(klass, domClasses.toArray(new Class<?>[0]), isJsObject,
+                                    className, extendedClassName);
 
-                process(classConfiguration, expectedBrowser);
-                return classConfiguration;
+                    process(classConfiguration, expectedBrowser);
+                    return classConfiguration;
+                }
             }
 
             final JsxClass jsxClass = klass.getAnnotation(JsxClass.class);
@@ -176,7 +181,8 @@ public abstract class AbstractJavaScriptConfiguration {
 
                 final String extendedClassName;
                 final Class<?> superClass = klass.getSuperclass();
-                if (superClass == HtmlUnitScriptable.class) {
+                if (superClass.getAnnotation(JsxClass.class) == null
+                        && superClass.getAnnotation(JsxClasses.class) == null) {
                     extendedClassName = "";
                 }
                 else {
@@ -202,18 +208,12 @@ public abstract class AbstractJavaScriptConfiguration {
         final Map<String, Method> allSetters = new ConcurrentHashMap<>();
 
         try {
-            for (final Constructor<?> constructor : classConfiguration.getHostClass().getDeclaredConstructors()) {
-                for (final Annotation annotation : constructor.getAnnotations()) {
-                    if (annotation instanceof JsxConstructor && isSupported(((JsxConstructor) annotation).value(),
-                            expectedBrowser)) {
-                        classConfiguration.setJSConstructor(constructor);
-                    }
-                }
-            }
+            // do this as first step to be able to overwrite the symbol later if needed
+            classConfiguration.addSymbolConstant(SymbolKey.TO_STRING_TAG, classConfiguration.getHostClassSimpleName());
+
             for (final Method method : classConfiguration.getHostClass().getDeclaredMethods()) {
                 for (final Annotation annotation : method.getAnnotations()) {
-                    if (annotation instanceof JsxGetter) {
-                        final JsxGetter jsxGetter = (JsxGetter) annotation;
+                    if (annotation instanceof JsxGetter jsxGetter) {
                         if (isSupported(jsxGetter.value(), expectedBrowser)) {
                             String property;
                             if (jsxGetter.propertyName().isEmpty()) {
@@ -227,8 +227,7 @@ public abstract class AbstractJavaScriptConfiguration {
                             allGetters.put(property, method);
                         }
                     }
-                    else if (annotation instanceof JsxSetter) {
-                        final JsxSetter jsxSetter = (JsxSetter) annotation;
+                    else if (annotation instanceof JsxSetter jsxSetter) {
                         if (isSupported(jsxSetter.value(), expectedBrowser)) {
                             String property;
                             if (jsxSetter.propertyName().isEmpty()) {
@@ -241,8 +240,7 @@ public abstract class AbstractJavaScriptConfiguration {
                             allSetters.put(property, method);
                         }
                     }
-                    if (annotation instanceof JsxSymbol) {
-                        final JsxSymbol jsxSymbol = (JsxSymbol) annotation;
+                    if (annotation instanceof JsxSymbol jsxSymbol) {
                         if (isSupported(jsxSymbol.value(), expectedBrowser)) {
                             final String symbolKeyName;
                             if (jsxSymbol.symbolName().isEmpty()) {
@@ -263,8 +261,7 @@ public abstract class AbstractJavaScriptConfiguration {
                             classConfiguration.addSymbol(symbolKey, method);
                         }
                     }
-                    else if (annotation instanceof JsxFunction) {
-                        final JsxFunction jsxFunction = (JsxFunction) annotation;
+                    else if (annotation instanceof JsxFunction jsxFunction) {
                         if (isSupported(jsxFunction.value(), expectedBrowser)) {
                             final String name;
                             if (jsxFunction.functionName().isEmpty()) {
@@ -276,8 +273,7 @@ public abstract class AbstractJavaScriptConfiguration {
                             classConfiguration.addFunction(name, method);
                         }
                     }
-                    else if (annotation instanceof JsxStaticGetter) {
-                        final JsxStaticGetter jsxStaticGetter = (JsxStaticGetter) annotation;
+                    else if (annotation instanceof JsxStaticGetter jsxStaticGetter) {
                         if (isSupported(jsxStaticGetter.value(), expectedBrowser)) {
                             final int prefix = method.getName().startsWith("is") ? 2 : 3;
                             String property = method.getName().substring(prefix);
@@ -285,8 +281,7 @@ public abstract class AbstractJavaScriptConfiguration {
                             classConfiguration.addStaticProperty(property, method, null);
                         }
                     }
-                    else if (annotation instanceof JsxStaticFunction) {
-                        final JsxStaticFunction jsxStaticFunction = (JsxStaticFunction) annotation;
+                    else if (annotation instanceof JsxStaticFunction jsxStaticFunction) {
                         if (isSupported(jsxStaticFunction.value(), expectedBrowser)) {
                             final String name;
                             if (jsxStaticFunction.functionName().isEmpty()) {
@@ -298,9 +293,22 @@ public abstract class AbstractJavaScriptConfiguration {
                             classConfiguration.addStaticFunction(name, method);
                         }
                     }
-                    else if (annotation instanceof JsxConstructor && isSupported(((JsxConstructor) annotation).value(),
-                            expectedBrowser)) {
-                        classConfiguration.setJSConstructor(method);
+                    else if (annotation instanceof JsxConstructor jsxConstructor) {
+                        if (isSupported(jsxConstructor.value(), expectedBrowser)) {
+                            final String name;
+                            if (jsxConstructor.functionName().isEmpty()) {
+                                name = classConfiguration.getClassName();
+                            }
+                            else {
+                                name = jsxConstructor.functionName();
+                            }
+                            classConfiguration.setJSConstructor(name, method);
+                        }
+                    }
+                    else if (annotation instanceof JsxConstructorAlias jsxConstructorAlias) {
+                        if (isSupported(jsxConstructorAlias.value(), expectedBrowser)) {
+                            classConfiguration.setJSConstructorAlias(jsxConstructorAlias.alias());
+                        }
                     }
                 }
             }
@@ -310,18 +318,34 @@ public abstract class AbstractJavaScriptConfiguration {
                 classConfiguration.addProperty(property, getterEntry.getValue(), allSetters.get(property));
             }
 
-            // JsxConstant
+            // JsxConstant/JsxSymbolConstant
             for (final Field field : classConfiguration.getHostClass().getDeclaredFields()) {
-                final JsxConstant jsxConstant = field.getAnnotation(JsxConstant.class);
-                if (jsxConstant != null && isSupported(jsxConstant.value(), expectedBrowser)) {
-                    try {
-                        classConfiguration.addConstant(field.getName(), field.get(null));
+                for (final Annotation annotation : field.getAnnotations()) {
+                    if (annotation instanceof JsxConstant jsxConstant) {
+                        if (isSupported(jsxConstant.value(), expectedBrowser)) {
+                            try {
+                                classConfiguration.addConstant(field.getName(), field.get(null));
+                            }
+                            catch (final IllegalAccessException e) {
+                                throw JavaScriptEngine.reportRuntimeError(
+                                        "Cannot get field '" + field.getName()
+                                        + "' for type: " + classConfiguration.getHostClass().getName()
+                                        + "reason: " + e.getMessage());
+                            }
+                        }
                     }
-                    catch (final IllegalAccessException e) {
-                        throw Context.reportRuntimeError(
-                                "Cannot get field '" + field.getName()
-                                + "' for type: " + classConfiguration.getHostClass().getName()
-                                + "reason: " + e.getMessage());
+                    if (annotation instanceof JsxSymbolConstant jsxSymbolConstant) {
+                        if (isSupported(jsxSymbolConstant.value(), expectedBrowser)) {
+                            final SymbolKey symbolKey;
+                            if (StringUtils.startsWithIgnoreCase(field.getName(), "TO_STRING_TAG")) {
+                                symbolKey = SymbolKey.TO_STRING_TAG;
+                            }
+                            else {
+                                throw new RuntimeException("Invalid JsxSymbol annotation; unsupported '"
+                                        + field.getName() + "' symbol name.");
+                            }
+                            classConfiguration.addSymbolConstant(symbolKey, field.get(null).toString());
+                        }
                     }
                 }
             }
@@ -336,30 +360,11 @@ public abstract class AbstractJavaScriptConfiguration {
 
     private static boolean isSupported(final SupportedBrowser[] browsers, final SupportedBrowser expectedBrowser) {
         for (final SupportedBrowser browser : browsers) {
-            if (isCompatible(browser, expectedBrowser)) {
+            if (browser == expectedBrowser) {
                 return true;
             }
         }
         return false;
-    }
-
-    /**
-     * Returns whether the two {@link SupportedBrowser} are compatible or not.
-     * @param browser1 the first {@link SupportedBrowser}
-     * @param browser2 the second {@link SupportedBrowser}
-     * @return whether the two {@link SupportedBrowser} are compatible or not
-     */
-    public static boolean isCompatible(final SupportedBrowser browser1, final SupportedBrowser browser2) {
-        return browser1 == browser2;
-    }
-
-    /**
-     * Gets the class configuration for the supplied JavaScript class name.
-     * @param hostClassName the JavaScript class name
-     * @return the class configuration for the supplied JavaScript class name
-     */
-    public ClassConfiguration getClassConfiguration(final String hostClassName) {
-        return configuration_.get(hostClassName);
     }
 
     /**
@@ -375,12 +380,11 @@ public abstract class AbstractJavaScriptConfiguration {
                     new ConcurrentHashMap<>(configuration_.size());
 
             final boolean debug = LOG.isDebugEnabled();
-            for (final Map.Entry<String, ClassConfiguration> entry : configuration_.entrySet()) {
-                final ClassConfiguration classConfig = entry.getValue();
+            for (final ClassConfiguration classConfig : configuration_) {
                 for (final Class<?> domClass : classConfig.getDomClasses()) {
                     // preload and validate that the class exists
                     if (debug) {
-                        LOG.debug("Mapping " + domClass.getName() + " to " + entry.getKey());
+                        LOG.debug("Mapping " + domClass.getName() + " to " + classConfig.getClassName());
                     }
                     map.put(domClass, classConfig.getHostClass());
                 }
@@ -390,5 +394,9 @@ public abstract class AbstractJavaScriptConfiguration {
         }
 
         return domJavaScriptMap_.get(clazz);
+    }
+
+    protected ClassConfiguration getGlobalThisConfiguration() {
+        return globalThisConfiguration_;
     }
 }

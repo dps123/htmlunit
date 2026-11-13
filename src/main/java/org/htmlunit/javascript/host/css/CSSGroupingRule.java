@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,6 @@
  */
 package org.htmlunit.javascript.host.css;
 
-import static org.htmlunit.BrowserVersionFeatures.JS_GROUPINGRULE_INSERTRULE_INDEX_OPTIONAL;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,16 +21,12 @@ import org.htmlunit.cssparser.dom.AbstractCSSRuleImpl;
 import org.htmlunit.cssparser.dom.CSSCharsetRuleImpl;
 import org.htmlunit.cssparser.dom.CSSMediaRuleImpl;
 import org.htmlunit.cssparser.dom.CSSRuleListImpl;
-import org.w3c.dom.DOMException;
-
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
-
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.ScriptRuntime;
-import org.htmlunit.corejs.javascript.Undefined;
+import org.w3c.dom.DOMException;
 
 /**
  * A JavaScript object for {@code CSSGroupingRule}.
@@ -45,10 +34,9 @@ import org.htmlunit.corejs.javascript.Undefined;
  * @author Ahmed Ashour
  * @author Ronald Brill
  * @author Frank Danek
- * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/CSSGroupingRule">MDN doc</a>
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/CSSGroupingRule">MDN Documentation</a>
  */
-@JsxClass({CHROME, EDGE, FF, FF_ESR})
-@JsxClass(isJSObject = false, value = IE)
+@JsxClass
 public class CSSGroupingRule extends CSSRule {
 
     /** The collection of rules defined in this rule. */
@@ -59,12 +47,13 @@ public class CSSGroupingRule extends CSSRule {
      * Creates a new instance.
      */
     public CSSGroupingRule() {
+        super();
     }
 
     /**
      * Creates an instance.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
+    @JsxConstructor
     @Override
     public void jsConstructor() {
         super.jsConstructor();
@@ -101,17 +90,11 @@ public class CSSGroupingRule extends CSSRule {
         if (position == null) {
             positionInt = 0;
         }
-        else if (Undefined.isUndefined(position)) {
-            if (getBrowserVersion().hasFeature(JS_GROUPINGRULE_INSERTRULE_INDEX_OPTIONAL)) {
-                positionInt = 0;
-            }
-            else {
-                throw ScriptRuntime.typeError("Failed to execute 'insertRule' on 'CSSGroupingRule':"
-                        + " 2 arguments required, but only 1 present.");
-            }
+        else if (JavaScriptEngine.isUndefined(position)) {
+            positionInt = 0;
         }
         else {
-            positionInt = ScriptRuntime.toInt32(position);
+            positionInt = JavaScriptEngine.toInt32(position);
         }
 
         try {
@@ -131,10 +114,14 @@ public class CSSGroupingRule extends CSSRule {
                     return positionInt;
                 }
                 catch (final DOMException ex) {
-                    throw Context.throwAsScriptRuntimeEx(ex);
+                    throw JavaScriptEngine.asJavaScriptException(
+                            getWindow(), ex.getMessage(), ex.code);
                 }
             }
-            throw Context.throwAsScriptRuntimeEx(e);
+            throw JavaScriptEngine.asJavaScriptException(
+                    getWindow(),
+                    e.getMessage(),
+                    org.htmlunit.javascript.host.dom.DOMException.SYNTAX_ERR);
         }
     }
 
@@ -150,7 +137,7 @@ public class CSSGroupingRule extends CSSRule {
             refreshCssRules();
         }
         catch (final DOMException e) {
-            throw Context.throwAsScriptRuntimeEx(e);
+            throw JavaScriptEngine.asJavaScriptException(getWindow(), e.getMessage(), e.code);
         }
     }
 
@@ -162,14 +149,15 @@ public class CSSGroupingRule extends CSSRule {
         }
     }
 
-    private int fixIndex(int index) {
+    private int fixIndex(final int index) {
+        int fixed = index;
         for (final int fix : cssRulesIndexFix_) {
-            if (fix > index) {
-                return index;
+            if (fix > fixed) {
+                return fixed;
             }
-            index++;
+            fixed++;
         }
-        return index;
+        return fixed;
     }
 
     private void refreshCssRules() {
@@ -190,7 +178,7 @@ public class CSSGroupingRule extends CSSRule {
             }
 
             final CSSRule cssRule = CSSRule.create(getParentStyleSheet(), rule);
-            if (null == cssRule) {
+            if (cssRule == null) {
                 cssRulesIndexFix_.add(pos);
             }
             else {

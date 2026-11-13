@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,12 @@ package org.htmlunit.javascript.host.html;
 
 import java.nio.charset.StandardCharsets;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.htmlunit.WebDriverTestCase;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.util.MimeType;
+import org.junit.jupiter.api.Test;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.htmlunit.HtmlUnitDriver;
-
-import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.util.MimeType;
 
 /**
  * Tests for {@link HTMLStyleElement}.
@@ -33,7 +30,6 @@ import org.htmlunit.util.MimeType;
  * @author Ronald Brill
  * @author Frank Danek
  */
-@RunWith(BrowserRunner.class)
 public class HTMLStyleElementTest extends WebDriverTestCase {
 
     /**
@@ -42,8 +38,8 @@ public class HTMLStyleElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"[object HTMLStyleElement]", "[object CSSStyleSheet]", "undefined"})
     public void stylesheet() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
             + "  var f = document.getElementById('myStyle');\n"
@@ -65,8 +61,8 @@ public class HTMLStyleElementTest extends WebDriverTestCase {
     @Test
     @Alerts("2")
     public void styleChildren() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
             + "  var doc = document;\n"
@@ -92,8 +88,8 @@ public class HTMLStyleElementTest extends WebDriverTestCase {
     @Test
     @Alerts({".a > .t { }", ".b > .t { }", ".c > .t { }"})
     public void innerHtml() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
 
             + "<style id='style_none'>.a > .t { }</style>\n"
             + "<style type='text/test' id='style_text'>.b > .t { }</style>\n"
@@ -122,8 +118,8 @@ public class HTMLStyleElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"", "text/test", "text/css"})
     public void type() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
 
             + "<style id='style_none'>my { }</style>\n"
             + "<style type='text/test' id='style_text'>my { }</style>\n"
@@ -152,8 +148,8 @@ public class HTMLStyleElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"", "all", "screen, print,test"})
     public void media() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
 
             + "<style id='style_none'>my { }</style>\n"
             + "<style media='all' id='style_all'>my { }</style>\n"
@@ -182,8 +178,8 @@ public class HTMLStyleElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"all", "", "screen:screen", "priNT", "screen, print"})
     public void media_setter() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
 
             + "<style id='myStyle' media='all'>my { }</style>\n"
 
@@ -220,8 +216,8 @@ public class HTMLStyleElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"undefined", "undefined"})
     public void scoped() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
 
             + "<style id='style_none'>my { }</style>\n"
 
@@ -248,8 +244,8 @@ public class HTMLStyleElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"undefined", "true", "false"})
     public void scoped_setter() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
 
             + "<style id='myStyle' media='all'>my { }</style>\n"
 
@@ -279,8 +275,8 @@ public class HTMLStyleElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"", "text/css"})
     public void type_setter() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<style id='style_none'></style>\n"
 
             + "<script>\n"
@@ -304,8 +300,8 @@ public class HTMLStyleElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"rgb(0, 128, 0)", "false", "rgb(0, 0, 0)"})
     public void disabled() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<style id='myStyle'> .abc { color: green; }</style>\n"
 
             + "<script>\n"
@@ -351,7 +347,9 @@ public class HTMLStyleElementTest extends WebDriverTestCase {
             + "    ]]>\n"
             + "  </style>\n"
             + "  <script>\n"
-            + LOG_TITLE_FUNCTION
+
+            // do not use LOG_TITLE_FUNCTION here
+            + "    function log(msg) { window.document.title += msg + '\\u00a7'; }\n"
             + "    function doTest() {\n"
             + "      var div = document.getElementById('one');\n"
             + "      log(window.getComputedStyle(div, null).color);\n"
@@ -400,7 +398,9 @@ public class HTMLStyleElementTest extends WebDriverTestCase {
             + "    ]]>\n"
             + "  </style>\n"
             + "  <script>\n"
-            + LOG_TITLE_FUNCTION
+
+            // do not use LOG_TITLE_FUNCTION here
+            + "    function log(msg) { window.document.title += msg + '\\u00a7'; }\n"
             + "    function doTest() {\n"
             + "      var div = document.getElementById('one');\n"
             + "      log(window.getComputedStyle(div, null).color);\n"
@@ -430,8 +430,8 @@ public class HTMLStyleElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"rgb(0, 0, 0)", "rgb(0, 128, 0)", "rgb(0, 0, 0)"})
     public void scriptInCdataHtml() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <style>\n"
             + "    //<![CDATA[\n"
@@ -466,5 +466,89 @@ public class HTMLStyleElementTest extends WebDriverTestCase {
             getWebClient().getOptions().setThrowExceptionOnScriptError(false);
         }
         loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"#id { color: red }", ":before { content: \"</> HtmlUnit\" }"})
+    public void innerHtml1() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "  <head>\n"
+            + "    <style>#id { color: red }</style>\n"
+            + "    <script>\n"
+            + LOG_TEXTAREA_FUNCTION
+            + "      function test() {\n"
+            + "        var style = document.getElementsByTagName('style')[0];\n"
+            + "        log(style.innerHTML);\n"
+            + "        style.innerHTML = ':before { content: \"</> HtmlUnit\" }';\n"
+            + "        log(style.innerHTML);\n"
+            + "      }\n"
+            + "    </script>\n"
+            + "  </head>\n"
+            + "  <body onload='test()'>\n"
+            + LOG_TEXTAREA
+            + "  </body>\n"
+            + "</html>";
+
+        loadPageVerifyTextArea2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"#id { color: red }", ":before { content: \"<span>Html</span>Unit\" }"})
+    public void innerHtmlTag() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "  <head>\n"
+            + "    <style>#id { color: red }</style>\n"
+            + "    <script>\n"
+            + LOG_TEXTAREA_FUNCTION
+            + "      function test() {\n"
+            + "        var style = document.getElementsByTagName('style')[0];\n"
+            + "        log(style.innerHTML);\n"
+            + "        style.innerHTML = ':before { content: \"<span>Html</span>Unit\" }';\n"
+            + "        log(style.innerHTML);\n"
+            + "      }\n"
+            + "    </script>\n"
+            + "  </head>\n"
+            + "  <body onload='test()'>\n"
+            + LOG_TEXTAREA
+            + "  </body>\n"
+            + "</html>";
+
+        loadPageVerifyTextArea2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"", ":before { content: \"&lt;/> HtmlUnit\" }"})
+    public void innerHtmlEscaping() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "  <head>\n"
+            + "    <style></style>\n"
+            + "    <script>\n"
+            + LOG_TEXTAREA_FUNCTION
+            + "      function test() {\n"
+            + "        var style = document.getElementsByTagName('style')[0];\n"
+            + "        log(style.innerHTML);\n"
+            + "        style.innerHTML = ':before { content: \"&lt;/> HtmlUnit\" }';\n"
+            + "        log(style.innerHTML);\n"
+            + "      }\n"
+            + "    </script>\n"
+            + "  </head>\n"
+            + "  <body onload='test()'>\n"
+            + LOG_TEXTAREA
+            + "  </body>\n"
+            + "</html>";
+
+        loadPageVerifyTextArea2(html);
     }
 }

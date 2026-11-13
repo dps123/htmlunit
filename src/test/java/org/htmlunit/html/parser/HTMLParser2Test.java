@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,10 @@
  */
 package org.htmlunit.html.parser;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
 import org.htmlunit.html.HtmlPageTest;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
-import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test class for {@link HTMLParser}.
@@ -32,7 +27,6 @@ import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
  * @author Marc Guillemot
  * @author Frank Danek
  */
-@RunWith(BrowserRunner.class)
 public class HTMLParser2Test extends WebDriverTestCase {
 
     /**
@@ -54,11 +48,6 @@ public class HTMLParser2Test extends WebDriverTestCase {
      */
     @Test
     @Alerts({"\\nbeforeafter", "undefined", "undefined"})
-    @HtmlUnitNYI(CHROME = {"beforeafter", "undefined", "undefined"},
-            EDGE = {"beforeafter", "undefined", "undefined"},
-            FF = {"beforeafter", "undefined", "undefined"},
-            FF_ESR = {"beforeafter", "undefined", "undefined"},
-            IE = {"beforeafter", "undefined", "undefined"})
     public void htmlTableTextAroundTD() throws Exception {
         final String html = "<html><head>\n"
             + "<script>\n"
@@ -76,6 +65,76 @@ public class HTMLParser2Test extends WebDriverTestCase {
             + "</head>\n"
             + "<body onload='test()'><div id='testDiv'>\n"
             + "<table><tr>before<td></td>after</tr></table>\n"
+            + "</div></body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Malformed HTML:
+     * &lt;/td&gt;some text&lt;/tr&gt; =&gt; text comes before the table.
+     *
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts({"\\nabcbeforeafter", "undefined", "undefined"})
+    public void htmlTableTextAroundTD2() throws Exception {
+        final String html = "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION_NORMALIZE
+            + "function test() {\n"
+            + "  var tmp = document.getElementById('testDiv');\n"
+            + "  tmp = tmp.firstChild;\n"
+            + "  log(tmp.data);\n"
+            + "  tmp = tmp.nextSibling;\n"
+            + "  log(tmp.data);\n"
+            + "  tmp = tmp.nextSibling;\n"
+            + "  log(tmp.tagName);\n"
+            + "}\n"
+            + "</script>\n"
+            + "</head>\n"
+            + "<body onload='test()'><div id='testDiv'>\n"
+            + "abc<table><tr>before<td></td>after</tr></table>\n"
+            + "</div></body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Malformed HTML:
+     * &lt;/td&gt;some text&lt;/tr&gt; =&gt; text comes before the table.
+     *
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts({"\\nbe", "B-for", "e", "STRONG-aft", "er", "[object\\sHTMLTableElement]"})
+    public void htmlTableTagsAroundTD() throws Exception {
+        final String html = "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION_NORMALIZE
+            + "function test() {\n"
+            + "  var tmp = document.getElementById('testDiv');\n"
+            + "  tmp = tmp.firstChild;\n"
+            + "  log(tmp.data);\n"
+
+            + "  tmp = tmp.nextSibling;\n"
+            + "  log(tmp.nodeName + '-' + tmp.firstChild.data);\n"
+
+            + "  tmp = tmp.nextSibling;\n"
+            + "  log(tmp.data);\n"
+
+            + "  tmp = tmp.nextSibling;\n"
+            + "  log(tmp.nodeName + '-' + tmp.firstChild.data);\n"
+
+            + "  tmp = tmp.nextSibling;\n"
+            + "  log(tmp.data);\n"
+
+            + "  log(tmp.nextSibling);\n"
+            + "}\n"
+            + "</script>\n"
+            + "</head>\n"
+            + "<body onload='test()'><div id='testDiv'>\n"
+            + "<table><tr>be<b>for</b>e<td></td><strong>aft</strong>er</tr></table>\n"
             + "</div></body></html>";
 
         loadPageVerifyTitle2(html);
@@ -195,6 +254,9 @@ public class HTMLParser2Test extends WebDriverTestCase {
         loadPageVerifyTitle2(html);
     }
 
+    /**
+     * @throws Exception if the test fails
+     */
     @Test
     @Alerts({"H2", "TABLE", "H2", "TABLE", "SCRIPT"})
     public void htmlTableMisplacedElementInside5() throws Exception {
@@ -224,6 +286,9 @@ public class HTMLParser2Test extends WebDriverTestCase {
         loadPageVerifyTitle2(html);
     }
 
+    /**
+     * @throws Exception if the test fails
+     */
     @Test
     @Alerts({"H2#x", "TABLE", "H2#y", "TABLE", "H2#z", "TABLE", "H2#a", "TABLE", "SCRIPT"})
     public void htmlTableMisplacedElementInside6() throws Exception {
@@ -265,6 +330,9 @@ public class HTMLParser2Test extends WebDriverTestCase {
         loadPageVerifyTitle2(html);
     }
 
+    /**
+     * @throws Exception if the test fails
+     */
     @Test
     @Alerts({"4", "TABLE", "TABLE", "SPAN", "SCRIPT"})
     public void tableInsideTable() throws Exception {
@@ -300,6 +368,9 @@ public class HTMLParser2Test extends WebDriverTestCase {
         loadPageVerifyTitle2(html);
     }
 
+    /**
+     * @throws Exception if the test fails
+     */
     @Test
     @Alerts({"4", "TABLE", "TABLE", "SPAN", "SCRIPT"})
     public void tableInsideTableTr() throws Exception {
@@ -337,6 +408,9 @@ public class HTMLParser2Test extends WebDriverTestCase {
         loadPageVerifyTitle2(html);
     }
 
+    /**
+     * @throws Exception if the test fails
+     */
     @Test
     @Alerts({"2", "TABLE", "SCRIPT"})
     public void tableInsideTableTd() throws Exception {
@@ -372,6 +446,9 @@ public class HTMLParser2Test extends WebDriverTestCase {
         loadPageVerifyTitle2(html);
     }
 
+    /**
+     * @throws Exception if the test fails
+     */
     @Test
     @Alerts({"1", "TABLE"})
     public void scriptInsideTable() throws Exception {
@@ -393,6 +470,9 @@ public class HTMLParser2Test extends WebDriverTestCase {
         loadPageVerifyTitle2(html);
     }
 
+    /**
+     * @throws Exception if the test fails
+     */
     @Test
     @Alerts({"1", "TABLE"})
     public void scriptInsideTableRows() throws Exception {
@@ -417,6 +497,9 @@ public class HTMLParser2Test extends WebDriverTestCase {
         loadPageVerifyTitle2(html);
     }
 
+    /**
+     * @throws Exception if the test fails
+     */
     @Test
     @Alerts({"1", "TABLE"})
     public void scriptInsideTableData() throws Exception {
@@ -557,7 +640,6 @@ public class HTMLParser2Test extends WebDriverTestCase {
      */
     @Test
     @Alerts("Hi!")
-    @NotYetImplemented
     public void unclosedCommentsInScript() throws Exception {
         final String html = "<html><body>\n"
             + "<script><!--\n"
@@ -589,7 +671,7 @@ public class HTMLParser2Test extends WebDriverTestCase {
             + "  log(tmp.tagName);\n"
             + "  tmp = tmp.firstChild.tagName;\n"
             + "  log(tmp);\n"
-            + "} catch(e) { log('exception'); }\n"
+            + "} catch(e) { logEx(e); }\n"
             + "}\n"
             + "</script>\n"
             + "</head>\n"
@@ -618,7 +700,7 @@ public class HTMLParser2Test extends WebDriverTestCase {
             + "  log(tmp.tagName);\n"
             + "  tmp = tmp.firstChild.tagName;\n"
             + "  log(tmp);\n"
-            + "} catch(e) { log('exception'); }\n"
+            + "} catch(e) { logEx(e); }\n"
             + "}\n"
             + "</script>\n"
             + "</head>\n"
@@ -781,7 +863,7 @@ public class HTMLParser2Test extends WebDriverTestCase {
             + "  log(tmp.innerHTML);\n"
             + "  tmp = document.getElementById('my2');\n"
             + "  log(tmp.innerHTML);\n"
-            + "} catch(e) { log('exception'); }\n"
+            + "} catch(e) { logEx(e); }\n"
             + "}\n"
             + "</script>\n"
             + "</head>\n"
@@ -879,24 +961,9 @@ public class HTMLParser2Test extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = {"<iframe></div></body></html></iframe>", "1",
-                       "1", "IFRAME", "null", "1",
-                       "3", "#text", "</div></body></html>"},
-            IE = {"<iframe>&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;</iframe>", "1",
-                  "1", "IFRAME", "null", "1",
-                  "3", "#text", "</div></body></html>"})
-    @HtmlUnitNYI(CHROME = {"<iframe>&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;</iframe>", "1",
-                           "1", "IFRAME", "null", "1",
-                           "3", "#text", "</div></body></html>"},
-            EDGE = {"<iframe>&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;</iframe>", "1",
-                    "1", "IFRAME", "null", "1",
-                    "3", "#text", "</div></body></html>"},
-            FF = {"<iframe>&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;</iframe>", "1",
-                  "1", "IFRAME", "null", "1",
-                  "3", "#text", "</div></body></html>"},
-            FF_ESR = {"<iframe>&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;</iframe>", "1",
-                      "1", "IFRAME", "null", "1",
-                      "3", "#text", "</div></body></html>"})
+    @Alerts({"<iframe></div></body></html></iframe>", "1",
+             "1", "IFRAME", "null", "1",
+             "3", "#text", "</div></body></html>"})
     public void selfClosingIframe() throws Exception {
         final String html = "<html><head>\n"
             + "<script>\n"
@@ -918,7 +985,7 @@ public class HTMLParser2Test extends WebDriverTestCase {
             + "  log(child2.nodeName);\n"
             + "  log(child2.nodeValue);\n"
 
-            + "} catch(e) { log('exception'); }\n"
+            + "} catch(e) { logEx(e); }\n"
             + "}\n"
             + "</script>\n"
             + "</head>\n"
@@ -956,7 +1023,7 @@ public class HTMLParser2Test extends WebDriverTestCase {
             + "  var child2 = child.childNodes[0];\n"
             + "  log(child2.childNodes.length + '-' + child2.nodeType + '#' +child2.nodeName);\n"
 
-            + "} catch(e) { log('exception'); }\n"
+            + "} catch(e) { logEx(e); }\n"
             + "}\n"
             + "</script>\n"
             + "</head>\n"
@@ -988,7 +1055,7 @@ public class HTMLParser2Test extends WebDriverTestCase {
             + "  var child = tmp.childNodes[0];\n"
             + "  log(child.childNodes.length + '-' + child.nodeType + '#' + child.nodeName);\n"
 
-            + "} catch(e) { log('exception'); }\n"
+            + "} catch(e) { logEx(e); }\n"
             + "}\n"
             + "</script>\n"
             + "</head>\n"
@@ -1021,7 +1088,7 @@ public class HTMLParser2Test extends WebDriverTestCase {
 
             + "  tmp = tmp.nextSibling;\n"
             + "  log(tmp.textContent);\n"
-            + "} catch(e) { log('exception'); }\n"
+            + "} catch(e) { logEx(e); }\n"
             + "}\n"
             + "</script>\n"
             + "</head>\n"
@@ -1048,13 +1115,94 @@ public class HTMLParser2Test extends WebDriverTestCase {
 
             + "  tmp = tmp.firstChild;\n"
             + "  log(tmp.tagName);\n"
-            + "} catch(e) { log('exception'); }\n"
+            + "} catch(e) { logEx(e); }\n"
             + "}\n"
             + "</script>\n"
             + "</head>\n"
             + "<body onload='test()'>\n"
             + "  <table id='myP'><style>h1 {color:red;} p {color:blue;}</style></table>\n"
             + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"2", "8"})
+    public void childNodesDynamicUpdateDuringParsing() throws Exception {
+        final String html =
+                "<html><head>\n"
+                + "<script>\n"
+                + LOG_TITLE_FUNCTION
+                + "</script>\n"
+                + "</head>\n"
+                + "<body id='id1'>\n"
+                + "<script>\n"
+                + "  var childNodes = document.getElementById('id1').childNodes;\n"
+                + "  log(childNodes.length);\n"
+                + "</script>\n"
+                + "<h1>My First Heading</h1>\n"
+                + "<p>My first paragraph.</p>\n"
+                + "<script>\n"
+                + "  log(childNodes.length);\n"
+                + "</script>\n"
+                + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Verifies that {@code basefont} is handled as specified in the HTML parsing algorithm:
+     * the start tag is processed as if found in the head ("redirect to 'in head'"), the element
+     * is inserted and immediately popped off the stack of open elements, so it can never have
+     * children even without a matching end tag.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("0")
+    public void basefont() throws Exception {
+        final String html =
+                "<html>\n"
+                + "<body>\n"
+                + "<basefont id='b' color='red' size='5'>\n"
+                + "<h1>Hello</h1>\n"
+                + "</body>\n"
+                + "<script>\n"
+                + LOG_TITLE_FUNCTION
+                + "  var childNodes = document.getElementById('b').childNodes;\n"
+                + "  log(childNodes.length);\n"
+                + "</script>\n"
+                + "</html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Verifies that {@code bgsound} is handled as specified in the HTML parsing algorithm:
+     * the start tag is processed as if found in the head ("redirect to 'in head'"), the element
+     * is inserted and immediately popped off the stack of open elements, so it can never have
+     * children even without a matching end tag.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("0")
+    public void bgsound() throws Exception {
+        final String html =
+                "<html>\n"
+                + "<body>\n"
+                + "<bgsound id='b' src=\"x.wav\">\n"
+                + "<p>Hello</p>\n"
+                + "</body>\n"
+                + "<script>\n"
+                + LOG_TITLE_FUNCTION
+                + "  var childNodes = document.getElementById('b').childNodes;\n"
+                + "  log(childNodes.length);\n"
+                + "</script>\n"
+                + "</html>";
 
         loadPageVerifyTitle2(html);
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,99 +15,65 @@
 package org.htmlunit.general;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
-
 import org.htmlunit.TestCaseTest;
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserParameterizedRunner;
-import org.htmlunit.junit.BrowserParameterizedRunner.Default;
-import org.htmlunit.junit.BrowserRunner.Alerts;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Test the host class constructors.
  *
  * @author Ronald Brill
  */
-@RunWith(BrowserParameterizedRunner.class)
-@Ignore("Work in progress")
+@Disabled("Work in progress")
 public class HostConstructorTest extends WebDriverTestCase {
-
-    private static final HashSet<String> passing = new HashSet<>(Arrays.asList(
-            "Animation",
-            "Blob",
-            "DOMParser",
-            "FileReader",
-            "FormData",
-            "MediaSource",
-            "MessageChannel",
-            "XMLHttpRequest",
-            "XMLSerializer"
-            ));
 
     /**
      * Returns the parameterized data.
      * @return the parameterized data
      * @throws Exception if an error occurs
      */
-    @Parameters
-    public static Collection<Object[]> data() throws Exception {
-        final List<Object[]> list = new ArrayList<>();
-        final Set<String> strings = TestCaseTest.getAllClassNames();
-        for (final String className : strings) {
-            list.add(new Object[] {className});
+    public static Collection<Arguments> data() throws Exception {
+        final List<Arguments> list = new ArrayList<>();
+        final Set<String> classNames = TestCaseTest.getAllConfiguredJsClassNames();
+        final ArrayList<String> classNamesSorted = new ArrayList<>(classNames);
+        Collections.sort(classNamesSorted);
+
+        for (final String className : classNamesSorted) {
+            list.add(Arguments.of(className));
         }
         return list;
     }
 
     /**
-     * The class name.
-     */
-    @Parameter
-    public String className_;
-
-    /**
      * The default test.
      * @throws Exception if an error occurs
      */
-    @Test
-    @Default
-    public void test() throws Exception {
-        setExpectedAlerts(getExpectedString(className_));
-
-        test(className_);
-    }
-
-    private void test(final String className) throws Exception {
-        final String html = "<html><head></head>\n"
+    @ParameterizedTest(name = "_{0}", quoteTextArguments = false)
+    @MethodSource("data")
+    @Alerts("TypeError")
+    void test(final String className) throws Exception {
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<body>"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
 
                 + "  try {\n"
                 + "    log(new " + className + "());\n"
-                + "  } catch(e) {log('exception')}\n"
+                + "  } catch(e) { logEx(e) }\n"
                 + "</script>\n"
                 + "</body></html>";
 
         loadPageVerifyTitle2(html);
-    }
-
-    private String getExpectedString(final String className) throws Exception {
-        if (passing.contains(className)) {
-            return "[object " + className_ + "]";
-        }
-
-        return "exception";
     }
 
     /**
@@ -118,445 +84,507 @@ public class HostConstructorTest extends WebDriverTestCase {
         return true;
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "[object Animation]",
-            IE = "exception")
-    public void _Animation() throws Exception {
+    @Alerts("[object AbortController]")
+    void _AbortController() throws Exception {
+        test("AbortController");
+    }
+
+    @Alerts("[object Animation]")
+    void _Animation() throws Exception {
         test("Animation");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
     @Alerts("[object HTMLAudioElement]")
-    public void _Audio() throws Exception {
+    void _Audio() throws Exception {
         test("Audio");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "[object AudioContext]",
-            IE = "exception")
-    public void _AudioContext() throws Exception {
+    @Alerts("[object AudioContext]")
+    void _AudioContext() throws Exception {
         test("AudioContext");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "[object CSSStyleSheet]",
-            IE = "exception")
-    public void _CSSStyleSheet() throws Exception {
-        test("CSSStyleSheet");
+    @Alerts(DEFAULT = "TypeError",
+            FF = "ReferenceError",
+            FF_ESR = "ReferenceError")
+    void _BatteryManager() throws Exception {
+        test("BatteryManager");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "[object Comment]",
-            IE = "exception")
-    public void _Comment() throws Exception {
+    @Alerts(DEFAULT = "TypeError",
+            FF = "ReferenceError",
+            FF_ESR = "ReferenceError")
+    void _BeforeInstallPromptEvent() throws Exception {
+        test("BeforeInstallPromptEvent");
+    }
+
+    @Alerts("[object Blob]")
+    void _Blob() throws Exception {
+        test("Blob");
+    }
+
+    @Alerts(DEFAULT = "ReferenceError",
+            FF = "TypeError",
+            FF_ESR = "TypeError")
+    void _CanvasCaptureMediaStream() throws Exception {
+        test("CanvasCaptureMediaStream");
+    }
+
+    @Alerts(DEFAULT = "TypeError",
+            FF = "ReferenceError",
+            FF_ESR = "ReferenceError")
+    void _CanvasCaptureMediaStreamTrack() throws Exception {
+        test("CanvasCaptureMediaStreamTrack");
+    }
+
+    @Alerts("[object Comment]")
+    void _Comment() throws Exception {
         test("Comment");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "matrix(1, 0, 0, 1, 0, 0)",
-            IE = "exception")
-    public void _DOMMatrix() throws Exception {
-        test("DOMMatrix");
+    @Alerts(DEFAULT = "ReferenceError",
+            FF = "TypeError",
+            FF_ESR = "TypeError")
+    void _CSS2Properties() throws Exception {
+        test("CSS2Properties");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "matrix(1, 0, 0, 1, 0, 0)",
-            IE = "exception")
-    public void _DOMMatrixReadOnly() throws Exception {
-        test("DOMMatrixReadOnly");
+    @Alerts("[object CSSStyleSheet]")
+    void _CSSStyleSheet() throws Exception {
+        test("CSSStyleSheet");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "Error",
-            IE = "exception")
-    public void _DOMException() throws Exception {
-        test("DOMException");
-    }
-
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "[object DOMPoint]",
-            IE = "exception")
-    public void _DOMPoint() throws Exception {
-        test("DOMPoint");
-    }
-
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "[object DOMPointReadOnly]",
-            IE = "exception")
-    public void _DOMPointReadOnly() throws Exception {
-        test("DOMPointReadOnly");
-    }
-
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "[object DOMRect]",
-            IE = "exception")
-    public void _DOMRect() throws Exception {
-        test("DOMRect");
-    }
-
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "[object DOMRectReadOnly]",
-            IE = "exception")
-    public void _DOMRectReadOnly() throws Exception {
-        test("DOMRectReadOnly");
-    }
-
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "[object DataTransfer]",
-            IE = "exception")
-    public void _DataTransfer() throws Exception {
+    @Alerts("[object DataTransfer]")
+    void _DataTransfer() throws Exception {
         test("DataTransfer");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "[object Document]",
-            IE = "exception")
-    public void _Document() throws Exception {
+    @Alerts("[object Document]")
+    void _Document() throws Exception {
         test("Document");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "[object DocumentFragment]",
-            IE = "exception")
-    public void _DocumentFragment() throws Exception {
+    @Alerts("[object DocumentFragment]")
+    void _DocumentFragment() throws Exception {
         test("DocumentFragment");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "exception",
-            IE = "[object Object]")
-    public void _Enumerator() throws Exception {
-        test("Enumerator");
+    @Alerts(DEFAULT = "TypeError",
+            FF = "ReferenceError",
+            FF_ESR = "ReferenceError")
+    void _DOMError() throws Exception {
+        test("DOMError");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "[object EventTarget]",
-            IE = "exception")
-    public void _EventTarget() throws Exception {
+    @Alerts("Error")
+    void _DOMException() throws Exception {
+        test("DOMException");
+    }
+
+    @Alerts("matrix(1, 0, 0, 1, 0, 0)")
+    void _DOMMatrix() throws Exception {
+        test("DOMMatrix");
+    }
+
+    @Alerts("matrix(1, 0, 0, 1, 0, 0)")
+    void _DOMMatrixReadOnly() throws Exception {
+        test("DOMMatrixReadOnly");
+    }
+
+    @Alerts("[object DOMParser]")
+    void _DOMParser() throws Exception {
+        test("DOMParser");
+    }
+
+    @Alerts("[object DOMPoint]")
+    void _DOMPoint() throws Exception {
+        test("DOMPoint");
+    }
+
+    @Alerts("[object DOMPointReadOnly]")
+    void _DOMPointReadOnly() throws Exception {
+        test("DOMPointReadOnly");
+    }
+
+    @Alerts("[object DOMRect]")
+    void _DOMRect() throws Exception {
+        test("DOMRect");
+    }
+
+    @Alerts("[object DOMRectReadOnly]")
+    void _DOMRectReadOnly() throws Exception {
+        test("DOMRectReadOnly");
+    }
+
+    @Alerts("[object EventTarget]")
+    void _EventTarget() throws Exception {
         test("EventTarget");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "[object Headers]",
-            IE = "exception")
-    public void _Headers() throws Exception {
+    @Alerts(DEFAULT = "TypeError",
+            FF = "ReferenceError",
+            FF_ESR = "ReferenceError")
+    void _External() throws Exception {
+        test("External");
+    }
+
+    @Alerts(DEFAULT = "TypeError",
+            FF = "ReferenceError",
+            FF_ESR = "ReferenceError")
+    void _FederatedCredential() throws Exception {
+        test("FederatedCredential");
+    }
+
+    @Alerts("[object FileReader]")
+    void _FileReader() throws Exception {
+        test("FileReader");
+    }
+
+    @Alerts(DEFAULT = "ReferenceError",
+            FF = "TypeError",
+            FF_ESR = "TypeError")
+    void _FileSystem() throws Exception {
+        test("FileSystem");
+    }
+
+    @Alerts(DEFAULT = "ReferenceError",
+            FF = "TypeError",
+            FF_ESR = "TypeError")
+    void _FileSystemDirectoryEntry() throws Exception {
+        test("FileSystemDirectoryEntry");
+    }
+
+    @Alerts(DEFAULT = "ReferenceError",
+            FF = "TypeError",
+            FF_ESR = "TypeError")
+    void _FileSystemDirectoryReader() throws Exception {
+        test("FileSystemDirectoryReader");
+    }
+
+    @Alerts(DEFAULT = "ReferenceError",
+            FF = "TypeError",
+            FF_ESR = "TypeError")
+    void _FileSystemEntry() throws Exception {
+        test("FileSystemEntry");
+    }
+
+    @Alerts(DEFAULT = "ReferenceError",
+            FF = "TypeError",
+            FF_ESR = "TypeError")
+    void _FileSystemFileEntry() throws Exception {
+        test("FileSystemFileEntry");
+    }
+
+    @Alerts(DEFAULT = "ReferenceError",
+            FF = "TypeError",
+            FF_ESR = "TypeError")
+    void _FontFaceSet() throws Exception {
+        test("FontFaceSet");
+    }
+
+    @Alerts("[object FormData]")
+    void _FormData() throws Exception {
+        test("FormData");
+    }
+
+    @Alerts("[object Headers]")
+    void _Headers() throws Exception {
         test("Headers");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts("[object HTMLImageElement]")
-    public void _Image() throws Exception {
-        test("Image");
-    }
-
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
     @Alerts(DEFAULT = "[object InputDeviceCapabilities]",
-            FF = "exception",
-            FF_ESR = "exception",
-            IE = "exception")
-    public void _InputDeviceCapabilities() throws Exception {
+            FF = "ReferenceError",
+            FF_ESR = "ReferenceError")
+    void _InputDeviceCapabilities() throws Exception {
         test("InputDeviceCapabilities");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "[object MediaStream]",
-            IE = "exception")
-    public void _MediaStream() throws Exception {
+    @Alerts(DEFAULT = "ReferenceError",
+            FF = "TypeError",
+            FF_ESR = "TypeError")
+    void _MediaKeyError() throws Exception {
+        test("MediaKeyError");
+    }
+
+    @Alerts("[object MediaSource]")
+    void _MediaSource() throws Exception {
+        test("MediaSource");
+    }
+
+    @Alerts("[object MediaStream]")
+    void _MediaStream() throws Exception {
         test("MediaStream");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "exception",
-            FF = "[object mozRTCPeerConnection]",
-            FF_ESR = "[object mozRTCPeerConnection]")
-    public void _mozRTCPeerConnection() throws Exception {
-        test("mozRTCPeerConnection");
+    @Alerts("[object MessageChannel]")
+    void _MessageChannel() throws Exception {
+        test("MessageChannel");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts("[object HTMLOptionElement]")
-    public void _Option() throws Exception {
-        test("Option");
+    @Alerts(DEFAULT = "ReferenceError",
+            FF = "TypeError",
+            FF_ESR = "TypeError")
+    void _MouseScrollEvent() throws Exception {
+        test("MouseScrollEvent");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "[object Path2D]",
-            IE = "exception")
-    public void _Path2D() throws Exception {
+    @Alerts(DEFAULT = "ReferenceError",
+            FF_ESR = "TypeError")
+    void _MutationEvent() throws Exception {
+        test("MutationEvent");
+    }
+
+    @Alerts("ReferenceError")
+    void _NativeXPathNSResolver() throws Exception {
+        test("NativeXPathNSResolver");
+    }
+
+    @Alerts(DEFAULT = "TypeError",
+            FF = "ReferenceError",
+            FF_ESR = "ReferenceError")
+    void _NetworkInformation() throws Exception {
+        test("NetworkInformation");
+    }
+
+    @Alerts(DEFAULT = "TypeError",
+            FF = "ReferenceError",
+            FF_ESR = "ReferenceError")
+    void _PasswordCredential() throws Exception {
+        test("PasswordCredential");
+    }
+
+    @Alerts("[object Path2D]")
+    void _Path2D() throws Exception {
         test("Path2D");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "",
-            IE = "exception")
-    public void _Range() throws Exception {
+    @Alerts(DEFAULT = "TypeError",
+            FF = "ReferenceError",
+            FF_ESR = "ReferenceError")
+    void _PaymentAddress() throws Exception {
+        test("PaymentAddress");
+    }
+
+    @Alerts(DEFAULT = "TypeError",
+            FF = "ReferenceError",
+            FF_ESR = "ReferenceError")
+    void _PaymentRequest() throws Exception {
+        test("PaymentRequest");
+    }
+
+    @Alerts(DEFAULT = "TypeError",
+            FF = "ReferenceError",
+            FF_ESR = "ReferenceError")
+    void _PaymentResponse() throws Exception {
+        test("PaymentResponse");
+    }
+
+    @Alerts(DEFAULT = "TypeError",
+            FF = "ReferenceError",
+            FF_ESR = "ReferenceError")
+    void _PeriodicSyncManager() throws Exception {
+        test("PeriodicSyncManager");
+    }
+
+    @Alerts(DEFAULT = "TypeError",
+            FF = "ReferenceError",
+            FF_ESR = "ReferenceError")
+    void _Presentation() throws Exception {
+        test("Presentation");
+    }
+
+    @Alerts(DEFAULT = "TypeError",
+            FF = "ReferenceError",
+            FF_ESR = "ReferenceError")
+    void _PresentationAvailability() throws Exception {
+        test("PresentationAvailability");
+    }
+
+    @Alerts(DEFAULT = "TypeError",
+            FF = "ReferenceError",
+            FF_ESR = "ReferenceError")
+    void _PresentationConnection() throws Exception {
+        test("PresentationConnection");
+    }
+
+    @Alerts(DEFAULT = "TypeError",
+            FF = "ReferenceError",
+            FF_ESR = "ReferenceError")
+    void _PresentationConnectionAvailableEvent() throws Exception {
+        test("PresentationConnectionAvailableEvent");
+    }
+
+    @Alerts(DEFAULT = "TypeError",
+            FF = "ReferenceError",
+            FF_ESR = "ReferenceError")
+    void _PresentationConnectionCloseEvent() throws Exception {
+        test("PresentationConnectionCloseEvent");
+    }
+
+    @Alerts(DEFAULT = "TypeError",
+            FF = "ReferenceError",
+            FF_ESR = "ReferenceError")
+    void _PresentationRequest() throws Exception {
+        test("PresentationRequest");
+    }
+
+    @Alerts("")
+    void _Range() throws Exception {
         test("Range");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "[object ReadableStream]",
-            IE = "exception")
-    public void _ReadableStream() throws Exception {
+    @Alerts("[object ReadableStream]")
+    void _ReadableStream() throws Exception {
         test("ReadableStream");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "[object Response]",
-            IE = "exception")
-    public void _Response() throws Exception {
+    @Alerts(DEFAULT = "TypeError",
+            FF = "ReferenceError",
+            FF_ESR = "ReferenceError")
+    void _RemotePlayback() throws Exception {
+        test("RemotePlayback");
+    }
+
+    @Alerts("[object Response]")
+    void _Response() throws Exception {
         test("Response");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "[object RTCPeerConnection]",
-            IE = "exception")
-    public void _RTCPeerConnection() throws Exception {
+    @Alerts("[object RTCPeerConnection]")
+    void _RTCPeerConnection() throws Exception {
         test("RTCPeerConnection");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
     @Alerts(DEFAULT = "[object RTCSessionDescription]",
-            FF = "exception",
-            FF_ESR = "exception",
-            IE = "exception")
-    public void _RTCSessionDescription() throws Exception {
+            FF = "TypeError",
+            FF_ESR = "TypeError")
+    void _RTCSessionDescription() throws Exception {
         test("RTCSessionDescription");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "[object SpeechSynthesisUtterance]",
-            IE = "exception")
-    public void _SpeechSynthesisUtterance() throws Exception {
+    @Alerts("[object SpeechSynthesisUtterance]")
+    void _SpeechSynthesisUtterance() throws Exception {
         test("SpeechSynthesisUtterance");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "[object Text]",
-            IE = "exception")
-    public void _Text() throws Exception {
+    @Alerts("ReferenceError")
+    void _StyleMedia() throws Exception {
+        test("StyleMedia");
+    }
+
+    @Alerts(DEFAULT = "TypeError",
+            FF = "ReferenceError",
+            FF_ESR = "ReferenceError")
+    void _SyncManager() throws Exception {
+        test("SyncManager");
+    }
+
+    @Alerts("[object Text]")
+    void _Text() throws Exception {
         test("Text");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "[object TextDecoder]",
-            IE = "exception")
-    public void _TextDecoder() throws Exception {
+    @Alerts("[object TextDecoder]")
+    void _TextDecoder() throws Exception {
         test("TextDecoder");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "[object TextEncoder]",
-            IE = "exception")
-    public void _TextEncoder() throws Exception {
+    @Alerts("[object TextEncoder]")
+    void _TextEncoder() throws Exception {
         test("TextEncoder");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "",
-            IE = "exception")
-    public void _URLSearchParams() throws Exception {
+    @Alerts(DEFAULT = "TypeError",
+            FF_ESR = "ReferenceError")
+    void _TextEvent() throws Exception {
+        test("TextEvent");
+    }
+
+    @Alerts(DEFAULT = "ReferenceError",
+            FF = "TypeError",
+            FF_ESR = "TypeError")
+    void _TimeEvent() throws Exception {
+        test("TimeEvent");
+    }
+
+    @Alerts(DEFAULT = "TypeError",
+            FF = "ReferenceError",
+            FF_ESR = "ReferenceError")
+    void _Touch() throws Exception {
+        test("Touch");
+    }
+
+    @Alerts(DEFAULT = "TypeError",
+            FF = "ReferenceError",
+            FF_ESR = "ReferenceError")
+    void _TouchEvent() throws Exception {
+        test("TouchEvent");
+    }
+
+    @Alerts(DEFAULT = "TypeError",
+            FF = "ReferenceError",
+            FF_ESR = "ReferenceError")
+    void _TouchList() throws Exception {
+        test("TouchList");
+    }
+
+    @Alerts("")
+    void _URLSearchParams() throws Exception {
         test("URLSearchParams");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "exception",
-            IE = "[object WebGLContextEvent]")
-    public void _WebGLContextEvent() throws Exception {
-        test("WebGLContextEvent");
-    }
-
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "matrix(1, 0, 0, 1, 0, 0)",
-            IE = "exception")
-    public void _WebKitCSSMatrix() throws Exception {
-        test("WebKitCSSMatrix");
-    }
-
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "[object MediaStream]",
-            FF = "exception",
-            FF_ESR = "exception",
-            IE = "exception")
-    public void _webkitMediaStream() throws Exception {
-        test("webkitMediaStream");
-    }
-
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "[object RTCPeerConnection]",
-            FF = "exception",
-            FF_ESR = "exception",
-            IE = "exception")
-    public void _webkitRTCPeerConnection() throws Exception {
-        test("webkitRTCPeerConnection");
-    }
-
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
     @Alerts(DEFAULT = "[object SpeechGrammar]",
-            FF = "exception",
-            FF_ESR = "exception",
-            IE = "exception")
-    public void _webkitSpeechGrammar() throws Exception {
+            FF = "ReferenceError",
+            FF_ESR = "ReferenceError")
+    void _webkitSpeechGrammar() throws Exception {
         test("webkitSpeechGrammar");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
     @Alerts(DEFAULT = "[object SpeechGrammarList]",
-            FF = "exception",
-            FF_ESR = "exception",
-            IE = "exception")
-    public void _webkitSpeechGrammarList() throws Exception {
+            FF = "ReferenceError",
+            FF_ESR = "ReferenceError")
+    void _webkitSpeechGrammarList() throws Exception {
         test("webkitSpeechGrammarList");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
     @Alerts(DEFAULT = "[object SpeechRecognition]",
-            FF = "exception",
-            FF_ESR = "exception",
-            IE = "exception")
-    public void _webkitSpeechRecognition() throws Exception {
+            FF = "ReferenceError",
+            FF_ESR = "ReferenceError")
+    void _webkitSpeechRecognition() throws Exception {
         test("webkitSpeechRecognition");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "[object XPathEvaluator]",
-            IE = "exception")
-    public void _XPathEvaluator() throws Exception {
+    @Alerts(DEFAULT = "TypeError",
+            FF = "ReferenceError",
+            FF_ESR = "ReferenceError")
+    void _webkitSpeechRecognitionError() throws Exception {
+        test("webkitSpeechRecognitionError");
+    }
+
+    @Alerts(DEFAULT = "TypeError",
+            FF = "ReferenceError",
+            FF_ESR = "ReferenceError")
+    void _webkitSpeechRecognitionEvent() throws Exception {
+        test("WebkitSpeechRecognitionEvent");
+    }
+
+    @Alerts("[object XMLHttpRequest]")
+    void _XMLHttpRequest() throws Exception {
+        test("XMLHttpRequest");
+    }
+
+    @Alerts("[object XMLSerializer]")
+    void _XMLSerializer() throws Exception {
+        test("XMLSerializer");
+    }
+
+    @Alerts("[object XPathEvaluator]")
+    void _XPathEvaluator() throws Exception {
         test("XPathEvaluator");
     }
 
-    /**
-     * @throws Exception if the test fails
-     */
-    @Test
-    @Alerts(DEFAULT = "[object XSLTProcessor]",
-            IE = "exception")
-    public void _XSLTProcessor() throws Exception {
+    @Alerts("[object XSLTProcessor]")
+    void _XSLTProcessor() throws Exception {
         test("XSLTProcessor");
     }
 }

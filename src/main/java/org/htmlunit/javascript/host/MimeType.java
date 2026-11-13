@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,24 +14,19 @@
  */
 package org.htmlunit.javascript.host;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
 import org.htmlunit.javascript.HtmlUnitScriptable;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxGetter;
 
 /**
- * A JavaScript object for {@code MimeType}.
+ * JavaScript host object for {@code MimeType}.
  *
  * @author Marc Guillemot
  * @author Ahmed Ashour
  * @author Ronald Brill
  *
- * @see <a href="http://www.xulplanet.com/references/objref/MimeType.html">XUL Planet</a>
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/MimeType">MDN Documentation</a>
  */
 @JsxClass
 public class MimeType extends HtmlUnitScriptable {
@@ -44,18 +39,28 @@ public class MimeType extends HtmlUnitScriptable {
     /**
      * Creates an instance.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
     public MimeType() {
+        super();
     }
 
     /**
-     * Constructor initializing fields.
-     * @param type the mime type
-     * @param description the type description
-     * @param suffixes the file suffixes
-     * @param plugin the associated plugin
+     * Creates an instance of this object.
+     */
+    @JsxConstructor
+    public void jsConstructor() {
+        // nothing to do
+    }
+
+    /**
+     * Creates an instance with the given properties.
+     *
+     * @param type the MIME type string
+     * @param description the human-readable description
+     * @param suffixes the file suffixes associated with this MIME type
+     * @param plugin the plugin that handles this MIME type
      */
     public MimeType(final String type, final String description, final String suffixes, final Plugin plugin) {
+        super();
         type_ = type;
         description_ = description;
         suffixes_ = suffixes;
@@ -63,7 +68,8 @@ public class MimeType extends HtmlUnitScriptable {
     }
 
     /**
-     * Returns the mime type's description.
+     * Returns the MIME type's description.
+     *
      * @return the description
      */
     @JsxGetter
@@ -72,7 +78,8 @@ public class MimeType extends HtmlUnitScriptable {
     }
 
     /**
-     * Returns the mime type's suffixes.
+     * Returns the file suffixes associated with this MIME type.
+     *
      * @return the suffixes
      */
     @JsxGetter
@@ -81,8 +88,9 @@ public class MimeType extends HtmlUnitScriptable {
     }
 
     /**
-     * Returns the mime type's suffixes.
-     * @return the suffixes
+     * Returns the MIME type string.
+     *
+     * @return the MIME type
      */
     @JsxGetter
     public String getType() {
@@ -90,11 +98,12 @@ public class MimeType extends HtmlUnitScriptable {
     }
 
     /**
-     * Returns the mime type's associated plugin.
-     * @return the plugin
+     * Returns the plugin that handles this MIME type.
+     *
+     * @return the enabled plugin
      */
     @JsxGetter
-    public Object getEnabledPlugin() {
+    public Plugin getEnabledPlugin() {
         return enabledPlugin_;
     }
 }

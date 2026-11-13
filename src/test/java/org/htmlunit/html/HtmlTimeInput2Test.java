@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,29 +14,24 @@
  */
 package org.htmlunit.html;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.SimpleWebTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
-import org.htmlunit.junit.BrowserRunner.TestedBrowser;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link HtmlTimeInput}.
  *
  * @author Anton Demydenko
+ * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class HtmlTimeInput2Test extends SimpleWebTestCase {
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @NotYetImplemented(TestedBrowser.IE)
     public void minValidation() throws Exception {
-        final String htmlContent = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head></head>\n"
                 + "<body>\n"
                 + "<form id='form1'>\n"
@@ -74,9 +69,10 @@ public class HtmlTimeInput2Test extends SimpleWebTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @NotYetImplemented(TestedBrowser.IE)
     public void maxValidation() throws Exception {
-        final String htmlContent = "<html>\n" + "<head></head>\n"
+        final String htmlContent = DOCTYPE_HTML
+                + "<html>\n"
+                + "<head></head>\n"
                 + "<body>\n"
                 + "<form id='form1'>\n"
                 + "  <input type='time' id='first' max='09:00'>\n"

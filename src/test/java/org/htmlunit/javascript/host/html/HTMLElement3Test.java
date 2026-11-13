@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,6 @@ package org.htmlunit.javascript.host.html;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.CollectingAlertHandler;
 import org.htmlunit.MockWebConnection;
 import org.htmlunit.SimpleWebTestCase;
@@ -28,8 +25,8 @@ import org.htmlunit.html.HtmlAnchor;
 import org.htmlunit.html.HtmlButton;
 import org.htmlunit.html.HtmlElement;
 import org.htmlunit.html.HtmlPage;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link HTMLElement}.
@@ -40,14 +37,14 @@ import org.htmlunit.junit.BrowserRunner.Alerts;
  * @author Daniel Gredler
  * @author Marc Guillemot
  * @author Hans Donner
- * @author <a href="mailto:george@murnock.com">George Murnock</a>
+ * @author George Murnock
  * @author Bruce Faulkner
  * @author Ahmed Ashour
  * @author Sudhan Moghe
  * @author Ethan Glasser-Camp
  * @author Frank Danek
+ * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class HTMLElement3Test extends SimpleWebTestCase {
 
     /**
@@ -55,8 +52,8 @@ public class HTMLElement3Test extends SimpleWebTestCase {
      */
     @Test
     public void clickHashAnchor() throws Exception {
-        final String html
-            = "<html><head><title>HashAnchor</title></head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><title>HashAnchor</title></head>\n"
             + "<body>\n"
             + "  <script language='javascript'>\n"
             + "    function test() {alert('test hash');}\n"
@@ -99,14 +96,16 @@ public class HTMLElement3Test extends SimpleWebTestCase {
 
         webClient.setAlertHandler(new CollectingAlertHandler(collectedAlerts));
 
-        final String firstHtml = "<html><head><title>First</title></head>\n"
+        final String firstHtml = DOCTYPE_HTML
+            + "<html><head><title>First</title></head>\n"
             + "<body><form name='form1'>\n"
             + "<input id='text1' onfocus='alert(\"onfocus text1\")'>\n"
             + "<button type='button' id='clickme' onClick='window.open(\"" + URL_SECOND + "\");'>Click me</a>\n"
             + "</form></body></html>";
         webConnection.setResponse(URL_FIRST, firstHtml);
 
-        final String secondHtml = "<html><head><title>Second</title></head>\n"
+        final String secondHtml = DOCTYPE_HTML
+            + "<html><head><title>Second</title></head>\n"
             + "<body onLoad='doTest()'>\n"
             + "<input id='text2' onfocus='alert(\"onfocus text2\")'>\n"
             + "<script>\n"
@@ -125,6 +124,7 @@ public class HTMLElement3Test extends SimpleWebTestCase {
         final HtmlButton buttonA = firstPage.getHtmlElementById("clickme");
         final HtmlPage secondPage = buttonA.click();
         assertEquals("Second", secondPage.getTitleText());
+
         webClient.setCurrentWindow(firstPage.getEnclosingWindow());
         webClient.setCurrentWindow(secondPage.getEnclosingWindow());
         assertEquals(getExpectedAlerts(), collectedAlerts);
@@ -142,14 +142,16 @@ public class HTMLElement3Test extends SimpleWebTestCase {
 
         webClient.setAlertHandler(new CollectingAlertHandler(collectedAlerts));
 
-        final String firstHtml = "<html><head><title>First</title></head>\n"
+        final String firstHtml = DOCTYPE_HTML
+            + "<html><head><title>First</title></head>\n"
             + "<body><form name='form1'>\n"
             + "<input id='text1' onblur='alert(\"onblur text1\")'>\n"
             + "<button type='button' id='clickme' onClick='window.open(\"" + URL_SECOND + "\");'>Click me</a>\n"
             + "</form></body></html>";
         webConnection.setResponse(URL_FIRST, firstHtml);
 
-        final String secondHtml = "<html><head><title>Second</title></head>\n"
+        final String secondHtml = DOCTYPE_HTML
+            + "<html><head><title>Second</title></head>\n"
             + "<body onLoad='doTest()'>\n"
             + "<input id='text2' onblur='alert(\"onblur text2\")'>\n"
             + "<script>\n"
@@ -178,14 +180,14 @@ public class HTMLElement3Test extends SimpleWebTestCase {
      */
     @Test
     public void offsetHeight() throws Exception {
-        final String html
-            = "<html><head></head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head></head>\n"
             + "<body>\n"
             + "<div>1</div>\n"
             + "</body>\n"
             + "</html>";
         final HtmlPage page = loadPage(html);
-        final HTMLElement host = (HTMLElement) page.<HtmlElement>getFirstByXPath("//div").getScriptableObject();
+        final HTMLElement host = page.<HtmlElement>getFirstByXPath("//div").getScriptableObject();
         final int offsetHeight = host.getOffsetHeight();
         assertTrue(offsetHeight > 0);
     }

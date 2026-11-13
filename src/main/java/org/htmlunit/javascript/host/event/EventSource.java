@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,40 +14,39 @@
  */
 package org.htmlunit.javascript.host.event;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstant;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 
 /**
- * A JavaScript object for {@code EventSource}.
+ * JavaScript host object for {@code EventSource}.
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/EventSource">MDN Documentation</a>
  */
-@JsxClass({CHROME, EDGE, FF, FF_ESR})
+@JsxClass
 public class EventSource extends EventTarget {
 
     /** The connection is being established. */
     @JsxConstant
-    public static final short CONNECTING = 0;
+    public static final int CONNECTING = 0;
 
     /** The connection is open and dispatching events. */
     @JsxConstant
-    public static final short OPEN = 1;
+    public static final int OPEN = 1;
 
-    /** The connection is not being established, has been closed or there was a fatal error. */
+    /** The connection is not being established, has been closed, or there was a fatal error. */
     @JsxConstant
-    public static final short CLOSED = 2;
+    public static final int CLOSED = 2;
 
     /**
-     * Default constructor.
+     * Creates an instance of this object.
      */
+    @Override
     @JsxConstructor
-    public EventSource() {
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 }

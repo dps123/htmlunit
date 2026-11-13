@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,14 @@
  */
 package org.htmlunit.html;
 
-import org.w3c.dom.DocumentFragment;
-
 import org.htmlunit.SgmlPage;
+import org.w3c.dom.DocumentFragment;
 
 /**
  * A DOM object for DocumentFragment.
  *
  * @author Ahmed Ashour
+ * @author Ronald Brill
  */
 public class DomDocumentFragment extends DomNode implements DocumentFragment {
 
@@ -51,7 +51,7 @@ public class DomDocumentFragment extends DomNode implements DocumentFragment {
      */
     @Override
     public short getNodeType() {
-        return org.w3c.dom.Node.DOCUMENT_FRAGMENT_NODE;
+        return DOCUMENT_FRAGMENT_NODE;
     }
 
     /**
@@ -90,5 +90,13 @@ public class DomDocumentFragment extends DomNode implements DocumentFragment {
     @Override
     public void setPrefix(final String prefix) {
         // Empty.
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String getCanonicalXPath() {
+        return "";
     }
 }

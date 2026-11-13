@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,13 @@
  */
 package org.htmlunit.javascript.host;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
 import java.net.URL;
 
 import org.htmlunit.Page;
 import org.htmlunit.WebWindow;
-import org.htmlunit.javascript.JavaScriptEngine;
+import org.htmlunit.corejs.javascript.Function;
+import org.htmlunit.javascript.AbstractJavaScriptEngine;
+import org.htmlunit.javascript.HtmlUnitContextFactory;
 import org.htmlunit.javascript.PostponedAction;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
@@ -34,53 +31,66 @@ import org.htmlunit.javascript.host.event.Event;
 import org.htmlunit.javascript.host.event.EventTarget;
 import org.htmlunit.javascript.host.event.MessageEvent;
 
-import org.htmlunit.corejs.javascript.ContextFactory;
-
 /**
- * A JavaScript object for {@code MessagePort}.
+ * JavaScript host object for {@code MessagePort}.
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/MessagePort">MDN Documentation</a>
  */
 @JsxClass
 public class MessagePort extends EventTarget {
 
-    private MessagePort port1_;
+    private MessagePort port_;
 
     /**
      * Default constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
     public MessagePort() {
+        super();
     }
 
     /**
-     * Constructors {@code port2} with the specified {@code port1}.
-     * @param port1 the port1
+     * Creates an instance of this object.
      */
-    public MessagePort(final MessagePort port1) {
-        port1_ = port1;
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
-     * Returns the value of the window's {@code onmessage} property.
-     * @return the value of the window's {@code onmessage} property
+     * Creates an instance connected to the specified port.
+     *
+     * @param port the port to connect to
+     */
+    public MessagePort(final MessagePort port) {
+        super();
+        port_ = port;
+    }
+
+    /**
+     * Returns the {@code onmessage} event handler.
+     *
+     * @return the {@code onmessage} event handler
      */
     @JsxGetter
-    public Object getOnmessage() {
+    public Function getOnmessage() {
         return getHandlerForJavaScript(Event.TYPE_MESSAGE);
     }
 
     /**
-     * Sets the value of the window's {@code onmessage} property.
-     * @param onmessage the value of the window's {@code onmessage} property
+     * Sets the {@code onmessage} event handler.
+     *
+     * @param onmessage the {@code onmessage} event handler
      */
     @JsxSetter
     public void setOnmessage(final Object onmessage) {
         setHandlerForJavaScript(Event.TYPE_MESSAGE, onmessage);
     }
 
-    private Object getHandlerForJavaScript(final String eventName) {
+    private Function getHandlerForJavaScript(final String eventName) {
         return getEventListenersContainer().getEventHandler(eventName);
     }
 
@@ -89,34 +99,56 @@ public class MessagePort extends EventTarget {
     }
 
     /**
-     * Posts a message.
-     * @param message the object passed to the window
-     * @param transfer an optional sequence of Transferable objects
-     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/window.postMessage">MDN documentation</a>
+     * Posts a message to the connected port.
+     *
+     * @param message the object to post
+     * @param transfer an optional sequence of transferable objects
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/MessagePort/postMessage">MDN Documentation</a>
      */
     @JsxFunction
     public void postMessage(final String message, final Object transfer) {
-        if (port1_ != null) {
+        if (port_ != null) {
             final Window w = getWindow();
             final WebWindow webWindow = w.getWebWindow();
             final Page page = webWindow.getEnclosedPage();
-            final URL currentURL = page.getUrl();
+
             final MessageEvent event = new MessageEvent();
+            final URL currentURL = page.getUrl();
             final String origin = currentURL.getProtocol() + "://" + currentURL.getHost() + ':' + currentURL.getPort();
             event.initMessageEvent(Event.TYPE_MESSAGE, false, false, message, origin, "", w, transfer);
-            event.setParentScope(port1_);
+            event.setParentScope(getParentScope());
             event.setPrototype(getPrototype(event.getClass()));
 
-            final JavaScriptEngine jsEngine = (JavaScriptEngine) webWindow.getWebClient().getJavaScriptEngine();
+            final AbstractJavaScriptEngine<?> jsEngine = webWindow.getWebClient().getJavaScriptEngine();
             final PostponedAction action = new PostponedAction(page, "MessagePort.postMessage") {
                 @Override
-                public void execute() throws Exception {
-                    final ContextFactory cf = jsEngine.getContextFactory();
-                    cf.call(cx -> port1_.dispatchEvent(event));
+                public void execute() {
+                    final HtmlUnitContextFactory cf = jsEngine.getContextFactory();
+                    cf.call(cx -> port_.dispatchEvent(event));
                 }
             };
             jsEngine.addPostponedAction(action);
         }
     }
 
+    /**
+     * Starts the sending of messages queued on the port.
+     * Only needed when using {@code EventTarget.addEventListener}; it is implied when using {@code onmessage}.
+     *
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/MessagePort/start">MDN Documentation</a>
+     */
+    @JsxFunction
+    public void start() {
+        // dummy for the moment
+    }
+
+    /**
+     * Disconnects the port so it is no longer active.
+     *
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/MessagePort/close">MDN Documentation</a>
+     */
+    @JsxFunction
+    public void close() {
+        // dummy for the moment
+    }
 }

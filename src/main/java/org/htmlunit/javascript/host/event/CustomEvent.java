@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,25 +14,20 @@
  */
 package org.htmlunit.javascript.host.event;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
+import org.htmlunit.corejs.javascript.ScriptableObject;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
 
-import org.htmlunit.corejs.javascript.ScriptRuntime;
-import org.htmlunit.corejs.javascript.ScriptableObject;
-import org.htmlunit.corejs.javascript.Undefined;
-
 /**
- * A JavaScript object for {@code CustomEvent}.
+ * JavaScript host object for {@code CustomEvent}.
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/CustomEvent">MDN Documentation</a>
  */
 @JsxClass
 public class CustomEvent extends Event {
@@ -41,23 +36,17 @@ public class CustomEvent extends Event {
     private Object detail_;
 
     /**
-     * Default constructor.
-     */
-    public CustomEvent() {
-    }
-
-    /**
-     * JavaScript constructor.
+     * Creates an instance of this event.
      *
      * @param type the event type
      * @param details the event details (optional)
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
     @Override
+    @JsxConstructor
     public void jsConstructor(final String type, final ScriptableObject details) {
-        super.jsConstructor(ScriptRuntime.toString(type), details);
+        super.jsConstructor(JavaScriptEngine.toString(type), details);
 
-        if (details != null && !Undefined.isUndefined(details)) {
+        if (details != null && !JavaScriptEngine.isUndefined(details)) {
             final Object detail = details.get("detail", details);
             if (NOT_FOUND != detail) {
                 detail_ = detail;
@@ -66,12 +55,12 @@ public class CustomEvent extends Event {
     }
 
     /**
-     * Implementation of the DOM Level 2 Event method for initializing the mouse event.
+     * Initializes the custom event.
      *
      * @param type the event type
-     * @param bubbles can the event bubble
-     * @param cancelable can the event be canceled
-     * @param detail the detail to set for the event
+     * @param bubbles whether the event bubbles
+     * @param cancelable whether the event can be canceled
+     * @param detail the custom detail data for the event
      */
     @JsxFunction
     public void initCustomEvent(
@@ -84,8 +73,9 @@ public class CustomEvent extends Event {
     }
 
     /**
-     * Returns any data passed when initializing the event.
-     * @return any data passed when initializing the event
+     * Returns any data passed when the event was initialized.
+     *
+     * @return any data passed when the event was initialized
      */
     @JsxGetter
     public Object getDetail() {

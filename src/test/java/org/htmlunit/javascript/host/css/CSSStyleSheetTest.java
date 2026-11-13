@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,28 +14,22 @@
  */
 package org.htmlunit.javascript.host.css;
 
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.IE;
-
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.openqa.selenium.By;
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.htmlunit.HtmlUnitDriver;
-
 import org.htmlunit.MockWebConnection;
 import org.htmlunit.WebClient;
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.html.HtmlPageTest;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.HtmlUnitNYI;
 import org.htmlunit.util.MimeType;
 import org.htmlunit.util.NameValuePair;
+import org.junit.jupiter.api.Test;
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 
 /**
  * Unit tests for {@link CSSStyleSheet}.
@@ -46,18 +40,16 @@ import org.htmlunit.util.NameValuePair;
  * @author Ronald Brill
  * @author Carsten Steul
  */
-@RunWith(BrowserRunner.class)
 public class CSSStyleSheetTest extends WebDriverTestCase {
 
     /**
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = {"[object CSSStyleSheet]", "[object HTMLStyleElement]", "true", "undefined", "false"},
-            IE = {"[object CSSStyleSheet]", "[object HTMLStyleElement]",
-                  "true", "[object HTMLStyleElement]", "true"})
+    @Alerts({"[object CSSStyleSheet]", "[object HTMLStyleElement]", "true", "undefined", "false"})
     public void owningNodeOwningElement() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
                 + "function test() {\n"
@@ -84,7 +76,8 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
             FF = {"4", "0", "1", "2", "3", "item", "length"},
             FF_ESR = {"4", "0", "1", "2", "3", "item", "length"})
     public void rules() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "<style>\n"
                 + "  BODY { background-color: white; color: black; }\n"
                 + "  H1 { font: 8pt Arial bold; }\n"
@@ -116,8 +109,7 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
     @Test
     @Alerts({"4", "§§URL§§style2.css", "§§URL§§style4.css", "null", "null"})
     public void href() throws Exception {
-        final String html =
-            HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html>\n"
             + "  <head>\n"
             + "    <link href='" + URL_FIRST + "style1.css' type='text/css'></link>\n"
@@ -151,15 +143,12 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"8", "§§URL§§style1.css 1", "§§URL§§style2.css 0",
-                       "§§URL§§style3.css 0", "§§URL§§style4.css 1",
-                       "§§URL§§style5.css 1", "§§URL§§style6.css 0",
-                       "§§URL§§style7.css 0", "§§URL§§style8.css 1"},
-            IE = {"2", "§§URL§§style1.css 1", "§§URL§§style5.css 1"})
-    @NotYetImplemented(IE)
+    @Alerts({"8", "§§URL§§style1.css 1", "§§URL§§style2.css 0",
+             "§§URL§§style3.css 0", "§§URL§§style4.css 1",
+             "§§URL§§style5.css 1", "§§URL§§style6.css 0",
+             "§§URL§§style7.css 0", "§§URL§§style8.css 1"})
     public void hrefWrongContentType() throws Exception {
-        final String html =
-            HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html>\n"
             + "  <head>\n"
             + "    <link href='" + URL_FIRST + "style1.css' rel='stylesheet' type='text/css'></link>\n"
@@ -200,10 +189,10 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"1", "false", "-1", "div", "color: red;", "2"},
-            IE = {"1", "false", "1", "div", "color: red;", "2"})
+    @Alerts({"1", "false", "-1", "div", "color: red;", "2"})
     public void addRule() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -233,10 +222,10 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"2", "-1", "div", "", "3"},
-            IE = {"2", "2", "div", "", "3"})
+    @Alerts({"2", "-1", "div", "", "3"})
     public void addRuleInvalidRule() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -266,9 +255,10 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts("exception")
+    @Alerts("SyntaxError/DOMException")
     public void addInvalidRule() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
@@ -277,9 +267,9 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
             + "  var rules = s.cssRules || s.rules;\n"
             + "  try {\n"
             + "    if (s.addRule)\n"
-            + "      s.addRule('.testStyle1;', '', 1);\n"
+            + "      s.addRule('.testStyle1;', '', 0);\n"
             + "    log('added');\n"
-            + "  } catch(err) { log('exception'); }\n"
+            + "  } catch(e) { logEx(e); }\n"
             + "}</script>\n"
             + "<style id='myStyle'></style>\n"
             + "</head><body onload='doTest()'>\n"
@@ -295,7 +285,8 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
     @Test
     @Alerts({"1", "false", "0", "div", "color: red;", "2"})
     public void insertRule() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -327,7 +318,8 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
     @Test
     @Alerts({"1", "false", "0", "div", "", "2"})
     public void insertRuleInvalidRule() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -358,9 +350,10 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts("exception")
+    @Alerts("SyntaxError/DOMException")
     public void insertInvalidRule() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -372,7 +365,7 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
             + "    if (s.insertRule)\n"
             + "      s.insertRule('.testStyle1', 0);\n"
             + "    log('inserted');\n"
-            + "  } catch(err) { log('exception'); }\n"
+            + "  } catch(e) { logEx(e); }\n"
             + "}</script>\n"
             + "<style id='myStyle'></style>\n"
             + "</head><body onload='doTest()'>\n"
@@ -388,7 +381,8 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
     @Test
     @Alerts({"2", "false", "false", "undefined", "1", "div", "color: red;"})
     public void removeRule_deleteRule() throws Exception {
-        final String html = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
             + "  var f = document.getElementById('myStyle');\n"
@@ -417,9 +411,10 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts("exception")
+    @Alerts("IndexSizeError/DOMException")
     public void deleteRuleInvalidParam() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -433,7 +428,7 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
             + "    else\n"
             + "      s.removeRule(19);\n"
             + "    log('deleted');\n"
-            + "  } catch(err) { log('exception'); }\n"
+            + "  } catch(e) { logEx(e); }\n"
             + "}</script>\n"
             + "<style id='myStyle'></style>\n"
             + "</head><body onload='doTest()'>\n"
@@ -448,7 +443,8 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
     @Test
     @Alerts({"2", "1", "div", "color: red;"})
     public void deleteRuleIgnored() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -465,7 +461,7 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
             + "    log(rules.length);\n"
             + "    log(rules[0].selectorText);\n"
             + "    log(rules[0].style.cssText);\n"
-            + "  } catch(err) { log('exception'); }\n"
+            + "  } catch(err) { logEx(e); }\n"
             + "}</script>\n"
             + "<style id='myStyle'>\n"
             + "  p { vertical-align:top }\n"
@@ -484,7 +480,8 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
     @Test
     @Alerts({"2", "1", "p", "vertical-align: top;"})
     public void deleteRuleIgnoredLast() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -501,7 +498,7 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
             + "    log(rules.length);\n"
             + "    log(rules[0].selectorText);\n"
             + "    log(rules[0].style.cssText);\n"
-            + "  } catch(err) { log('exception'); }\n"
+            + "  } catch(err) { logEx(e); }\n"
             + "}</script>\n"
             + "<style id='myStyle'>\n"
             + "  p { vertical-align:top }\n"
@@ -521,8 +518,7 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
     @Test
     @Alerts({"2", ".testStyleDef", "height: 42px;", ".testStyle", "width: 24px;"})
     public void insertRuleLeadingWhitespace() throws Exception {
-        final String html =
-            HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
@@ -673,7 +669,8 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
     }
 
     private void doTest(final String cssSelector, final String htmlSnippet) throws Exception {
-        final String html = "<html id='elt0'><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html id='elt0'><head>\n"
                 + "<style>\n"
                 + cssSelector + " { z-index: 10 }\n"
                 + "</style>\n"
@@ -706,7 +703,8 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
     @Test
     @Alerts("width=100")
     public void important() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -734,7 +732,8 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
     @Test
     @Alerts("none")
     public void fontFace() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -766,7 +765,8 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
     @Test
     @Alerts("60")
     public void rulePriority_specificity() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<style>\n"
             + "div { z-index: 60 }\n"
             + "* { z-index: 10 }\n"
@@ -792,7 +792,8 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
     @Test
     @Alerts("60")
     public void rulePriority_specificity2() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<style>\n"
             + ".classA .classB .classC { z-index: 60 }\n"
             + ".classA .classC { z-index: 10 }\n"
@@ -822,7 +823,8 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
     @Test
     @Alerts({"10", "10"})
     public void rulePriority_position() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<style>\n"
             + ".classA { z-index: 60 }\n"
             + ".classB { z-index: 10 }\n"
@@ -916,8 +918,8 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
     }
 
     private void mediaOnStyleTag(final String media) throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<style media='" + media + "'> div { display: none }</style>\n"
             + "</head><body>\n"
             + "<div id='d'>hello</div>\n"
@@ -972,11 +974,7 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"block", "1"},
-            CHROME = {"block", "0"},
-            EDGE = {"block", "0"},
-            FF = {"block", "0"},
-            FF_ESR = {"block", "0"})
+    @Alerts({"block", "0"})
     public void mediaOnLinkTag_notScreen() throws Exception {
         mediaOnLinkTag("print");
     }
@@ -994,18 +992,14 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"block", "1"},
-            CHROME = {"block", "0"},
-            EDGE = {"block", "0"},
-            FF = {"block", "0"},
-            FF_ESR = {"block", "0"})
+    @Alerts({"block", "0"})
     public void mediaOnLinkTag_multipleWithoutScreen() throws Exception {
         mediaOnLinkTag("print, projection, tv");
     }
 
     private void mediaOnLinkTag(final String media) throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<link rel='stylesheet' media='" + media + "' href='" + URL_SECOND + "'></link>\n"
             + "</head><body>\n"
             + "<div id='d'>hello</div>\n"
@@ -1062,9 +1056,7 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"block", "1"},
-            IE = {"none", "1"})
-    @NotYetImplemented(IE)
+    @Alerts({"block", "1"})
     public void mediaRule_max_width() throws Exception {
         mediaRule("screen and (max-width: 123px)");
     }
@@ -1119,9 +1111,7 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"none", "1"},
-            IE = {"block", "1"})
-    @NotYetImplemented(IE)
+    @Alerts({"none", "1"})
     public void mediaRule_min_width_match() throws Exception {
         mediaRule("screen and (min-width: 123px)");
     }
@@ -1250,9 +1240,7 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"block", "1"},
-            IE = {"none", "1"})
-    @NotYetImplemented(IE)
+    @Alerts({"block", "1"})
     public void mediaRule_max_height() throws Exception {
         mediaRule("screen and (max-height: 123px)");
     }
@@ -1307,9 +1295,7 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"none", "1"},
-            IE = {"block", "1"})
-    @NotYetImplemented(IE)
+    @Alerts({"none", "1"})
     public void mediaRule_min_height_match() throws Exception {
         mediaRule("screen and (min-height: 123px)");
     }
@@ -1447,9 +1433,7 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"none", "1"},
-            IE = {"block", "1"})
-    @NotYetImplemented(IE)
+    @Alerts({"none", "1"})
     public void mediaRule_resolution_match() throws Exception {
         mediaRule("screen and (resolution: 96dpi)");
     }
@@ -1476,9 +1460,7 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"none", "1"},
-            IE = {"block", "1"})
-    @NotYetImplemented(IE)
+    @Alerts({"none", "1"})
     public void mediaRule_resolution_without_value() throws Exception {
         mediaRule("screen and (resolution)");
     }
@@ -1496,9 +1478,7 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"block", "1"},
-            IE = {"none", "1"})
-    @NotYetImplemented(IE)
+    @Alerts({"block", "1"})
     public void mediaRule_max_resolution() throws Exception {
         mediaRule("screen and (max-resolution: 90dpi)");
     }
@@ -1553,9 +1533,7 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"none", "1"},
-            IE = {"block", "1"})
-    @NotYetImplemented(IE)
+    @Alerts({"none", "1"})
     public void mediaRule_min_resolution_match() throws Exception {
         mediaRule("screen and (min-resolution: 10dpi)");
     }
@@ -1589,12 +1567,47 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
     }
 
     /**
+     * 'x' is an alias for 'dppx'.
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"block", "1"},
-            IE = {"none", "1"})
-    @NotYetImplemented(IE)
+    @Alerts({"none", "1"})
+    public void mediaRule_min_resolution_x() throws Exception {
+        mediaRule("screen and (min-resolution: 0.5x)");
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"block", "1"})
+    public void mediaRule_min_resolution_x_noMatch() throws Exception {
+        mediaRule("screen and (min-resolution: 100x)");
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"none", "1"})
+    public void mediaRule_max_resolution_x() throws Exception {
+        mediaRule("screen and (max-resolution: 100x)");
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"block", "1"})
+    public void mediaRule_max_resolution_x_noMatch() throws Exception {
+        mediaRule("screen and (max-resolution: 0.5x)");
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts({"block", "1"})
     public void mediaRule_portrait() throws Exception {
         mediaRule("screen and (orientation: portrait)");
     }
@@ -1603,9 +1616,7 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"none", "1"},
-            IE = {"block", "1"})
-    @NotYetImplemented(IE)
+    @Alerts({"none", "1"})
     public void mediaRule_portrait_not() throws Exception {
         mediaRule("not screen and (orientation: portrait)");
     }
@@ -1614,9 +1625,7 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"none", "1"},
-            IE = {"block", "1"})
-    @NotYetImplemented(IE)
+    @Alerts({"none", "1"})
     public void mediaRule_landscape() throws Exception {
         mediaRule("screen and (orientation: landscape)");
     }
@@ -1625,9 +1634,7 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"block", "1"},
-            IE = {"none", "1"})
-    @NotYetImplemented(IE)
+    @Alerts({"block", "1"})
     public void mediaRule_landscape_not() throws Exception {
         mediaRule("not screen and (orientation: landscape)");
     }
@@ -1660,8 +1667,7 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
     }
 
     private void mediaRule(final String media) throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html>\n"
             + "<head>\n"
             + "  <style> @media " + media + " { div { display: none } }</style>\n"
@@ -1694,7 +1700,8 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
             maxInMemory = webClient.getOptions().getMaxInMemory();
         }
 
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <link href='" + URL_FIRST + "style.css' rel='stylesheet'></link>\n"
             + "  </head>\n"
@@ -1740,7 +1747,8 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
     @Test
     @Alerts("inserted")
     public void insertRuleWithoutGetRules() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -1754,7 +1762,7 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
                 + "      s.addRule('.testStyle1', 'color: red;', 0);\n"
                 + "    }\n"
                 + "    log('inserted');\n"
-                + "  } catch(err) { log('exception'); }\n"
+                + "  } catch(err) { logEx(e); }\n"
                 + "}</script>\n"
                 + "<style id='myStyle'></style>\n"
                 + "</head>\n"
@@ -2022,5 +2030,126 @@ public class CSSStyleSheetTest extends WebDriverTestCase {
 
         final WebDriver webDriver = loadPage2(html);
         assertFalse(webDriver.findElement(By.id("di")).isDisplayed());
+    }
+
+    /**
+     * Test for #1300.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void brokenExternalCSS() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<link rel='stylesheet' type='text/css' href='" + URL_SECOND + "'/>\n"
+            + "</head>\n"
+            + "<body>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  log(document.body.currentStyle);\n"
+            + "</script>\n"
+            + "</body>\n"
+            + "</html>";
+
+        getMockWebConnection().setResponse(URL_SECOND, "body { font-weight: 900\\9; }");
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Test for #941.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"true", "false"})
+    @HtmlUnitNYI(
+            CHROME = {"true", "true"},
+            EDGE = {"true", "true"},
+            FF = {"true", "true"},
+            FF_ESR = {"true", "true"})
+    public void widthHeightPercent() throws Exception {
+        widthHeightPercent(DOCTYPE_HTML);
+    }
+
+    /**
+     * Test for #941.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"true", "true"})
+    public void widthHeightPercentQuirks() throws Exception {
+        widthHeightPercent("");
+    }
+
+    private void widthHeightPercent(final String doctype) throws Exception {
+        final String html = doctype
+            + "<html>\n"
+            + "  <head>"
+            + "    <style>#testDiv { width: 50%; height: 50%; background-color: blue; }</style>\n"
+            + "  </head>"
+            + "  <body>\n"
+            + "    <div id='testDiv'>Test Div</div>\n"
+
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  let elem = document.getElementById('testDiv');\n"
+            + "  let sty = window.getComputedStyle(elem, null);\n"
+            + "  let w = (window.innerWidth / 2) - parseInt(sty.width, 10);\n"
+            + "  log(10 > w);\n"
+            + "  let h = (window.innerHeight / 2) - parseInt(sty.height, 10);\n"
+            + "  log(10 > h);\n"
+            + "</script>\n"
+
+            + "  </body>\n"
+            + "</html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * Test for #942.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts(CHROME = "break at: 10 664.25 / 621",
+            EDGE = "break at: 10 664.25 / 630",
+            FF = "break at: 10 675.2000122070312 / 674",
+            FF_ESR = "break at: 10 675.2000122070312 / 674")
+    @HtmlUnitNYI(CHROME = "break at: 16 637 / 605",
+            EDGE = "break at: 16 637 / 605",
+            FF = "break at: 15 616 / 605",
+            FF_ESR = "break at: 15 616 / 605")
+    public void endlessLoop() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "  <head>"
+            + "  </head>"
+            + "  <body>\n"
+            + "    <h1>Scroll me</h1>\n"
+
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+
+            + "  var lastBottom = 0;\n"
+            + "  for (let i = 0; i < 70; i++) {\n"
+            + "    let windowRelativeBottom = document.documentElement.getBoundingClientRect().bottom;\n"
+            + "    let stop = document.documentElement.clientHeight;"
+            + "    if (windowRelativeBottom > stop) {\n"
+            + "      log('break at: ' + i + ' ' + windowRelativeBottom + ' / ' + stop);\n"
+            + "      break;\n"
+            + "    }\n"
+            + "    if (lastBottom >= windowRelativeBottom) {\n"
+            + "      log('error at: ' + i + ' ' + windowRelativeBottom + ' / ' + lastBottom);\n"
+            + "      break;\n"
+            + "    }\n"
+            + "    lastBottom = windowRelativeBottom;\n"
+
+            + "    document.body.insertAdjacentHTML('beforeend', '<h1>H 1</h1>');\n"
+            + "  }\n"
+            + "</script>\n"
+
+            + "  </body>\n"
+            + "</html>";
+
+        loadPageVerifyTitle2(html);
     }
 }

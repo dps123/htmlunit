@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,15 @@ package org.htmlunit;
 
 import java.net.URL;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.html.HtmlPage;
-import org.htmlunit.junit.BrowserRunner;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link NiceRefreshHandler}.
  *
  * @author Marc Guillemot
+ * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public final class NiceRefreshHandlerTest extends SimpleWebTestCase {
 
     /**
@@ -47,7 +44,8 @@ public final class NiceRefreshHandlerTest extends SimpleWebTestCase {
     }
 
     private void doTest(final int handlerMaxDelay, final URL expectedUrl) throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head><title>Meta Redirect Page</title>\n"
             + "<meta http-equiv='Refresh' content='2; URL=" + URL_THIRD + "'>\n"
             + "</head>\n"

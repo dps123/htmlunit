@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +19,11 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
+import java.lang.ref.Cleaner;
 import java.nio.file.Files;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.ArrayUtils;
+import org.htmlunit.util.ArrayUtils;
 
 /**
  * Wrapper for content downloaded from a remote server.
@@ -72,16 +73,38 @@ public interface DownloadedContent extends Serializable {
      * Implementation keeping content on the file system.
      */
     class OnFile implements DownloadedContent {
+
         private final File file_;
-        private final boolean temporary_;
+        private final Cleaner.Cleanable cleanable_;
+
+        // no synchronization required, a Cleanable runs the action at most once
+        private static final class OnFileCleaningAction implements Runnable {
+            private final File file_;
+
+            OnFileCleaningAction(final File file) {
+                file_ = file;
+            }
+
+            @Override
+            public void run() {
+                FileUtils.deleteQuietly(file_);
+            }
+        }
 
         /**
+         * Ctor.
+         *
          * @param file the file
          * @param temporary if true, the file will be deleted when cleanUp() is called.
          */
         OnFile(final File file, final boolean temporary) {
             file_ = file;
-            temporary_ = temporary;
+            if (temporary) {
+                cleanable_ = WebClient.registerCleanerAction(this, new OnFileCleaningAction(file));
+            }
+            else {
+                cleanable_ = null;
+            }
         }
 
         @Override
@@ -91,8 +114,8 @@ public interface DownloadedContent extends Serializable {
 
         @Override
         public void cleanUp() {
-            if (temporary_) {
-                FileUtils.deleteQuietly(file_);
+            if (cleanable_ != null) {
+                cleanable_.clean();
             }
         }
 
@@ -102,16 +125,11 @@ public interface DownloadedContent extends Serializable {
         }
 
         @Override
-        protected void finalize() throws Throwable {
-            super.finalize();
-            cleanUp();
-        }
-
-        @Override
         public long length() {
             if (file_ == null) {
                 return 0;
             }
+
             return file_.length();
         }
     }

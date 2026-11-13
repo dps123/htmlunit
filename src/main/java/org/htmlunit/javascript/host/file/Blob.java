@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,39 +14,35 @@
  */
 package org.htmlunit.javascript.host.file;
 
-import static org.htmlunit.BrowserVersionFeatures.JS_BLOB_CONTENT_TYPE_CASE_SENSITIVE;
-import static org.htmlunit.BrowserVersionFeatures.XHR_SEND_IGNORES_BLOB_MIMETYPE_AS_CONTENTTYPE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
+import java.nio.charset.Charset;
 import java.util.Locale;
-
-import org.apache.commons.lang3.StringUtils;
 
 import org.htmlunit.BrowserVersion;
 import org.htmlunit.HttpHeader;
 import org.htmlunit.WebRequest;
+import org.htmlunit.corejs.javascript.NativeArray;
+import org.htmlunit.corejs.javascript.NativePromise;
+import org.htmlunit.corejs.javascript.Scriptable;
+import org.htmlunit.corejs.javascript.ScriptableObject;
+import org.htmlunit.corejs.javascript.typedarrays.NativeArrayBuffer;
+import org.htmlunit.corejs.javascript.typedarrays.NativeArrayBufferView;
 import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.host.ReadableStream;
-
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.NativeArray;
-import org.htmlunit.corejs.javascript.ScriptRuntime;
-import org.htmlunit.corejs.javascript.Scriptable;
-import org.htmlunit.corejs.javascript.ScriptableObject;
-import org.htmlunit.corejs.javascript.Undefined;
-import org.htmlunit.corejs.javascript.typedarrays.NativeArrayBuffer;
-import org.htmlunit.corejs.javascript.typedarrays.NativeArrayBufferView;
+import org.htmlunit.util.KeyDataPair;
+import org.htmlunit.util.MimeType;
+import org.htmlunit.util.StringUtils;
 
 /**
  * A JavaScript object for {@code Blob}.
@@ -64,60 +60,131 @@ public class Blob extends HtmlUnitScriptable {
 
     private Backend backend_;
 
-    protected abstract static class Backend implements Serializable {
-        abstract String getName();
-        abstract long getLastModified();
-        abstract long getSize();
-        abstract String getType(BrowserVersion browserVersion);
-        abstract String getText() throws IOException;
+    /**
+     * The backend used for saving the blob.
+     */
+    protected interface Backend extends Serializable {
 
-        abstract byte[] getBytes(int start, int end);
+        /**
+         * Returns the name.
+         *
+         * @return the name
+         */
+        String getName();
 
-        Backend() {
-        }
+        /**
+         * Returns the last modified timestamp as long.
+         *
+         * @return the last modified timestamp as long
+         */
+        long getLastModified();
 
-        // TODO
-        abstract java.io.File getFile();
+        /**
+         * Returns the size.
+         *
+         * @return the size
+         */
+        long getSize();
+
+        /**
+         * Returns the type.
+         *
+         * @param browserVersion the {@link BrowserVersion}
+         * @return the type
+         */
+        String getType(BrowserVersion browserVersion);
+
+        /**
+         * Returns the text.
+         *
+         * @return the text
+         * @throws IOException in case of error
+         */
+        String getText() throws IOException;
+
+        /**
+         * Returns the bytes.
+         *
+         * @param start the start position
+         * @param end the end position
+         * @return the bytes
+         */
+        byte[] getBytes(int start, int end);
+
+        /**
+         * Returns the KeyDataPair for this Blob/File.
+         *
+         * @param name the name
+         * @param fileName the file name
+         * @param contentType the content type
+         * @return the KeyDataPair to hold the data
+         */
+        KeyDataPair getKeyDataPair(String name, String fileName, String contentType);
     }
 
-    protected static class InMemoryBackend extends Backend {
+    /**
+     * Implementation of the {@link Backend} that stores the bytes in memory.
+     *
+     */
+    protected static class InMemoryBackend implements Backend {
         private final String fileName_;
         private final String type_;
         private final long lastModified_;
         private final byte[] bytes_;
 
+        /**
+         * Ctor.
+         *
+         * @param bytes the bytes
+         * @param fileName the name
+         * @param type the type
+         * @param lastModified last modified
+         */
         protected InMemoryBackend(final byte[] bytes, final String fileName,
                 final String type, final long lastModified) {
+            super();
             fileName_ = fileName;
             type_ = type;
             lastModified_ = lastModified;
             bytes_ = bytes;
         }
 
+        /**
+         * Factory method to create an {@link InMemoryBackend} from an {@link NativeArray}.
+         *
+         * @param fileBits the bytes as {@link NativeArray}
+         * @param fileName the name
+         * @param type the type
+         * @param lastModified last modified
+         * @return the new {@link InMemoryBackend}
+         * @throws IOException in case of error
+         */
         protected static InMemoryBackend create(final NativeArray fileBits, final String fileName,
-                final String type, final long lastModified) {
+                final String type, final long lastModified) throws IOException {
             if (fileBits == null) {
                 return new InMemoryBackend(new byte[0], fileName, type, lastModified);
             }
 
             final ByteArrayOutputStream out = new ByteArrayOutputStream();
-            for (long i = 0; i < fileBits.getLength(); i++) {
+            final long length = fileBits.getLength();
+            for (long i = 0; i < length; i++) {
                 final Object fileBit = fileBits.get(i);
-                if (fileBit instanceof NativeArrayBuffer) {
-                    final byte[] bytes = ((NativeArrayBuffer) fileBit).getBuffer();
-                    out.write(bytes, 0, bytes.length);
+                if (fileBit instanceof NativeArrayBuffer buffer) {
+                    final ByteBuffer bb = buffer.getByteBuffer();
+                    Channels.newChannel(out).write(bb);
                 }
-                else if (fileBit instanceof NativeArrayBufferView) {
-                    final byte[] bytes = ((NativeArrayBufferView) fileBit).getBuffer().getBuffer();
-                    out.write(bytes, 0, bytes.length);
+                else if (fileBit instanceof NativeArrayBufferView view) {
+                    final ByteBuffer bb = view.getBuffer().getByteBuffer();
+                    bb.position(view.getByteOffset());
+                    bb.limit(view.getByteOffset() + view.getByteLength());
+                    Channels.newChannel(out).write(bb);
                 }
-                else if (fileBit instanceof Blob) {
-                    final Blob blob = (Blob) fileBit;
+                else if (fileBit instanceof Blob blob) {
                     final byte[] bytes = blob.getBackend().getBytes(0, (int) blob.getSize());
                     out.write(bytes, 0, bytes.length);
                 }
                 else {
-                    final String bits = Context.toString(fileBits.get(i));
+                    final String bits = JavaScriptEngine.toString(fileBits.get(i));
                     // Todo normalize line breaks
                     final byte[] bytes = bits.getBytes(UTF_8);
                     out.write(bytes, 0, bytes.length);
@@ -126,74 +193,97 @@ public class Blob extends HtmlUnitScriptable {
             return new InMemoryBackend(out.toByteArray(), fileName, type, lastModified);
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public String getName() {
             return fileName_;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public long getLastModified() {
             return lastModified_;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public long getSize() {
             return bytes_.length;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public String getType(final BrowserVersion browserVersion) {
-            if (!browserVersion.hasFeature(JS_BLOB_CONTENT_TYPE_CASE_SENSITIVE)) {
-                return type_.toLowerCase(Locale.ROOT);
-            }
-            return type_;
+            return type_.toLowerCase(Locale.ROOT);
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public String getText() throws IOException {
             return new String(bytes_, UTF_8);
         }
 
-        @Override
-        public java.io.File getFile() {
-            throw new UnsupportedOperationException(
-                    "org.htmlunit.javascript.host.file.File.InMemoryBackend.getFile()");
-        }
-
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public byte[] getBytes(final int start, final int end) {
             final byte[] result = new byte[end - start];
             System.arraycopy(bytes_, start, result, 0, result.length);
             return result;
         }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public KeyDataPair getKeyDataPair(final String name, final String fileName, final String contentType) {
+            String fname = fileName;
+            if (fname == null) {
+                fname = getName();
+            }
+            final KeyDataPair data = new KeyDataPair(name, null, fname, contentType, (Charset) null);
+            data.setData(bytes_);
+            return data;
+        }
     }
 
     protected static String extractFileTypeOrDefault(final ScriptableObject properties) {
-        if (properties == null || Undefined.isUndefined(properties)) {
+        if (properties == null || JavaScriptEngine.isUndefined(properties)) {
             return OPTIONS_TYPE_DEFAULT;
         }
 
         final Object optionsType = properties.get(OPTIONS_TYPE_NAME, properties);
         if (optionsType != null && properties != Scriptable.NOT_FOUND
-                && !Undefined.isUndefined(optionsType)) {
-            return Context.toString(optionsType);
+                && !JavaScriptEngine.isUndefined(optionsType)) {
+            return JavaScriptEngine.toString(optionsType);
         }
 
         return OPTIONS_TYPE_DEFAULT;
     }
 
     protected static long extractLastModifiedOrDefault(final ScriptableObject properties) {
-        if (properties == null || Undefined.isUndefined(properties)) {
+        if (properties == null || JavaScriptEngine.isUndefined(properties)) {
             return System.currentTimeMillis();
         }
 
         final Object optionsType = properties.get(OPTIONS_LASTMODIFIED, properties);
-        if (optionsType != null && properties != Scriptable.NOT_FOUND
-                && !Undefined.isUndefined(optionsType)) {
+        if (optionsType != null && optionsType != Scriptable.NOT_FOUND
+                && !JavaScriptEngine.isUndefined(optionsType)) {
             try {
-                return Long.parseLong(Context.toString(optionsType));
+                return Long.parseLong(JavaScriptEngine.toString(optionsType));
             }
-            catch (final NumberFormatException e) {
+            catch (final NumberFormatException ignored) {
                 // fall back to default
             }
         }
@@ -205,31 +295,41 @@ public class Blob extends HtmlUnitScriptable {
      * Creates an instance.
      */
     public Blob() {
+        super();
     }
 
     /**
      * Creates an instance.
      * @param fileBits the bits
      * @param properties the properties
+     * @throws IOException in case of error
      */
     @JsxConstructor
-    public Blob(final NativeArray fileBits, final ScriptableObject properties) {
+    public void jsConstructor(final NativeArray fileBits, final ScriptableObject properties) throws IOException {
         NativeArray nativeBits = fileBits;
-        if (Undefined.isUndefined(fileBits)) {
+        if (JavaScriptEngine.isUndefined(fileBits)) {
             nativeBits = null;
         }
 
-        setBackend(InMemoryBackend.create(nativeBits, null,
+        backend_ = InMemoryBackend.create(nativeBits, null,
                             extractFileTypeOrDefault(properties),
-                            extractLastModifiedOrDefault(properties)));
+                            extractLastModifiedOrDefault(properties));
     }
 
-    public Blob(final byte[] bits, final String contentType) {
-        setBackend(new InMemoryBackend(bits, null, contentType, -1));
+    /**
+     * Ctor.
+     *
+     * @param bytes the bytes
+     * @param contentType the content type
+     */
+    public Blob(final byte[] bytes, final String contentType) {
+        super();
+        setBackend(new InMemoryBackend(bytes, null, contentType, -1));
     }
 
     /**
      * Returns the {@code size} property.
+     *
      * @return the {@code size} property
      */
     @JsxGetter
@@ -239,6 +339,7 @@ public class Blob extends HtmlUnitScriptable {
 
     /**
      * Returns the {@code type} property.
+     *
      * @return the {@code type} property
      */
     @JsxGetter
@@ -247,20 +348,39 @@ public class Blob extends HtmlUnitScriptable {
     }
 
     /**
+     * Returns a Promise that resolves with an ArrayBuffer containing the
+     *         data in binary form.
+     *
      * @return a Promise that resolves with an ArrayBuffer containing the
-     * data in binary form.
+     *         data in binary form.
      */
-    @JsxFunction({CHROME, EDGE, FF, FF_ESR})
-    public Object arrayBuffer() {
+    @JsxFunction
+    public NativePromise arrayBuffer() {
         return setupPromise(() -> {
             final byte[] bytes = getBytes();
             final NativeArrayBuffer buffer = new NativeArrayBuffer(bytes.length);
-            System.arraycopy(bytes, 0, buffer.getBuffer(), 0, bytes.length);
-            ScriptRuntime.setObjectProtoAndParent(buffer, getParentScope());
+            buffer.getByteBuffer().put(bytes);
+            buffer.setParentScope(getParentScope());
+            buffer.setPrototype(ScriptableObject.getClassPrototype(getParentScope(), buffer.getClassName()));
             return buffer;
         });
     }
 
+    /**
+     * Returns a new Blob object which contains data from a subset of the blob on which it's called.
+     *
+     * @param start An index into the Blob indicating the first byte to include in the new Blob. If you specify
+     *        a negative value, it's treated as an offset from the end of the Blob toward the beginning.
+     *        For example, -10 would be the 10th from last byte in the Blob. The default value is 0.
+     *        If you specify a value for start that is larger than the size of the source Blob,
+     *        the returned Blob has size 0 and contains no data.
+     * @param end An index into the Blob indicating the first byte that will not be included in the
+     *        new Blob (i.e. the byte exactly at this index is not included). If you specify a negative value,
+     *        it's treated as an offset from the end of the Blob toward the beginning.
+     *        For example, -10 would be the 10th from last byte in the Blob. The default value is size.
+     * @param contentType The content type to assign to the new Blob; this will be the value of its type property. The default value is an empty string.
+     * @return a new Blob object which contains data from a subset of the blob on which it's called.
+     */
     @JsxFunction
     public Blob slice(final Object start, final Object end, final Object contentType) {
         final Blob blob = new Blob();
@@ -270,16 +390,16 @@ public class Blob extends HtmlUnitScriptable {
         final int size = (int) getSize();
         int usedStart = 0;
         int usedEnd = size;
-        if (start != null && !Undefined.isUndefined(start)) {
-            usedStart = ScriptRuntime.toInt32(start);
+        if (start != null && !JavaScriptEngine.isUndefined(start)) {
+            usedStart = JavaScriptEngine.toInt32(start);
             if (usedStart < 0) {
                 usedStart = size + usedStart;
             }
             usedStart = Math.max(0, usedStart);
         }
 
-        if (end != null && !Undefined.isUndefined(end)) {
-            usedEnd = ScriptRuntime.toInt32(end);
+        if (end != null && !JavaScriptEngine.isUndefined(end)) {
+            usedEnd = JavaScriptEngine.toInt32(end);
             if (usedEnd < 0) {
                 usedEnd = size + usedEnd;
             }
@@ -287,8 +407,8 @@ public class Blob extends HtmlUnitScriptable {
         }
 
         String usedContentType = "";
-        if (contentType != null && !Undefined.isUndefined(contentType)) {
-            usedContentType = ScriptRuntime.toString(contentType).toLowerCase(Locale.ROOT);
+        if (contentType != null && !JavaScriptEngine.isUndefined(contentType)) {
+            usedContentType = JavaScriptEngine.toString(contentType).toLowerCase(Locale.ROOT);
         }
 
         if (usedEnd <= usedStart || usedStart >= getSize()) {
@@ -300,20 +420,33 @@ public class Blob extends HtmlUnitScriptable {
         return blob;
     }
 
+    /**
+     * Returns a ReadableStream which, upon reading, returns the contents of the Blob.
+     *
+     * @return a ReadableStream which, upon reading, returns the contents of the Blob.
+     */
     @JsxFunction
     public ReadableStream stream() {
         throw new UnsupportedOperationException("Blob.stream() is not yet implemented.");
     }
 
     /**
+     * Returns a Promise that resolves with a string containing the
+     *         contents of the blob, interpreted as UTF-8.
+     *
      * @return a Promise that resolves with a string containing the
-     * contents of the blob, interpreted as UTF-8.
+     *         contents of the blob, interpreted as UTF-8.
      */
-    @JsxFunction({CHROME, EDGE, FF, FF_ESR})
-    public Object text() {
+    @JsxFunction
+    public NativePromise text() {
         return setupPromise(() -> getBackend().getText());
     }
 
+    /**
+     * Returns the bytes of this blob.
+     *
+     * @return the bytes of this blob
+     */
     public byte[] getBytes() {
         return getBackend().getBytes(0, (int) getBackend().getSize());
     }
@@ -326,14 +459,28 @@ public class Blob extends HtmlUnitScriptable {
         webRequest.setRequestBody(new String(getBytes(), UTF_8));
 
         final boolean contentTypeDefinedByCaller = webRequest.getAdditionalHeader(HttpHeader.CONTENT_TYPE) != null;
-        if (!contentTypeDefinedByCaller
-                && !getBrowserVersion().hasFeature(XHR_SEND_IGNORES_BLOB_MIMETYPE_AS_CONTENTTYPE)) {
+        if (!contentTypeDefinedByCaller) {
             final String mimeType = getType();
             if (StringUtils.isNotBlank(mimeType)) {
                 webRequest.setAdditionalHeader(HttpHeader.CONTENT_TYPE, mimeType);
             }
             webRequest.setEncodingType(null);
         }
+    }
+
+    /**
+     * Delegates the KeyDataPair construction to the backend.
+     * @param name the name
+     * @param fileName the filename
+     * @return the constructed {@link KeyDataPair}
+     */
+    public KeyDataPair getKeyDataPair(final String name, final String fileName) {
+        String contentType = getType();
+        if (StringUtils.isEmptyOrNull(contentType)) {
+            contentType = MimeType.APPLICATION_OCTET_STREAM;
+        }
+
+        return backend_.getKeyDataPair(name, fileName, contentType);
     }
 
     protected Backend getBackend() {

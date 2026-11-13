@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,37 +15,47 @@
 package org.htmlunit;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
-import static org.junit.Assert.fail;
 
+import java.awt.Color;
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
+import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.function.Supplier;
 
 import javax.imageio.ImageIO;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.SerializationUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.rules.MethodRule;
-import org.junit.rules.TestName;
+import org.htmlunit.junit.BrowserVersionClassTemplateInvocationContextProvider;
+import org.htmlunit.junit.ErrorOutputChecker;
+import org.htmlunit.junit.SetExpectedAlertsBeforeTestExecutionCallback;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.ClassTemplate;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.github.romankh3.image.comparison.ImageComparison;
 import com.github.romankh3.image.comparison.ImageComparisonUtil;
@@ -55,7 +65,7 @@ import com.github.romankh3.image.comparison.model.ImageComparisonState;
 /**
  * Common superclass for HtmlUnit tests.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author David D. Kilzer
  * @author Marc Guillemot
  * @author Chris Erskine
@@ -64,15 +74,22 @@ import com.github.romankh3.image.comparison.model.ImageComparisonState;
  * @author Ahmed Ashour
  * @author Ronald Brill
  */
+@ClassTemplate
+@ExtendWith({BrowserVersionClassTemplateInvocationContextProvider.class,
+             SetExpectedAlertsBeforeTestExecutionCallback.class,
+             ErrorOutputChecker.class})
+@TestMethodOrder(MethodOrderer.DisplayName.class)
 public abstract class WebTestCase {
+
+    /** The html5 doctype. */
+    public static final String DOCTYPE_HTML = "<!DOCTYPE html>\n";
 
     /**
      * Make the test method name available to the tests.
      */
-    @Rule
-    public TestName testMethodName_ = new TestName();
+    public TestInfo testInfo_;
 
-    /** Logging support. */
+    // /** Logging support. */
     // private static final Log LOG = LogFactory.getLog(WebTestCase.class);
 
     /** save the environment */
@@ -84,28 +101,68 @@ public abstract class WebTestCase {
     public static final int PORT = Integer.parseInt(System.getProperty("htmlunit.test.port", "22222"));
 
     /** The second listener port for the web server, used for cross-origin tests. */
-    public static final int PORT2 = Integer.parseInt(System.getProperty("htmlunit.test.port2", "22223"));
+    public static final int PORT2 = Integer.parseInt(System.getProperty("htmlunit.test.port2", "" + (PORT + 1)));
 
     /** The third listener port for the web server, used for cross-origin tests. */
-    public static final int PORT3 = Integer.parseInt(System.getProperty("htmlunit.test.port3", "22224"));
+    public static final int PORT3 = Integer.parseInt(System.getProperty("htmlunit.test.port3", "" + (PORT + 2)));
 
     /** The listener port used for our primitive server tests. */
     public static final int PORT_PRIMITIVE_SERVER = Integer.parseInt(
-                                                        System.getProperty("htmlunit.test.port_primitive", "22225"));
+                                                        System.getProperty("htmlunit.test.port_primitive", "" + (PORT + 3)));
 
     /** The listener port used for our proxy tests. */
     public static final int PORT_PROXY_SERVER = Integer.parseInt(
-                                                        System.getProperty("htmlunit.test.port_proxy", "22226"));
+                                                        System.getProperty("htmlunit.test.port_proxy", "" + (PORT + 4)));
 
     /** The SOCKS proxy port to use for SOCKS proxy tests. */
     public static final int SOCKS_PROXY_PORT = Integer.parseInt(
-            System.getProperty("htmlunit.test.socksproxy.port", "22227"));
+            System.getProperty("htmlunit.test.socksproxy.port", "" + (PORT + 5)));
 
     /** The SOCKS proxy host to use for SOCKS proxy tests. */
     public static final String SOCKS_PROXY_HOST = System.getProperty("htmlunit.test.socksproxy.host", "localhost");
 
+    /**
+     * The domain for tests requiring more host names than localhost (e.g. cookie domains,
+     * same site checks or hosts that are not a loopback host).
+     * <p>
+     * These host names have to be resolved to 127.0.0.1; this requires a special setup of the
+     * name resolution (e.g. in {@code etc/hosts}), see the
+     * <a href="https://www.htmlunit.org/development.html#hosts_setup">development guide</a>:
+     * </p>
+     * <pre>
+     * 127.0.0.1       host1.htmlunit-dev.org
+     * 127.0.0.1       host2.htmlunit-dev.org
+     * 127.0.0.1       htmlunit-dev.org
+     * 127.0.0.1       htmlunit-dev
+     * </pre>
+     *
+     * @see #assertHostsConfigured()
+     */
+    public static final String HOSTS_DOMAIN = "htmlunit-dev.org";
+
+    /** "host1.htmlunit-dev.org" (see {@link #HOSTS_DOMAIN}). */
+    public static final String HOST1 = "host1." + HOSTS_DOMAIN;
+
+    /** "host2.htmlunit-dev.org" (see {@link #HOSTS_DOMAIN}). */
+    public static final String HOST2 = "host2." + HOSTS_DOMAIN;
+
+    /** "htmlunit-dev", a host name without domain (see {@link #HOSTS_DOMAIN}). */
+    public static final String HOST_WITHOUT_DOMAIN = "htmlunit-dev";
+
+    /** "http://host1.htmlunit-dev.org:" + PORT + '/'. */
+    public static final String URL_HOST1 = "http://" + HOST1 + ":" + PORT + '/';
+
+    /** "http://host2.htmlunit-dev.org:" + PORT + '/'. */
+    public static final String URL_HOST2 = "http://" + HOST2 + ":" + PORT + '/';
+
+    /** "http://htmlunit-dev.org:" + PORT + '/'. */
+    public static final String URL_HOST3 = "http://" + HOSTS_DOMAIN + ":" + PORT + '/';
+
+    /** "http://htmlunit-dev:" + PORT + '/'. */
+    public static final String URL_HOST4 = "http://" + HOST_WITHOUT_DOMAIN + ":" + PORT + '/';
+
     /** The default time used to wait for the expected alerts. */
-    protected static final long DEFAULT_WAIT_TIME = 1000;
+    protected static final Duration DEFAULT_WAIT_TIME = Duration.ofSeconds(1);
 
     /** Constant for the URL which is used in the tests. */
     public static final URL URL_FIRST;
@@ -135,21 +192,9 @@ public abstract class WebTestCase {
      */
     public static final URL URL_CROSS_ORIGIN_BASE;
 
-    /** To be documented. */
-    protected static final BrowserVersion FLAG_ALL_BROWSERS
-        = new BrowserVersion.BrowserVersionBuilder(BrowserVersion.BEST_SUPPORTED)
-                    .setApplicationName("FLAG_ALL_BROWSERS")
-                    .build();
-
     private BrowserVersion browserVersion_;
     private String[] expectedAlerts_;
     private MockWebConnection mockWebConnection_;
-
-    /**
-     * JUnit 4 {@link Rule} controlling System.err.
-     */
-    @Rule
-    public final MethodRule errOutputChecker_ = new ErrorOutputChecker();
 
     static {
         try {
@@ -167,9 +212,30 @@ public abstract class WebTestCase {
     }
 
     /**
+     * Fails if the host names of {@link #HOSTS_DOMAIN} can't be resolved (the special
+     * setup of the name resolution is missing).
+     */
+    protected static void assertHostsConfigured() {
+        for (final String host : new String[] {HOST1, HOST2, HOSTS_DOMAIN, HOST_WITHOUT_DOMAIN}) {
+            try {
+                InetAddress.getByName(host);
+            }
+            catch (final UnknownHostException e) {
+                Assertions.fail("Host '" + host + "' can't be resolved; the host names have to be configured, see "
+                        + "https://www.htmlunit.org/development.html#hosts_setup");
+            }
+        }
+    }
+
+    /**
      * Constructor.
      */
     protected WebTestCase() {
+    }
+
+    @BeforeEach
+    void init(final TestInfo testInfo) {
+        testInfo_ = testInfo;
     }
 
     /**
@@ -177,7 +243,7 @@ public abstract class WebTestCase {
      * @param object the object to check
      */
     public static void assertNull(final Object object) {
-        Assert.assertNull("Expected null but found [" + object + "]", object);
+        Assertions.assertNull(object, "Expected null but found [" + object + "]");
     }
 
     /**
@@ -186,7 +252,7 @@ public abstract class WebTestCase {
      * @param object the object to check
      */
     public static void assertNull(final String message, final Object object) {
-        Assert.assertNull(message, object);
+        Assertions.assertNull(object, message);
     }
 
     /**
@@ -194,7 +260,7 @@ public abstract class WebTestCase {
      * @param object the object to check
      */
     public static void assertNotNull(final Object object) {
-        Assert.assertNotNull(object);
+        Assertions.assertNotNull(object);
     }
 
     /**
@@ -203,7 +269,7 @@ public abstract class WebTestCase {
      * @param object the object to check
      */
     public static void assertNotNull(final String message, final Object object) {
-        Assert.assertNotNull(message, object);
+        Assertions.assertNotNull(object, message);
     }
 
     /**
@@ -212,7 +278,7 @@ public abstract class WebTestCase {
      * @param actual the actual object
      */
     public static void assertSame(final Object expected, final Object actual) {
-        Assert.assertSame(expected, actual);
+        Assertions.assertSame(expected, actual);
     }
 
     /**
@@ -222,7 +288,7 @@ public abstract class WebTestCase {
      * @param actual the actual object
      */
     public static void assertSame(final String message, final Object expected, final Object actual) {
-        Assert.assertSame(message, expected, actual);
+        Assertions.assertSame(expected, actual, message);
     }
 
     /**
@@ -231,7 +297,7 @@ public abstract class WebTestCase {
      * @param actual the actual object
      */
     public static void assertNotSame(final Object expected, final Object actual) {
-        Assert.assertNotSame(expected, actual);
+        Assertions.assertNotSame(expected, actual);
     }
 
     /**
@@ -241,7 +307,7 @@ public abstract class WebTestCase {
      * @param actual the actual object
      */
     public static void assertNotSame(final String message, final Object expected, final Object actual) {
-        Assert.assertNotSame(message, expected, actual);
+        Assertions.assertNotSame(expected, actual, message);
     }
 
     /**
@@ -251,7 +317,7 @@ public abstract class WebTestCase {
      * @param actualUrl the URL to test
      */
     protected static void assertEquals(final URL expectedUrl, final URL actualUrl) {
-        Assert.assertEquals(expectedUrl.toExternalForm(), actualUrl.toExternalForm());
+        Assertions.assertEquals(expectedUrl.toExternalForm(), actualUrl.toExternalForm());
     }
 
     /**
@@ -260,7 +326,7 @@ public abstract class WebTestCase {
      * @param actual the object to test
      */
     protected static void assertEquals(final Object expected, final Object actual) {
-        Assert.assertEquals(expected, actual);
+        Assertions.assertEquals(expected, actual);
     }
 
     /**
@@ -270,7 +336,7 @@ public abstract class WebTestCase {
      * @param actual the object to test
      */
     protected static void assertEquals(final String message, final Object expected, final Object actual) {
-        Assert.assertEquals(message, expected, actual);
+        Assertions.assertEquals(expected, actual, message);
     }
 
     /**
@@ -279,7 +345,7 @@ public abstract class WebTestCase {
      * @param actual the int to test
      */
     protected static void assertEquals(final int expected, final int actual) {
-        Assert.assertEquals(expected, actual);
+        Assertions.assertEquals(expected, actual);
     }
 
     /**
@@ -288,7 +354,7 @@ public abstract class WebTestCase {
      * @param actual the boolean to test
      */
     protected void assertEquals(final boolean expected, final boolean actual) {
-        Assert.assertEquals(Boolean.valueOf(expected), Boolean.valueOf(actual));
+        Assertions.assertEquals(Boolean.valueOf(expected), Boolean.valueOf(actual));
     }
 
     /**
@@ -299,7 +365,7 @@ public abstract class WebTestCase {
      * @param actualUrl the URL to test
      */
     protected void assertEquals(final String message, final URL expectedUrl, final URL actualUrl) {
-        Assert.assertEquals(message, expectedUrl.toExternalForm(), actualUrl.toExternalForm());
+        Assertions.assertEquals(expectedUrl.toExternalForm(), actualUrl.toExternalForm(), message);
     }
 
     /**
@@ -308,7 +374,7 @@ public abstract class WebTestCase {
      * @param actualUrl the URL to test
      */
     protected void assertEquals(final String expectedUrl, final URL actualUrl) {
-        Assert.assertEquals(expectedUrl, actualUrl.toExternalForm());
+        Assertions.assertEquals(expectedUrl, actualUrl.toExternalForm());
     }
 
     /**
@@ -333,7 +399,7 @@ public abstract class WebTestCase {
      * @param actual the collection of strings to test
      */
     protected void assertEquals(final String message, final String[] expected, final List<String> actual) {
-        Assert.assertEquals(message, Arrays.asList(expected).toString(), actual.toString());
+        Assertions.assertEquals(Arrays.asList(expected).toString(), actual.toString(), message);
     }
 
     /**
@@ -343,7 +409,7 @@ public abstract class WebTestCase {
      * @param actualUrl the URL to test
      */
     protected void assertEquals(final String message, final String expectedUrl, final URL actualUrl) {
-        Assert.assertEquals(message, expectedUrl, actualUrl.toExternalForm());
+        Assertions.assertEquals(expectedUrl, actualUrl.toExternalForm(), message);
     }
 
     /**
@@ -351,7 +417,7 @@ public abstract class WebTestCase {
      * @param condition condition to test
      */
     protected void assertTrue(final boolean condition) {
-        Assert.assertTrue(condition);
+        Assertions.assertTrue(condition);
     }
 
     /**
@@ -360,7 +426,7 @@ public abstract class WebTestCase {
      * @param condition condition to test
      */
     protected void assertTrue(final String message, final boolean condition) {
-        Assert.assertTrue(message, condition);
+        Assertions.assertTrue(condition, message);
     }
 
     /**
@@ -368,7 +434,7 @@ public abstract class WebTestCase {
      * @param condition condition to test
      */
     protected void assertFalse(final boolean condition) {
-        Assert.assertFalse(condition);
+        Assertions.assertFalse(condition);
     }
 
     /**
@@ -377,7 +443,7 @@ public abstract class WebTestCase {
      * @param condition condition to test
      */
     protected void assertFalse(final String message, final boolean condition) {
-        Assert.assertFalse(message, condition);
+        Assertions.assertFalse(condition, message);
     }
 
     /**
@@ -392,7 +458,7 @@ public abstract class WebTestCase {
      * Returns the current {@link BrowserVersion}.
      * @return current {@link BrowserVersion}
      */
-    protected final BrowserVersion getBrowserVersion() {
+    public final BrowserVersion getBrowserVersion() {
         if (browserVersion_ == null) {
             throw new IllegalStateException("You must annotate the test class with '@RunWith(BrowserRunner.class)'");
         }
@@ -428,11 +494,21 @@ public abstract class WebTestCase {
      * @param url the URL to expand
      */
     protected void expandExpectedAlertsVariables(final String url) {
+        expandExpectedAlertsVariables(url, PORT);
+    }
+
+    /**
+     * Expand "§§URL§§" and §§PORT§§ to the provided in the expected alerts.
+     * @param url the URL to expand
+     * @param port the port to expand
+     */
+    protected void expandExpectedAlertsVariables(final String url, int port) {
         if (expectedAlerts_ == null) {
             throw new IllegalStateException("You must annotate the test class with '@RunWith(BrowserRunner.class)'");
         }
         for (int i = 0; i < expectedAlerts_.length; i++) {
             expectedAlerts_[i] = expectedAlerts_[i].replaceAll("§§URL§§", url);
+            expectedAlerts_[i] = expectedAlerts_[i].replaceAll("§§PORT§§", "" + port);
         }
     }
 
@@ -450,7 +526,7 @@ public abstract class WebTestCase {
      * Prepare the environment.
      * Rhino has localized error message... for instance for French
      */
-    @BeforeClass
+    @BeforeAll
     public static void beforeClass() {
         Locale.setDefault(Locale.US);
     }
@@ -458,44 +534,148 @@ public abstract class WebTestCase {
     /**
      * Restore the environment.
      */
-    @AfterClass
+    @AfterAll
     public static void afterClass() {
         Locale.setDefault(SAVE_LOCALE);
     }
 
     /**
-     * Verifies the captured alerts.
-     * @param func actual string producer
-     * @param expected the expected string
-     * @throws Exception in case of failure
+     * Asserts that the value returned by the given supplier is equal to the expected value.
+     *
+     * @param expected the expected value
+     * @param func the supplier of the actual value (e.g. the window name or the page title)
+     * @param maxWaitTime the maximum time to wait for the expected value
+     * @throws Exception if the waiting is interrupted
+     * @see #assertEquals(String, Supplier, Duration)
      */
-    protected void verify(final Supplier<String> func, final String expected) throws Exception {
-        verify(func, expected, DEFAULT_WAIT_TIME);
+    protected void verify(final String expected, final Supplier<String> func,
+            final Duration maxWaitTime) throws Exception {
+        assertEquals(expected, func, maxWaitTime);
     }
 
     /**
-     * Verifies the captured alerts.
-     * @param func actual string producer
-     * @param expected the expected string
-     * @param maxWaitTime the maximum time to wait to get the alerts (in millis)
-     * @throws Exception in case of failure
+     * Asserts that the value returned by the given supplier is equal to the expected value.
+     * The supplier is called repeatedly (every 50ms) until it returns the expected value
+     * or the given time has passed. Use this instead of fixed waits in tests
+     * that depend on background processing (e.g. timeouts or asynchronous requests).
+     *
+     * @param expected the expected value
+     * @param func the supplier of the actual value (e.g. the window name or the page title)
+     * @param maxWaitTime the maximum time to wait for the expected value
+     * @throws InterruptedException if the waiting is interrupted
      */
-    protected void verify(final Supplier<String> func, final String expected,
-            final long maxWaitTime) throws Exception {
-        final long maxWait = System.currentTimeMillis() + maxWaitTime;
+    protected static void assertEquals(final String expected, final Supplier<String> func,
+            final Duration maxWaitTime) throws InterruptedException {
+        Assertions.assertEquals(expected, waitFor(expected, func, maxWaitTime));
+    }
 
-        String actual = null;
-        while (System.currentTimeMillis() < maxWait) {
+    /**
+     * Asserts that the value returned by the given supplier is equal to the expected value.
+     * The supplier is called repeatedly (every 50ms) until it returns the expected value
+     * or the given time has passed. Use this instead of fixed waits in tests
+     * that depend on background processing (e.g. timeouts or asynchronous requests).
+     *
+     * @param message the message to display if the assertion fails
+     * @param expected the expected value
+     * @param func the supplier of the actual value (e.g. the window name or the page title)
+     * @param maxWaitTime the maximum time to wait for the expected value
+     * @throws InterruptedException if the waiting is interrupted
+     */
+    protected static void assertEquals(final String message, final String expected,
+            final Supplier<String> func, final Duration maxWaitTime) throws InterruptedException {
+        Assertions.assertEquals(expected, waitFor(expected, func, maxWaitTime), message);
+    }
+
+    /**
+     * Asserts that the value returned by the given supplier is equal to the expected value.
+     * The supplier is called repeatedly (every 50ms) until it returns the expected value
+     * or the given time has passed. Use this instead of fixed waits in tests
+     * that depend on background processing (e.g. timeouts or asynchronous requests).
+     *
+     * @param expected the expected value
+     * @param func the supplier of the actual value (e.g. the number of elements)
+     * @param maxWaitTime the maximum time to wait for the expected value
+     * @throws InterruptedException if the waiting is interrupted
+     */
+    protected static void assertEquals(final int expected, final Supplier<Integer> func,
+            final Duration maxWaitTime) throws InterruptedException {
+        Assertions.assertEquals(Integer.valueOf(expected), waitFor(expected, func, maxWaitTime));
+    }
+
+    /**
+     * Asserts that the value returned by the given supplier is equal to the expected value.
+     * The supplier is called repeatedly (every 50ms) until it returns the expected value
+     * or the given time has passed. Use this instead of fixed waits in tests
+     * that depend on background processing (e.g. timeouts or asynchronous requests).
+     *
+     * @param message the message to display if the assertion fails
+     * @param expected the expected value
+     * @param func the supplier of the actual value (e.g. the number of elements)
+     * @param maxWaitTime the maximum time to wait for the expected value
+     * @throws InterruptedException if the waiting is interrupted
+     */
+    protected static void assertEquals(final String message, final int expected,
+            final Supplier<Integer> func, final Duration maxWaitTime) throws InterruptedException {
+        Assertions.assertEquals(Integer.valueOf(expected), waitFor(expected, func, maxWaitTime), message);
+    }
+
+    /**
+     * Asserts that the list returned by the given supplier contains the expected strings.
+     * The supplier is called repeatedly (every 50ms) until the list contains the expected
+     * strings or the given time has passed. Use this instead of fixed waits in tests
+     * that depend on background processing (e.g. alerts collected from timeouts).
+     *
+     * @param expected the expected strings
+     * @param func the supplier of the actual list (e.g. the collected alerts)
+     * @param maxWaitTime the maximum time to wait for the expected strings
+     * @throws InterruptedException if the waiting is interrupted
+     */
+    protected static void assertEquals(final String[] expected, final Supplier<List<String>> func,
+            final Duration maxWaitTime) throws InterruptedException {
+        assertEquals(null, expected, func, maxWaitTime);
+    }
+
+    /**
+     * Asserts that the list returned by the given supplier contains the expected strings.
+     * The supplier is called repeatedly (every 50ms) until the list contains the expected
+     * strings or the given time has passed. Use this instead of fixed waits in tests
+     * that depend on background processing (e.g. alerts collected from timeouts).
+     *
+     * @param message the message to display if the assertion fails
+     * @param expected the expected strings
+     * @param func the supplier of the actual list (e.g. the collected alerts)
+     * @param maxWaitTime the maximum time to wait for the expected strings
+     * @throws InterruptedException if the waiting is interrupted
+     */
+    protected static void assertEquals(final String message, final String[] expected,
+            final Supplier<List<String>> func, final Duration maxWaitTime) throws InterruptedException {
+        final String expectedString = Arrays.asList(expected).toString();
+        final String actual = waitFor(expectedString, () -> String.valueOf(func.get()), maxWaitTime);
+        Assertions.assertEquals(expectedString, actual, message);
+    }
+
+    /**
+     * Calls the supplier (every 50ms) until it returns the expected value
+     * or the given time has passed. The supplier is called at least once
+     * and once more after the last wait.
+     *
+     * @param <T> the type of the value
+     * @param expected the expected value
+     * @param func the supplier of the actual value
+     * @param maxWaitTime the maximum time to wait for the expected value
+     * @return the last value returned by the supplier
+     * @throws InterruptedException if the waiting is interrupted
+     */
+    private static <T> T waitFor(final T expected, final Supplier<T> func,
+            final Duration maxWaitTime) throws InterruptedException {
+        final long maxWait = System.currentTimeMillis() + maxWaitTime.toMillis();
+
+        T actual = func.get();
+        while (!Objects.equals(expected, actual) && System.currentTimeMillis() < maxWait) {
+            Thread.sleep(42);
             actual = func.get();
-
-            if (StringUtils.equals(expected, actual)) {
-                break;
-            }
-
-            Thread.sleep(50);
         }
-
-        assertEquals(expected, actual);
+        return actual;
     }
 
     /**
@@ -512,9 +692,11 @@ public abstract class WebTestCase {
     /**
      * Cleanup after a test.
      */
-    @After
+    @AfterEach
     public void releaseResources() {
-        mockWebConnection_ = null;
+        if (mockWebConnection_ != null) {
+            mockWebConnection_.clear();
+        }
     }
 
     /**
@@ -565,52 +747,152 @@ public abstract class WebTestCase {
         try (ByteArrayInputStream expectedBis = new ByteArrayInputStream(expectedImageBytes)) {
             final BufferedImage expectedImage = ImageIO.read(expectedBis);
 
-            final ImageComparison imageComparison = new ImageComparison(expectedImage, currentImage);
+            if (expectedImage == null) {
+                assertEquals("Could not decode expected image from base64 data", expected, current);
+                return;
+            }
+
+            final BufferedImage normalizedExpected = blurAndFlatten(toRgb(expectedImage), 1);
+            final BufferedImage normalizedCurrent = blurAndFlatten(toRgb(currentImage), 1);
+
+            final ImageComparison imageComparison = new ImageComparison(normalizedExpected, normalizedCurrent);
             // imageComparison.setMinimalRectangleSize(10);
-            imageComparison.setPixelToleranceLevel(0.2);
-            imageComparison.setAllowingPercentOfDifferentPixels(7);
+            imageComparison.setPixelToleranceLevel(0.15);
+            imageComparison.setAllowingPercentOfDifferentPixels(5);
 
             final ImageComparisonResult imageComparisonResult = imageComparison.compareImages();
             final ImageComparisonState imageComparisonState = imageComparisonResult.getImageComparisonState();
 
-            if (ImageComparisonState.SIZE_MISMATCH == imageComparisonState) {
-                final String dir = "target/" + testMethodName_.getMethodName();
-                Files.createDirectories(Paths.get(dir));
+            // debugOutput(expectedImage, currentImage, imageComparisonResult.getResult());
 
-                final File expectedOut = new File(dir, "expected.png");
-                final File currentOut = new File(dir, "current.png");
-                ImageComparisonUtil.saveImage(expectedOut, expectedImage);
-                ImageComparisonUtil.saveImage(currentOut, currentImage);
+            if (ImageComparisonState.SIZE_MISMATCH == imageComparisonState) {
+                final List<String> result = debugOutput(expectedImage, currentImage, null);
 
                 String fail = "The images are different in size - "
                         + "expected: " + expectedImage.getWidth() + "x" + expectedImage.getHeight()
                         + " current: " + currentImage.getWidth() + "x" + currentImage.getHeight()
-                        + " (expected: " + expectedOut.getAbsolutePath()
-                            + " current: " + currentOut.getAbsolutePath() + ")";
+                        + " (expected: " + result.get(0)
+                            + " current: " + result.get(1) + ")";
                 if (current != null) {
                     fail += "; current data: '" + current + "'";
                 }
-                fail(fail);
+
+                // fail(fail);
+                assertEquals(fail, expected, current);
             }
             else if (ImageComparisonState.MISMATCH == imageComparisonState) {
-                final String dir = "target/" + testMethodName_.getMethodName();
-                Files.createDirectories(Paths.get(dir));
+                final List<String> result = debugOutput(expectedImage, currentImage, imageComparisonResult.getResult());
 
-                final File expectedOut = new File(dir, "expected.png");
-                final File currentOut = new File(dir, "current.png");
-                final File differenceOut = new File(dir, "difference.png");
-                ImageComparisonUtil.saveImage(expectedOut, expectedImage);
-                ImageComparisonUtil.saveImage(currentOut, currentImage);
-                ImageComparisonUtil.saveImage(differenceOut, imageComparisonResult.getResult());
-
-                String fail = "The images are different (expected: " + expectedOut.getAbsolutePath()
-                            + " current: " + currentOut.getAbsolutePath()
-                            + " difference: " + differenceOut.getAbsolutePath() + ")";
+                String fail = "The images are different (expected: " + result.get(0)
+                            + " current: " + result.get(1)
+                            + " difference: " + result.get(2) + ")";
                 if (current != null) {
                     fail += "; current data: '" + current + "'";
                 }
-                fail(fail);
+
+                // fail(fail);
+                assertEquals(fail, expected, current);
             }
+        }
+    }
+
+    // flatten onto white background first to handle transparency
+    private static BufferedImage toRgb(final BufferedImage src) {
+        final int w = src.getWidth();
+        final int h = src.getHeight();
+        final BufferedImage dst = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+
+        final Graphics2D g = dst.createGraphics();
+        g.setColor(Color.WHITE);
+        g.fillRect(0, 0, w, h);
+        g.drawImage(src, 0, 0, null);
+        g.dispose();
+
+        return dst;
+    }
+
+    // box blur to absorb antialiasing and small pixel shifts
+    private static BufferedImage blurAndFlatten(final BufferedImage img, final int radius) {
+        final int w = img.getWidth();
+        final int h = img.getHeight();
+        final int[] pixels = img.getRGB(0, 0, w, h, null, 0, w);
+        final int[] result = new int[pixels.length];
+
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                int r = 0, g = 0, b = 0, count = 0;
+                for (int dy = -radius; dy <= radius; dy++) {
+                    for (int dx = -radius; dx <= radius; dx++) {
+                        final int nx = x + dx;
+                        final int ny = y + dy;
+                        if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
+                            final int pixel = pixels[ny * w + nx];
+                            r += (pixel >> 16) & 0xFF;
+                            g += (pixel >> 8)  & 0xFF;
+                            b +=  pixel        & 0xFF;
+                            count++;
+                        }
+                    }
+                }
+                result[y * w + x] = 0xFF000000
+                                   | ((r / count) << 16)
+                                   | ((g / count) << 8)
+                                   |  (b / count);
+            }
+        }
+
+        final BufferedImage dst = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+        dst.setRGB(0, 0, w, h, result, 0, w);
+        return dst;
+    }
+
+    private List<String> debugOutput(final BufferedImage expectedImage,
+            final BufferedImage currentImage,
+            final BufferedImage differenceImage) throws IOException {
+        final List<String> result = new ArrayList<>();
+
+        final String dir = "target/imageComparison/" + testInfo_.getDisplayName();
+        Files.createDirectories(Paths.get(dir));
+
+        final String browser = getBrowserVersion().getNickname();
+
+        final File expectedOut = new File(dir, browser + "_expected.png");
+        ImageComparisonUtil.saveImage(expectedOut, expectedImage);
+        result.add(expectedOut.getAbsolutePath());
+
+        final File currentOut = new File(dir, browser + "_current.png");
+        ImageComparisonUtil.saveImage(currentOut, currentImage);
+        result.add(currentOut.getAbsolutePath());
+
+        if (differenceImage != null) {
+            final File differenceOut = new File(dir, browser + "_difference.png");
+            ImageComparisonUtil.saveImage(differenceOut, differenceImage);
+            result.add(differenceOut.getAbsolutePath());
+        }
+        return result;
+    }
+
+    protected void readExpectedAlertFromPng(final String testName) throws IOException {
+        String resourceName = testName + "/nyi_" + getBrowserVersion().getNickname() + ".png";
+        try (InputStream is = getClass().getResourceAsStream(resourceName)) {
+            if (is != null) {
+                final byte[] bytes = IOUtils.toByteArray(is);
+                final String alert = "data:image/png;base64," + Base64.getEncoder().encodeToString(bytes);
+                setExpectedAlerts(alert);
+
+                return;
+            }
+        }
+
+        resourceName = testName + "/expected_" + getBrowserVersion().getNickname() + ".png";
+        try (InputStream is = getClass().getResourceAsStream(resourceName)) {
+            if (is == null) {
+                throw new IllegalArgumentException("Resource named '" + resourceName + "' not found");
+            }
+
+            final byte[] bytes = IOUtils.toByteArray(is);
+            final String alert = "data:image/png;base64," + Base64.getEncoder().encodeToString(bytes);
+            setExpectedAlerts(alert);
         }
     }
 }

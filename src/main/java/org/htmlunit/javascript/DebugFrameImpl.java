@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,6 @@ package org.htmlunit.javascript;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import org.htmlunit.javascript.host.event.Event;
-
 import org.htmlunit.corejs.javascript.Context;
 import org.htmlunit.corejs.javascript.EcmaError;
 import org.htmlunit.corejs.javascript.Function;
@@ -28,7 +25,9 @@ import org.htmlunit.corejs.javascript.JavaScriptException;
 import org.htmlunit.corejs.javascript.NativeFunction;
 import org.htmlunit.corejs.javascript.Scriptable;
 import org.htmlunit.corejs.javascript.ScriptableObject;
+import org.htmlunit.corejs.javascript.VarScope;
 import org.htmlunit.corejs.javascript.debug.DebuggableScript;
+import org.htmlunit.javascript.host.event.Event;
 
 /**
  * <p>
@@ -46,9 +45,12 @@ import org.htmlunit.corejs.javascript.debug.DebuggableScript;
  * HtmlUnit itself, rather than the debugging and development of web applications.
  * </p>
  *
+ * @see DebuggerImpl
+ *
  * @author Daniel Gredler
  * @author Marc Guillemot
- * @see DebuggerImpl
+ * @author Sven Strickroth
+ * @author Ronald Brill
  */
 public class DebugFrameImpl extends DebugFrameAdapter {
 
@@ -65,6 +67,7 @@ public class DebugFrameImpl extends DebugFrameAdapter {
      * @param functionOrScript the function or script to which this frame corresponds
      */
     public DebugFrameImpl(final DebuggableScript functionOrScript) {
+        super();
         functionOrScript_ = functionOrScript;
     }
 
@@ -72,7 +75,7 @@ public class DebugFrameImpl extends DebugFrameAdapter {
      * {@inheritDoc}
      */
     @Override
-    public void onEnter(final Context cx, final Scriptable activation, final Scriptable thisObj, final Object[] args) {
+    public void onEnter(final Context cx, final VarScope activation, final Object thisObj, final Object[] args) {
         if (LOG.isTraceEnabled()) {
             final StringBuilder sb = new StringBuilder();
 
@@ -80,12 +83,12 @@ public class DebugFrameImpl extends DebugFrameAdapter {
             final String source = getSourceName(cx);
             sb.append(source).append(':').append(line).append(' ');
 
-            Scriptable parent = activation.getParentScope();
+            VarScope parent = activation.getParentScope();
             while (parent != null) {
                 sb.append("   ");
                 parent = parent.getParentScope();
             }
-            final String functionName = getFunctionName(thisObj);
+            final String functionName = getFunctionName((Scriptable) thisObj);
             sb.append(functionName).append('(');
             final int nbParams = functionOrScript_.getParamCount();
             for (int i = 0; i < nbParams; i++) {
@@ -108,14 +111,14 @@ public class DebugFrameImpl extends DebugFrameAdapter {
     }
 
     private static String stringValue(final Object arg) {
-        if (arg instanceof NativeFunction) {
+        if (arg instanceof NativeFunction function) {
             // Don't return the string value of the function, because it's usually
             // multiple lines of content and messes up the log.
-            final String name = StringUtils.defaultIfEmpty(((NativeFunction) arg).getFunctionName(), "anonymous");
+            final String name = StringUtils.defaultIfEmpty(function.getFunctionName(), "anonymous");
             return "[function " + name + "]";
         }
-        else if (arg instanceof IdFunctionObject) {
-            return "[function " + ((IdFunctionObject) arg).getFunctionName() + "]";
+        else if (arg instanceof IdFunctionObject object) {
+            return "[function " + object.getFunctionName() + "]";
         }
         else if (arg instanceof Function) {
             return "[function anonymous]";
@@ -123,9 +126,9 @@ public class DebugFrameImpl extends DebugFrameAdapter {
         String asString;
         try {
             // try to get the js representation
-            asString = Context.toString(arg);
-            if (arg instanceof Event) {
-                asString += "<" + ((Event) arg).getType() + ">";
+            asString = JavaScriptEngine.toString(arg);
+            if (arg instanceof Event event) {
+                asString += "<" + event.getType() + ">";
             }
         }
         catch (final Throwable e) {
@@ -141,24 +144,16 @@ public class DebugFrameImpl extends DebugFrameAdapter {
     @Override
     public void onExceptionThrown(final Context cx, final Throwable t) {
         if (LOG.isTraceEnabled()) {
-            if (t instanceof JavaScriptException) {
-                final JavaScriptException e = (JavaScriptException) t;
-                if (LOG.isTraceEnabled()) {
-                    LOG.trace(getSourceName(cx) + ":" + getFirstLine(cx)
-                        + " Exception thrown: " + Context.toString(e.details()));
-                }
+            if (t instanceof JavaScriptException e) {
+                LOG.trace(getSourceName(cx) + ":" + getFirstLine(cx)
+                    + " Exception thrown: " + e.details());
             }
-            else if (t instanceof EcmaError) {
-                final EcmaError e = (EcmaError) t;
-                if (LOG.isTraceEnabled()) {
-                    LOG.trace(getSourceName(cx) + ":" + getFirstLine(cx)
-                        + " Exception thrown: " + Context.toString(e.details()));
-                }
+            else if (t instanceof EcmaError e) {
+                LOG.trace(getSourceName(cx) + ":" + getFirstLine(cx)
+                    + " Exception thrown: " + e.details());
             }
             else {
-                if (LOG.isTraceEnabled()) {
-                    LOG.trace(getSourceName(cx) + ":" + getFirstLine(cx) + " Exception thrown: " + t.getCause());
-                }
+                LOG.trace(getSourceName(cx) + ":" + getFirstLine(cx) + " Exception thrown: " + t.getCause());
             }
         }
     }
@@ -173,7 +168,7 @@ public class DebugFrameImpl extends DebugFrameAdapter {
     }
 
     /**
-     * Returns the name of the function corresponding to this frame, if it is a function and it has
+     * Returns the name of the function corresponding to this frame, if it is a function, and it has
      * a name. If the function does not have a name, this method will try to return the name under
      * which it was referenced. See <a
      * href="http://www.digital-web.com/articles/scope_in_javascript/">this page</a> for a good
@@ -202,12 +197,11 @@ public class DebugFrameImpl extends DebugFrameAdapter {
             Scriptable obj = thisObj;
             while (obj != null) {
                 for (final Object id : obj.getIds()) {
-                    if (id instanceof String) {
-                        final String s = (String) id;
-                        if (obj instanceof ScriptableObject) {
-                            Object o = ((ScriptableObject) obj).getGetterOrSetter(s, 0, thisObj, false);
+                    if (id instanceof String s) {
+                        if (obj instanceof ScriptableObject object) {
+                            Object o = object.getGetterOrSetter(s, 0, thisObj, false);
                             if (o == null) {
-                                o = ((ScriptableObject) obj).getGetterOrSetter(s, 0, thisObj, true);
+                                o = object.getGetterOrSetter(s, 0, thisObj, true);
                                 if (o != null) {
                                     return "__defineSetter__ " + s;
                                 }
@@ -224,8 +218,7 @@ public class DebugFrameImpl extends DebugFrameAdapter {
                         catch (final Exception e) {
                             return "[anonymous]";
                         }
-                        if (o instanceof NativeFunction) {
-                            final NativeFunction f = (NativeFunction) o;
+                        if (o instanceof NativeFunction f) {
                             if (f.getDebuggableView() == functionOrScript_) {
                                 return s;
                             }
@@ -268,7 +261,7 @@ public class DebugFrameImpl extends DebugFrameAdapter {
         // only the file name is interesting the rest of the url is mostly noise
         source = StringUtils.substringAfterLast(source, "/");
         // embedded scripts have something like "foo.html from (3, 10) to (10, 13)"
-        source = StringUtils.substringBefore(source, " ");
+        source = org.htmlunit.util.StringUtils.substringBefore(source, " ");
         return source;
     }
 

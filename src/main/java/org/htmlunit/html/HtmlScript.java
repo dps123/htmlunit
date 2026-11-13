@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,8 +32,8 @@ import org.htmlunit.javascript.host.dom.Document;
  * (i.e. <code>document.write("&lt;span id='mySpan'/&gt;"); document.getElementById("mySpan").tagName;</code>
  * can't work with a filter).
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
- * @author <a href="mailto:cse@dynabean.de">Christian Sell</a>
+ * @author Mike Bowler
+ * @author Christian Sell
  * @author Marc Guillemot
  * @author David K. Taylor
  * @author Ahmed Ashour
@@ -53,9 +53,10 @@ public class HtmlScript extends HtmlElement implements ScriptElement {
 
     private boolean executed_;
     private boolean createdByDomParser_;
+    private boolean parserInserted_;
 
     /**
-     * Creates an instance of HtmlScript
+     * Creates an instance of HtmlScript.
      *
      * @param qualifiedName the qualified name of the element type to instantiate
      * @param page the HtmlPage that contains this element
@@ -67,10 +68,22 @@ public class HtmlScript extends HtmlElement implements ScriptElement {
     }
 
     /**
+     * Returns the value of the attribute {@code charset}. Refer to the
+     * <a href="http://www.w3.org/TR/html401/">HTML 4.01</a>
+     * documentation for details on the use of this attribute.
+     *
+     * @return the value of the attribute {@code charset}
+     *         or an empty string if that attribute isn't defined.
+     */
+    public final String getCharsetAttribute() {
+        return getAttributeDirect("charset");
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
-    public final String getCharsetAttribute() {
+    public final String getScriptCharset() {
         return getAttributeDirect("charset");
     }
 
@@ -80,10 +93,10 @@ public class HtmlScript extends HtmlElement implements ScriptElement {
      * documentation for details on the use of this attribute.
      *
      * @return the value of the attribute {@code type}
-     * or an empty string if that attribute isn't defined.
+     *         or an empty string if that attribute isn't defined.
      */
     public final String getTypeAttribute() {
-        return getAttributeDirect("type");
+        return getAttributeDirect(TYPE_ATTRIBUTE);
     }
 
     /**
@@ -92,17 +105,29 @@ public class HtmlScript extends HtmlElement implements ScriptElement {
      * documentation for details on the use of this attribute.
      *
      * @return the value of the attribute {@code language}
-     * or an empty string if that attribute isn't defined.
+     *         or an empty string if that attribute isn't defined.
      */
     public final String getLanguageAttribute() {
         return getAttributeDirect("language");
     }
 
     /**
+     * Returns the value of the attribute {@code src}. Refer to the
+     * <a href="http://www.w3.org/TR/html401/">HTML 4.01</a>
+     * documentation for details on the use of this attribute.
+     *
+     * @return the value of the attribute {@code src}
+     *         or an empty string if that attribute isn't defined.
+     */
+    public final String getSrcAttribute() {
+        return getSrcAttributeNormalized();
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
-    public final String getSrcAttribute() {
+    public final String getScriptSource() {
         return getSrcAttributeNormalized();
     }
 
@@ -128,7 +153,7 @@ public class HtmlScript extends HtmlElement implements ScriptElement {
      * documentation for details on the use of this attribute.
      *
      * @return the value of the attribute {@code defer}
-     * or an empty string if that attribute isn't defined.
+     *         or an empty string if that attribute isn't defined.
      */
     public final String getDeferAttribute() {
         return getAttributeDirect("defer");
@@ -146,6 +171,14 @@ public class HtmlScript extends HtmlElement implements ScriptElement {
      * {@inheritDoc}
      */
     @Override
+    public boolean isCrossorigin() {
+        return hasAttribute("crossorigin");
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public boolean mayBeDisplayed() {
         return false;
     }
@@ -157,16 +190,17 @@ public class HtmlScript extends HtmlElement implements ScriptElement {
     @Override
     protected void setAttributeNS(final String namespaceURI, final String qualifiedName, final String attributeValue,
             final boolean notifyAttributeChangeListeners, final boolean notifyMutationObservers) {
+        final String qualifiedNameLC = org.htmlunit.util.StringUtils.toRootLowerCase(qualifiedName);
         // special additional processing for the 'src'
-        if (namespaceURI != null || !SRC_ATTRIBUTE.equals(qualifiedName)) {
-            super.setAttributeNS(namespaceURI, qualifiedName, attributeValue, notifyAttributeChangeListeners,
+        if (namespaceURI != null || !SRC_ATTRIBUTE.equals(qualifiedNameLC)) {
+            super.setAttributeNS(namespaceURI, qualifiedNameLC, attributeValue, notifyAttributeChangeListeners,
                     notifyMutationObservers);
             return;
         }
 
         // namespaceURI is always null here - we can call getAttribute directly
-        final String oldValue = getAttribute(qualifiedName);
-        super.setAttributeNS(null, qualifiedName, attributeValue, notifyAttributeChangeListeners,
+        final String oldValue = getAttribute(qualifiedNameLC);
+        super.setAttributeNS(null, qualifiedNameLC, attributeValue, notifyAttributeChangeListeners,
                 notifyMutationObservers);
 
         if (isAttachedToPage() && oldValue.isEmpty() && getFirstChild() == null) {
@@ -182,7 +216,7 @@ public class HtmlScript extends HtmlElement implements ScriptElement {
     }
 
     /**
-     * Executes the <code>onreadystatechange</code> handler when simulating IE, as well as executing
+     * Executes the <code>onreadystatechange</code> handler, as well as executing
      * the script itself, if necessary.
      * {@inheritDoc}
      */
@@ -198,8 +232,7 @@ public class HtmlScript extends HtmlElement implements ScriptElement {
         final Iterable<DomNode> textNodes = getChildren();
         final StringBuilder scriptCode = new StringBuilder();
         for (final DomNode node : textNodes) {
-            if (node instanceof DomText) {
-                final DomText domText = (DomText) node;
+            if (node instanceof DomText domText) {
                 scriptCode.append(domText.getData());
             }
         }
@@ -220,16 +253,16 @@ public class HtmlScript extends HtmlElement implements ScriptElement {
      * {@inheritDoc}
      */
     @Override
-    protected void printChildrenAsXml(final String indent, final PrintWriter printWriter) {
+    protected boolean printChildrenAsXml(final String indent, final boolean tagBefore, final PrintWriter printWriter) {
         final DomCharacterData textNode = (DomCharacterData) getFirstChild();
         if (textNode == null) {
-            return;
+            return tagBefore;
         }
 
         final String data = textNode.getData();
+        printWriter.print("\r\n");
         if (data.contains("//<![CDATA[")) {
             printWriter.print(data);
-            printWriter.print("\r\n");
         }
         else {
             printWriter.print("//<![CDATA[");
@@ -237,8 +270,8 @@ public class HtmlScript extends HtmlElement implements ScriptElement {
             printWriter.print(data);
             printWriter.print("\r\n");
             printWriter.print("//]]>");
-            printWriter.print("\r\n");
         }
+        return true;
     }
 
     /**
@@ -299,6 +332,22 @@ public class HtmlScript extends HtmlElement implements ScriptElement {
     @Override
     public boolean wasCreatedByDomParser() {
         return createdByDomParser_;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void markAsParserInserted() {
+        parserInserted_ = true;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean wasParserInserted() {
+        return parserInserted_;
     }
 
     /**

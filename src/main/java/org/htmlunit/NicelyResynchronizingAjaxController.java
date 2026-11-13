@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import java.lang.ref.WeakReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.htmlunit.html.HtmlPage;
 
 /**
@@ -31,6 +30,7 @@ import org.htmlunit.html.HtmlPage;
  * are performed synchronously.
  *
  * @author Marc Guillemot
+ * @author Ronald Brill
  */
 public class NicelyResynchronizingAjaxController extends AjaxController {
 
@@ -42,6 +42,7 @@ public class NicelyResynchronizingAjaxController extends AjaxController {
      * Creates an instance.
      */
     public NicelyResynchronizingAjaxController() {
+        super();
         init();
     }
 
@@ -54,8 +55,6 @@ public class NicelyResynchronizingAjaxController extends AjaxController {
 
     /**
      * Resynchronizes calls performed from the thread where this instance has been created.
-     * <p>
-     * {@inheritDoc}
      */
     @Override
     public boolean processSynchron(final HtmlPage page, final WebRequest settings, final boolean async) {

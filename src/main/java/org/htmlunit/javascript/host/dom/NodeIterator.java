@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,6 @@
  */
 package org.htmlunit.javascript.host.dom;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
-import org.htmlunit.SgmlPage;
 import org.htmlunit.html.DomNode;
 import org.htmlunit.html.DomNodeIterator;
 import org.htmlunit.javascript.HtmlUnitScriptable;
@@ -33,6 +27,8 @@ import org.htmlunit.javascript.configuration.JsxGetter;
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/NodeIterator">MDN Documentation</a>
  */
 @JsxClass
 public class NodeIterator extends HtmlUnitScriptable {
@@ -42,22 +38,30 @@ public class NodeIterator extends HtmlUnitScriptable {
     /**
      * Creates an instance.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
     public NodeIterator() {
+        super();
+    }
+
+    /**
+     * JavaScript constructor.
+     */
+    @JsxConstructor
+    public void jsConstructor() {
+        // nothing to do
     }
 
     /**
      * Creates a new instance.
      *
-     * @param page the page
      * @param root The root node at which to begin the {@link NodeIterator}'s traversal
      * @param whatToShow an optional long representing a bitmask created by combining
-     * the constant properties of {@link NodeFilter}
+     *        the constant properties of {@link NodeFilter}
      * @param filter an object implementing the {@link NodeFilter} interface
      */
-    public NodeIterator(final SgmlPage page, final Node root, final int whatToShow,
+    public NodeIterator(final Node root, final int whatToShow,
             final org.w3c.dom.traversal.NodeFilter filter) {
-        iterator_ = page.createNodeIterator(root.getDomNodeOrDie(), whatToShow, filter, true);
+        super();
+        iterator_ = new DomNodeIterator(root.getDomNodeOrDie(), whatToShow, filter, true);
     }
 
     /**
@@ -80,11 +84,10 @@ public class NodeIterator extends HtmlUnitScriptable {
      * Returns the types of nodes being presented.
      * @return combined bitmask of {@link NodeFilter}
      */
+    @JsxGetter
     public long getWhatToShow() {
-        if (iterator_.getWhatToShow() == NodeFilter.SHOW_ALL) {
-            return 0xFFFFFFFFL;
-        }
-        return iterator_.getWhatToShow();
+        // the dom iterator uses the int based constants of org.w3c.dom.traversal.NodeFilter (SHOW_ALL is -1)
+        return Integer.toUnsignedLong(iterator_.getWhatToShow());
     }
 
     /**

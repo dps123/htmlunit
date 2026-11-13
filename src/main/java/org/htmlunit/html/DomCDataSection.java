@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,15 @@ package org.htmlunit.html;
 
 import java.io.PrintWriter;
 
-import org.w3c.dom.CDATASection;
-
 import org.htmlunit.SgmlPage;
+import org.w3c.dom.CDATASection;
 
 /**
  * Representation of a CDATA node in the HTML DOM.
  *
  * @author Marc Guillemot
  * @author David K. Taylor
+ * @author Ronald Brill
  */
 public class DomCDataSection extends DomText implements CDATASection {
 
@@ -39,11 +39,11 @@ public class DomCDataSection extends DomText implements CDATASection {
     }
 
     /**
-     * @return the node type constant, in this case {@link org.w3c.dom.Node#CDATA_SECTION_NODE}
+     * {@inheritDoc}
      */
     @Override
     public short getNodeType() {
-        return org.w3c.dom.Node.CDATA_SECTION_NODE;
+        return CDATA_SECTION_NODE;
     }
 
     /**
@@ -58,10 +58,11 @@ public class DomCDataSection extends DomText implements CDATASection {
      * {@inheritDoc}
      */
     @Override
-    protected void printXml(final String indent, final PrintWriter printWriter) {
+    protected boolean printXml(final String indent, final boolean indentBefore, final PrintWriter printWriter) {
         printWriter.print("<![CDATA[");
         printWriter.print(getData());
         printWriter.print("]]>");
+        return true;
     }
 
     /**

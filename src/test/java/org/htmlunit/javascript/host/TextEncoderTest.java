@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,9 @@
  */
 package org.htmlunit.javascript.host;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link TextEncoder}.
@@ -27,17 +24,16 @@ import org.htmlunit.junit.BrowserRunner.Alerts;
  * @author Ronald Brill
  * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/TextEncoder">TextEncoder() - Web APIs | MDN</a>
  */
-@RunWith(BrowserRunner.class)
 public class TextEncoderTest extends WebDriverTestCase {
 
     /**
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "utf-8",
-            IE = "no TextEncoder")
+    @Alerts("utf-8")
     public void encoding() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION
@@ -61,10 +57,10 @@ public class TextEncoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = {"0", "8", "72", "116"},
-            IE = "no TextEncoder")
+    @Alerts({"0", "8", "72", "116"})
     public void encode() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION
@@ -94,10 +90,10 @@ public class TextEncoderTest extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = {"0", "0", "4"},
-            IE = "no TextEncoder")
+    @Alerts({"0", "0", "4"})
     public void encode2() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION

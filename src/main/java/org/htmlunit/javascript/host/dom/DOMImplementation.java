@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,53 +14,31 @@
  */
 package org.htmlunit.javascript.host.dom;
 
-import static org.htmlunit.BrowserVersionFeatures.JS_DOMIMPLEMENTATION_CREATE_HTMLDOCOMENT_REQUIRES_TITLE;
-import static org.htmlunit.BrowserVersionFeatures.JS_DOMIMPLEMENTATION_FEATURE_CORE_3;
-import static org.htmlunit.BrowserVersionFeatures.JS_DOMIMPLEMENTATION_FEATURE_CSS2_1;
-import static org.htmlunit.BrowserVersionFeatures.JS_DOMIMPLEMENTATION_FEATURE_CSS2_3;
-import static org.htmlunit.BrowserVersionFeatures.JS_DOMIMPLEMENTATION_FEATURE_CSS3_1;
-import static org.htmlunit.BrowserVersionFeatures.JS_DOMIMPLEMENTATION_FEATURE_CSS3_2;
-import static org.htmlunit.BrowserVersionFeatures.JS_DOMIMPLEMENTATION_FEATURE_CSS3_3;
-import static org.htmlunit.BrowserVersionFeatures.JS_DOMIMPLEMENTATION_FEATURE_CSS_1;
-import static org.htmlunit.BrowserVersionFeatures.JS_DOMIMPLEMENTATION_FEATURE_CSS_2;
-import static org.htmlunit.BrowserVersionFeatures.JS_DOMIMPLEMENTATION_FEATURE_CSS_3;
-import static org.htmlunit.BrowserVersionFeatures.JS_DOMIMPLEMENTATION_FEATURE_EVENTS_1;
-import static org.htmlunit.BrowserVersionFeatures.JS_DOMIMPLEMENTATION_FEATURE_KEYBOARDEVENTS;
-import static org.htmlunit.BrowserVersionFeatures.JS_DOMIMPLEMENTATION_FEATURE_LS;
-import static org.htmlunit.BrowserVersionFeatures.JS_DOMIMPLEMENTATION_FEATURE_MUTATIONNAMEEVENTS;
-import static org.htmlunit.BrowserVersionFeatures.JS_DOMIMPLEMENTATION_FEATURE_RANGE_1;
-import static org.htmlunit.BrowserVersionFeatures.JS_DOMIMPLEMENTATION_FEATURE_RANGE_3;
-import static org.htmlunit.BrowserVersionFeatures.JS_DOMIMPLEMENTATION_FEATURE_STYLESHEETS;
-import static org.htmlunit.BrowserVersionFeatures.JS_DOMIMPLEMENTATION_FEATURE_SVG_BASICSTRUCTURE_1_2;
-import static org.htmlunit.BrowserVersionFeatures.JS_DOMIMPLEMENTATION_FEATURE_TEXTEVENTS;
-import static org.htmlunit.BrowserVersionFeatures.JS_DOMIMPLEMENTATION_FEATURE_UIEVENTS_2;
-import static org.htmlunit.BrowserVersionFeatures.JS_DOMIMPLEMENTATION_FEATURE_VALIDATION;
-import static org.htmlunit.BrowserVersionFeatures.JS_DOMIMPLEMENTATION_FEATURE_VIEWS_1;
-import static org.htmlunit.BrowserVersionFeatures.JS_DOMIMPLEMENTATION_FEATURE_VIEWS_3;
-import static org.htmlunit.BrowserVersionFeatures.JS_DOMIMPLEMENTATION_FEATURE_XPATH;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
 import java.io.IOException;
 
+import org.htmlunit.SgmlPage;
 import org.htmlunit.StringWebResponse;
+import org.htmlunit.WebClient;
 import org.htmlunit.WebResponse;
 import org.htmlunit.WebWindow;
+import org.htmlunit.corejs.javascript.Context;
+import org.htmlunit.corejs.javascript.Function;
+import org.htmlunit.corejs.javascript.Scriptable;
+import org.htmlunit.corejs.javascript.VarScope;
+import org.htmlunit.html.DomDocumentType;
+import org.htmlunit.html.Html;
 import org.htmlunit.html.HtmlPage;
 import org.htmlunit.html.parser.HTMLParser;
 import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.host.html.HTMLDocument;
 import org.htmlunit.javascript.host.xml.XMLDocument;
+import org.htmlunit.util.StringUtils;
 import org.htmlunit.util.UrlUtils;
 import org.htmlunit.xml.XmlPage;
-
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.Undefined;
 
 /**
  * A JavaScript object for {@code DOMImplementation}.
@@ -70,21 +48,23 @@ import org.htmlunit.corejs.javascript.Undefined;
  * @author Ronald Brill
  * @author Adam Afeltowicz
  *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/DOMImplementation">MDN Documentation</a>
  * @see <a href="http://www.w3.org/TR/2000/WD-DOM-Level-1-20000929/level-one-core.html#ID-102161490">
- * W3C Dom Level 1</a>
+ *     W3C Dom Level 1</a>
  */
 @JsxClass
 public class DOMImplementation extends HtmlUnitScriptable {
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public DOMImplementation() {
+    @JsxConstructor
+    public void jsConstructor() {
+        // nothing to do
     }
 
     /**
-     * Test if the DOM implementation implements a specific feature.
+     * Tests if the DOM implementation implements a specific feature.
      * @param feature the name of the feature to test (case-insensitive)
      * @param version the version number of the feature to test
      * @return true if the feature is implemented in the specified version, false otherwise
@@ -99,9 +79,8 @@ public class DOMImplementation extends HtmlUnitScriptable {
                 switch (version) {
                     case "1.0":
                     case "2.0":
-                        return true;
                     case "3.0":
-                        return getBrowserVersion().hasFeature(JS_DOMIMPLEMENTATION_FEATURE_CORE_3);
+                        return true;
                     default:
                 }
                 break;
@@ -109,26 +88,29 @@ public class DOMImplementation extends HtmlUnitScriptable {
             case "Views":
                 switch (version) {
                     case "1.0":
-                        return getBrowserVersion().hasFeature(JS_DOMIMPLEMENTATION_FEATURE_VIEWS_1);
                     case "2.0":
-                        return true;
                     case "3.0":
-                        return getBrowserVersion().hasFeature(JS_DOMIMPLEMENTATION_FEATURE_VIEWS_3);
+                        return true;
                     default:
                 }
                 break;
 
             case "StyleSheets":
-                return getBrowserVersion().hasFeature(JS_DOMIMPLEMENTATION_FEATURE_STYLESHEETS);
+            case "KeyboardEvents":
+            case "MutationNameEvents":
+            case "TextEvents":
+            case "LS":
+            case "LS-Async":
+            case "Validation":
+            case "XPath":
+                return true;
 
             case "CSS":
                 switch (version) {
                     case "1.0":
-                        return getBrowserVersion().hasFeature(JS_DOMIMPLEMENTATION_FEATURE_CSS_1);
                     case "2.0":
-                        return getBrowserVersion().hasFeature(JS_DOMIMPLEMENTATION_FEATURE_CSS_2);
                     case "3.0":
-                        return getBrowserVersion().hasFeature(JS_DOMIMPLEMENTATION_FEATURE_CSS_3);
+                        return true;
                     default:
                 }
                 break;
@@ -136,11 +118,9 @@ public class DOMImplementation extends HtmlUnitScriptable {
             case "CSS2":
                 switch (version) {
                     case "1.0":
-                        return getBrowserVersion().hasFeature(JS_DOMIMPLEMENTATION_FEATURE_CSS2_1);
                     case "2.0":
-                        return true;
                     case "3.0":
-                        return getBrowserVersion().hasFeature(JS_DOMIMPLEMENTATION_FEATURE_CSS2_3);
+                        return true;
                     default:
                 }
                 break;
@@ -148,11 +128,9 @@ public class DOMImplementation extends HtmlUnitScriptable {
             case "CSS3":
                 switch (version) {
                     case "1.0":
-                        return getBrowserVersion().hasFeature(JS_DOMIMPLEMENTATION_FEATURE_CSS3_1);
                     case "2.0":
-                        return getBrowserVersion().hasFeature(JS_DOMIMPLEMENTATION_FEATURE_CSS3_2);
                     case "3.0":
-                        return getBrowserVersion().hasFeature(JS_DOMIMPLEMENTATION_FEATURE_CSS3_3);
+                        return true;
                     default:
                 }
                 break;
@@ -163,7 +141,6 @@ public class DOMImplementation extends HtmlUnitScriptable {
             case "MutationEvents":
                 switch (version) {
                     case "1.0":
-                        return getBrowserVersion().hasFeature(JS_DOMIMPLEMENTATION_FEATURE_EVENTS_1);
                     case "2.0":
                     case "3.0":
                         return true;
@@ -175,53 +152,30 @@ public class DOMImplementation extends HtmlUnitScriptable {
                 switch (version) {
                     case "1.0":
                     case "2.0":
-                        return getBrowserVersion().hasFeature(JS_DOMIMPLEMENTATION_FEATURE_UIEVENTS_2);
                     case "3.0":
                         return true;
                     default:
                 }
                 break;
-
-            case "KeyboardEvents":
-                return getBrowserVersion().hasFeature(JS_DOMIMPLEMENTATION_FEATURE_KEYBOARDEVENTS);
-
-            case "MutationNameEvents":
-                return getBrowserVersion().hasFeature(JS_DOMIMPLEMENTATION_FEATURE_MUTATIONNAMEEVENTS);
-
-            case "TextEvents":
-                return getBrowserVersion().hasFeature(JS_DOMIMPLEMENTATION_FEATURE_TEXTEVENTS);
-
-            case "LS":
-            case "LS-Async":
-                return getBrowserVersion().hasFeature(JS_DOMIMPLEMENTATION_FEATURE_LS);
 
             case "Range":
             case "Traversal":
                 switch (version) {
                     case "1.0":
-                        return getBrowserVersion().hasFeature(JS_DOMIMPLEMENTATION_FEATURE_RANGE_1);
                     case "2.0":
-                        return true;
                     case "3.0":
-                        return getBrowserVersion().hasFeature(JS_DOMIMPLEMENTATION_FEATURE_RANGE_3);
+                        return true;
                     default:
                 }
                 break;
-
-            case "Validation":
-                return getBrowserVersion().hasFeature(JS_DOMIMPLEMENTATION_FEATURE_VALIDATION);
-
-            case "XPath":
-                return getBrowserVersion().hasFeature(JS_DOMIMPLEMENTATION_FEATURE_XPATH);
 
             case "http://www.w3.org/TR/SVG11/feature#BasicStructure":
             case "http://www.w3.org/TR/SVG11/feature#Shape":
                 switch (version) {
                     case "1.0":
                     case "1.1":
-                        return true;
                     case "1.2":
-                        return getBrowserVersion().hasFeature(JS_DOMIMPLEMENTATION_FEATURE_SVG_BASICSTRUCTURE_1_2);
+                        return true;
                     default:
                 }
                 break;
@@ -241,44 +195,112 @@ public class DOMImplementation extends HtmlUnitScriptable {
      * @return the newly created {@link XMLDocument}
      */
     @JsxFunction
-    public XMLDocument createDocument(final String namespaceURI, final String qualifiedName,
+    public XMLDocument createDocument(final Object namespaceURI, final String qualifiedName,
             final DocumentType doctype) {
+        // null (and undefined) means no namespace; a String parameter converts null to 'null'
+        final String namespace;
+        if (namespaceURI == null || JavaScriptEngine.isUndefined(namespaceURI)) {
+            namespace = null;
+        }
+        else {
+            namespace = JavaScriptEngine.toString(namespaceURI);
+        }
+
         final XMLDocument document = new XMLDocument(getWindow().getWebWindow());
         document.setParentScope(getParentScope());
         document.setPrototype(getPrototype(document.getClass()));
+
+        final XmlPage page = (XmlPage) document.getDomNodeOrDie();
+        if (doctype != null) {
+            // the doctype is in front of the root element
+            final DomDocumentType doctypeNode = (DomDocumentType) doctype.getDomNodeOrDie();
+            page.appendChild(doctypeNode);
+            page.setDocumentType(doctypeNode);
+        }
         if (qualifiedName != null && !qualifiedName.isEmpty()) {
-            final XmlPage page = (XmlPage) document.getDomNodeOrDie();
-            page.appendChild(page.createElementNS("".equals(namespaceURI) ? null : namespaceURI, qualifiedName));
+            page.appendChild(page.createElementNS(
+                    StringUtils.isEmptyString(namespace) ? null : namespace, qualifiedName));
         }
         return document;
     }
 
     /**
+     * Creates a {@link DocumentType}.
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/DOMImplementation/createDocumentType">
+     *     createDocumentType (MDN)</a>
+     *
+     * @param context the JavaScript context
+     * @param scope the scope
+     * @param thisObj the scriptable
+     * @param args the arguments passed into the method: qualifiedName, publicId and systemId
+     * @param function the function
+     * @return the newly created {@link DocumentType}
+     */
+    @JsxFunction
+    public static DocumentType createDocumentType(final Context context, final VarScope scope,
+            final Scriptable thisObj, final Object[] args, final Function function) {
+        if (args.length < 3) {
+            throw JavaScriptEngine.typeError("Failed to execute 'createDocumentType' on 'DOMImplementation': "
+                    + "3 arguments required, but only " + args.length + " present.");
+        }
+
+        final DOMImplementation implementation = (DOMImplementation) thisObj;
+        final String qualifiedName = JavaScriptEngine.toString(args[0]);
+        final String publicId = JavaScriptEngine.toString(args[1]);
+        final String systemId = JavaScriptEngine.toString(args[2]);
+
+        if (!isValidDocumentTypeName(qualifiedName)) {
+            throw JavaScriptEngine.asJavaScriptException(
+                    implementation.getWindow(),
+                    "createDocumentType: Provided string '" + qualifiedName + "' contains an invalid character",
+                    DOMException.INVALID_CHARACTER_ERR);
+        }
+
+        // the node is owned by the page of the window; if it is appended to another document
+        // the page is replaced
+        final SgmlPage page = (SgmlPage) implementation.getWindow().getWebWindow().getEnclosedPage();
+        final DomDocumentType doctype = new DomDocumentType(page, qualifiedName, publicId, systemId);
+        return (DocumentType) implementation.getScriptableFor(doctype);
+    }
+
+    // The name does not have to be a valid XML name (the empty string, '1a' or '-a' are fine), the
+    // browsers only reject ASCII whitespace and '>' (and NULL).
+    // Do not share this with the check of the processing instruction target, there the Name
+    // production is still required.
+    private static boolean isValidDocumentTypeName(final String name) {
+        final int length = name.length();
+        for (int i = 0; i < length; i++) {
+            final char c = name.charAt(i);
+            if (c == '>' || c == '\u0000'
+                    || c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r') {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * Creates an {@link HTMLDocument}.
      * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/DOMImplementation/createHTMLDocument">
-     *   createHTMLDocument (MDN)</a>
+     *     createHTMLDocument (MDN)</a>
      *
      * @param titleObj the document title
      * @return the newly created {@link HTMLDocument}
      */
     @JsxFunction
     public HTMLDocument createHTMLDocument(final Object titleObj) {
-        if (Undefined.isUndefined(titleObj)
-                && getBrowserVersion().hasFeature(JS_DOMIMPLEMENTATION_CREATE_HTMLDOCOMENT_REQUIRES_TITLE)) {
-            throw Context.reportRuntimeError("Title is required");
-        }
-
         // a similar impl is in
         // org.htmlunit.javascript.host.dom.DOMParser.parseFromString(String, Object)
         try {
             final WebWindow webWindow = getWindow().getWebWindow();
             final String html;
-            if (Undefined.isUndefined(titleObj)) {
-                html = "<html><head></head><body></body></html>";
+            if (JavaScriptEngine.isUndefined(titleObj)) {
+                html = Html.DOCTYPE_HTML + "<html><head></head><body></body></html>";
             }
             else {
-                html = "<html><head><title>"
-                        + Context.toString(titleObj)
+                html = Html.DOCTYPE_HTML
+                        + "<html><head><title>"
+                        + JavaScriptEngine.toString(titleObj)
                         + "</title></head><body></body></html>";
             }
             final WebResponse webResponse = new StringWebResponse(html, UrlUtils.URL_ABOUT_BLANK);
@@ -289,17 +311,18 @@ public class DOMImplementation extends HtmlUnitScriptable {
 
             // document knows the window but is not the windows document
             final HTMLDocument document = new HTMLDocument();
-            document.setParentScope(getWindow());
+            document.setParentScope(getTopLevelScope(getParentScope()));
             document.setPrototype(getPrototype(document.getClass()));
             // document.setWindow(getWindow());
             document.setDomNode(page);
 
-            final HTMLParser htmlParser = webWindow.getWebClient().getPageCreator().getHtmlParser();
-            htmlParser.parse(webResponse, page, false, false);
+            final WebClient webClient = webWindow.getWebClient();
+            final HTMLParser htmlParser = webClient.getPageCreator().getHtmlParser();
+            htmlParser.parse(webClient, webResponse, page, false, false);
             return page.getScriptableObject();
         }
         catch (final IOException e) {
-            throw Context.reportRuntimeError("Parsing failed" + e.getMessage());
+            throw JavaScriptEngine.reportRuntimeError("Parsing failed" + e.getMessage());
         }
     }
 }

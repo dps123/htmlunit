@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import org.apache.http.util.LangUtils;
  * Wrapper for {@link UsernamePasswordCredentials} to avoid direct references spread around.
  *
  * @author Ronald Brill
+ * @author Lai Quang Duong
  */
 public class HtmlUnitUsernamePasswordCredentials implements Credentials, Serializable {
 
@@ -36,8 +37,10 @@ public class HtmlUnitUsernamePasswordCredentials implements Credentials, Seriali
      * @param userName the user name
      * @param password the password
      */
-    public HtmlUnitUsernamePasswordCredentials(final String userName, final String password) {
-        httpClientUsernamePasswordCredentials_ = new UsernamePasswordCredentials(userName, password);
+    public HtmlUnitUsernamePasswordCredentials(final String userName, final char[] password) {
+        httpClientUsernamePasswordCredentials_ = new UsernamePasswordCredentials(
+                userName,
+                password == null ? null : String.valueOf(password));
     }
 
     @Override
@@ -60,8 +63,7 @@ public class HtmlUnitUsernamePasswordCredentials implements Credentials, Seriali
         if (this == o) {
             return true;
         }
-        if (o instanceof HtmlUnitUsernamePasswordCredentials) {
-            final HtmlUnitUsernamePasswordCredentials that = (HtmlUnitUsernamePasswordCredentials) o;
+        if (o instanceof HtmlUnitUsernamePasswordCredentials that) {
             if (LangUtils.equals(this.getUserPrincipal(), that.getUserPrincipal())) {
                 return true;
             }

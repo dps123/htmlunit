@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ package org.htmlunit.util.geometry;
 import java.util.ArrayList;
 
 /**
- * Simple 2D shape polygon.
+ * Simple 2D polygon shape.
  *
  * @author Ronald Brill
  */
@@ -26,10 +26,11 @@ public class Polygon2D implements Shape2D {
     private final Rectangle2D boundingBox_;
 
     /**
-     * Ctor.
-     * @see #lineTo(double, double)
-     * @param startX the x value of the first point.
-     * @param startY the Y value of the first point.
+     * Creates a new polygon starting at the given point.
+     * Use {@link #lineTo(double, double)} to add further corner points.
+     *
+     * @param startX the x coordinate of the first point
+     * @param startY the y coordinate of the first point
      */
     public Polygon2D(final double startX, final double startY) {
         points_ = new ArrayList<>();
@@ -38,10 +39,11 @@ public class Polygon2D implements Shape2D {
     }
 
     /**
-     * Add another corner Point to the polygon.
-     * @param x the x value of the corner to be added
-     * @param y the y value of the corner to be added
-     * @return this to support fluent style construction
+     * Adds another corner point to the polygon.
+     *
+     * @param x the x coordinate of the corner to add
+     * @param y the y coordinate of the corner to add
+     * @return this instance to support fluent-style construction
      */
     public Polygon2D lineTo(final double x, final double y) {
         points_.add(new Point2D(x, y));
@@ -59,7 +61,7 @@ public class Polygon2D implements Shape2D {
             return false;
         }
 
-        final double outsideX = boundingBox_.getLeft() - 0.0000001;
+        final double outsideX = boundingBox_.getLeft() - EPSILON;
         final double outsideY = boundingBox_.getBottom();
 
         final Line2D testLine = new Line2D(outsideX, outsideY, x, y);

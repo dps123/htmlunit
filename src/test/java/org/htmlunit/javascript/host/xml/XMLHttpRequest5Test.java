@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,22 +14,19 @@
  */
 package org.htmlunit.javascript.host.xml;
 
+import java.io.File;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.HttpHeader;
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.html.HtmlPageTest;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.HtmlUnitNYI;
 import org.htmlunit.util.NameValuePair;
+import org.junit.jupiter.api.Test;
 
 /**
  * Additional tests for {@link XMLHttpRequest} blob handling.
@@ -37,30 +34,33 @@ import org.htmlunit.util.NameValuePair;
  * @author Ronald Brill
  * @author Thorsten Wendelmuth
  */
-@RunWith(BrowserRunner.class)
 public class XMLHttpRequest5Test extends WebDriverTestCase {
 
+    /**
+     * @throws Exception if the test fails
+     */
     @Test
-    @Alerts(DEFAULT = {"multipart/form-data; boundary=----formdata123456", "Html\r\nUnit\r\n"},
-            IE = {"null", "Html\r\nUnit\r\n"})
-    @HtmlUnitNYI(IE = {"application/x-www-form-urlencoded", "null"})
+    @Alerts({"multipart/form-data; boundary=----formdata123456", "Html\r\nUnit\r\n"})
     public void sendBlob() throws Exception {
         sendBlobWithMimeTypeAndAssertContentType(getExpectedAlerts()[0],
                 "Html\\r\\nUnit\\r\\n", getExpectedAlerts()[1]);
     }
 
+    /**
+     * @throws Exception if the test fails
+     */
     @Test
     @Alerts({"null", "Html\r\nUnit\r\n"})
-    @HtmlUnitNYI(IE = {"application/x-www-form-urlencoded", "null"})
     public void sendBlob_emptyMimeType() throws Exception {
         sendBlobWithMimeTypeAndAssertContentType(getExpectedAlerts()[0],
                 "Html\\r\\nUnit\\r\\n", getExpectedAlerts()[1]);
     }
 
+    /**
+     * @throws Exception if the test fails
+     */
     @Test
-    @Alerts(DEFAULT = {"doesnt/exist", "Html\r\nUnit\r\n"},
-            IE = {"null", "Html\r\nUnit\r\n"})
-    @HtmlUnitNYI(IE = {"application/x-www-form-urlencoded", "null"})
+    @Alerts({"doesnt/exist", "Html\r\nUnit\r\n"})
     public void sendBlob_badMimeType() throws Exception {
         sendBlobWithMimeTypeAndAssertContentType(getExpectedAlerts()[0],
                 "Html\\r\\nUnit\\r\\n", getExpectedAlerts()[1]);
@@ -71,7 +71,7 @@ public class XMLHttpRequest5Test extends WebDriverTestCase {
         startWebServer(getMockWebConnection(), Charset.defaultCharset());
         final String url = URL_SECOND.toString();
 
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
                 + "<html><head><title>foo</title>"
                 + "<script>\n"
                 + "  function test() {\n"
@@ -97,7 +97,7 @@ public class XMLHttpRequest5Test extends WebDriverTestCase {
         setExpectedAlerts();
         loadPageWithAlerts2(html);
 
-        Assert.assertEquals("Never received a call to URL_SECOND", URL_SECOND,
+        assertEquals("Never received a call to URL_SECOND", URL_SECOND,
                 getMockWebConnection().getLastWebRequest().getUrl());
 
         final String contentType = getMockWebConnection().getLastWebRequest()
@@ -105,14 +105,16 @@ public class XMLHttpRequest5Test extends WebDriverTestCase {
 
         final String requestBody = getMockWebConnection().getLastWebRequest().getRequestBody();
 
-        Assert.assertEquals("Unexpected Content-Type header", desiredMimeType,
+        assertEquals("Unexpected Content-Type header", desiredMimeType,
                 contentType == null ? "null" : contentType);
-        Assert.assertEquals(expectedBody, requestBody == null ? "null" : requestBody);
+        assertEquals(expectedBody, requestBody == null ? "null" : requestBody);
     }
 
+    /**
+     * @throws Exception if the test fails
+     */
     @Test
     @Alerts({"text/plain", "HtmlUnit"})
-    @HtmlUnitNYI(IE = {"application/x-www-form-urlencoded", "null"})
     public void sendBlob307() throws Exception {
         final URL redirectUrl = new URL(URL_FIRST, "/redirect.html");
         final URL responseUrl = new URL(URL_FIRST, "/response.html");
@@ -124,7 +126,7 @@ public class XMLHttpRequest5Test extends WebDriverTestCase {
 
         startWebServer(getMockWebConnection(), Charset.defaultCharset());
 
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
                 + "<html><head><title>foo</title>"
                 + "<script>\n"
                 + "  function test() {\n"
@@ -144,47 +146,178 @@ public class XMLHttpRequest5Test extends WebDriverTestCase {
 
         loadPage2(html);
 
-        Assert.assertEquals("Never received a call to '" + responseUrl + "'", responseUrl,
+        assertEquals("Never received a call to '" + responseUrl + "'", responseUrl,
                 getMockWebConnection().getLastWebRequest().getUrl());
 
-        Assert.assertEquals(3, getMockWebConnection().getRequestCount());
+        assertEquals(3, getMockWebConnection().getRequestCount());
         final String contentType = getMockWebConnection().getLastWebRequest()
                 .getAdditionalHeader(HttpHeader.CONTENT_TYPE);
 
         final String requestBody = getMockWebConnection().getLastWebRequest().getRequestBody();
 
-        Assert.assertEquals("Unexpected Content-Type header", getExpectedAlerts()[0],
+        assertEquals("Unexpected Content-Type header", getExpectedAlerts()[0],
                 contentType == null ? "null" : contentType);
-        Assert.assertEquals(getExpectedAlerts()[1], requestBody == null ? "null" : requestBody);
+        assertEquals(getExpectedAlerts()[1], requestBody == null ? "null" : requestBody);
     }
 
+    /**
+     * @throws Exception if the test fails
+     */
     @Test
-    @Alerts(DEFAULT = {"application/xml;charset=UTF-8", "null"},
-            IE = {"application/xml; charset=utf-8", "\u00EF\u00BB\u00BF"})
-    @HtmlUnitNYI(IE = {"application/xml;charset=UTF-8", "null"})
+    @Alerts({"0", "127", "128", "255"})
+    public void sendXUserDefined() throws Exception {
+        final URL responseUrl = new URL(URL_FIRST, "/response");
+        getMockWebConnection().setResponse(responseUrl, "\u0000\u007f\u0080\u00ff");
+
+        startWebServer(getMockWebConnection(), StandardCharsets.US_ASCII);
+
+        final String html = DOCTYPE_HTML
+                + "<html><head>"
+                + "<script>\n"
+                + LOG_TITLE_FUNCTION
+                + "  function test() {\n"
+                + "    try {\n"
+                + "      var xhr = new XMLHttpRequest();\n"
+                + "      xhr.open('POST', '/response', false);\n"
+                + "      xhr.overrideMimeType('text/plain; charset=x-user-defined');\n"
+                + "      xhr.send(null);\n"
+                + "      log(xhr.responseText.charCodeAt(0) & 0xff);\n"
+                + "      log(xhr.responseText.charCodeAt(1) & 0xff);\n"
+                + "      log(xhr.responseText.charCodeAt(2) & 0xff);\n"
+                + "      log(xhr.responseText.charCodeAt(3) & 0xff);\n"
+                + "  } catch (exception) { \n"
+                + "    log(exception);\n"
+                + "  }\n"
+                + "}\n"
+                + "</script></head>\n"
+                + "<body onload='test()'>\n"
+                + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"onreadystatechange [object Event]", "readystatechange", "1",
+             "NetworkError"})
+    public void sendLocalFile() throws Exception {
+        final URL fileURL = getClass().getClassLoader().getResource("testfiles/tiny-png.img");
+        final File file = new File(fileURL.toURI());
+        assertTrue("File '" + file.getAbsolutePath() + "' does not exist", file.exists());
+
+        startWebServer(getMockWebConnection(), StandardCharsets.US_ASCII);
+
+        final String html = DOCTYPE_HTML
+                + "<html><head>"
+                + "<script>\n"
+                + LOG_TITLE_FUNCTION
+                + "  function test() {\n"
+                + "    try {\n"
+                + "      var xhr = new XMLHttpRequest();\n"
+                + "      xhr.onreadystatechange = function(event) {\n"
+                + "                    log('onreadystatechange ' + event);\n"
+                + "                    log(event.type);\n"
+                + "                    log(xhr.readyState);\n"
+                + "                  };\n"
+                + "      xhr.onerror = function(event) {\n"
+                + "                    log('error ' + event);\n"
+                + "                    log(event.type);\n"
+                + "                    log(event.lengthComputable);\n"
+                + "                    log(event.loaded);\n"
+                + "                    log(event.total);\n"
+                + "                  };\n"
+                + "      xhr.open('GET', '" + fileURL + "', false);\n"
+                + "      xhr.send('');\n"
+                + "  } catch (exception) { \n"
+                + "    log(exception.name);\n"
+                + "  }\n"
+                + "}\n"
+                + "</script></head>\n"
+                + "<body onload='test()'>\n"
+                + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"onreadystatechange [object Event]", "readystatechange", "1",
+             "onreadystatechange [object Event]", "readystatechange", "4",
+             "error [object ProgressEvent]", "error", "false", "0", "0"})
+    public void sendLocalFileAsync() throws Exception {
+        final URL fileURL = getClass().getClassLoader().getResource("testfiles/tiny-png.img");
+        final File file = new File(fileURL.toURI());
+        assertTrue("File '" + file.getAbsolutePath() + "' does not exist", file.exists());
+
+        startWebServer(getMockWebConnection(), StandardCharsets.US_ASCII);
+
+        final String html = DOCTYPE_HTML
+                + "<html><head>"
+                + "<script>\n"
+                + LOG_TITLE_FUNCTION
+                + "  function test() {\n"
+                + "    try {\n"
+                + "      var xhr = new XMLHttpRequest();\n"
+                + "      xhr.onreadystatechange = function(event) {\n"
+                + "                    log('onreadystatechange ' + event);\n"
+                + "                    log(event.type);\n"
+                + "                    log(xhr.readyState);\n"
+                + "                  };\n"
+                + "      xhr.onerror = function(event) {\n"
+                + "                    log('error ' + event);\n"
+                + "                    log(event.type);\n"
+                + "                    log(event.lengthComputable);\n"
+                + "                    log(event.loaded);\n"
+                + "                    log(event.total);\n"
+                + "                  };\n"
+                + "      xhr.open('GET', '" + fileURL + "', true);\n"
+                + "      xhr.send('');\n"
+                + "  } catch (exception) { \n"
+                + "    log(exception);\n"
+                + "  }\n"
+                + "}\n"
+                + "</script></head>\n"
+                + "<body onload='test()'>\n"
+                + "</body></html>";
+
+        loadPage2(html);
+        verifyTitle2(DEFAULT_WAIT_TIME, getWebDriver(), getExpectedAlerts());
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"application/xml;charset=UTF-8", "null"})
     public void sendXMLDocumentEmpty() throws Exception {
         final String createXmlDoc =
                 "    var doc = document.implementation.createDocument('', '', null);\n";
-        sendXMLDocument(createXmlDoc, getExpectedAlerts()[0], getExpectedAlerts()[1]);
+        sendXMLDocument(DOCTYPE_HTML, createXmlDoc, getExpectedAlerts()[0], getExpectedAlerts()[1]);
     }
 
+    /**
+     * @throws Exception if the test fails
+     */
     @Test
-    @Alerts(DEFAULT = {"application/xml;charset=UTF-8", "<root/>"},
-            IE = {"application/xml; charset=utf-8", "\u00EF\u00BB\u00BF<root />"})
-    @HtmlUnitNYI(IE = {"application/xml;charset=UTF-8", "<root/>"})
+    @Alerts({"application/xml;charset=UTF-8", "<root/>"})
     public void sendXMLDocumentRoot() throws Exception {
         final String createXmlDoc =
                 "    var doc = document.implementation.createDocument('', '', null);\n"
                 + "  var root = doc.createElement('root');\n"
                 + "  doc.appendChild(root);\n";
-        sendXMLDocument(createXmlDoc, getExpectedAlerts()[0], getExpectedAlerts()[1]);
+        sendXMLDocument(DOCTYPE_HTML, createXmlDoc, getExpectedAlerts()[0], getExpectedAlerts()[1]);
     }
 
+    /**
+     * @throws Exception if the test fails
+     */
     @Test
-    @Alerts(DEFAULT = {"application/xml;charset=UTF-8",
-                       "<html xmlns=\"http://www.w3.org/1999/xhtml\"><body id=\"abc\"></body></html>"},
-            IE = {"application/xml; charset=utf-8",
-                  "\u00EF\u00BB\u00BF<html xmlns=\"http://www.w3.org/1999/xhtml\"><body id=\"abc\" /></html>"})
+    @Alerts({"application/xml;charset=UTF-8",
+             "<html xmlns=\"http://www.w3.org/1999/xhtml\"><body id=\"abc\"></body></html>"})
     @HtmlUnitNYI(CHROME = {"application/xml;charset=UTF-8",
                            "<html xmlns=\"http://www.w3.org/1999/xhtml\"><body id=\"abc\"/></html>"},
             EDGE = {"application/xml;charset=UTF-8",
@@ -192,92 +325,44 @@ public class XMLHttpRequest5Test extends WebDriverTestCase {
             FF = {"application/xml;charset=UTF-8",
                   "<html xmlns=\"http://www.w3.org/1999/xhtml\"><body id=\"abc\"/></html>"},
             FF_ESR = {"application/xml;charset=UTF-8",
-                      "<html xmlns=\"http://www.w3.org/1999/xhtml\"><body id=\"abc\"/></html>"},
-            IE = {"application/xml;charset=UTF-8",
-                  "<html xmlns=\"http://www.w3.org/1999/xhtml\"><body id=\"abc\"/></html>"})
+                      "<html xmlns=\"http://www.w3.org/1999/xhtml\"><body id=\"abc\"/></html>"})
     public void sendXMLDocumentRootNamespace() throws Exception {
         final String createXmlDoc =
                 "    var doc = document.implementation.createDocument('http://www.w3.org/1999/xhtml', 'html', null);\n"
                 + "  var body = document.createElementNS('http://www.w3.org/1999/xhtml', 'body');\n"
                 + "  body.setAttribute('id', 'abc');\n"
                 + "  doc.documentElement.appendChild(body);\n";
-        sendXMLDocument(createXmlDoc, getExpectedAlerts()[0], getExpectedAlerts()[1]);
+        sendXMLDocument(DOCTYPE_HTML, createXmlDoc, getExpectedAlerts()[0], getExpectedAlerts()[1]);
     }
 
+    /**
+     * @throws Exception if the test fails
+     */
     @Test
-    @Alerts(DEFAULT = {"text/html;charset=UTF-8",
-                       "<!DOCTYPE html PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/html4/strict.dtd\">"
-                               + "<html><head><title>foo</title><script>\n"
-                            + "  function test() {\n"
-                            + "    try {\n"
-                            + "    var doc = document;\n"
-                            + "      var xhr = new XMLHttpRequest();\n"
-                            + "      xhr.open('POST', 'http://localhost:22222/second/', false);\n"
-                            + "      xhr.send(doc);\n"
-                            + "  } catch (exception) { \n"
-                            + "    alert(exception);\n"
-                            + "  }\n"
-                            + "}\n"
-                            + "</script></head>\n"
-                            + "<body onload=\"test()\">\n"
-                            + "</body></html>"},
-            FF = {"text/html;charset=UTF-8",
-                  "<!DOCTYPE html>"
-                                + "<html><head><title>foo</title><script>\n"
+    @Alerts({"text/html;charset=utf-8",
+             "<!DOCTYPE html>"
+                    + "<html><head><title>foo</title><script>\n"
+                    + "  function test() {\n"
+                    + "    try {\n"
+                    + "    var doc = document;\n"
+                    + "      var xhr = new XMLHttpRequest();\n"
+                    + "      xhr.open('POST', 'http://localhost:§§PORT§§/second/', false);\n"
+                    + "      xhr.send(doc);\n"
+                    + "  } catch (exception) { \n"
+                    + "    alert(exception);\n"
+                    + "  }\n"
+                    + "}\n"
+                    + "</script></head>\n"
+                    + "<body onload=\"test()\">\n"
+                    + "</body></html>"})
+    @HtmlUnitNYI(CHROME = {"text/html;charset=utf-8",
+                           "<!DOCTYPE html>"
+                             + "<html><head><title>foo</title><script>\n"
                              + "  function test() {\n"
                              + "    try {\n"
                              + "    var doc = document;\n"
                              + "      var xhr = new XMLHttpRequest();\n"
-                             + "      xhr.open('POST', 'http://localhost:22222/second/', false);\n"
-                             + "      xhr.send(doc);\n"
-                             + "  } catch (exception) { \n"
-                             + "    alert(exception);\n"
-                             + "  }\n"
-                             + "}\n"
-                             + "</script></head>\n"
-                             + "<body onload=\"test()\">\n"
-                             + "</body></html>"},
-            FF_ESR = {"text/html;charset=UTF-8",
-                      "<!DOCTYPE html>"
-                                + "<html><head><title>foo</title><script>\n"
-                             + "  function test() {\n"
-                             + "    try {\n"
-                             + "    var doc = document;\n"
-                             + "      var xhr = new XMLHttpRequest();\n"
-                             + "      xhr.open('POST', 'http://localhost:22222/second/', false);\n"
-                             + "      xhr.send(doc);\n"
-                             + "  } catch (exception) { \n"
-                             + "    alert(exception);\n"
-                             + "  }\n"
-                             + "}\n"
-                             + "</script></head>\n"
-                             + "<body onload=\"test()\">\n"
-                             + "</body></html>"},
-            IE = {"text/html; charset=ISO-8859-1",
-                  "<!DOCTYPE HTML>"
-                      + "<!DOCTYPE html PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/html4/strict.dtd\">"
-                             + "<html><head><title>foo</title>"
-                             + "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=iso-8859-1\"><script>\n"
-                             + "  function test() {\n"
-                             + "    try {\n"
-                             + "    var doc = document;\n"
-                             + "      var xhr = new XMLHttpRequest();\n"
-                             + "      xhr.open('POST', 'http://localhost:22222/second/', false);\n"
-                             + "      xhr.send(doc);\n"
-                             + "  } catch (exception) { \n"
-                             + "    alert(exception);\n"
-                             + "  }\n"
-                             + "}\n"
-                             + "</script></head>\n"
-                             + "<body onload=\"test()\">\n"
-                             + "</body></html>"})
-    @HtmlUnitNYI(CHROME = {"text/html;charset=UTF-8",
-                           "<html xmlns=\"http://www.w3.org/1999/xhtml\" ><head><title>foo</title><script>\n"
-                             + "  function test() {\n"
-                             + "    try {\n"
-                             + "    var doc = document;\n"
-                             + "      var xhr = new XMLHttpRequest();\n"
-                             + "      xhr.open('POST', 'http://localhost:22222/second/', false);\n"
+                             + "      xhr.open('POST', 'http://localhost:§§PORT§§/second/', false);\n"
                              + "      xhr.send(doc);\n"
                              + "  } catch (exception) { \n"
                              + "    alert(exception);\n"
@@ -286,13 +371,14 @@ public class XMLHttpRequest5Test extends WebDriverTestCase {
                              + "</script></head>"
                              + "<body onload=\"test()\">\n"
                              + "</body></html>"},
-                 EDGE = {"text/html;charset=UTF-8",
-                         "<html xmlns=\"http://www.w3.org/1999/xhtml\" ><head><title>foo</title><script>\n"
+                 EDGE = {"text/html;charset=utf-8",
+                         "<!DOCTYPE html>"
+                           + "<html><head><title>foo</title><script>\n"
                            + "  function test() {\n"
                            + "    try {\n"
                            + "    var doc = document;\n"
                            + "      var xhr = new XMLHttpRequest();\n"
-                           + "      xhr.open('POST', 'http://localhost:22222/second/', false);\n"
+                           + "      xhr.open('POST', 'http://localhost:§§PORT§§/second/', false);\n"
                            + "      xhr.send(doc);\n"
                            + "  } catch (exception) { \n"
                            + "    alert(exception);\n"
@@ -301,13 +387,14 @@ public class XMLHttpRequest5Test extends WebDriverTestCase {
                            + "</script></head>"
                            + "<body onload=\"test()\">\n"
                            + "</body></html>"},
-                 FF = {"text/html;charset=UTF-8",
-                       "<html xmlns=\"http://www.w3.org/1999/xhtml\" ><head><title>foo</title><script>\n"
+                 FF = {"text/html;charset=utf-8",
+                       "<!DOCTYPE html>"
+                           + "<html><head><title>foo</title><script>\n"
                            + "  function test() {\n"
                            + "    try {\n"
                            + "    var doc = document;\n"
                            + "      var xhr = new XMLHttpRequest();\n"
-                           + "      xhr.open('POST', 'http://localhost:22222/second/', false);\n"
+                           + "      xhr.open('POST', 'http://localhost:§§PORT§§/second/', false);\n"
                            + "      xhr.send(doc);\n"
                            + "  } catch (exception) { \n"
                            + "    alert(exception);\n"
@@ -316,28 +403,14 @@ public class XMLHttpRequest5Test extends WebDriverTestCase {
                            + "</script></head>"
                            + "<body onload=\"test()\">\n"
                            + "</body></html>"},
-                 FF_ESR = {"text/html;charset=UTF-8",
-                           "<html xmlns=\"http://www.w3.org/1999/xhtml\" ><head><title>foo</title><script>\n"
+                 FF_ESR = {"text/html;charset=utf-8",
+                           "<!DOCTYPE html>"
+                           + "<html><head><title>foo</title><script>\n"
                            + "  function test() {\n"
                            + "    try {\n"
                            + "    var doc = document;\n"
                            + "      var xhr = new XMLHttpRequest();\n"
-                           + "      xhr.open('POST', 'http://localhost:22222/second/', false);\n"
-                           + "      xhr.send(doc);\n"
-                           + "  } catch (exception) { \n"
-                           + "    alert(exception);\n"
-                           + "  }\n"
-                           + "}\n"
-                           + "</script></head>"
-                           + "<body onload=\"test()\">\n"
-                           + "</body></html>"},
-                 IE = {"text/html;charset=UTF-8",
-                       "<html xmlns=\"http://www.w3.org/1999/xhtml\" ><head><title>foo</title><script>\n"
-                           + "  function test() {\n"
-                           + "    try {\n"
-                           + "    var doc = document;\n"
-                           + "      var xhr = new XMLHttpRequest();\n"
-                           + "      xhr.open('POST', 'http://localhost:22222/second/', false);\n"
+                           + "      xhr.open('POST', 'http://localhost:§§PORT§§/second/', false);\n"
                            + "      xhr.send(doc);\n"
                            + "  } catch (exception) { \n"
                            + "    alert(exception);\n"
@@ -349,15 +422,105 @@ public class XMLHttpRequest5Test extends WebDriverTestCase {
     public void sendDocument() throws Exception {
         final String createXmlDoc =
                 "    var doc = document;\n";
-        sendXMLDocument(createXmlDoc, getExpectedAlerts()[0], getExpectedAlerts()[1]);
+
+        expandExpectedAlertsVariables("");
+        sendXMLDocument(DOCTYPE_HTML, createXmlDoc, getExpectedAlerts()[0], getExpectedAlerts()[1]);
     }
 
-    private void sendXMLDocument(final String createXmlDoc,
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"text/html;charset=utf-8",
+             "<html><head><title>foo</title><script>\n"
+                    + "  function test() {\n"
+                    + "    try {\n"
+                    + "    var doc = document;\n"
+                    + "      var xhr = new XMLHttpRequest();\n"
+                    + "      xhr.open('POST', 'http://localhost:§§PORT§§/second/', false);\n"
+                    + "      xhr.send(doc);\n"
+                    + "  } catch (exception) { \n"
+                    + "    alert(exception);\n"
+                    + "  }\n"
+                    + "}\n"
+                    + "</script></head>\n"
+                    + "<body onload=\"test()\">\n"
+                    + "</body></html>"})
+    @HtmlUnitNYI(CHROME = {"text/html;charset=utf-8",
+                           "<html><head><title>foo</title><script>\n"
+                             + "  function test() {\n"
+                             + "    try {\n"
+                             + "    var doc = document;\n"
+                             + "      var xhr = new XMLHttpRequest();\n"
+                             + "      xhr.open('POST', 'http://localhost:§§PORT§§/second/', false);\n"
+                             + "      xhr.send(doc);\n"
+                             + "  } catch (exception) { \n"
+                             + "    alert(exception);\n"
+                             + "  }\n"
+                             + "}\n"
+                             + "</script></head>"
+                             + "<body onload=\"test()\">\n"
+                             + "</body></html>"},
+                 EDGE = {"text/html;charset=utf-8",
+                         "<html><head><title>foo</title><script>\n"
+                           + "  function test() {\n"
+                           + "    try {\n"
+                           + "    var doc = document;\n"
+                           + "      var xhr = new XMLHttpRequest();\n"
+                           + "      xhr.open('POST', 'http://localhost:§§PORT§§/second/', false);\n"
+                           + "      xhr.send(doc);\n"
+                           + "  } catch (exception) { \n"
+                           + "    alert(exception);\n"
+                           + "  }\n"
+                           + "}\n"
+                           + "</script></head>"
+                           + "<body onload=\"test()\">\n"
+                           + "</body></html>"},
+                 FF = {"text/html;charset=utf-8",
+                       "<html><head><title>foo</title><script>\n"
+                           + "  function test() {\n"
+                           + "    try {\n"
+                           + "    var doc = document;\n"
+                           + "      var xhr = new XMLHttpRequest();\n"
+                           + "      xhr.open('POST', 'http://localhost:§§PORT§§/second/', false);\n"
+                           + "      xhr.send(doc);\n"
+                           + "  } catch (exception) { \n"
+                           + "    alert(exception);\n"
+                           + "  }\n"
+                           + "}\n"
+                           + "</script></head>"
+                           + "<body onload=\"test()\">\n"
+                           + "</body></html>"},
+                 FF_ESR = {"text/html;charset=utf-8",
+                           "<html><head><title>foo</title><script>\n"
+                           + "  function test() {\n"
+                           + "    try {\n"
+                           + "    var doc = document;\n"
+                           + "      var xhr = new XMLHttpRequest();\n"
+                           + "      xhr.open('POST', 'http://localhost:§§PORT§§/second/', false);\n"
+                           + "      xhr.send(doc);\n"
+                           + "  } catch (exception) { \n"
+                           + "    alert(exception);\n"
+                           + "  }\n"
+                           + "}\n"
+                           + "</script></head>"
+                           + "<body onload=\"test()\">\n"
+                           + "</body></html>"})
+    public void sendDocumentNoDoctype() throws Exception {
+        final String createXmlDoc =
+                "    var doc = document;\n";
+
+        expandExpectedAlertsVariables("");
+        sendXMLDocument("", createXmlDoc, getExpectedAlerts()[0], getExpectedAlerts()[1]);
+    }
+
+    private void sendXMLDocument(final String doctype, final String createXmlDoc,
             final String expectedMimeType, final String expectedBody) throws Exception {
         startWebServer(getMockWebConnection(), Charset.defaultCharset());
         final String url = URL_SECOND.toString();
 
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = doctype
                 + "<html><head><title>foo</title>"
                 + "<script>\n"
                 + "  function test() {\n"
@@ -379,7 +542,7 @@ public class XMLHttpRequest5Test extends WebDriverTestCase {
         setExpectedAlerts();
         loadPageWithAlerts2(html);
 
-        Assert.assertEquals("Never received a call to URL_SECOND", URL_SECOND,
+        assertEquals("Never received a call to URL_SECOND", URL_SECOND,
                 getMockWebConnection().getLastWebRequest().getUrl());
 
         final String contentType = getMockWebConnection().getLastWebRequest()
@@ -387,8 +550,8 @@ public class XMLHttpRequest5Test extends WebDriverTestCase {
 
         final String requestBody = getMockWebConnection().getLastWebRequest().getRequestBody();
 
-        Assert.assertEquals("Unexpected Content-Type header", expectedMimeType,
+        assertEquals("Unexpected Content-Type header", expectedMimeType,
                 contentType == null ? "null" : contentType);
-        Assert.assertEquals(expectedBody, requestBody == null ? "null" : requestBody);
+        assertEquals(expectedBody, requestBody == null ? "null" : requestBody);
     }
 }

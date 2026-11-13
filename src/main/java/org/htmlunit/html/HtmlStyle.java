@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,26 +14,43 @@
  */
 package org.htmlunit.html;
 
+import java.io.IOException;
+import java.io.StringReader;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.htmlunit.Cache;
 import org.htmlunit.SgmlPage;
+import org.htmlunit.css.CssStyleSheet;
+import org.htmlunit.cssparser.dom.CSSStyleSheetImpl;
+import org.htmlunit.cssparser.parser.InputSource;
+import org.htmlunit.html.csp.ContentSecurityPolicy;
 
 /**
  * Wrapper for the HTML element "style".
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
- * @author <a href="mailto:cse@dynabean.de">Christian Sell</a>
+ * @author Mike Bowler
+ * @author Christian Sell
  * @author Marc Guillemot
  * @author Ahmed Ashour
  * @author Frank Danek
+ * @author Ronald Brill
  */
 public class HtmlStyle extends HtmlElement {
+
+    private static final Log LOG = LogFactory.getLog(HtmlStyle.class);
 
     /** The HTML tag represented by this element. */
     public static final String TAG_NAME = "style";
 
+    private CssStyleSheet sheet_;
+    // the content checked against the Content-Security-Policy (style-src-elem) and the result
+    private String cspCheckedContent_;
+    private boolean cspAllowed_ = true;
+
     /**
-     * Creates an instance of HtmlStyle
+     * Creates an instance of HtmlStyle.
      *
      * @param qualifiedName the qualified name of the element type to instantiate
      * @param page the HtmlPage that contains this element
@@ -52,7 +69,7 @@ public class HtmlStyle extends HtmlElement {
      * @return the value of the attribute {@code type} or an empty string if that attribute isn't defined
      */
     public final String getTypeAttribute() {
-        return getAttributeDirect("type");
+        return getAttributeDirect(TYPE_ATTRIBUTE);
     }
 
     /**
@@ -61,7 +78,7 @@ public class HtmlStyle extends HtmlElement {
      * @param type the new type
      */
     public final void setTypeAttribute(final String type) {
-        setAttribute("type", type);
+        setAttribute(TYPE_ATTRIBUTE, type);
     }
 
     /**
@@ -88,6 +105,35 @@ public class HtmlStyle extends HtmlElement {
 
     /**
      * {@inheritDoc}
+     * Like the browsers, the content is checked against the Content-Security-Policy when the
+     * style element is added to the page.
+     */
+    @Override
+    public void onAllChildrenAddedToPage(final boolean postponed) {
+        super.onAllChildrenAddedToPage(postponed);
+        isAllowedByContentSecurityPolicy();
+    }
+
+    /**
+     * Checks the content against the Content-Security-Policy (style-src-elem); the content
+     * is only checked once.
+     *
+     * @return {@code true} if the content of this style element is allowed
+     */
+    private boolean isAllowedByContentSecurityPolicy() {
+        final String content = getTextContent();
+        if (content.equals(cspCheckedContent_)) {
+            return cspAllowed_;
+        }
+
+        cspCheckedContent_ = content;
+        cspAllowed_ = !(getPage() instanceof HtmlPage htmlPage)
+                || ContentSecurityPolicy.allowsInlineStyle(htmlPage, this, content);
+        return cspAllowed_;
+    }
+
+    /**
+     * {@inheritDoc}
      * @return {@code true} to make generated XML readable as HTML on Firefox 3 for instance.
      */
     @Override
@@ -109,5 +155,41 @@ public class HtmlStyle extends HtmlElement {
     @Override
     public boolean mayBeDisplayed() {
         return false;
+    }
+
+    /**
+     * Return the referenced style sheet.
+     *
+     * @return the referenced style sheet
+     */
+    public CssStyleSheet getSheet() {
+        if (sheet_ != null) {
+            return sheet_;
+        }
+
+        final String uri = getPage().getWebResponse().getWebRequest().getUrl().toExternalForm();
+        if (!isAllowedByContentSecurityPolicy()) {
+            sheet_ = new CssStyleSheet(this, "", uri);
+            return sheet_;
+        }
+
+        final Cache cache = getPage().getWebClient().getCache();
+        final CSSStyleSheetImpl cached = cache.getCachedStyleSheet(getTextContent());
+
+        if (cached != null) {
+            sheet_ = new CssStyleSheet(this, cached, uri);
+        }
+        else {
+            final String css = getTextContent();
+            try (InputSource source = new InputSource(new StringReader(css))) {
+                sheet_ = new CssStyleSheet(this, source, uri);
+                cache.cache(css, sheet_.getWrappedSheet());
+            }
+            catch (final IOException e) {
+                LOG.error(e.getMessage(), e);
+            }
+        }
+
+        return sheet_;
     }
 }

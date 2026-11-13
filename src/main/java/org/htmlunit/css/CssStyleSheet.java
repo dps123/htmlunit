@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,9 @@
  */
 package org.htmlunit.css;
 
-import static org.htmlunit.BrowserVersionFeatures.CSS_PSEUDO_SELECTOR_MS_PLACEHHOLDER;
-import static org.htmlunit.BrowserVersionFeatures.CSS_PSEUDO_SELECTOR_PLACEHOLDER_SHOWN;
-import static org.htmlunit.BrowserVersionFeatures.HTMLLINK_CHECK_TYPE_FOR_STYLESHEET;
-import static org.htmlunit.BrowserVersionFeatures.QUERYSELECTORALL_NOT_IN_QUIRKS;
-import static org.htmlunit.BrowserVersionFeatures.QUERYSELECTOR_CSS3_PSEUDO_REQUIRE_ATTACHED_NODE;
-import static org.htmlunit.html.DomElement.ATTRIBUTE_NOT_DEFINED;
-import static java.nio.charset.StandardCharsets.UTF_16BE;
-import static java.nio.charset.StandardCharsets.UTF_16LE;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.htmlunit.BrowserVersionFeatures.HTMLLINK_CHECK_TYPE_FOR_STYLESHEET;
+import static org.htmlunit.html.DomElement.ATTRIBUTE_NOT_DEFINED;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -43,13 +37,19 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import org.apache.commons.io.ByteOrderMark;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.io.input.BOMInputStream;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.htmlunit.BrowserVersion;
+import org.htmlunit.Cache;
+import org.htmlunit.FailingHttpStatusCodeException;
+import org.htmlunit.Page;
+import org.htmlunit.SgmlPage;
+import org.htmlunit.WebClient;
+import org.htmlunit.WebClient.PooledCSS3Parser;
+import org.htmlunit.WebRequest;
+import org.htmlunit.WebResponse;
+import org.htmlunit.WebWindow;
 import org.htmlunit.cssparser.dom.AbstractCSSRuleImpl;
 import org.htmlunit.cssparser.dom.CSSImportRuleImpl;
 import org.htmlunit.cssparser.dom.CSSMediaRuleImpl;
@@ -69,8 +69,12 @@ import org.htmlunit.cssparser.parser.LexicalUnit;
 import org.htmlunit.cssparser.parser.condition.AttributeCondition;
 import org.htmlunit.cssparser.parser.condition.Condition;
 import org.htmlunit.cssparser.parser.condition.Condition.ConditionType;
+import org.htmlunit.cssparser.parser.condition.HasPseudoClassCondition;
+import org.htmlunit.cssparser.parser.condition.IsPseudoClassCondition;
 import org.htmlunit.cssparser.parser.condition.NotPseudoClassCondition;
-import org.htmlunit.cssparser.parser.javacc.CSS3Parser;
+import org.htmlunit.cssparser.parser.condition.NthPseudoClassCondition;
+import org.htmlunit.cssparser.parser.condition.NthPseudoClassCondition.NthType;
+import org.htmlunit.cssparser.parser.condition.WherePseudoClassCondition;
 import org.htmlunit.cssparser.parser.media.MediaQuery;
 import org.htmlunit.cssparser.parser.selector.ChildSelector;
 import org.htmlunit.cssparser.parser.selector.DescendantSelector;
@@ -78,26 +82,18 @@ import org.htmlunit.cssparser.parser.selector.DirectAdjacentSelector;
 import org.htmlunit.cssparser.parser.selector.ElementSelector;
 import org.htmlunit.cssparser.parser.selector.GeneralAdjacentSelector;
 import org.htmlunit.cssparser.parser.selector.PseudoElementSelector;
+import org.htmlunit.cssparser.parser.selector.RelativeSelector;
 import org.htmlunit.cssparser.parser.selector.Selector;
 import org.htmlunit.cssparser.parser.selector.Selector.SelectorType;
 import org.htmlunit.cssparser.parser.selector.SelectorList;
 import org.htmlunit.cssparser.parser.selector.SimpleSelector;
-
-import org.htmlunit.BrowserVersion;
-import org.htmlunit.Cache;
-import org.htmlunit.FailingHttpStatusCodeException;
-import org.htmlunit.Page;
-import org.htmlunit.SgmlPage;
-import org.htmlunit.WebClient;
-import org.htmlunit.WebRequest;
-import org.htmlunit.WebResponse;
-import org.htmlunit.WebWindow;
 import org.htmlunit.html.DisabledElement;
 import org.htmlunit.html.DomElement;
 import org.htmlunit.html.DomNode;
 import org.htmlunit.html.DomText;
 import org.htmlunit.html.HtmlCheckBoxInput;
 import org.htmlunit.html.HtmlElement;
+import org.htmlunit.html.HtmlForm;
 import org.htmlunit.html.HtmlInput;
 import org.htmlunit.html.HtmlLink;
 import org.htmlunit.html.HtmlOption;
@@ -105,10 +101,11 @@ import org.htmlunit.html.HtmlPage;
 import org.htmlunit.html.HtmlRadioButtonInput;
 import org.htmlunit.html.HtmlStyle;
 import org.htmlunit.html.HtmlTextArea;
+import org.htmlunit.html.ValidatableHtmlElement;
+import org.htmlunit.html.csp.ContentSecurityPolicy;
 import org.htmlunit.javascript.host.css.MediaList;
-import org.htmlunit.javascript.host.html.HTMLDocument;
-import org.htmlunit.util.EncodingSniffer;
 import org.htmlunit.util.MimeType;
+import org.htmlunit.util.StringUtils;
 import org.htmlunit.util.UrlUtils;
 
 /**
@@ -121,6 +118,8 @@ import org.htmlunit.util.UrlUtils;
  * @author Guy Burton
  * @author Frank Danek
  * @author Carsten Steul
+ * @author Sven Strickroth
+ * @author Ashutosh Panda
  */
 public class CssStyleSheet implements Serializable {
 
@@ -146,11 +145,11 @@ public class CssStyleSheet implements Serializable {
     public static final String BLOCK = "block";
     /** "inline". */
     public static final String INLINE = "inline";
+    /** "scroll". */
+    public static final String SCROLL = "scroll";
 
     private static final Log LOG = LogFactory.getLog(CssStyleSheet.class);
 
-    private static final Pattern NTH_NUMERIC = Pattern.compile("\\d+");
-    private static final Pattern NTH_COMPLEX = Pattern.compile("[+-]?\\d*n\\w*([+-]\\w\\d*)?");
     private static final Pattern UNESCAPE_SELECTOR = Pattern.compile("\\\\([\\[\\].:])");
 
     /** The parsed stylesheet which this host object wraps. */
@@ -159,15 +158,14 @@ public class CssStyleSheet implements Serializable {
     /** The HTML element which owns this stylesheet. */
     private final HtmlElement owner_;
 
-    /** The collection of rules defined in this style sheet. */
-    private org.htmlunit.javascript.host.css.CSSRuleList cssRules_;
-    private List<Integer> cssRulesIndexFix_;
-
     /** The CSS import rules and their corresponding stylesheets. */
     private final Map<CSSImportRuleImpl, CssStyleSheet> imports_ = new HashMap<>();
 
-    /** cache parsed media strings */
-    private static final transient Map<String, MediaListImpl> media_ = new HashMap<>();
+    /** True if this (imported) style sheet was not loaded because of the Content-Security-Policy. */
+    private boolean blockedByContentSecurityPolicy_;
+
+    /** cache parsed media strings. */
+    private static final Map<String, MediaListImpl> MEDIA = Collections.synchronizedMap(new HashMap<>(100));
 
     /** This stylesheet's URI (used to resolved contained @import rules). */
     private final String uri_;
@@ -187,11 +185,10 @@ public class CssStyleSheet implements Serializable {
     public static final Set<String> CSS4_PSEUDO_CLASSES;
 
     static {
-        CSS2_PSEUDO_CLASSES = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-                "link", "visited", "hover", "active", "focus", "lang", "first-child")));
+        CSS2_PSEUDO_CLASSES = Set.of("link", "visited", "hover", "active", "focus", "lang", "first-child");
 
         final Set<String> css3 = new HashSet<>(Arrays.asList(
-                "checked", "disabled", "enabled", "indeterminated", "root", "target", "not()",
+                "checked", "disabled", "enabled", "indeterminate", "root", "target", "not()",
                 "nth-child()", "nth-last-child()", "nth-of-type()", "nth-last-of-type()",
                 "last-child", "first-of-type", "last-of-type", "only-child", "only-of-type", "empty",
                 "optional", "required", "valid", "invalid"));
@@ -200,7 +197,7 @@ public class CssStyleSheet implements Serializable {
 
         final Set<String> css4 = new HashSet<>(Arrays.asList(
                 // only what is supported at the moment
-                "focus-within", "focus-visible"));
+                "focus-within", "focus-visible", "scope"));
         css4.addAll(CSS3_PSEUDO_CLASSES);
         CSS4_PSEUDO_CLASSES = Collections.unmodifiableSet(css4);
     }
@@ -292,8 +289,8 @@ public class CssStyleSheet implements Serializable {
     /**
      * Loads the stylesheet at the specified link or href.
      * @param element the parent DOM element
-     * @param link the stylesheet's link (may be {@code null} if a <code>url</code> is specified)
-     * @param url the stylesheet's url (may be {@code null} if a <code>link</code> is specified)
+     * @param link the stylesheet's link (maybe {@code null} if a <code>url</code> is specified)
+     * @param url the stylesheet's url (maybe {@code null} if a <code>link</code> is specified)
      * @return the loaded stylesheet
      */
     public static CssStyleSheet loadStylesheet(final HtmlElement element, final HtmlLink link, final String url) {
@@ -308,37 +305,64 @@ public class CssStyleSheet implements Serializable {
                 // Use href.
                 final BrowserVersion browser = client.getBrowserVersion();
                 request = new WebRequest(new URL(url), browser.getCssAcceptHeader(), browser.getAcceptEncodingHeader());
-                request.setRefererlHeader(page.getUrl());
+                request.setRefererHeader(page.getUrl());
+                // https://www.w3.org/TR/css-syntax-3/#input-byte-stream
+                request.setDefaultResponseContentCharset(UTF_8);
 
-                // our cache is a bit strange;
-                // loadWebResponse check the cache for the web response
-                // AND also fixes the request url for the following cache lookups
-                response = client.loadWebResponse(request);
-            }
-            else {
-                // Use link.
-                request = link.getWebRequest();
-
-                if (client.getBrowserVersion().hasFeature(HTMLLINK_CHECK_TYPE_FOR_STYLESHEET)) {
-                    final String type = link.getTypeAttribute();
-                    if (StringUtils.isNotBlank(type) && !MimeType.TEXT_CSS.equals(type)) {
-                        return new CssStyleSheet(element, "", uri);
-                    }
+                if (page.getContentSecurityPolicy() != null) {
+                    // like the browsers, redirects are checked (and upgraded) also
+                    final URL importUrl = request.getUrl();
+                    ContentSecurityPolicy.upgradeInsecureRedirects(page, request);
+                    request.setRedirectFilter(
+                        redirectUrl -> ContentSecurityPolicy.allowsExternalStyle(page, null, redirectUrl, importUrl));
                 }
 
                 // our cache is a bit strange;
                 // loadWebResponse check the cache for the web response
                 // AND also fixes the request url for the following cache lookups
-                response = link.getWebResponse(true, request);
+                response = client.loadWebResponse(request);
+                if (response == null) {
+                    // redirect blocked by the Content-Security-Policy
+                    final CssStyleSheet blocked = new CssStyleSheet(element, "", url);
+                    blocked.blockedByContentSecurityPolicy_ = true;
+                    return blocked;
+                }
+            }
+            else {
+                // Use link.
+                request = link.getWebRequest();
+
+                final String type = link.getTypeAttribute();
+                if (client.getBrowserVersion().hasFeature(HTMLLINK_CHECK_TYPE_FOR_STYLESHEET)) {
+                    if (StringUtils.isNotBlank(type) && !MimeType.TEXT_CSS.equals(type)) {
+                        return new CssStyleSheet(element, "", uri);
+                    }
+                }
+
+                if (request.getCharset() != null) {
+                    request.setDefaultResponseContentCharset(request.getCharset());
+                }
+                else {
+                    // https://www.w3.org/TR/css-syntax-3/#input-byte-stream
+                    request.setDefaultResponseContentCharset(UTF_8);
+                }
+
+                // our cache is a bit strange;
+                // loadWebResponse check the cache for the web response
+                // AND also fixes the request url for the following cache lookups
+                response = link.getWebResponse(true, request, true, type);
+                if (response == null) {
+                    return new CssStyleSheet(element, "", uri);
+                }
             }
 
             // now we can look into the cache with the fixed request for
             // a cached style sheet
             final Cache cache = client.getCache();
             final Object fromCache = cache.getCachedObject(request);
-            if (fromCache instanceof CSSStyleSheetImpl) {
+            if (fromCache instanceof CSSStyleSheetImpl impl) {
                 uri = request.getUrl().toExternalForm();
-                return new CssStyleSheet(element, (CSSStyleSheetImpl) fromCache, uri);
+                return new CssStyleSheet(element, impl, uri);
             }
 
             uri = response.getWebRequest().getUrl().toExternalForm();
@@ -348,49 +372,20 @@ public class CssStyleSheet implements Serializable {
 
             final CssStyleSheet sheet;
             final String contentType = response.getContentType();
-            if (StringUtils.isEmpty(contentType) || MimeType.TEXT_CSS.equals(contentType)) {
-
-                final InputStream in = response.getContentAsStreamWithBomIfApplicable();
-                if (in == null) {
-                    if (LOG.isWarnEnabled()) {
-                        LOG.warn("Loading stylesheet for url '" + uri + "' returns empty responseData");
-                    }
-                    return new CssStyleSheet(element, "", uri);
-                }
-                try {
-                    Charset cssEncoding = Charset.forName("windows-1252");
-                    final Charset contentCharset =
-                            EncodingSniffer.sniffEncodingFromHttpHeaders(response.getResponseHeaders());
-                    if (contentCharset == null && request.getCharset() != null) {
-                        cssEncoding = request.getCharset();
-                    }
-                    else if (contentCharset != null) {
-                        cssEncoding = contentCharset;
-                    }
-
-                    if (in instanceof BOMInputStream) {
-                        final BOMInputStream bomIn = (BOMInputStream) in;
-                        // there seems to be a bug in BOMInputStream
-                        // we have to call this before hasBOM(ByteOrderMark)
-                        if (bomIn.hasBOM()) {
-                            if (bomIn.hasBOM(ByteOrderMark.UTF_8)) {
-                                cssEncoding = UTF_8;
-                            }
-                            else if (bomIn.hasBOM(ByteOrderMark.UTF_16BE)) {
-                                cssEncoding = UTF_16BE;
-                            }
-                            else if (bomIn.hasBOM(ByteOrderMark.UTF_16LE)) {
-                                cssEncoding = UTF_16LE;
-                            }
+            if (StringUtils.isEmptyOrNull(contentType) || MimeType.TEXT_CSS.equals(contentType)) {
+                try (InputStream in = response.getContentAsStreamWithBomIfApplicable()) {
+                    if (in == null) {
+                        if (LOG.isWarnEnabled()) {
+                            LOG.warn("Loading stylesheet for url '" + uri + "' returns empty responseData");
                         }
+                        return new CssStyleSheet(element, "", uri);
                     }
-                    try (InputSource source = new InputSource(new InputStreamReader(in, cssEncoding))) {
+
+                    final Charset cssEncoding2 = response.getContentCharset();
+                    try (InputSource source = new InputSource(new InputStreamReader(in, cssEncoding2))) {
                         source.setURI(uri);
                         sheet = new CssStyleSheet(element, source, uri);
                     }
-                }
-                finally {
-                    in.close();
                 }
             }
             else {
@@ -427,12 +422,17 @@ public class CssStyleSheet implements Serializable {
      * @param selector the selector to test
      * @param element the element to test
      * @param pseudoElement the pseudo element to match, (can be {@code null})
-     * @param fromQuerySelectorAll whether this is called from {@link DomNode#querySelectorAll(String)}
+     * @param scope the context scope node used for evaluating relative selectors like :scope
+     * @param fromQuerySelectorAll whether this is called from {@link DomNode#querySelectorAll(String, DomNode)}
      * @param throwOnSyntax throw exception if the selector syntax is incorrect
      * @return {@code true} if it does apply, {@code false} if it doesn't apply
      */
-    public static boolean selects(final BrowserVersion browserVersion, final Selector selector,
-            final DomElement element, final String pseudoElement, final boolean fromQuerySelectorAll,
+    public static boolean selects(final BrowserVersion browserVersion,
+            final DomElement element,
+            final Selector selector,
+            final String pseudoElement,
+            final DomNode scope,
+            final boolean fromQuerySelectorAll,
             final boolean throwOnSyntax) {
         switch (selector.getSelectorType()) {
             case ELEMENT_NODE_SELECTOR:
@@ -453,7 +453,8 @@ public class CssStyleSheet implements Serializable {
                     final List<Condition> conditions = es.getConditions();
                     if (conditions != null) {
                         for (final Condition condition : conditions) {
-                            if (!selects(browserVersion, condition, element, fromQuerySelectorAll, throwOnSyntax)) {
+                            if (!selects(browserVersion, element, condition,
+                                    scope, fromQuerySelectorAll, throwOnSyntax)) {
                                 return false;
                             }
                         }
@@ -472,24 +473,24 @@ public class CssStyleSheet implements Serializable {
                     return false; // for instance parent is a DocumentFragment
                 }
                 final ChildSelector cs = (ChildSelector) selector;
-                return selects(browserVersion, cs.getSimpleSelector(), element, pseudoElement,
-                            fromQuerySelectorAll, throwOnSyntax)
-                    && selects(browserVersion, cs.getAncestorSelector(), (DomElement) parentNode,
-                            pseudoElement, fromQuerySelectorAll, throwOnSyntax);
+                return selects(browserVersion, element, cs.getSimpleSelector(), pseudoElement,
+                            scope, fromQuerySelectorAll, throwOnSyntax)
+                    && selects(browserVersion, (DomElement) parentNode, cs.getAncestorSelector(),
+                            pseudoElement, scope, fromQuerySelectorAll, throwOnSyntax);
 
             case DESCENDANT_SELECTOR:
                 final DescendantSelector ds = (DescendantSelector) selector;
                 final SimpleSelector simpleSelector = ds.getSimpleSelector();
-                if (selects(browserVersion, simpleSelector, element, pseudoElement,
-                            fromQuerySelectorAll, throwOnSyntax)) {
+                if (selects(browserVersion, element, simpleSelector, pseudoElement,
+                            scope, fromQuerySelectorAll, throwOnSyntax)) {
                     DomNode ancestor = element;
                     if (simpleSelector.getSelectorType() != SelectorType.PSEUDO_ELEMENT_SELECTOR) {
                         ancestor = ancestor.getParentNode();
                     }
                     final Selector dsAncestorSelector = ds.getAncestorSelector();
                     while (ancestor instanceof DomElement) {
-                        if (selects(browserVersion, dsAncestorSelector, (DomElement) ancestor, pseudoElement,
-                                fromQuerySelectorAll, throwOnSyntax)) {
+                        if (selects(browserVersion, (DomElement) ancestor, dsAncestorSelector, pseudoElement,
+                                scope, fromQuerySelectorAll, throwOnSyntax)) {
                             return true;
                         }
                         ancestor = ancestor.getParentNode();
@@ -499,27 +500,27 @@ public class CssStyleSheet implements Serializable {
 
             case DIRECT_ADJACENT_SELECTOR:
                 final DirectAdjacentSelector das = (DirectAdjacentSelector) selector;
-                if (selects(browserVersion, das.getSimpleSelector(), element, pseudoElement,
-                            fromQuerySelectorAll, throwOnSyntax)) {
+                if (selects(browserVersion, element, das.getSimpleSelector(), pseudoElement,
+                            scope, fromQuerySelectorAll, throwOnSyntax)) {
                     DomNode prev = element.getPreviousSibling();
                     while (prev != null && !(prev instanceof DomElement)) {
                         prev = prev.getPreviousSibling();
                     }
                     return prev != null
-                            && selects(browserVersion, das.getSelector(),
-                                    (DomElement) prev, pseudoElement, fromQuerySelectorAll, throwOnSyntax);
+                            && selects(browserVersion, (DomElement) prev, das.getSelector(),
+                                    pseudoElement, scope, fromQuerySelectorAll, throwOnSyntax);
                 }
                 return false;
 
             case GENERAL_ADJACENT_SELECTOR:
                 final GeneralAdjacentSelector gas = (GeneralAdjacentSelector) selector;
-                if (selects(browserVersion, gas.getSimpleSelector(), element, pseudoElement,
-                            fromQuerySelectorAll, throwOnSyntax)) {
+                if (selects(browserVersion, element, gas.getSimpleSelector(), pseudoElement,
+                            scope, fromQuerySelectorAll, throwOnSyntax)) {
                     for (DomNode prev1 = element.getPreviousSibling(); prev1 != null;
                                                         prev1 = prev1.getPreviousSibling()) {
-                        if (prev1 instanceof DomElement
-                            && selects(browserVersion, gas.getSelector(), (DomElement) prev1,
-                                    pseudoElement, fromQuerySelectorAll, throwOnSyntax)) {
+                        if (prev1 instanceof DomElement domElement
+                            && selects(browserVersion, domElement, gas.getSelector(),
+                                    pseudoElement, scope, fromQuerySelectorAll, throwOnSyntax)) {
                             return true;
                         }
                     }
@@ -531,6 +532,51 @@ public class CssStyleSheet implements Serializable {
                     return pseudoName.equals(pseudoElement.substring(1));
                 }
                 return false;
+
+            case RELATIVE_SELECTOR:
+                final RelativeSelector rs = (RelativeSelector) selector;
+
+                switch (rs.getCombinator()) {
+                    case DESCENDANT_COMBINATOR:
+                        for (final DomElement descendant : element.getDomElementDescendants()) {
+                            if (selects(browserVersion, descendant, rs.getSelector(), pseudoElement,
+                                            scope, fromQuerySelectorAll, throwOnSyntax)) {
+                                return true;
+                            }
+                        }
+                        return false;
+
+                    case CHILD_COMBINATOR:
+                        for (final DomElement child : element.getChildElements()) {
+                            if (selects(browserVersion, child, rs.getSelector(), pseudoElement,
+                                            scope, fromQuerySelectorAll, throwOnSyntax)) {
+                                return true;
+                            }
+                        }
+                        return false;
+
+                    case NEXT_SIBLING_COMBINATOR:
+                        final DomElement nextSibling = element.getNextElementSibling();
+                        return nextSibling != null && selects(browserVersion, nextSibling,
+                                                                rs.getSelector(), pseudoElement,
+                                                                scope, fromQuerySelectorAll, throwOnSyntax);
+
+                    case SUBSEQUENT_SIBLING_COMBINATOR:
+                        for (DomNode n = element.getNextSibling(); n != null; n = n.getNextSibling()) {
+                            if (n instanceof DomElement domElement
+                                    && selects(browserVersion, domElement, rs.getSelector(), pseudoElement,
+                                                scope, fromQuerySelectorAll, throwOnSyntax)) {
+                                return true;
+                            }
+                        }
+                        return false;
+
+                    default:
+                        if (LOG.isErrorEnabled()) {
+                            LOG.error("Unknown CSS combinator '" + rs.getCombinator() + "'.");
+                        }
+                        return false;
+                }
 
             default:
                 if (LOG.isErrorEnabled()) {
@@ -547,13 +593,15 @@ public class CssStyleSheet implements Serializable {
      * @param browserVersion the browser version
      * @param condition the condition to test
      * @param element the element to test
+     * @param scope the context scope node used for evaluating relative selectors like :scope
      * @param fromQuerySelectorAll whether this is called from {@link DomNode#querySelectorAll(String)}
      * @param throwOnSyntax throw exception if the selector syntax is incorrect
      * @return {@code true} if it does apply, {@code false} if it doesn't apply
      */
-    // TODO make (package) private again
-    public static boolean selects(final BrowserVersion browserVersion,
-            final Condition condition, final DomElement element,
+    static boolean selects(final BrowserVersion browserVersion,
+            final DomElement element,
+            final Condition condition,
+            final DomNode scope,
             final boolean fromQuerySelectorAll, final boolean throwOnSyntax) {
 
         switch (condition.getConditionType()) {
@@ -566,7 +614,7 @@ public class CssStyleSheet implements Serializable {
                     v3 = UNESCAPE_SELECTOR.matcher(v3).replaceAll("$1");
                 }
                 final String a3 = element.getAttributeDirect("class");
-                return selectsWhitespaceSeparated(v3, a3);
+                return matchesWhitespaceSeparated(v3, a3);
 
             case ATTRIBUTE_CONDITION:
                 final AttributeCondition attributeCondition = (AttributeCondition) condition;
@@ -577,7 +625,7 @@ public class CssStyleSheet implements Serializable {
                     }
                     final String name = attributeCondition.getLocalName();
                     final String attrValue = element.getAttribute(name);
-                    if (attributeCondition.isCaseInSensitive() || "type".equals(name)) {
+                    if (attributeCondition.isCaseInSensitive() || DomElement.TYPE_ATTRIBUTE.equals(name)) {
                         return ATTRIBUTE_NOT_DEFINED != attrValue && attrValue.equalsIgnoreCase(value);
                     }
                     return ATTRIBUTE_NOT_DEFINED != attrValue && attrValue.equals(value);
@@ -588,33 +636,33 @@ public class CssStyleSheet implements Serializable {
                 final AttributeCondition prefixAttributeCondition = (AttributeCondition) condition;
                 final String prefixValue = prefixAttributeCondition.getValue();
                 if (prefixAttributeCondition.isCaseInSensitive()) {
-                    return !"".equals(prefixValue)
+                    return !StringUtils.isEmptyString(prefixValue)
                             && StringUtils.startsWithIgnoreCase(
                                     element.getAttribute(prefixAttributeCondition.getLocalName()), prefixValue);
                 }
-                return !"".equals(prefixValue)
+                return !StringUtils.isEmptyString(prefixValue)
                         && element.getAttribute(prefixAttributeCondition.getLocalName()).startsWith(prefixValue);
 
             case SUFFIX_ATTRIBUTE_CONDITION:
                 final AttributeCondition suffixAttributeCondition = (AttributeCondition) condition;
                 final String suffixValue = suffixAttributeCondition.getValue();
                 if (suffixAttributeCondition.isCaseInSensitive()) {
-                    return !"".equals(suffixValue)
+                    return !StringUtils.isEmptyString(suffixValue)
                             && StringUtils.endsWithIgnoreCase(
                                     element.getAttribute(suffixAttributeCondition.getLocalName()), suffixValue);
                 }
-                return !"".equals(suffixValue)
+                return !StringUtils.isEmptyString(suffixValue)
                         && element.getAttribute(suffixAttributeCondition.getLocalName()).endsWith(suffixValue);
 
             case SUBSTRING_ATTRIBUTE_CONDITION:
                 final AttributeCondition substringAttributeCondition = (AttributeCondition) condition;
                 final String substringValue = substringAttributeCondition.getValue();
                 if (substringAttributeCondition.isCaseInSensitive()) {
-                    return !"".equals(substringValue)
+                    return !StringUtils.isEmptyString(substringValue)
                             && StringUtils.containsIgnoreCase(
                                     element.getAttribute(substringAttributeCondition.getLocalName()), substringValue);
                 }
-                return !"".equals(substringValue)
+                return !StringUtils.isEmptyString(substringValue)
                         && element.getAttribute(substringAttributeCondition.getLocalName()).contains(substringValue);
 
             case BEGIN_HYPHEN_ATTRIBUTE_CONDITION:
@@ -622,22 +670,22 @@ public class CssStyleSheet implements Serializable {
                 final String v = beginHyphenAttributeCondition.getValue();
                 final String a = element.getAttribute(beginHyphenAttributeCondition.getLocalName());
                 if (beginHyphenAttributeCondition.isCaseInSensitive()) {
-                    return selectsHyphenSeparated(
-                            org.htmlunit.util.StringUtils.toRootLowerCaseWithCache(v),
-                            org.htmlunit.util.StringUtils.toRootLowerCaseWithCache(a));
+                    return matchesHyphenSeparated(
+                            StringUtils.toRootLowerCase(v),
+                            StringUtils.toRootLowerCase(a));
                 }
-                return selectsHyphenSeparated(v, a);
+                return matchesHyphenSeparated(v, a);
 
             case ONE_OF_ATTRIBUTE_CONDITION:
                 final AttributeCondition oneOfAttributeCondition = (AttributeCondition) condition;
                 final String v2 = oneOfAttributeCondition.getValue();
                 final String a2 = element.getAttribute(oneOfAttributeCondition.getLocalName());
                 if (oneOfAttributeCondition.isCaseInSensitive()) {
-                    return selectsOneOf(
-                            org.htmlunit.util.StringUtils.toRootLowerCaseWithCache(v2),
-                            org.htmlunit.util.StringUtils.toRootLowerCaseWithCache(a2));
+                    return matchesWhitespaceSeparated(
+                            StringUtils.toRootLowerCase(v2),
+                            StringUtils.toRootLowerCase(a2));
                 }
-                return selectsOneOf(v2, a2);
+                return matchesWhitespaceSeparated(v2, a2);
 
             case LANG_CONDITION:
                 final String lcLang = condition.getValue();
@@ -653,17 +701,28 @@ public class CssStyleSheet implements Serializable {
                 return false;
 
             case NOT_PSEUDO_CLASS_CONDITION:
-                final NotPseudoClassCondition notPseudoCondition = (NotPseudoClassCondition) condition;
-                final SelectorList selectorList = notPseudoCondition.getSelectors();
-                for (final Selector selector : selectorList) {
-                    if (selects(browserVersion, selector, element, null, fromQuerySelectorAll, throwOnSyntax)) {
-                        return false;
-                    }
-                }
-                return true;
+                return !selectsAny(browserVersion, element, ((NotPseudoClassCondition) condition).getSelectors(),
+                                    scope, fromQuerySelectorAll, throwOnSyntax);
+
+            case IS_PSEUDO_CLASS_CONDITION:
+                return selectsAny(browserVersion, element, ((IsPseudoClassCondition) condition).getSelectors(),
+                                    scope, fromQuerySelectorAll, throwOnSyntax);
+
+            case WHERE_PSEUDO_CLASS_CONDITION:
+                // same as is
+                return selectsAny(browserVersion, element, ((WherePseudoClassCondition) condition).getSelectors(),
+                                    scope, fromQuerySelectorAll, throwOnSyntax);
+
+            case HAS_PSEUDO_CLASS_CONDITION:
+                return selectsAny(browserVersion, element, ((HasPseudoClassCondition) condition).getSelectors(),
+                                    scope, fromQuerySelectorAll, throwOnSyntax);
+
+            case NTH_PSEUDO_CLASS_CONDITION:
+                return selectsNth(browserVersion, element, (NthPseudoClassCondition) condition,
+                                    scope, fromQuerySelectorAll, throwOnSyntax);
 
             case PSEUDO_CLASS_CONDITION:
-                return selectsPseudoClass(browserVersion, condition, element);
+                return selectsPseudoClass(browserVersion, element, condition, scope);
 
             default:
                 if (LOG.isErrorEnabled()) {
@@ -673,40 +732,68 @@ public class CssStyleSheet implements Serializable {
         }
     }
 
-    private static boolean selectsOneOf(final String condition, final String attribute) {
-        // attribute.equals(condition)
-        // || attribute.startsWith(condition + " ") || attriubte.endsWith(" " + condition)
-        // || attribute.contains(" " + condition + " ");
-
-        final int conditionLength = condition.length();
-        if (conditionLength < 1) {
+    /**
+     * Checks one of the nth-xxx() pseudo-classes; the position of the element is determined
+     * by counting the siblings (of the same type and/or matching the optional 'of S' selectors).
+     *
+     * @param browserVersion the browser version
+     * @param element the element to test
+     * @param condition the nth condition
+     * @param scope the context scope node used for evaluating relative selectors like :scope
+     * @param fromQuerySelectorAll whether this is called from {@link DomNode#querySelectorAll(String)}
+     * @param throwOnSyntax throw exception if the selector syntax is incorrect
+     * @return {@code true} if the condition applies
+     */
+    private static boolean selectsNth(final BrowserVersion browserVersion,
+            final DomElement element,
+            final NthPseudoClassCondition condition,
+            final DomNode scope,
+            final boolean fromQuerySelectorAll, final boolean throwOnSyntax) {
+        final SelectorList ofSelectors = condition.getSelectors();
+        if (ofSelectors != null
+                && !selectsAny(browserVersion, element, ofSelectors, scope, fromQuerySelectorAll, throwOnSyntax)) {
             return false;
         }
 
-        final int attribLength = attribute.length();
-        if (attribLength < conditionLength) {
-            return false;
+        final NthType type = condition.getType();
+        final String nodeName = element.getNodeName();
+        int position = 0;
+        for (DomNode n = element; n != null; n = type.isFromEnd() ? n.getNextSibling() : n.getPreviousSibling()) {
+            if (n instanceof DomElement sibling
+                    && (!type.isOfType() || nodeName.equals(sibling.getNodeName()))
+                    && (ofSelectors == null || selectsAny(browserVersion, sibling, ofSelectors,
+                                                    scope, fromQuerySelectorAll, throwOnSyntax))) {
+                position++;
+            }
         }
-        if (attribLength > conditionLength) {
-            if (' ' == attribute.charAt(conditionLength)
-                    && attribute.startsWith(condition)) {
-                return true;
-            }
-            if (' ' == attribute.charAt(attribLength - conditionLength - 1)
-                    && attribute.endsWith(condition)) {
-                return true;
-            }
-            if (attribLength + 1 > conditionLength) {
-                final StringBuilder tmp = new StringBuilder(conditionLength + 2);
-                tmp.append(' ').append(condition).append(' ');
-                return attribute.contains(tmp);
-            }
-            return false;
-        }
-        return attribute.equals(condition);
+        return condition.matches(position);
     }
 
-    private static boolean selectsHyphenSeparated(final String condition, final String attribute) {
+    /**
+     * Returns true if the element is matched by at least one of the selectors.
+     *
+     * @param browserVersion the browser version
+     * @param element the element to test
+     * @param selectors the selectors
+     * @param scope the context scope node used for evaluating relative selectors like :scope
+     * @param fromQuerySelectorAll whether this is called from {@link DomNode#querySelectorAll(String)}
+     * @param throwOnSyntax throw exception if the selector syntax is incorrect
+     * @return {@code true} if at least one selector applies
+     */
+    private static boolean selectsAny(final BrowserVersion browserVersion,
+            final DomElement element,
+            final SelectorList selectors,
+            final DomNode scope,
+            final boolean fromQuerySelectorAll, final boolean throwOnSyntax) {
+        for (final Selector selector : selectors) {
+            if (selects(browserVersion, element, selector, null, scope, fromQuerySelectorAll, throwOnSyntax)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean matchesHyphenSeparated(final String condition, final String attribute) {
         final int conditionLength = condition.length();
         if (conditionLength < 1) {
             if (attribute != ATTRIBUTE_NOT_DEFINED) {
@@ -727,7 +814,7 @@ public class CssStyleSheet implements Serializable {
         return attribute.equals(condition);
     }
 
-    private static boolean selectsWhitespaceSeparated(final String condition, final String attribute) {
+    private static boolean matchesWhitespaceSeparated(final String condition, final String attribute) {
         final int conditionLength = condition.length();
         if (conditionLength < 1) {
             return false;
@@ -755,25 +842,22 @@ public class CssStyleSheet implements Serializable {
         return false;
     }
 
-    private static boolean selectsPseudoClass(final BrowserVersion browserVersion,
-            final Condition condition, final DomElement element) {
-        if (browserVersion.hasFeature(QUERYSELECTORALL_NOT_IN_QUIRKS)) {
-            final Object sobj = element.getPage().getScriptableObject();
-            if (sobj instanceof HTMLDocument && ((HTMLDocument) sobj).getDocumentMode() < 8) {
-                return false;
-            }
-        }
-
-        final String value = condition.getValue();
+    @SuppressWarnings("PMD.UselessParentheses")
+    private static boolean selectsPseudoClass(
+            final BrowserVersion browserVersion,
+            final DomElement element,
+            final Condition condition,
+            final DomNode scope) {
+        final String value = StringUtils.toRootLowerCase(condition.getValue());
         switch (value) {
             case "root":
                 return element == element.getPage().getDocumentElement();
 
             case "enabled":
-                return element instanceof DisabledElement && !((DisabledElement) element).isDisabled();
+                return element instanceof DisabledElement de && !de.isDisabled();
 
             case "disabled":
-                return element instanceof DisabledElement && ((DisabledElement) element).isDisabled();
+                return element instanceof DisabledElement de && de.isDisabled();
 
             case "focus":
                 final HtmlPage htmlPage = element.getHtmlPageOrNull();
@@ -796,21 +880,24 @@ public class CssStyleSheet implements Serializable {
                 if (htmlPage3 != null) {
                     final DomElement focus = htmlPage3.getFocusedElement();
                     return element == focus
-                            && ((element instanceof HtmlInput && !((HtmlInput) element).isReadOnly())
-                                || (element instanceof HtmlTextArea && !((HtmlTextArea) element).isReadOnly()));
+                            && ((element instanceof HtmlInput hi && !hi.isReadOnly())
+                                || (element instanceof HtmlTextArea hta && !hta.isReadOnly()));
                 }
                 return false;
 
+            case "scope":
+                return element == (scope == null ? element.getPage().getDocumentElement() : scope);
+
             case "checked":
-                return (element instanceof HtmlCheckBoxInput && ((HtmlCheckBoxInput) element).isChecked())
-                        || (element instanceof HtmlRadioButtonInput && ((HtmlRadioButtonInput) element).isChecked()
-                                || (element instanceof HtmlOption && ((HtmlOption) element).isSelected()));
+                return (element instanceof HtmlCheckBoxInput hcbi && hcbi.isChecked())
+                        || (element instanceof HtmlRadioButtonInput hrbi && hrbi.isChecked())
+                                || (element instanceof HtmlOption ho && ho.isSelected());
 
             case "required":
-                return element instanceof HtmlElement && ((HtmlElement) element).isRequired();
+                return element instanceof HtmlElement he && he.isRequired();
 
             case "optional":
-                return element instanceof HtmlElement && ((HtmlElement) element).isOptional();
+                return element instanceof HtmlElement he && he.isOptional();
 
             case "first-child":
                 for (DomNode n = element.getPreviousSibling(); n != null; n = n.getPreviousSibling()) {
@@ -874,10 +961,24 @@ public class CssStyleSheet implements Serializable {
                 return true;
 
             case "valid":
-                return element instanceof HtmlElement && ((HtmlElement) element).isValid();
+                if (element instanceof ValidatableHtmlElement validatable) {
+                    return validatable.willValidate()
+                                && ((HtmlElement) validatable).isValid();
+                }
+                else if (element instanceof HtmlForm form) {
+                    return form.isValid();
+                }
+                return false;
 
             case "invalid":
-                return element instanceof HtmlElement && !((HtmlElement) element).isValid();
+                if (element instanceof ValidatableHtmlElement validatable) {
+                    return validatable.willValidate()
+                                && !((HtmlElement) validatable).isValid();
+                }
+                else if (element instanceof HtmlForm form) {
+                    return !form.isValid();
+                }
+                return false;
 
             case "empty":
                 return isEmpty(element);
@@ -890,62 +991,11 @@ public class CssStyleSheet implements Serializable {
                 return element.isMouseOver();
 
             case "placeholder-shown":
-                if (browserVersion.hasFeature(CSS_PSEUDO_SELECTOR_PLACEHOLDER_SHOWN)) {
-                    return element instanceof HtmlInput
-                            && StringUtils.isEmpty(((HtmlInput) element).getValue())
-                            && StringUtils.isNotEmpty(((HtmlInput) element).getPlaceholder());
-                }
-
-            case "-ms-input-placeholder":
-                if (browserVersion.hasFeature(CSS_PSEUDO_SELECTOR_MS_PLACEHHOLDER)) {
-                    return element instanceof HtmlInput
-                            && StringUtils.isEmpty(((HtmlInput) element).getValue())
-                            && StringUtils.isNotEmpty(((HtmlInput) element).getPlaceholder());
-                }
+                return element instanceof HtmlInput hi
+                        && StringUtils.isEmptyOrNull(hi.getValue())
+                        && !StringUtils.isEmptyOrNull(hi.getPlaceholder());
 
             default:
-                if (value.startsWith("nth-child(")) {
-                    final String nth = value.substring(value.indexOf('(') + 1, value.length() - 1);
-                    int index = 0;
-                    for (DomNode n = element; n != null; n = n.getPreviousSibling()) {
-                        if (n instanceof DomElement) {
-                            index++;
-                        }
-                    }
-                    return getNthElement(nth, index);
-                }
-                else if (value.startsWith("nth-last-child(")) {
-                    final String nth = value.substring(value.indexOf('(') + 1, value.length() - 1);
-                    int index = 0;
-                    for (DomNode n = element; n != null; n = n.getNextSibling()) {
-                        if (n instanceof DomElement) {
-                            index++;
-                        }
-                    }
-                    return getNthElement(nth, index);
-                }
-                else if (value.startsWith("nth-of-type(")) {
-                    final String nthType = element.getNodeName();
-                    final String nth = value.substring(value.indexOf('(') + 1, value.length() - 1);
-                    int index = 0;
-                    for (DomNode n = element; n != null; n = n.getPreviousSibling()) {
-                        if (n instanceof DomElement && n.getNodeName().equals(nthType)) {
-                            index++;
-                        }
-                    }
-                    return getNthElement(nth, index);
-                }
-                else if (value.startsWith("nth-last-of-type(")) {
-                    final String nthLastType = element.getNodeName();
-                    final String nth = value.substring(value.indexOf('(') + 1, value.length() - 1);
-                    int index = 0;
-                    for (DomNode n = element; n != null; n = n.getNextSibling()) {
-                        if (n instanceof DomElement && n.getNodeName().equals(nthLastType)) {
-                            index++;
-                        }
-                    }
-                    return getNthElement(nth, index);
-                }
                 return false;
         }
     }
@@ -959,44 +1009,6 @@ public class CssStyleSheet implements Serializable {
         return true;
     }
 
-    private static boolean getNthElement(final String nth, final int index) {
-        if ("odd".equalsIgnoreCase(nth)) {
-            return index % 2 != 0;
-        }
-
-        if ("even".equalsIgnoreCase(nth)) {
-            return index % 2 == 0;
-        }
-
-        // (numerator) * n + (denominator)
-        final int nIndex = nth.indexOf('n');
-        int denominator = 0;
-        if (nIndex != -1) {
-            String value = nth.substring(0, nIndex).trim();
-            if ("-".equals(value)) {
-                denominator = -1;
-            }
-            else {
-                if (value.length() > 0 && value.charAt(0) == '+') {
-                    value = value.substring(1);
-                }
-                denominator = NumberUtils.toInt(value, 1);
-            }
-        }
-
-        String value = nth.substring(nIndex + 1).trim();
-        if (value.length() > 0 && value.charAt(0) == '+') {
-            value = value.substring(1);
-        }
-        final int numerator = NumberUtils.toInt(value, 0);
-        if (denominator == 0) {
-            return index == numerator && numerator > 0;
-        }
-
-        final double n = (index - numerator) / (double) denominator;
-        return n >= 0 && n % 1 == 0;
-    }
-
     /**
      * Parses the CSS at the specified input source. If anything at all goes wrong, this method
      * returns an empty stylesheet.
@@ -1007,15 +1019,17 @@ public class CssStyleSheet implements Serializable {
      */
     private static CSSStyleSheetImpl parseCSS(final InputSource source, final WebClient client) {
         CSSStyleSheetImpl ss;
-        try {
+
+        // use a pooled parser, if any available to avoid expensive recreation
+        try (PooledCSS3Parser pooledParser = client.getCSS3Parser()) {
             final CSSErrorHandler errorHandler = client.getCssErrorHandler();
-            final CSSOMParser parser = new CSSOMParser(new CSS3Parser());
+            final CSSOMParser parser = new CSSOMParser(pooledParser);
             parser.setErrorHandler(errorHandler);
             ss = parser.parseStyleSheet(source, null);
         }
-        catch (final Throwable t) {
+        catch (final Throwable ex) {
             if (LOG.isErrorEnabled()) {
-                LOG.error("Error parsing CSS from '" + toString(source) + "': " + t.getMessage(), t);
+                LOG.error("Error parsing CSS from '" + toString(source) + "': " + ex.getMessage(), ex);
             }
             ss = new CSSStyleSheetImpl();
         }
@@ -1027,32 +1041,26 @@ public class CssStyleSheet implements Serializable {
      * method returns an empty MediaList list.
      *
      * @param mediaString the source from which to retrieve the media to be parsed
-     * @param errorHandler the {@link CSSErrorHandler} to be used
+     * @param webClient the {@link WebClient} to be used
      * @return the media parsed from the specified input source
      */
-    public static MediaListImpl parseMedia(final CSSErrorHandler errorHandler, final String mediaString) {
-        MediaListImpl media = media_.get(mediaString);
-        if (media != null) {
-            return media;
-        }
+    public static MediaListImpl parseMedia(final String mediaString, final WebClient webClient) {
+        return MEDIA.computeIfAbsent(mediaString, s -> {
+            // get us a pooled parser for efficiency because a new parser is expensive
+            try (PooledCSS3Parser pooledParser = webClient.getCSS3Parser()) {
+                final CSSOMParser parser = new CSSOMParser(pooledParser);
+                parser.setErrorHandler(webClient.getCssErrorHandler());
 
-        try {
-            final CSSOMParser parser = new CSSOMParser(new CSS3Parser());
-            parser.setErrorHandler(errorHandler);
-
-            media = new MediaListImpl(parser.parseMedia(mediaString));
-            media_.put(mediaString, media);
-            return media;
-        }
-        catch (final Exception e) {
-            if (LOG.isErrorEnabled()) {
-                LOG.error("Error parsing CSS media from '" + mediaString + "': " + e.getMessage(), e);
+                return new MediaListImpl(parser.parseMedia(mediaString));
             }
-        }
+            catch (final Exception e) {
+                if (LOG.isErrorEnabled()) {
+                    LOG.error("Error parsing CSS media from '" + mediaString + "': " + e.getMessage(), e);
+                }
+            }
 
-        media = new MediaListImpl(null);
-        media_.put(mediaString, media);
-        return media;
+            return new MediaListImpl(null);
+        });
     }
 
     /**
@@ -1065,8 +1073,7 @@ public class CssStyleSheet implements Serializable {
             final Reader reader = source.getReader();
             if (null != reader) {
                 // try to reset to produce some output
-                if (reader instanceof StringReader) {
-                    final StringReader sr = (StringReader) reader;
+                if (reader instanceof StringReader sr) {
                     sr.reset();
                 }
                 return IOUtils.toString(reader);
@@ -1082,29 +1089,25 @@ public class CssStyleSheet implements Serializable {
     /**
      * Validates the list of selectors.
      * @param selectorList the selectors
-     * @param documentMode see {@link HTMLDocument#getDocumentMode()}
      * @param domNode the dom node the query should work on
+     *
      * @throws CSSException if a selector is invalid
      */
-    public static void validateSelectors(final SelectorList selectorList, final int documentMode,
-                final DomNode domNode) throws CSSException {
+    public static void validateSelectors(final SelectorList selectorList, final DomNode domNode) throws CSSException {
         for (final Selector selector : selectorList) {
-            if (!isValidSelector(selector, documentMode, domNode)) {
-                throw new CSSException("Invalid selector: " + selector);
+            if (!isValidSelector(selector, domNode)) {
+                throw new CSSException("Invalid selector: " + selector, null);
             }
         }
     }
 
-    /**
-     * @param documentMode see {@link HTMLDocument#getDocumentMode()}
-     */
-    private static boolean isValidSelector(final Selector selector, final int documentMode, final DomNode domNode) {
+    private static boolean isValidSelector(final Selector selector, final DomNode domNode) {
         switch (selector.getSelectorType()) {
             case ELEMENT_NODE_SELECTOR:
                 final List<Condition> conditions = ((ElementSelector) selector).getConditions();
                 if (conditions != null) {
                     for (final Condition condition : conditions) {
-                        if (!isValidCondition(condition, documentMode, domNode)) {
+                        if (!isValidCondition(condition, domNode)) {
                             return false;
                         }
                     }
@@ -1112,20 +1115,33 @@ public class CssStyleSheet implements Serializable {
                 return true;
             case DESCENDANT_SELECTOR:
                 final DescendantSelector ds = (DescendantSelector) selector;
-                return isValidSelector(ds.getAncestorSelector(), documentMode, domNode)
-                        && isValidSelector(ds.getSimpleSelector(), documentMode, domNode);
+                return isValidSelector(ds.getAncestorSelector(), domNode)
+                        && isValidSelector(ds.getSimpleSelector(), domNode);
             case CHILD_SELECTOR:
                 final ChildSelector cs = (ChildSelector) selector;
-                return isValidSelector(cs.getAncestorSelector(), documentMode, domNode)
-                        && isValidSelector(cs.getSimpleSelector(), documentMode, domNode);
+                return isValidSelector(cs.getAncestorSelector(), domNode)
+                        && isValidSelector(cs.getSimpleSelector(), domNode);
             case DIRECT_ADJACENT_SELECTOR:
                 final DirectAdjacentSelector das = (DirectAdjacentSelector) selector;
-                return isValidSelector(das.getSelector(), documentMode, domNode)
-                        && isValidSelector(das.getSimpleSelector(), documentMode, domNode);
+                return isValidSelector(das.getSelector(), domNode)
+                        && isValidSelector(das.getSimpleSelector(), domNode);
             case GENERAL_ADJACENT_SELECTOR:
                 final GeneralAdjacentSelector gas = (GeneralAdjacentSelector) selector;
-                return isValidSelector(gas.getSelector(), documentMode, domNode)
-                        && isValidSelector(gas.getSimpleSelector(), documentMode, domNode);
+                return isValidSelector(gas.getSelector(), domNode)
+                        && isValidSelector(gas.getSimpleSelector(), domNode);
+            case PSEUDO_ELEMENT_SELECTOR:
+                // as of now (4.17) the htmlunit-cssparser accepts only supported selectors
+                // if ("first-line".equals(s)
+                //         || "first-letter".equals(s)
+                //         || "before".equals(s)
+                //         || "after".equals(s))
+                //     {
+                //         return new PseudoElementSelector(s, locator, doubleColon);
+                //     }
+                return true;
+            case RELATIVE_SELECTOR:
+                final RelativeSelector rs = (RelativeSelector) selector;
+                return isValidSelector(rs.getSelector(), domNode);
             default:
                 if (LOG.isWarnEnabled()) {
                     LOG.warn("Unhandled CSS selector type '"
@@ -1135,10 +1151,16 @@ public class CssStyleSheet implements Serializable {
         }
     }
 
-    /**
-     * @param documentMode see {@link HTMLDocument#getDocumentMode()}
-     */
-    private static boolean isValidCondition(final Condition condition, final int documentMode, final DomNode domNode) {
+    private static boolean isValidSelectors(final SelectorList selectors, final DomNode domNode) {
+        for (final Selector selector : selectors) {
+            if (!isValidSelector(selector, domNode)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean isValidCondition(final Condition condition, final DomNode domNode) {
         switch (condition.getConditionType()) {
             case ATTRIBUTE_CONDITION:
             case ID_CONDITION:
@@ -1151,14 +1173,17 @@ public class CssStyleSheet implements Serializable {
             case SUFFIX_ATTRIBUTE_CONDITION:
                 return true;
             case NOT_PSEUDO_CLASS_CONDITION:
-                final NotPseudoClassCondition notPseudoCondition = (NotPseudoClassCondition) condition;
-                final SelectorList selectorList = notPseudoCondition.getSelectors();
-                for (final Selector selector : selectorList) {
-                    if (!isValidSelector(selector, documentMode, domNode)) {
-                        return false;
-                    }
-                }
-                return true;
+                return isValidSelectors(((NotPseudoClassCondition) condition).getSelectors(), domNode);
+            case IS_PSEUDO_CLASS_CONDITION:
+                return isValidSelectors(((IsPseudoClassCondition) condition).getSelectors(), domNode);
+            case WHERE_PSEUDO_CLASS_CONDITION:
+                return isValidSelectors(((WherePseudoClassCondition) condition).getSelectors(), domNode);
+            case HAS_PSEUDO_CLASS_CONDITION:
+                return isValidSelectors(((HasPseudoClassCondition) condition).getSelectors(), domNode);
+            case NTH_PSEUDO_CLASS_CONDITION:
+                // the An+B argument is already checked by the parser; only the optional 'of S' list is left
+                final SelectorList nthSelectors = ((NthPseudoClassCondition) condition).getSelectors();
+                return nthSelectors == null || isValidSelectors(nthSelectors, domNode);
             case PSEUDO_CLASS_CONDITION:
                 String value = condition.getValue();
                 if (value.endsWith(")")) {
@@ -1167,30 +1192,10 @@ public class CssStyleSheet implements Serializable {
                     }
                     value = value.substring(0, value.indexOf('(') + 1) + ')';
                 }
-                if (documentMode < 9) {
-                    return CSS2_PSEUDO_CLASSES.contains(value);
-                }
 
-                if (!CSS2_PSEUDO_CLASSES.contains(value)
-                        && domNode.hasFeature(QUERYSELECTOR_CSS3_PSEUDO_REQUIRE_ATTACHED_NODE)
-                        && !domNode.isAttachedToPage()
-                        && !domNode.hasChildNodes()) {
-                    throw new CSSException("Syntax Error");
-                }
-
-                if ("nth-child()".equals(value)) {
-                    final String arg = StringUtils.substringBetween(condition.getValue(), "(", ")").trim();
-                    return "even".equalsIgnoreCase(arg) || "odd".equalsIgnoreCase(arg)
-                            || NTH_NUMERIC.matcher(arg).matches()
-                            || NTH_COMPLEX.matcher(arg).matches();
-                }
-
+                value = StringUtils.toRootLowerCase(value);
                 if ("placeholder-shown".equals(value)) {
-                    return domNode.hasFeature(CSS_PSEUDO_SELECTOR_PLACEHOLDER_SHOWN);
-                }
-
-                if ("-ms-input-placeholder".equals(value)) {
-                    return domNode.hasFeature(CSS_PSEUDO_SELECTOR_MS_PLACEHHOLDER);
+                    return true;
                 }
 
                 return CSS4_PSEUDO_CLASSES.contains(value);
@@ -1203,15 +1208,65 @@ public class CssStyleSheet implements Serializable {
         }
     }
 
+    /**
+     * Returns the {@link CssStyleSheet} imported by this rule.
+     *
+     * @param importRule the {@link CSSImportRuleImpl} that imports the {@link CssStyleSheet}
+     * @return the {@link CssStyleSheet} imported by this rule
+     */
     public CssStyleSheet getImportedStyleSheet(final CSSImportRuleImpl importRule) {
         CssStyleSheet sheet = imports_.get(importRule);
         if (sheet == null) {
-            final String href = importRule.getHref();
-            final String url = UrlUtils.resolveUrl(getUri(), href);
-            sheet = loadStylesheet(owner_, null, url);
+            String url = UrlUtils.resolveUrl(getUri(), importRule.getHref());
+            if (owner_ == null || !(owner_.getPage() instanceof HtmlPage page)) {
+                // nothing to load from; e.g. a constructed stylesheet
+                sheet = new CssStyleSheet(owner_, new CSSStyleSheetImpl(), url);
+            }
+            else {
+                // upgrade-insecure-requests of the Content-Security-Policy
+                final URL resolvedUrl = UrlUtils.toUrlSafe(url);
+                final URL upgradedUrl = ContentSecurityPolicy.upgradeInsecureRequest(page, resolvedUrl);
+                if (upgradedUrl != resolvedUrl) {
+                    url = upgradedUrl.toExternalForm();
+                }
+
+                if (ContentSecurityPolicy.allowsExternalStyle(page, null, upgradedUrl)) {
+                    sheet = loadStylesheet(owner_, null, url);
+                }
+                else {
+                    sheet = new CssStyleSheet(owner_, new CSSStyleSheetImpl(), url);
+                    sheet.blockedByContentSecurityPolicy_ = true;
+                }
+            }
             imports_.put(importRule, sheet);
         }
         return sheet;
+    }
+
+    /**
+     * Loads all imported style sheets (including nested imports) like the browsers do before
+     * the load event of the link element is fired.
+     *
+     * @return {@code false} if at least one import was blocked by the Content-Security-Policy
+     */
+    public boolean loadImports() {
+        return loadImports(new HashSet<>());
+    }
+
+    private boolean loadImports(final Set<String> alreadyProcessing) {
+        boolean allowed = true;
+        for (final AbstractCSSRuleImpl rule : wrapped_.getCssRules().getRules()) {
+            if (rule instanceof CSSImportRuleImpl importRule) {
+                final CssStyleSheet sheet = getImportedStyleSheet(importRule);
+                if (sheet.blockedByContentSecurityPolicy_) {
+                    allowed = false;
+                }
+                else if (alreadyProcessing.add(sheet.getUri()) && !sheet.loadImports(alreadyProcessing)) {
+                    allowed = false;
+                }
+            }
+        }
+        return allowed;
     }
 
     /**
@@ -1220,12 +1275,10 @@ public class CssStyleSheet implements Serializable {
      */
     public boolean isActive() {
         final String media;
-        if (owner_ instanceof HtmlStyle) {
-            final HtmlStyle style = (HtmlStyle) owner_;
+        if (owner_ instanceof HtmlStyle style) {
             media = style.getMediaAttribute();
         }
-        else if (owner_ instanceof HtmlLink) {
-            final HtmlLink link = (HtmlLink) owner_;
+        else if (owner_ instanceof HtmlLink link) {
             media = link.getMediaAttribute();
         }
         else {
@@ -1237,7 +1290,7 @@ public class CssStyleSheet implements Serializable {
         }
 
         final WebWindow webWindow = owner_.getPage().getEnclosingWindow();
-        final MediaListImpl mediaList = parseMedia(webWindow.getWebClient().getCssErrorHandler(), media);
+        final MediaListImpl mediaList = parseMedia(media, webWindow.getWebClient());
         return isActive(mediaList, webWindow);
     }
 
@@ -1252,7 +1305,8 @@ public class CssStyleSheet implements Serializable {
             return true;
         }
 
-        for (int i = 0; i < mediaList.getLength(); i++) {
+        final int length = mediaList.getLength();
+        for (int i = 0; i < length; i++) {
             final MediaQuery mediaQuery = mediaList.mediaQuery(i);
             boolean isActive = isActive(mediaQuery, webWindow);
             if (mediaQuery.isNot()) {
@@ -1301,28 +1355,28 @@ public class CssStyleSheet implements Serializable {
 
                     case "max-height":
                         val = pixelValue(property.getValue(), webWindow);
-                        if (val == -1 || val < webWindow.getInnerWidth()) {
+                        if (val == -1 || val < webWindow.getInnerHeight()) {
                             return false;
                         }
                         break;
 
                     case "min-height":
                         val = pixelValue(property.getValue(), webWindow);
-                        if (val == -1 || val > webWindow.getInnerWidth()) {
+                        if (val == -1 || val > webWindow.getInnerHeight()) {
                             return false;
                         }
                         break;
 
                     case "max-device-height":
                         val = pixelValue(property.getValue(), webWindow);
-                        if (val == -1 || val < webWindow.getScreen().getWidth()) {
+                        if (val == -1 || val < webWindow.getScreen().getHeight()) {
                             return false;
                         }
                         break;
 
                     case "min-device-height":
                         val = pixelValue(property.getValue(), webWindow);
-                        if (val == -1 || val > webWindow.getScreen().getWidth()) {
+                        if (val == -1 || val > webWindow.getScreen().getHeight()) {
                             return false;
                         }
                         break;
@@ -1355,9 +1409,7 @@ public class CssStyleSheet implements Serializable {
                     case "orientation":
                         final CSSValueImpl cssValue = property.getValue();
                         if (cssValue == null) {
-                            if (LOG.isWarnEnabled()) {
-                                LOG.warn("CSSValue is null not supported for feature 'orientation'");
-                            }
+                            LOG.warn("CSSValue is null not supported for feature 'orientation'");
                             return true;
                         }
 
@@ -1388,19 +1440,20 @@ public class CssStyleSheet implements Serializable {
         }
         else if ("print".equalsIgnoreCase(mediaType)) {
             final Page page = webWindow.getEnclosedPage();
-            if (page instanceof SgmlPage) {
-                return ((SgmlPage) page).isPrinting();
+            if (page instanceof SgmlPage sgmlPage) {
+                return sgmlPage.isPrinting();
             }
         }
         return false;
     }
 
+    @SuppressWarnings("PMD.UselessParentheses")
     private static double pixelValue(final CSSValueImpl cssValue, final WebWindow webWindow) {
         if (cssValue == null) {
-            if (LOG.isWarnEnabled()) {
-                LOG.warn("CSSValue is null but has to be a 'px', 'em', '%', 'ex', 'ch', "
-                        + "'vw', 'vh', 'vmin', 'vmax', 'rem', 'mm', 'cm', 'Q', or 'pt' value.");
-            }
+            LOG.warn("CSSValue is null but has to be a 'px', 'em', '%', 'ex', 'ch', "
+                    + "'vw', 'vh', 'vmin', 'vmax', 'dvw', 'dvh', 'dvmin', 'dvmax', "
+                    + "'lvw', 'lvh', 'lvmin', 'lvmax', 'svw', 'svh', 'svmin', 'svmax', "
+                    + "'rem', 'mm', 'cm', 'Q', or 'pt' value.");
             return -1;
         }
 
@@ -1435,19 +1488,55 @@ public class CssStyleSheet implements Serializable {
                 case VMAX:
                     // hard coded default for the moment 16px = 100%
                     return 0.16f * cssValue.getDoubleValue();
+                case DVW:
+                    // hard coded default for the moment 16px = 100%
+                    return 0.16f * cssValue.getDoubleValue();
+                case DVH:
+                    // hard coded default for the moment 16px = 100%
+                    return 0.16f * cssValue.getDoubleValue();
+                case DVMIN:
+                    // hard coded default for the moment 16px = 100%
+                    return 0.16f * cssValue.getDoubleValue();
+                case DVMAX:
+                    // hard coded default for the moment 16px = 100%
+                    return 0.16f * cssValue.getDoubleValue();
+                case LVW:
+                    // hard coded default for the moment 16px = 100%
+                    return 0.16f * cssValue.getDoubleValue();
+                case LVH:
+                    // hard coded default for the moment 16px = 100%
+                    return 0.16f * cssValue.getDoubleValue();
+                case LVMIN:
+                    // hard coded default for the moment 16px = 100%
+                    return 0.16f * cssValue.getDoubleValue();
+                case LVMAX:
+                    // hard coded default for the moment 16px = 100%
+                    return 0.16f * cssValue.getDoubleValue();
+                case SVW:
+                    // hard coded default for the moment 16px = 100%
+                    return 0.16f * cssValue.getDoubleValue();
+                case SVH:
+                    // hard coded default for the moment 16px = 100%
+                    return 0.16f * cssValue.getDoubleValue();
+                case SVMIN:
+                    // hard coded default for the moment 16px = 100%
+                    return 0.16f * cssValue.getDoubleValue();
+                case SVMAX:
+                    // hard coded default for the moment 16px = 100%
+                    return 0.16f * cssValue.getDoubleValue();
                 case REM:
                     // hard coded default for the moment 16px = 100%
                     return 0.16f * cssValue.getDoubleValue();
                 case MILLIMETER:
                     dpi = webWindow.getScreen().getDeviceXDPI();
                     return (dpi / 25.4f) * cssValue.getDoubleValue();
-                case QUATER:
+                case QUARTER:
                     // One quarter of a millimeter. 1Q = 1/40th of 1cm.
                     dpi = webWindow.getScreen().getDeviceXDPI();
                     return ((dpi / 25.4f) * cssValue.getDoubleValue()) / 4d;
                 case CENTIMETER:
                     dpi = webWindow.getScreen().getDeviceXDPI();
-                    return (dpi / 254f) * cssValue.getDoubleValue();
+                    return (dpi / 2.54f) * cssValue.getDoubleValue();
                 case POINT:
                     dpi = webWindow.getScreen().getDeviceXDPI();
                     return (dpi / 72f) * cssValue.getDoubleValue();
@@ -1458,16 +1547,16 @@ public class CssStyleSheet implements Serializable {
         if (LOG.isWarnEnabled()) {
             LOG.warn("CSSValue '" + cssValue.getCssText()
                         + "' has to be a 'px', 'em', '%', 'ex', 'ch', "
-                        + "'vw', 'vh', 'vmin', 'vmax', 'rem', 'mm', 'cm', 'Q', or 'pt' value.");
+                        + "'vw', 'vh', 'vmin', 'vmax', 'dvw', 'dvh', 'dvmin', 'dvmax', "
+                        + "'lvw', 'lvh', 'lvmin', 'lvmax', 'svw', 'svh', 'svmin', 'svmax', "
+                        + "'rem', 'mm', 'cm', 'Q', or 'pt' value.");
         }
         return -1;
     }
 
     private static double resolutionValue(final CSSValueImpl cssValue) {
         if (cssValue == null) {
-            if (LOG.isWarnEnabled()) {
-                LOG.warn("CSSValue is null but has to be a 'dpi', 'dpcm', or 'dppx' value.");
-            }
+            LOG.warn("CSSValue is null but has to be a 'dpi', 'dpcm', or 'dppx' value.");
             return -1;
         }
 
@@ -1482,10 +1571,14 @@ public class CssStyleSheet implements Serializable {
             if (text.endsWith("dppx")) {
                 return 96 * cssValue.getDoubleValue();
             }
+            // 'x' is an alias for 'dppx'
+            if (text.endsWith("x")) {
+                return 96 * cssValue.getDoubleValue();
+            }
         }
 
         if (LOG.isWarnEnabled()) {
-            LOG.warn("CSSValue '" + cssValue.getCssText() + "' has to be a 'dpi', 'dpcm', or 'dppx' value.");
+            LOG.warn("CSSValue '" + cssValue.getCssText() + "' has to be a 'dpi', 'dpcm', 'dppx' or 'x' value.");
         }
         return -1;
     }
@@ -1497,14 +1590,17 @@ public class CssStyleSheet implements Serializable {
      * @param style the style to modify
      * @param element the element to which style rules must apply in order for them to be added to
      *        the specified style
-     * @param pseudoElement a string specifying the pseudo-element to match (may be {@code null})
+     * @param pseudoElement a string specifying the pseudo-element to match (maybe {@code null})
+     * @param scope the context scope node used for evaluating relative selectors like :scope
      */
-    public void modifyIfNecessary(final ComputedCssStyleDeclaration style, final DomElement element,
-            final String pseudoElement) {
+    public void modifyIfNecessary(final ComputedCssStyleDeclaration style,
+            final DomElement element,
+            final String pseudoElement,
+            final DomNode scope) {
 
         final BrowserVersion browser = element.getPage().getWebClient().getBrowserVersion();
         final List<CSSStyleSheetImpl.SelectorEntry> matchingRules =
-                selects(getRuleIndex(), browser, element, pseudoElement, false);
+                selects(getRuleIndex(), browser, element, pseudoElement, scope, false);
         for (final CSSStyleSheetImpl.SelectorEntry entry : matchingRules) {
             final CSSStyleDeclarationImpl dec = entry.getRule().getStyle();
             style.applyStyleFromSelector(dec, entry.getSelector());
@@ -1529,8 +1625,7 @@ public class CssStyleSheet implements Serializable {
             final Set<String> alreadyProcessing) {
 
         for (final AbstractCSSRuleImpl rule : ruleList.getRules()) {
-            if (rule instanceof CSSStyleRuleImpl) {
-                final CSSStyleRuleImpl styleRule = (CSSStyleRuleImpl) rule;
+            if (rule instanceof CSSStyleRuleImpl styleRule) {
                 final SelectorList selectors = styleRule.getSelectors();
                 for (final Selector selector : selectors) {
                     final SimpleSelector simpleSel = selector.getSimpleSelector();
@@ -1554,8 +1649,7 @@ public class CssStyleSheet implements Serializable {
                     }
                 }
             }
-            else if (rule instanceof CSSImportRuleImpl) {
-                final CSSImportRuleImpl importRule = (CSSImportRuleImpl) rule;
+            else if (rule instanceof CSSImportRuleImpl importRule) {
 
                 final CssStyleSheet sheet = getImportedStyleSheet(importRule);
 
@@ -1572,8 +1666,7 @@ public class CssStyleSheet implements Serializable {
                     }
                 }
             }
-            else if (rule instanceof CSSMediaRuleImpl) {
-                final CSSMediaRuleImpl mediaRule = (CSSMediaRuleImpl) rule;
+            else if (rule instanceof CSSMediaRuleImpl mediaRule) {
                 final MediaListImpl mediaList = mediaRule.getMediaList();
                 if (mediaList.getLength() == 0 && index.getMediaList().getLength() == 0) {
                     index(index, mediaRule.getCssRules(), alreadyProcessing);
@@ -1587,21 +1680,25 @@ public class CssStyleSheet implements Serializable {
 
     private List<CSSStyleSheetImpl.SelectorEntry> selects(
                             final CSSStyleSheetImpl.CSSStyleSheetRuleIndex index,
-                            final BrowserVersion browserVersion, final DomElement element,
-                            final String pseudoElement, final boolean fromQuerySelectorAll) {
+                            final BrowserVersion browserVersion,
+                            final DomElement element,
+                            final String pseudoElement,
+                            final DomNode scope,
+                            final boolean fromQuerySelectorAll) {
 
         final List<CSSStyleSheetImpl.SelectorEntry> matchingRules = new ArrayList<>();
 
         if (isActive(index.getMediaList(), element.getPage().getEnclosingWindow())) {
             final String elementName = element.getLowercaseName();
-            final String[] classes = StringUtils.split(element.getAttributeDirect("class"), null, -1);
+            final String[] classes = StringUtils.splitAtJavaWhitespace(
+                                                            element.getAttributeDirect("class"));
             final Iterator<CSSStyleSheetImpl.SelectorEntry> iter =
                     index.getSelectorEntriesIteratorFor(elementName, classes);
 
             CSSStyleSheetImpl.SelectorEntry entry = iter.next();
             while (null != entry) {
-                if (CssStyleSheet.selects(browserVersion, entry.getSelector(),
-                                            element, pseudoElement, fromQuerySelectorAll, false)) {
+                if (selects(browserVersion, element, entry.getSelector(),
+                            pseudoElement, scope, fromQuerySelectorAll, false)) {
                     matchingRules.add(entry);
                 }
                 entry = iter.next();
@@ -1609,7 +1706,7 @@ public class CssStyleSheet implements Serializable {
 
             for (final CSSStyleSheetImpl.CSSStyleSheetRuleIndex child : index.getChildren()) {
                 matchingRules.addAll(selects(child, browserVersion,
-                                                    element, pseudoElement, fromQuerySelectorAll));
+                                                    element, pseudoElement, scope, fromQuerySelectorAll));
             }
         }
 

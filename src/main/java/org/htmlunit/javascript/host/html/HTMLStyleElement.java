@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,21 +14,12 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
-import org.htmlunit.cssparser.dom.CSSStyleSheetImpl;
-
-import org.htmlunit.Cache;
 import org.htmlunit.css.CssStyleSheet;
 import org.htmlunit.html.HtmlStyle;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.configuration.JsxSetter;
-import org.htmlunit.javascript.host.Window;
 import org.htmlunit.javascript.host.css.CSSStyleSheet;
 
 /**
@@ -38,6 +29,8 @@ import org.htmlunit.javascript.host.css.CSSStyleSheet;
  * @author Marc Guillemot
  * @author Ronald Brill
  * @author Frank Danek
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLStyleElement">MDN Documentation</a>
  */
 @JsxClass(domClass = HtmlStyle.class)
 public class HTMLStyleElement extends HTMLElement {
@@ -45,15 +38,17 @@ public class HTMLStyleElement extends HTMLElement {
     private CSSStyleSheet sheet_;
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public HTMLStyleElement() {
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
      * Gets the associated sheet.
-     * @see <a href="http://www.xulplanet.com/references/objref/HTMLStyleElement.html">Mozilla doc</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLStyleElement/sheet">MDN Documentation</a>
      * @return the sheet
      */
     @JsxGetter
@@ -63,27 +58,14 @@ public class HTMLStyleElement extends HTMLElement {
         }
 
         final HtmlStyle style = (HtmlStyle) getDomNodeOrDie();
-        final String css = style.getTextContent();
-
-        final Window window = getWindow();
-        final Cache cache = window.getWebWindow().getWebClient().getCache();
-        final CSSStyleSheetImpl cached = cache.getCachedStyleSheet(css);
-        final String uri = getDomNodeOrDie().getPage().getWebResponse().getWebRequest()
-                .getUrl().toExternalForm();
-        if (cached != null) {
-            sheet_ = new CSSStyleSheet(this, window, new CssStyleSheet(style, cached, uri));
-        }
-        else {
-            sheet_ = new CSSStyleSheet(this, css, uri);
-            cache.cache(css, sheet_.getCssStyleSheet().getWrappedSheet());
-        }
+        sheet_ = new CSSStyleSheet(this, getTopLevelScope(getParentScope()), style.getSheet());
 
         return sheet_;
     }
 
     /**
-     * Returns the type of this style.
-     * @return the type
+     * Returns the value of the {@code type} property.
+     * @return the value of the {@code type} property
      */
     @JsxGetter
     public String getType() {
@@ -92,8 +74,8 @@ public class HTMLStyleElement extends HTMLElement {
     }
 
     /**
-     * Sets the type of this style.
-     * @param type the new type
+     * Sets the value of the {@code type} property.
+     * @param type the {@code type} property value
      */
     @JsxSetter
     public void setType(final String type) {
@@ -102,8 +84,8 @@ public class HTMLStyleElement extends HTMLElement {
     }
 
     /**
-     * Returns the media of this style.
-     * @return the media
+     * Returns the value of the {@code media} property.
+     * @return the value of the {@code media} property
      */
     @JsxGetter
     public String getMedia() {
@@ -112,8 +94,8 @@ public class HTMLStyleElement extends HTMLElement {
     }
 
     /**
-     * Sets the media of this style.
-     * @param media the new media
+     * Sets the value of the {@code media} property.
+     * @param media the {@code media} property value
      */
     @JsxSetter
     public void setMedia(final String media) {
@@ -133,7 +115,7 @@ public class HTMLStyleElement extends HTMLElement {
 
     /**
      * Sets the {@code disabled} property.
-     * @param disabled the {@code disabled} property
+     * @param disabled the {@code disabled} property value
      */
     @Override
     @JsxSetter

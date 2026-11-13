@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,29 +24,26 @@ import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.servlet.Servlet;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebClient;
 import org.htmlunit.WebServerTestCase;
 import org.htmlunit.html.HtmlPage;
-import org.htmlunit.junit.BrowserRunner;
 import org.htmlunit.util.MimeType;
+import org.junit.jupiter.api.Test;
+
+import jakarta.servlet.Servlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Test class for {@link HTMLParser}.
  *
- * @author <a href="mailto:cse@dynabean.de">Christian Sell</a>
+ * @author Christian Sell
  * @author Marc Guillemot
  * @author Ahmed Ashour
  * @author Sudhan Moghe
+ * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class HTMLParser3Test extends WebServerTestCase {
 
     /**
@@ -88,18 +85,18 @@ public class HTMLParser3Test extends WebServerTestCase {
     private void headerVsMetaTagContentType(final boolean utf8Encoded) throws Exception {
         final Map<String, Class<? extends Servlet>> servlets = new HashMap<>();
         servlets.put("/test", HeaderVsMetaTagContentTypeServlet.class);
-        startWebServer("./", null, servlets);
+        startWebServer("./", servlets);
 
         final WebClient client = getWebClient();
         final HtmlPage page = client.getPage(URL_FIRST + "test");
-        assertEquals(utf8Encoded, HeaderVsMetaTagContentTypeServlet.utf8String.equals(page.asNormalizedText()));
+        assertEquals(utf8Encoded, HeaderVsMetaTagContentTypeServlet.UTF8_STRING.equals(page.asNormalizedText()));
     }
 
     /**
      * Servlet for headerVsMetaTagContentType(boolean).
      */
     public static class HeaderVsMetaTagContentTypeServlet extends HttpServlet {
-        private static final String utf8String = "\u064A\u0627 \u0644\u064A\u064A\u064A\u064A\u0644";
+        private static final String UTF8_STRING = "\u064A\u0627 \u0644\u064A\u064A\u064A\u064A\u0644";
         private static Charset HEADER_ENCODING_;
         private static Charset META_TAG_ENCODING_;
 
@@ -122,7 +119,7 @@ public class HTMLParser3Test extends WebServerTestCase {
                 if (META_TAG_ENCODING_ != null) {
                     html += "<META HTTP-EQUIV='Content-Type' CONTENT='text/html; charset=" + META_TAG_ENCODING_ + "'>";
                 }
-                html += "</head><body>" + utf8String + "</body></html>";
+                html += "</head><body>" + UTF8_STRING + "</body></html>";
                 writer.write(html);
             }
         }

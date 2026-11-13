@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,25 +14,22 @@
  */
 package org.htmlunit.javascript.host.dom;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
+import org.htmlunit.corejs.javascript.Context;
+import org.htmlunit.corejs.javascript.Function;
+import org.htmlunit.corejs.javascript.Scriptable;
+import org.htmlunit.corejs.javascript.VarScope;
 import org.htmlunit.cssparser.parser.CSSException;
-
 import org.htmlunit.html.DomDocumentFragment;
 import org.htmlunit.html.DomNode;
+import org.htmlunit.html.HtmlPage;
+import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.host.Element;
 import org.htmlunit.javascript.host.html.HTMLCollection;
-
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.ScriptRuntime;
-import org.htmlunit.corejs.javascript.Undefined;
 
 /**
  * A JavaScript object for {@code DocumentFragment}.
@@ -41,17 +38,84 @@ import org.htmlunit.corejs.javascript.Undefined;
  * @author Frank Danek
  * @author Ronald Brill
  *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/DocumentFragment">MDN Documentation</a>
  * @see <a href="http://www.w3.org/TR/2000/WD-DOM-Level-1-20000929/level-one-core.html#ID-B63ED1A3">
- * W3C Dom Level 1</a>
+ *     W3C Dom Level 1</a>
  */
 @JsxClass(domClass = DomDocumentFragment.class)
 public class DocumentFragment extends Node {
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public DocumentFragment() {
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
+
+        final HtmlPage page = (HtmlPage) getWindow().getWebWindow().getEnclosedPage();
+        final DomDocumentFragment fragment = new DomDocumentFragment(page);
+        setDomNode(fragment);
+    }
+
+    /**
+     * Inserts a set of Node objects or string objects after the last child
+     * of the document fragment. String objects are inserted as equivalent Text nodes.
+     * @param context the context
+     * @param scope the scope
+     * @param thisObj this object
+     * @param args the arguments
+     * @param function the function
+     */
+    @JsxFunction
+    public static void append(final Context context, final VarScope scope,
+            final Scriptable thisObj, final Object[] args, final Function function) {
+        Node.append(context, thisObj, args, function);
+    }
+
+    /**
+     * Inserts a set of Node objects or string objects before the first child
+     * of the document fragment. String objects are inserted as equivalent Text nodes.
+     * @param context the context
+     * @param scope the scope
+     * @param thisObj this object
+     * @param args the arguments
+     * @param function the function
+     */
+    @JsxFunction
+    public static void prepend(final Context context, final VarScope scope,
+            final Scriptable thisObj, final Object[] args, final Function function) {
+        Node.prepend(context, thisObj, args, function);
+    }
+
+    /**
+     * Replaces the existing children of a DocumentFragment with a specified
+     * new set of children. These can be string or Node objects.
+     * @param context the context
+     * @param scope the scope
+     * @param thisObj this object
+     * @param args the arguments
+     * @param function the function
+     */
+    @JsxFunction
+    public static void replaceChildren(final Context context, final VarScope scope,
+            final Scriptable thisObj, final Object[] args, final Function function) {
+        Node.replaceChildren(context, thisObj, args, function);
+    }
+
+    /**
+     * Moves a given Node inside the invoking node as a direct child, before a given reference node.
+     *
+     * @param context the JavaScript context
+     * @param scope the scope
+     * @param thisObj the scriptable
+     * @param args the arguments passed into the method
+     * @param function the function
+     */
+    @JsxFunction
+    public static void moveBefore(final Context context, final VarScope scope,
+            final Scriptable thisObj, final Object[] args, final Function function) {
+        moveBeforeImpl(thisObj, args, "DocumentFragment");
     }
 
     /**
@@ -64,10 +128,11 @@ public class DocumentFragment extends Node {
     @JsxFunction
     public NodeList querySelectorAll(final String selectors) {
         try {
-            return NodeList.staticNodeList(this, getDomNodeOrDie().querySelectorAll(selectors));
+            final DomNode domNode = getDomNodeOrDie();
+            return NodeList.staticNodeList(getParentScope(), domNode.querySelectorAll(selectors, domNode));
         }
         catch (final CSSException e) {
-            throw Context.reportRuntimeError("An invalid or illegal selector was specified (selector: '"
+            throw JavaScriptEngine.reportRuntimeError("An invalid or illegal selector was specified (selector: '"
                     + selectors + "' error: " + e.getMessage() + ").");
         }
     }
@@ -80,14 +145,15 @@ public class DocumentFragment extends Node {
     @JsxFunction
     public Node querySelector(final String selectors) {
         try {
-            final DomNode node = getDomNodeOrDie().querySelector(selectors);
+            final DomNode domNode = getDomNodeOrDie();
+            final DomNode node = domNode.querySelector(selectors, domNode);
             if (node != null) {
                 return node.getScriptableObject();
             }
             return null;
         }
         catch (final CSSException e) {
-            throw Context.reportRuntimeError("An invalid or illegal selector was specified (selector: '"
+            throw JavaScriptEngine.reportRuntimeError("An invalid or illegal selector was specified (selector: '"
                     + selectors + "' error: " + e.getMessage() + ").");
         }
     }
@@ -107,7 +173,7 @@ public class DocumentFragment extends Node {
      * {@inheritDoc}
      */
     @Override
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public int getChildElementCount() {
         return super.getChildElementCount();
     }
@@ -116,7 +182,7 @@ public class DocumentFragment extends Node {
      * {@inheritDoc}
      */
     @Override
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public Element getFirstElementChild() {
         return super.getFirstElementChild();
     }
@@ -125,7 +191,7 @@ public class DocumentFragment extends Node {
      * {@inheritDoc}
      */
     @Override
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public Element getLastElementChild() {
         return super.getLastElementChild();
     }
@@ -134,7 +200,7 @@ public class DocumentFragment extends Node {
      * {@inheritDoc}
      */
     @Override
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public HTMLCollection getChildren() {
         return super.getChildren();
     }
@@ -144,12 +210,12 @@ public class DocumentFragment extends Node {
      * @param id the ID to search for
      * @return the element, or {@code null} if it could not be found
      */
-    @JsxFunction({CHROME, EDGE, FF, FF_ESR})
-    public Object getElementById(final Object id) {
-        if (id == null || Undefined.isUndefined(id)) {
+    @JsxFunction
+    public HtmlUnitScriptable getElementById(final Object id) {
+        if (id == null || JavaScriptEngine.isUndefined(id)) {
             return null;
         }
-        final String idString = ScriptRuntime.toString(id);
+        final String idString = JavaScriptEngine.toString(id);
         if (idString == null || idString.length() == 0) {
             return null;
         }
@@ -166,7 +232,7 @@ public class DocumentFragment extends Node {
      * {@inheritDoc}
      */
     @Override
-    public Object getRootNode() {
+    public Node getRootNode() {
         return this;
     }
 }

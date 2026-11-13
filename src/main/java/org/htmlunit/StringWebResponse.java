@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,15 +21,14 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.http.HttpStatus;
-
+import org.htmlunit.http.HttpStatus;
 import org.htmlunit.util.NameValuePair;
 import org.htmlunit.util.StringUtils;
 
 /**
  * A simple WebResponse created from a string. Content is assumed to be of type <code>text/html</code>.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author Marc Guillemot
  * @author Brad Clarke
  * @author Ahmed Ashour
@@ -71,7 +70,7 @@ public class StringWebResponse extends WebResponse {
         final byte[] content = StringUtils.toByteArray(contentString, charset);
         final List<NameValuePair> compiledHeaders = new ArrayList<>();
         compiledHeaders.add(new NameValuePair(HttpHeader.CONTENT_TYPE, "text/html; charset=" + charset));
-        return new WebResponseData(content, HttpStatus.SC_OK, "OK", compiledHeaders);
+        return new WebResponseData(content, HttpStatus.OK_200, HttpStatus.OK_200_MSG, compiledHeaders);
     }
 
     private static WebRequest buildWebRequest(final URL originatingURL, final Charset charset) {

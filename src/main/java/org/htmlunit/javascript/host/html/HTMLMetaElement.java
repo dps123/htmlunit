@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,7 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
-
+import org.htmlunit.html.DomElement;
 import org.htmlunit.html.HtmlMeta;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
@@ -31,33 +26,19 @@ import org.htmlunit.javascript.configuration.JsxSetter;
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLMetaElement">MDN Documentation</a>
  */
 @JsxClass(domClass = HtmlMeta.class)
 public class HTMLMetaElement extends HTMLElement {
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public HTMLMetaElement() {
-    }
-
-    /**
-     * Returns the {@code charset} attributee.
-     * @return the {@code charset} attribute
-     */
-    @JsxGetter(IE)
-    public String getCharset() {
-        return "";
-    }
-
-    /**
-     * Sets the {@code charset} attribute.
-     * @param charset the {@code charset} attribute
-     */
-    @JsxSetter(IE)
-    public void setCharset(final String charset) {
-        //empty
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
@@ -71,7 +52,7 @@ public class HTMLMetaElement extends HTMLElement {
 
     /**
      * Sets the {@code content} attribute.
-     * @param content the content attribute
+     * @param content the {@code content} attribute value
      */
     @JsxSetter
     public void setContent(final String content) {
@@ -89,7 +70,7 @@ public class HTMLMetaElement extends HTMLElement {
 
     /**
      * Sets the {@code http-equiv} attribute.
-     * @param httpEquiv the http-equiv attribute
+     * @param httpEquiv the {@code http-equiv} attribute value
      */
     @JsxSetter
     public void setHttpEquiv(final String httpEquiv) {
@@ -103,17 +84,17 @@ public class HTMLMetaElement extends HTMLElement {
     @JsxGetter
     @Override
     public String getName() {
-        return getDomNodeOrDie().getAttributeDirect("name");
+        return getDomNodeOrDie().getAttributeDirect(DomElement.NAME_ATTRIBUTE);
     }
 
     /**
      * Sets the {@code name} attribute.
-     * @param name the {@code name} attribute
+     * @param name the {@code name} attribute value
      */
     @JsxSetter
     @Override
     public void setName(final String name) {
-        getDomNodeOrDie().setAttribute("name", name);
+        getDomNodeOrDie().setAttribute(DomElement.NAME_ATTRIBUTE, name);
     }
 
     /**
@@ -127,7 +108,7 @@ public class HTMLMetaElement extends HTMLElement {
 
     /**
      * Sets the {@code scheme} attribute.
-     * @param scheme the {@code scheme} attribute
+     * @param scheme the {@code scheme} attribute value
      */
     @JsxSetter
     public void setScheme(final String scheme) {
@@ -135,37 +116,21 @@ public class HTMLMetaElement extends HTMLElement {
     }
 
     /**
-     * @return the {@code meta} attribute
+     * Returns the {@code media} attribute.
+     * @return the {@code media} attribute
      */
-    @JsxGetter({CHROME, EDGE, FF})
+    @JsxGetter
     public String getMedia() {
         return getDomNodeOrDie().getAttribute("media");
     }
 
     /**
-     * @param media the media attribute
+     * Sets the {@code media} attribute.
+     * @param media the {@code media} attribute value
      */
-    @JsxSetter({CHROME, EDGE})
+    @JsxSetter
     public void setMedia(final String media) {
         getDomNodeOrDie().setAttribute("media", media);
-    }
-
-    /**
-     * Returns the {@code url} attribute.
-     * @return the {@code url} attribute
-     */
-    @JsxGetter(IE)
-    public String getUrl() {
-        return "";
-    }
-
-    /**
-     * Sets the {@code url} attribute.
-     * @param url the {@code url} attribute
-     */
-    @JsxSetter(IE)
-    public void setUrl(final String url) {
-        //empty
     }
 
     /**

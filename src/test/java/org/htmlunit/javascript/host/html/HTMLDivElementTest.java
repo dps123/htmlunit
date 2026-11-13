@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,9 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.IE;
-
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.html.HtmlPageTest;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for {@link HTMLDivElement}.
@@ -34,7 +27,6 @@ import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
  * @author Ronald Brill
  * @author Frank Danek
  */
-@RunWith(BrowserRunner.class)
 public class HTMLDivElementTest extends WebDriverTestCase {
 
     /**
@@ -43,8 +35,8 @@ public class HTMLDivElementTest extends WebDriverTestCase {
     @Test
     @Alerts("no")
     public void doScroll() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION
@@ -70,12 +62,10 @@ public class HTMLDivElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"left", "right", "justify", "center", "wrong", ""},
-            IE = {"left", "right", "justify", "center", "", ""})
-    @NotYetImplemented(IE)
+    @Alerts({"left", "right", "justify", "center", "wrong", ""})
     public void getAlign() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "  <table>\n"
             + "    <div id='d1' align='left' ></div>\n"
             + "    <div id='d2' align='right' ></div>\n"
@@ -100,11 +90,10 @@ public class HTMLDivElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"CenTer", "8", "foo", "left", "right", "justify", "center"},
-            IE = {"center", "error", "center", "error", "center", "left", "right", "justify", "center"})
+    @Alerts({"CenTer", "8", "foo", "left", "right", "justify", "center"})
     public void setAlign() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "  <table>\n"
             + "    <div id='d1' align='left' ></div>\n"
             + "  </table>\n"
@@ -114,7 +103,7 @@ public class HTMLDivElementTest extends WebDriverTestCase {
             + "  function setAlign(elem, value) {\n"
             + "    try {\n"
             + "      elem.align = value;\n"
-            + "    } catch (e) { log('error'); }\n"
+            + "    } catch(e) { logEx(e); }\n"
             + "    log(elem.align);\n"
             + "  }\n"
 
@@ -141,8 +130,8 @@ public class HTMLDivElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"null", "true", "null", "true"})
     public void handlers() throws Exception {
-        final String html
-            = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<div id='d1'></div>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -163,8 +152,7 @@ public class HTMLDivElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"true", "true", "true", "true", "true", "true"})
     public void clientHeight() throws Exception {
-        final String html =
-            HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
@@ -208,8 +196,7 @@ public class HTMLDivElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"true", "true", "true", "true", "true", "true"})
     public void clientWidth() throws Exception {
-        final String html =
-            HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
@@ -253,8 +240,7 @@ public class HTMLDivElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"true", "true", "true", "true", "true", "true"})
     public void clientWidthNested() throws Exception {
-        final String html =
-            HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
@@ -296,11 +282,10 @@ public class HTMLDivElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"undefined", "null", "nowrap", "null", "x", "null", "x", "blah", "", "blah"},
-            IE = {"false", "null", "true", "", "true", "", "true", "blah", "false", "null"})
+    @Alerts({"undefined", "null", "nowrap", "null", "x", "null", "x", "blah", "", "blah"})
     public void noWrap() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION

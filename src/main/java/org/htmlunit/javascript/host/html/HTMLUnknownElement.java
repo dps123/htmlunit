@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +14,12 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.BrowserVersionFeatures.JS_HTML_HYPHEN_ELEMENT_CLASS_NAME;
-import static org.htmlunit.BrowserVersionFeatures.JS_HTML_RUBY_ELEMENT_CLASS_NAME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
 import org.htmlunit.Page;
 import org.htmlunit.html.HtmlElement;
+import org.htmlunit.html.HtmlRb;
 import org.htmlunit.html.HtmlRp;
 import org.htmlunit.html.HtmlRt;
+import org.htmlunit.html.HtmlRtc;
 import org.htmlunit.html.HtmlRuby;
 import org.htmlunit.html.HtmlUnknownElement;
 import org.htmlunit.javascript.configuration.JsxClass;
@@ -36,15 +31,19 @@ import org.htmlunit.xml.XmlPage;
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLUnknownElement">MDN Documentation</a>
  */
 @JsxClass(domClass = HtmlUnknownElement.class)
 public class HTMLUnknownElement extends HTMLElement {
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public HTMLUnknownElement() {
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
@@ -70,17 +69,15 @@ public class HTMLUnknownElement extends HTMLElement {
             final HtmlElement element = getDomNodeOrNull();
             if (element != null) {
                 final String name = element.getNodeName();
-                if (getBrowserVersion().hasFeature(JS_HTML_RUBY_ELEMENT_CLASS_NAME)
-                        && (HtmlRp.TAG_NAME.equals(name)
+                if (HtmlRb.TAG_NAME.equals(name)
+                                || HtmlRp.TAG_NAME.equals(name)
                                 || HtmlRt.TAG_NAME.equals(name)
-                                || HtmlRuby.TAG_NAME.equals(name)
-                                || "rb".equals(name)
-                                || "rtc".equals(name))) {
+                                || HtmlRtc.TAG_NAME.equals(name)
+                                || HtmlRuby.TAG_NAME.equals(name)) {
                     return "HTMLElement";
                 }
 
-                if (name.indexOf('-') != -1
-                    && getBrowserVersion().hasFeature(JS_HTML_HYPHEN_ELEMENT_CLASS_NAME)) {
+                if (name.indexOf('-') != -1) {
                     return "HTMLElement";
                 }
             }
@@ -101,7 +98,8 @@ public class HTMLUnknownElement extends HTMLElement {
      */
     @Override
     protected boolean isEndTagForbidden() {
-        if ("BGSOUND".equals(getNodeName())) {
+        final String nodeName = getNodeName();
+        if ("BGSOUND".equals(nodeName) || "KEYGEN".equals(nodeName)) {
             return true;
         }
         return super.isEndTagForbidden();

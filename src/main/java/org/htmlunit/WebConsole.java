@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +14,18 @@
  */
 package org.htmlunit;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.Serializable;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.htmlunit.corejs.javascript.Context;
 import org.htmlunit.corejs.javascript.NativeConsole;
 import org.htmlunit.corejs.javascript.NativeConsole.ConsolePrinter;
 import org.htmlunit.corejs.javascript.NativeConsole.Level;
 import org.htmlunit.corejs.javascript.ScriptStackElement;
-import org.htmlunit.corejs.javascript.Scriptable;
+import org.htmlunit.corejs.javascript.VarScope;
 
 /**
  * This class can be used to print messages to the logger. The first parameter
@@ -33,13 +34,16 @@ import org.htmlunit.corejs.javascript.Scriptable;
  * format specifiers and the numbers of parameters don't match, no exception is thrown.
  * <p>
  * The default logger uses Apache Commons Logging.
+ * </p>
  *
  * @author Andrea Martino
  * @author Ronald Brill
  */
 public class WebConsole implements ConsolePrinter, Serializable {
 
-    private Logger logger_ = new DefaultLogger();
+    private static final Log LOG = LogFactory.getLog(WebConsole.class);
+
+    private transient Logger logger_ = new DefaultLogger(LOG);
 
     /**
      * A simple logging interface abstracting logging APIs.
@@ -47,11 +51,12 @@ public class WebConsole implements ConsolePrinter, Serializable {
     public interface Logger {
 
         /**
-         * Is trace logging currently enabled?
+         * Is trace logging currently enabled?.
          * <p>
          * Call this method to prevent having to perform expensive operations
          * (for example, <code>String</code> concatenation)
          * when the log level is more than trace.
+         * </p>
          *
          * @return true if trace is enabled in the underlying logger.
          */
@@ -65,11 +70,12 @@ public class WebConsole implements ConsolePrinter, Serializable {
         void trace(Object message);
 
         /**
-         * Is debug logging currently enabled?
+         * Is debug logging currently enabled?.
          * <p>
          * Call this method to prevent having to perform expensive operations
          * (for example, <code>String</code> concatenation)
          * when the log level is more than debug.
+         * </p>
          *
          * @return true if debug is enabled in the underlying logger.
          */
@@ -83,11 +89,12 @@ public class WebConsole implements ConsolePrinter, Serializable {
         void debug(Object message);
 
         /**
-         * Is info logging currently enabled?
+         * Is info logging currently enabled?.
          * <p>
          * Call this method to prevent having to perform expensive operations
          * (for example, <code>String</code> concatenation)
          * when the log level is more than info.
+         * </p>
          *
          * @return true if info is enabled in the underlying logger.
          */
@@ -101,11 +108,12 @@ public class WebConsole implements ConsolePrinter, Serializable {
         void info(Object message);
 
         /**
-         * Is warn logging currently enabled?
+         * Is warn logging currently enabled?.
          * <p>
          * Call this method to prevent having to perform expensive operations
          * (for example, <code>String</code> concatenation)
          * when the log level is more than warn.
+         * </p>
          *
          * @return true if warn is enabled in the underlying logger.
          */
@@ -119,11 +127,12 @@ public class WebConsole implements ConsolePrinter, Serializable {
         void warn(Object message);
 
         /**
-         * Is error logging currently enabled?
+         * Is error logging currently enabled?.
          * <p>
          * Call this method to prevent having to perform expensive operations
          * (for example, <code>String</code> concatenation)
          * when the log level is more than error.
+         * </p>
          *
          * @return true if error is enabled in the underlying logger.
          */
@@ -154,11 +163,10 @@ public class WebConsole implements ConsolePrinter, Serializable {
     }
 
     @Override
-    public void print(final Context cx, final Scriptable scope, final Level level,
+    public void print(final Context cx, final VarScope scope, final Level level,
             final Object[] args, final ScriptStackElement[] stack) {
-
         switch (level) {
-            case TRACE:
+            case TRACE -> {
                 if (logger_.isInfoEnabled()) {
                     String msg = format(cx, scope, args);
                     if (stack != null) {
@@ -176,101 +184,103 @@ public class WebConsole implements ConsolePrinter, Serializable {
                     }
                     logger_.info(msg);
                 }
-                break;
-            case DEBUG:
+            }
+            case DEBUG -> {
                 if (logger_.isDebugEnabled()) {
                     logger_.debug(format(cx, scope, args));
                 }
-                break;
-            case INFO:
+            }
+            case INFO -> {
                 if (logger_.isInfoEnabled()) {
                     logger_.info(format(cx, scope, args));
                 }
-                break;
-            case WARN:
+            }
+            case WARN -> {
                 if (logger_.isWarnEnabled()) {
                     logger_.warn(format(cx, scope, args));
                 }
-                break;
-            case ERROR:
+            }
+            case ERROR -> {
                 if (logger_.isErrorEnabled()) {
                     logger_.error(format(cx, scope, args));
                 }
-                break;
-
-            default:
-                break;
+            }
+            default -> { /* skip */ }
         }
     }
 
-    private String format(final Context cx, final Scriptable scope, final Object[] args) {
-        String msg = NativeConsole.format(cx, scope, args);
-        msg = msg.replaceAll("\\r?\\n", "\n");
-        return msg;
+    private static String format(final Context cx, final VarScope scope, final Object[] args) {
+        final String msg = NativeConsole.format(cx, scope, args);
+        return msg.replaceAll("\\r?\\n", "\n");
+    }
+
+    private void readObject(final ObjectInputStream ois) throws ClassNotFoundException, IOException {
+        ois.defaultReadObject();
+        setLogger(new DefaultLogger(LOG));
     }
 
     /**
      * This class is the default logger used by WebConsole.
      */
-    private static class DefaultLogger implements Logger, Serializable {
+    private static class DefaultLogger implements Logger {
 
-        private static final Log LOG = LogFactory.getLog(WebConsole.class);
+        private final Log webConsoleLogger_;
 
-        DefaultLogger() {
+        /**
+         * Ctor.
+         */
+        DefaultLogger(final Log logger) {
+            webConsoleLogger_ = logger;
         }
 
         @Override
         public boolean isTraceEnabled() {
-            return LOG.isTraceEnabled();
+            return webConsoleLogger_.isTraceEnabled();
         }
 
         @Override
         public void trace(final Object message) {
-            if (LOG.isTraceEnabled()) {
-                LOG.trace(message);
-            }
+            webConsoleLogger_.trace(message);
         }
 
         @Override
         public boolean isDebugEnabled() {
-            return LOG.isDebugEnabled();
+            return webConsoleLogger_.isDebugEnabled();
         }
 
         @Override
         public void debug(final Object message) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug(message);
-            }
+            webConsoleLogger_.debug(message);
         }
 
         @Override
         public boolean isInfoEnabled() {
-            return LOG.isInfoEnabled();
+            return webConsoleLogger_.isInfoEnabled();
         }
 
         @Override
         public void info(final Object message) {
-            LOG.info(message);
+            webConsoleLogger_.info(message);
         }
 
         @Override
         public boolean isWarnEnabled() {
-            return LOG.isWarnEnabled();
+            return webConsoleLogger_.isWarnEnabled();
         }
 
         @Override
         public void warn(final Object message) {
-            LOG.warn(message);
+            webConsoleLogger_.warn(message);
         }
 
         @Override
         public boolean isErrorEnabled() {
-            return LOG.isErrorEnabled();
+            return webConsoleLogger_.isErrorEnabled();
         }
 
         @Override
         public void error(final Object message) {
-            LOG.error(message);
+            webConsoleLogger_.error(message);
         }
     }
 }

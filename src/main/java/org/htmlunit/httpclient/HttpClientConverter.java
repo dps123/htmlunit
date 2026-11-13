@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +14,27 @@
  */
 package org.htmlunit.httpclient;
 
-import java.nio.charset.Charset;
+import java.net.IDN;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
-import java.util.Date;
+import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
-import org.apache.http.NoHttpResponseException;
-import org.apache.http.client.utils.DateUtils;
-import org.apache.http.client.utils.URLEncodedUtils;
-import org.apache.http.message.BasicNameValuePair;
-
-import org.htmlunit.util.NameValuePair;
+import org.apache.http.conn.util.InetAddressUtils;
+import org.apache.http.conn.util.PublicSuffixMatcher;
+import org.apache.http.conn.util.PublicSuffixMatcherLoader;
+import org.apache.http.cookie.ClientCookie;
+import org.apache.http.cookie.Cookie;
+import org.apache.http.cookie.CookieOrigin;
+import org.apache.http.cookie.CookieSpec;
+import org.apache.http.cookie.MalformedCookieException;
+import org.apache.http.impl.cookie.BasicClientCookie;
+import org.apache.http.message.BufferedHeader;
+import org.apache.http.util.CharArrayBuffer;
+import org.htmlunit.BrowserVersion;
+import org.htmlunit.util.UrlUtils;
 
 /**
  * Helper methods to convert from/to HttpClient.
@@ -33,76 +43,168 @@ import org.htmlunit.util.NameValuePair;
  */
 public final class HttpClientConverter {
 
+    private static final PublicSuffixMatcher PUBLIC_SUFFIX_MATCHER = PublicSuffixMatcherLoader.getDefault();
+
     private HttpClientConverter() {
+        // util class
     }
 
     /**
-     * Converts the specified name/value pairs into HttpClient name/value pairs.
-     * @param pairs the name/value pairs to convert
-     * @return the converted name/value pairs
+     * Returns the "registrable domain" (effective TLD+1) for the given host, per the
+     * public suffix list (https://publicsuffix.org/). Backed by Apache HttpClient's own
+     * {@link PublicSuffixMatcher}, already on the classpath as part of the httpclient
+     * dependency this class already uses elsewhere for cookie handling - no new
+     * dependency needed, and it avoids the wrong results a naive "last two labels"
+     * heuristic would give for domains under multi-part public suffixes (e.g. a
+     * {@code co.uk}-style suffix, or a private-section entry like {@code github.io}).
+     * <p>
+     * Note this is deliberately unrelated to {@link HtmlUnitDomainHandler}'s cookie
+     * domain-matching: RFC 6265 cookie domain-match is a simple suffix/subdomain check
+     * against a single cookie-supplied domain, not a registrable-domain computation
+     * between two hosts, so there is nothing to share between the two.
+     * </p>
+     * @param host the host part of a URL
+     * @return the registrable domain, or the host itself if it doesn't have one (e.g.
+     *         a bare public suffix, a single-label host like {@code localhost}, or an
+     *         IP address - which per the HTML "obtain a site" algorithm is always its
+     *         own site, never run through the public suffix list at all)
      */
-    public static List<org.apache.http.NameValuePair> nameValuePairsToHttpClient(final List<NameValuePair> pairs) {
-        final List<org.apache.http.NameValuePair> resultingPairs = new ArrayList<>(pairs.size());
-        for (final NameValuePair pair : pairs) {
-            resultingPairs.add(new BasicNameValuePair(pair.getName(), pair.getValue()));
+    public static String registrableDomain(final String host) {
+        if (InetAddressUtils.isIPv4Address(host) || InetAddressUtils.isIPv6Address(host)) {
+            return host;
         }
-        return resultingPairs;
+        // getDomainRoot() returns null for a bare public suffix (e.g. 'com' or 'co.uk')
+        final String domainRoot = PUBLIC_SUFFIX_MATCHER.getDomainRoot(host);
+        return domainRoot == null ? host : IDN.toASCII(domainRoot);
     }
 
     /**
-     * Pares url query into name/value pairs using methods from HttpClient.
-     * @param query the urlencoded query
-     * @param charset the charset or null (defaulting to utf-8)
-     * @return the name/value pairs
+     * Helper that builds a CookieOrigin.
+     * @param url the url to be used
+     * @return the new CookieOrigin
      */
-    public static List<NameValuePair> parseUrlQuery(final String query, final Charset charset) {
-        final List<org.apache.http.NameValuePair> pairs = URLEncodedUtils.parse(query, charset);
+    public static CookieOrigin buildCookieOrigin(final URL url) {
+        final URL normalizedUrl = replaceForCookieIfNecessary(url);
 
-        final List<NameValuePair> resultingPairs = new ArrayList<>();
-        for (final org.apache.http.NameValuePair pair : pairs) {
-            resultingPairs.add(new NameValuePair(pair.getName(), pair.getValue()));
+        int port = normalizedUrl.getPort();
+        if (port == -1) {
+            port = normalizedUrl.getDefaultPort();
         }
-        return resultingPairs;
+
+        return new CookieOrigin(
+                normalizedUrl.getHost(),
+                port,
+                normalizedUrl.getPath(),
+                "https".equals(normalizedUrl.getProtocol()));
     }
 
     /**
-     * @param parameters the paramters
-     * @param enc the charset
-     * @return the query string from the given parameters
-     */
-    public static String toQueryFormFields(final List<NameValuePair> parameters, final Charset enc) {
-        return URLEncodedUtils.format(nameValuePairsToHttpClient(parameters), enc);
-    }
-
-    /**
-     * Parses the specified date string, assuming that it is formatted according to RFC 1123, RFC 1036 or as an ANSI
-     * C HTTP date header. This method returns {@code null} if the specified string is {@code null} or unparseable.
+     * {@link CookieOrigin} doesn't like empty hosts and negative ports,
+     * but these things happen if we're dealing with a local file.
+     * This method allows us to work around this limitation in HttpClient by feeding it a bogus host and port.
      *
-     * @param s the string to parse as a date
-     * @return the date version of the specified string, or {@code null}
+     * @param url the URL to replace if necessary
+     * @return the replacement URL, or the original URL if no replacement was necessary
      */
-    public static Date parseHttpDate(final String s) {
-        if (s == null) {
-            return null;
+    public static URL replaceForCookieIfNecessary(final URL url) {
+        if (!"file".equals(url.getProtocol())) {
+            return url;
         }
-        return DateUtils.parseDate(s);
+
+        try {
+            return UrlUtils.getUrlWithNewHostAndPort(url,
+                    HtmlUnitBrowserCompatCookieSpec.LOCAL_FILESYSTEM_DOMAIN, 0);
+        }
+        catch (final MalformedURLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
-     * Formats the given date according to the RFC 1123 pattern.
+     * Parses the specified cookie string into HtmlUnit cookie objects.
      *
-     * @param date The date to format.
-     * @return An RFC 1123 formatted date string.
+     * @param cookieString the {@code Set-Cookie} header value to parse
+     * @param pageUrl the URL of the page from which the cookie originates
+     * @param browserVersion the browser version used to determine cookie parsing behavior
+     * @return a list of parsed {@link org.htmlunit.http.Cookie} instances
+     * @throws MalformedCookieException if the cookie string does not conform to the cookie specification
      */
-    public static String formatDate(final Date date) {
-        return DateUtils.formatDate(date);
+    public static List<org.htmlunit.http.Cookie> parseCookie(final String cookieString, final URL pageUrl,
+                                                             final BrowserVersion browserVersion)
+            throws MalformedCookieException {
+        final CharArrayBuffer buffer = new CharArrayBuffer(cookieString.length() + 22);
+        buffer.append("Set-Cookie: ");
+        buffer.append(cookieString);
+
+        final CookieSpec cookieSpec = new HtmlUnitBrowserCompatCookieSpec(browserVersion);
+        final List<Cookie> cookies = cookieSpec.parse(new BufferedHeader(buffer), buildCookieOrigin(pageUrl));
+
+        final List<org.htmlunit.http.Cookie> htmlUnitCookies = new ArrayList<>(cookies.size());
+        for (final Cookie cookie : cookies) {
+            final org.htmlunit.http.Cookie htmlUnitCookie = new HttpClientCookie((ClientCookie) cookie);
+            htmlUnitCookies.add(htmlUnitCookie);
+        }
+        return htmlUnitCookies;
     }
 
     /**
-     * @param e the exception to check
-     * @return true if the provided Exception is na {@link NoHttpResponseException}
+     * Converts the specified collection of cookies into a collection of HttpClient cookies.
+     * @param cookies the cookies to be converted
+     * @return the specified cookies, as HttpClient cookies
      */
-    public static boolean isNoHttpResponseException(final Exception e) {
-        return e instanceof NoHttpResponseException;
+    public static List<Cookie> toHttpClient(final Collection<org.htmlunit.http.Cookie> cookies) {
+        final ArrayList<Cookie> array = new ArrayList<>(cookies.size());
+        for (final org.htmlunit.http.Cookie cookie : cookies) {
+            array.add(toHttpClient(cookie));
+        }
+        return array;
+    }
+
+    /**
+     * Adds all matching cookies to the provided set.
+     * @param cookies the cookies to select from
+     * @param normalizedUrl the url to match against
+     * @param browserVersion the {@link BrowserVersion}
+     * @param matches the set to add
+     */
+    public static void addMatching(final Set<org.htmlunit.http.Cookie> cookies,
+            final URL normalizedUrl, final BrowserVersion browserVersion,
+            final Set<org.htmlunit.http.Cookie> matches) {
+        if (!cookies.isEmpty()) {
+            final CookieOrigin cookieOrigin = HttpClientConverter.buildCookieOrigin(normalizedUrl);
+            final CookieSpec cookieSpec = new HtmlUnitBrowserCompatCookieSpec(browserVersion);
+            for (final org.htmlunit.http.Cookie cookie : cookies) {
+                if (cookieSpec.match(toHttpClient(cookie), cookieOrigin)) {
+                    matches.add(cookie);
+                }
+            }
+        }
+    }
+
+    private static ClientCookie toHttpClient(final org.htmlunit.http.Cookie cookie) {
+        if (cookie instanceof HttpClientCookie) {
+            return ((HttpClientCookie) cookie).getHttpClientCookie();
+        }
+
+        final BasicClientCookie httpClientCookie = new BasicClientCookie(cookie.getName(),
+                cookie.getValue() == null ? "" : cookie.getValue());
+
+        httpClientCookie.setDomain(cookie.getDomain());
+        // BasicDomainHandler.match(Cookie, CookieOrigin) checks the attribute also (see #333)
+        httpClientCookie.setAttribute(ClientCookie.DOMAIN_ATTR, cookie.getDomain());
+
+        httpClientCookie.setPath(cookie.getPath());
+        httpClientCookie.setExpiryDate(cookie.getExpires());
+
+        httpClientCookie.setSecure(cookie.isSecure());
+        if (cookie.isHttpOnly()) {
+            httpClientCookie.setAttribute("httponly", "true");
+        }
+
+        if (cookie.getSameSite() != null) {
+            httpClientCookie.setAttribute("samesite", cookie.getSameSite());
+        }
+
+        return httpClientCookie;
     }
 }

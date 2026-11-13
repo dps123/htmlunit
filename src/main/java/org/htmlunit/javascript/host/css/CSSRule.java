@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,6 @@ package org.htmlunit.javascript.host.css;
 
 import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
 import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
-
-import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,15 +27,13 @@ import org.htmlunit.cssparser.dom.CSSMediaRuleImpl;
 import org.htmlunit.cssparser.dom.CSSPageRuleImpl;
 import org.htmlunit.cssparser.dom.CSSStyleRuleImpl;
 import org.htmlunit.cssparser.dom.CSSUnknownRuleImpl;
-
 import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstant;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.configuration.JsxSetter;
-
-import org.htmlunit.corejs.javascript.Context;
 
 /**
  * A JavaScript object for {@code CSSRule}.
@@ -48,99 +41,100 @@ import org.htmlunit.corejs.javascript.Context;
  * @author Ahmed Ashour
  * @author Frank Danek
  * @author Ronald Brill
- * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/CSSRule">MDN doc</a>
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/CSSRule">MDN Documentation</a>
  */
 @JsxClass
 public class CSSRule extends HtmlUnitScriptable {
 
     private static final Log LOG = LogFactory.getLog(CSSRule.class);
 
-    /** RegEx to fix css text for IE. */
-    protected static final Pattern REPLACEMENT_IE = Pattern.compile("url\\(\"([^;]*)\"\\)");
-
     /**
      * The rule is a {@code CSSUnknownRule}.
      */
-    @JsxConstant(IE)
-    public static final short UNKNOWN_RULE              = org.w3c.dom.css.CSSRule.UNKNOWN_RULE;
+    public static final int UNKNOWN_RULE              = org.w3c.dom.css.CSSRule.UNKNOWN_RULE;
 
     /**
      * The rule is a {@code CSSStyleRule}.
      */
     @JsxConstant
-    public static final short STYLE_RULE                = org.w3c.dom.css.CSSRule.STYLE_RULE;
+    public static final int STYLE_RULE                = org.w3c.dom.css.CSSRule.STYLE_RULE;
 
     /**
      * The rule is a {@code CSSCharsetRule}.
      */
     @JsxConstant
-    public static final short CHARSET_RULE              = org.w3c.dom.css.CSSRule.CHARSET_RULE;
+    public static final int CHARSET_RULE              = org.w3c.dom.css.CSSRule.CHARSET_RULE;
 
     /**
      * The rule is a {@code CSSImportRule}.
      */
     @JsxConstant
-    public static final short IMPORT_RULE               = org.w3c.dom.css.CSSRule.IMPORT_RULE;
+    public static final int IMPORT_RULE               = org.w3c.dom.css.CSSRule.IMPORT_RULE;
 
     /**
      * The rule is a {@code CSSMediaRule}.
      */
     @JsxConstant
-    public static final short MEDIA_RULE                = org.w3c.dom.css.CSSRule.MEDIA_RULE;
+    public static final int MEDIA_RULE                = org.w3c.dom.css.CSSRule.MEDIA_RULE;
 
     /**
      * The rule is a {@code CSSFontFaceRule}.
      */
     @JsxConstant
-    public static final short FONT_FACE_RULE            = org.w3c.dom.css.CSSRule.FONT_FACE_RULE;
+    public static final int FONT_FACE_RULE            = org.w3c.dom.css.CSSRule.FONT_FACE_RULE;
 
     /**
      * The rule is a {@code CSSPageRule}.
      */
     @JsxConstant
-    public static final short PAGE_RULE                 = org.w3c.dom.css.CSSRule.PAGE_RULE;
+    public static final int PAGE_RULE                 = org.w3c.dom.css.CSSRule.PAGE_RULE;
 
     /**
      * The rule is a {@code CSSKeyframesRule}.
      */
     @JsxConstant
-    public static final short KEYFRAMES_RULE            = 7;
+    public static final int KEYFRAMES_RULE            = 7;
 
     /**
      * The rule is a {@code CSSKeyframeRule}.
      */
     @JsxConstant
-    public static final short KEYFRAME_RULE             = 8;
+    public static final int KEYFRAME_RULE             = 8;
+
+    /**
+     * The rule is a {@code CSSMarginRule}.
+     */
+    @JsxConstant({CHROME, EDGE})
+    public static final int MARGIN_RULE               = 9;
 
     /**
      * The rule is a {@code CSSNamespaceRule}.
      */
     @JsxConstant
-    public static final short NAMESPACE_RULE           = 10;
+    public static final int NAMESPACE_RULE           = 10;
 
     /**
      * The rule is a {@code CSSCounterStyleRule}.
      */
-    @JsxConstant({CHROME, EDGE, FF, FF_ESR})
-    public static final short COUNTER_STYLE_RULE        = 11;
+    @JsxConstant
+    public static final int COUNTER_STYLE_RULE        = 11;
 
     /**
      * The rule is a {@code CSSSupportsRule}.
      */
-    @JsxConstant({CHROME, EDGE, FF, FF_ESR})
-    public static final short SUPPORTS_RULE             = 12;
+    @JsxConstant
+    public static final int SUPPORTS_RULE             = 12;
 
     /**
-     * The rule is a {@code CSSCounterStyleRule}.
+     * The rule is a {@code CSSFontFeatureValuesRule}.
      */
-    @JsxConstant({CHROME, EDGE, FF, FF_ESR})
-    public static final short FONT_FEATURE_VALUES_RULE  = 14;
+    @JsxConstant
+    public static final int FONT_FEATURE_VALUES_RULE  = 14;
 
     /**
      * The rule is a {@code CSSViewportRule}.
      */
-    @JsxConstant(IE)
-    public static final short VIEWPORT_RULE  = 15;
+    public static final int VIEWPORT_RULE  = 15;
 
     private final CSSStyleSheet stylesheet_;
 
@@ -150,6 +144,7 @@ public class CSSRule extends HtmlUnitScriptable {
      * Creates a new instance.
      */
     public CSSRule() {
+        super();
         stylesheet_ = null;
         rule_ = null;
     }
@@ -157,9 +152,9 @@ public class CSSRule extends HtmlUnitScriptable {
     /**
      * Creates an instance.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
+    @JsxConstructor
     public void jsConstructor() {
-        throw Context.reportRuntimeError("Illegal constructor.");
+        throw JavaScriptEngine.typeErrorIllegalConstructor();
     }
 
     /**
@@ -169,28 +164,27 @@ public class CSSRule extends HtmlUnitScriptable {
      * @return a CSSRule subclass according to the rule type
      */
     public static CSSRule create(final CSSStyleSheet stylesheet, final AbstractCSSRuleImpl rule) {
-        if (rule instanceof CSSStyleRuleImpl) {
-            return new CSSStyleRule(stylesheet, (CSSStyleRuleImpl) rule);
+        if (rule instanceof CSSStyleRuleImpl impl) {
+            return new CSSStyleRule(stylesheet, impl);
         }
-        if (rule instanceof CSSImportRuleImpl) {
-            return new CSSImportRule(stylesheet, (CSSImportRuleImpl) rule);
+        if (rule instanceof CSSImportRuleImpl impl) {
+            return new CSSImportRule(stylesheet, impl);
         }
 //        if (rule instanceof CSSCharsetRuleImpl) {
 //            return new CSSCharsetRule(stylesheet, (CSSCharsetRuleImpl) rule);
 //        }
-        if (rule instanceof CSSMediaRuleImpl) {
-            return new CSSMediaRule(stylesheet, (CSSMediaRuleImpl) rule);
+        if (rule instanceof CSSMediaRuleImpl impl) {
+            return new CSSMediaRule(stylesheet, impl);
         }
-        if (rule instanceof CSSFontFaceRuleImpl) {
-            return new CSSFontFaceRule(stylesheet, (CSSFontFaceRuleImpl) rule);
+        if (rule instanceof CSSFontFaceRuleImpl impl) {
+            return new CSSFontFaceRule(stylesheet, impl);
         }
-        if (rule instanceof CSSPageRuleImpl) {
-            return new CSSPageRule(stylesheet, (CSSPageRuleImpl) rule);
+        if (rule instanceof CSSPageRuleImpl impl) {
+            return new CSSPageRule(stylesheet, impl);
         }
-        if (rule instanceof CSSUnknownRuleImpl) {
-            final CSSUnknownRuleImpl unknownRule = (CSSUnknownRuleImpl) rule;
+        if (rule instanceof CSSUnknownRuleImpl unknownRule) {
             if (unknownRule.getCssText().startsWith("@keyframes")) {
-                return new CSSKeyframesRule(stylesheet, (CSSUnknownRuleImpl) rule);
+                return new CSSKeyframesRule(stylesheet, unknownRule);
             }
             if (LOG.isWarnEnabled()) {
                 LOG.warn("Unknown CSSRule " + rule.getClass().getName()
@@ -212,9 +206,10 @@ public class CSSRule extends HtmlUnitScriptable {
      * @param rule the wrapped rule
      */
     protected CSSRule(final CSSStyleSheet stylesheet, final AbstractCSSRuleImpl rule) {
+        super();
         stylesheet_ = stylesheet;
         rule_ = rule;
-        setParentScope(stylesheet);
+        setParentScope(stylesheet.getParentScope());
         setPrototype(getPrototype(getClass()));
     }
 
@@ -223,30 +218,30 @@ public class CSSRule extends HtmlUnitScriptable {
      * @return the type of the rule.
      */
     @JsxGetter
-    public short getType() {
+    public int getType() {
         if (rule_ instanceof CSSCharsetRuleImpl) {
-            return CSSRule.CHARSET_RULE;
+            return CHARSET_RULE;
         }
         if (rule_ instanceof CSSFontFaceRuleImpl) {
-            return CSSRule.FONT_FACE_RULE;
+            return FONT_FACE_RULE;
         }
         if (rule_ instanceof CSSImportRuleImpl) {
-            return CSSRule.IMPORT_RULE;
+            return IMPORT_RULE;
         }
         if (rule_ instanceof CSSMediaRuleImpl) {
-            return CSSRule.MEDIA_RULE;
+            return MEDIA_RULE;
         }
         if (rule_ instanceof CSSPageRuleImpl) {
-            return CSSRule.PAGE_RULE;
+            return PAGE_RULE;
         }
         if (rule_ instanceof CSSStyleRuleImpl) {
-            return CSSRule.STYLE_RULE;
+            return STYLE_RULE;
         }
         if (rule_ instanceof CSSUnknownRuleImpl) {
-            return CSSRule.UNKNOWN_RULE;
+            return UNKNOWN_RULE;
         }
 
-        return CSSRule.UNKNOWN_RULE;
+        return UNKNOWN_RULE;
     }
 
     /**
@@ -266,6 +261,7 @@ public class CSSRule extends HtmlUnitScriptable {
      */
     @JsxSetter
     public void setCssText(final String cssText) {
+        // nothing to do
     }
 
     /**
@@ -286,7 +282,7 @@ public class CSSRule extends HtmlUnitScriptable {
     public CSSRule getParentRule() {
         final AbstractCSSRuleImpl parentRule = rule_.getParentRule();
         if (parentRule != null) {
-            return CSSRule.create(stylesheet_, parentRule);
+            return create(stylesheet_, parentRule);
         }
         return null;
     }

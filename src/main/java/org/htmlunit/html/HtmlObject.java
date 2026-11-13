@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,60 +14,42 @@
  */
 package org.htmlunit.html;
 
-import static org.htmlunit.BrowserVersionFeatures.JS_HTML_OBJECT_VALIDITYSTATE_ISVALID_IGNORES_CUSTOM_ERROR;
+import static org.htmlunit.BrowserVersionFeatures.CSP_OBJECT_BLOCKED_FIRES_ERROR;
 
-import java.applet.Applet;
-import java.io.IOException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import org.htmlunit.AppletConfirmHandler;
-import org.htmlunit.FailingHttpStatusCodeException;
 import org.htmlunit.SgmlPage;
 import org.htmlunit.WebClient;
-import org.htmlunit.WebRequest;
-import org.htmlunit.WebResponse;
-import org.htmlunit.html.applets.AppletClassLoader;
-import org.htmlunit.html.applets.AppletStubImpl;
+import org.htmlunit.html.csp.ContentSecurityPolicy;
+import org.htmlunit.javascript.PostponedAction;
+import org.htmlunit.javascript.host.event.Event;
 import org.htmlunit.javascript.host.html.HTMLObjectElement;
-import org.htmlunit.util.UrlUtils;
+import org.htmlunit.util.StringUtils;
 import org.htmlunit.xml.XmlPage;
 
 /**
  * Wrapper for the HTML element "object".
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author David K. Taylor
- * @author <a href="mailto:cse@dynabean.de">Christian Sell</a>
+ * @author Christian Sell
  * @author Ahmed Ashour
  * @author Ronald Brill
  * @author Frank Danek
  */
-public class HtmlObject extends HtmlElement implements ValidatableElement {
+public class HtmlObject extends HtmlElement implements ValidatableHtmlElement {
 
     private static final Log LOG = LogFactory.getLog(HtmlObject.class);
-
-    private static final String APPLET_TYPE = "application/x-java-applet";
-    private static final String ARCHIVE = "archive";
-    private static final String CACHE_ARCHIVE = "cache_archive";
-    private static final String CODEBASE = "codebase";
 
     /** The HTML tag represented by this element. */
     public static final String TAG_NAME = "object";
 
-    private Applet applet_;
     private String customValidity_;
 
     /**
-     * Creates an instance of HtmlObject
+     * Creates an instance of HtmlObject.
      *
      * @param qualifiedName the qualified name of the element type to instantiate
      * @param page the HtmlPage that contains this element
@@ -84,7 +66,7 @@ public class HtmlObject extends HtmlElement implements ValidatableElement {
      * documentation for details on the use of this attribute.
      *
      * @return the value of the attribute {@code declare}
-     * or an empty string if that attribute isn't defined.
+     *         or an empty string if that attribute isn't defined.
      */
     public final String getDeclareAttribute() {
         return getAttributeDirect("declare");
@@ -96,7 +78,7 @@ public class HtmlObject extends HtmlElement implements ValidatableElement {
      * documentation for details on the use of this attribute.
      *
      * @return the value of the attribute {@code classid}
-     * or an empty string if that attribute isn't defined.
+     *         or an empty string if that attribute isn't defined.
      */
     public final String getClassIdAttribute() {
         return getAttributeDirect("classid");
@@ -108,7 +90,7 @@ public class HtmlObject extends HtmlElement implements ValidatableElement {
      * documentation for details on the use of this attribute.
      *
      * @return the value of the attribute "codebase"
-     * or an empty string if that attribute isn't defined.
+     *         or an empty string if that attribute isn't defined.
      */
     public final String getCodebaseAttribute() {
         return getAttributeDirect("codebase");
@@ -120,7 +102,7 @@ public class HtmlObject extends HtmlElement implements ValidatableElement {
      * documentation for details on the use of this attribute.
      *
      * @return the value of the attribute {@code data}
-     * or an empty string if that attribute isn't defined.
+     *         or an empty string if that attribute isn't defined.
      */
     public final String getDataAttribute() {
         return getAttributeDirect("data");
@@ -132,10 +114,10 @@ public class HtmlObject extends HtmlElement implements ValidatableElement {
      * documentation for details on the use of this attribute.
      *
      * @return the value of the attribute {@code type}
-     * or an empty string if that attribute isn't defined.
+     *         or an empty string if that attribute isn't defined.
      */
     public final String getTypeAttribute() {
-        return getAttributeDirect("type");
+        return getAttributeDirect(TYPE_ATTRIBUTE);
     }
 
     /**
@@ -144,7 +126,7 @@ public class HtmlObject extends HtmlElement implements ValidatableElement {
      * documentation for details on the use of this attribute.
      *
      * @return the value of the attribute "codetype"
-     * or an empty string if that attribute isn't defined.
+     *         or an empty string if that attribute isn't defined.
      */
     public final String getCodeTypeAttribute() {
         return getAttributeDirect("codetype");
@@ -156,7 +138,7 @@ public class HtmlObject extends HtmlElement implements ValidatableElement {
      * documentation for details on the use of this attribute.
      *
      * @return the value of the attribute {@code archive}
-     * or an empty string if that attribute isn't defined.
+     *         or an empty string if that attribute isn't defined.
      */
     public final String getArchiveAttribute() {
         return getAttributeDirect("archive");
@@ -168,7 +150,7 @@ public class HtmlObject extends HtmlElement implements ValidatableElement {
      * documentation for details on the use of this attribute.
      *
      * @return the value of the attribute {@code standby}
-     * or an empty string if that attribute isn't defined.
+     *         or an empty string if that attribute isn't defined.
      */
     public final String getStandbyAttribute() {
         return getAttributeDirect("standby");
@@ -180,7 +162,7 @@ public class HtmlObject extends HtmlElement implements ValidatableElement {
      * documentation for details on the use of this attribute.
      *
      * @return the value of the attribute {@code height}
-     * or an empty string if that attribute isn't defined.
+     *         or an empty string if that attribute isn't defined.
      */
     public final String getHeightAttribute() {
         return getAttributeDirect("height");
@@ -192,7 +174,7 @@ public class HtmlObject extends HtmlElement implements ValidatableElement {
      * documentation for details on the use of this attribute.
      *
      * @return the value of the attribute {@code width}
-     * or an empty string if that attribute isn't defined.
+     *         or an empty string if that attribute isn't defined.
      */
     public final String getWidthAttribute() {
         return getAttributeDirect("width");
@@ -204,7 +186,7 @@ public class HtmlObject extends HtmlElement implements ValidatableElement {
      * documentation for details on the use of this attribute.
      *
      * @return the value of the attribute {@code usemap}
-     * or an empty string if that attribute isn't defined.
+     *         or an empty string if that attribute isn't defined.
      */
     public final String getUseMapAttribute() {
         return getAttributeDirect("usemap");
@@ -216,10 +198,10 @@ public class HtmlObject extends HtmlElement implements ValidatableElement {
      * documentation for details on the use of this attribute.
      *
      * @return the value of the attribute {@code name}
-     * or an empty string if that attribute isn't defined.
+     *         or an empty string if that attribute isn't defined.
      */
     public final String getNameAttribute() {
-        return getAttributeDirect("name");
+        return getAttributeDirect(NAME_ATTRIBUTE);
     }
 
     /**
@@ -228,7 +210,7 @@ public class HtmlObject extends HtmlElement implements ValidatableElement {
      * documentation for details on the use of this attribute.
      *
      * @return the value of the attribute {@code tabindex}
-     * or an empty string if that attribute isn't defined.
+     *         or an empty string if that attribute isn't defined.
      */
     public final String getTabIndexAttribute() {
         return getAttributeDirect("tabindex");
@@ -240,7 +222,7 @@ public class HtmlObject extends HtmlElement implements ValidatableElement {
      * documentation for details on the use of this attribute.
      *
      * @return the value of the attribute {@code align}
-     * or an empty string if that attribute isn't defined.
+     *         or an empty string if that attribute isn't defined.
      */
     public final String getAlignAttribute() {
         return getAttributeDirect("align");
@@ -252,7 +234,7 @@ public class HtmlObject extends HtmlElement implements ValidatableElement {
      * documentation for details on the use of this attribute.
      *
      * @return the value of the attribute {@code border}
-     * or an empty string if that attribute isn't defined.
+     *         or an empty string if that attribute isn't defined.
      */
     public final String getBorderAttribute() {
         return getAttributeDirect("border");
@@ -264,7 +246,7 @@ public class HtmlObject extends HtmlElement implements ValidatableElement {
      * documentation for details on the use of this attribute.
      *
      * @return the value of the attribute {@code hspace}
-     * or an empty string if that attribute isn't defined.
+     *         or an empty string if that attribute isn't defined.
      */
     public final String getHspaceAttribute() {
         return getAttributeDirect("hspace");
@@ -276,14 +258,76 @@ public class HtmlObject extends HtmlElement implements ValidatableElement {
      * documentation for details on the use of this attribute.
      *
      * @return the value of the attribute {@code vspace}
-     * or an empty string if that attribute isn't defined.
+     *         or an empty string if that attribute isn't defined.
      */
     public final String getVspaceAttribute() {
         return getAttributeDirect("vspace");
     }
 
     /**
-     * Initialize the ActiveX(Mock).
+     * {@inheritDoc}
+     * Checks the data url against the Content-Security-Policy (object-src).
+     */
+    @Override
+    protected void onAddedToPage() {
+        super.onAddedToPage();
+        checkContentSecurityPolicy(getAttributeDirect("data"));
+    }
+
+    /**
+     * {@inheritDoc}
+     * Checks the new data url against the Content-Security-Policy (object-src).
+     */
+    @Override
+    protected void setAttributeNS(final String namespaceURI, final String qualifiedName, final String value,
+            final boolean notifyAttributeChangeListeners, final boolean notifyMutationObservers) {
+        final String qualifiedNameLC = StringUtils.toRootLowerCase(qualifiedName);
+        final boolean changed = "data".equals(qualifiedNameLC)
+                && !getAttributeNS(namespaceURI, qualifiedNameLC).equals(value);
+
+        super.setAttributeNS(namespaceURI, qualifiedName, value,
+                notifyAttributeChangeListeners, notifyMutationObservers);
+
+        if (changed && isAttachedToPage()) {
+            checkContentSecurityPolicy(value);
+        }
+    }
+
+    /**
+     * Checks the url against the Content-Security-Policy (object-src); if the url is blocked,
+     * Firefox fires the error event (async).
+     */
+    private void checkContentSecurityPolicy(final String data) {
+        if (ContentSecurityPolicy.allowsObject(this, data)) {
+            return;
+        }
+
+        final HtmlPage htmlPage = getHtmlPageOrNull();
+        if (htmlPage == null || !hasFeature(CSP_OBJECT_BLOCKED_FIRES_ERROR)) {
+            return;
+        }
+
+        final WebClient client = htmlPage.getWebClient();
+        if (!client.isJavaScriptEngineEnabled()) {
+            return;
+        }
+
+        final PostponedAction action = new PostponedAction(htmlPage, "HtmlObject.blocked") {
+            @Override
+            public void execute() {
+                HtmlObject.this.fireEvent(Event.TYPE_ERROR);
+            }
+        };
+        if (READY_STATE_LOADING.equals(htmlPage.getReadyState())) {
+            htmlPage.addAfterLoadAction(action);
+        }
+        else {
+            client.getJavaScriptEngine().addPostponedAction(action);
+        }
+    }
+
+    /**
+     * Initialize the clsid.
      * {@inheritDoc}
      */
     @Override
@@ -311,144 +355,6 @@ public class HtmlObject extends HtmlElement implements ValidatableElement {
     }
 
     /**
-     * Gets the applet referenced by this tag. Instantiates it if necessary.
-     *
-     * @return the applet or null, if the installed AppletConfirmHandler
-     * prohibits this applet
-     * @throws IOException in case of problem
-     */
-    public Applet getApplet() throws IOException {
-        setupAppletIfNeeded();
-        return applet_;
-    }
-
-    /**
-     * Download the associated content specified in the code attribute.
-     *
-     * @throws IOException if an error occurs while downloading the content
-     */
-    @SuppressWarnings("unchecked")
-    private synchronized void setupAppletIfNeeded() throws IOException {
-        if (applet_ != null) {
-            return;
-        }
-
-        if (StringUtils.isBlank(getTypeAttribute()) || !getTypeAttribute().startsWith(APPLET_TYPE)) {
-            return;
-        }
-
-        final HashMap<String, String> params = new HashMap<>();
-        params.put("name", getNameAttribute());
-
-        params.put("height", getHeightAttribute());
-        params.put("width", getWidthAttribute());
-
-        final DomNodeList<HtmlElement> paramTags = getElementsByTagName("param");
-        for (final HtmlElement paramTag : paramTags) {
-            final HtmlParameter parameter = (HtmlParameter) paramTag;
-            params.put(parameter.getNameAttribute(), parameter.getValueAttribute());
-        }
-
-        if (StringUtils.isEmpty(params.get(CODEBASE)) && StringUtils.isNotEmpty(getCodebaseAttribute())) {
-            params.put(CODEBASE, getCodebaseAttribute());
-        }
-
-        if (StringUtils.isEmpty(params.get(ARCHIVE)) && StringUtils.isNotEmpty(getArchiveAttribute())) {
-            params.put(ARCHIVE, getArchiveAttribute());
-        }
-
-        final HtmlPage page = (HtmlPage) getPage();
-        final WebClient webclient = page.getWebClient();
-
-        final AppletConfirmHandler handler = webclient.getAppletConfirmHandler();
-        if (null != handler && !handler.confirm(this)) {
-            return;
-        }
-
-        String appletClassName = getAttributeDirect("code");
-        if (StringUtils.isEmpty(appletClassName)) {
-            appletClassName = params.get("code");
-        }
-        if (appletClassName.endsWith(".class")) {
-            appletClassName = appletClassName.substring(0, appletClassName.length() - 6);
-        }
-
-        try (AppletClassLoader appletClassLoader =
-                new AppletClassLoader(getPage().getEnclosingWindow().getScriptableObject(),
-                                            Thread.currentThread().getContextClassLoader())) {
-
-            final String documentUrl = page.getUrl().toExternalForm();
-            String baseUrl = UrlUtils.resolveUrl(documentUrl, ".");
-            final String codebaseProperty = params.get(CODEBASE);
-            if (StringUtils.isNotEmpty(codebaseProperty)) {
-                // codebase can be relative to the page
-                baseUrl = UrlUtils.resolveUrl(baseUrl, codebaseProperty);
-            }
-            if (!baseUrl.endsWith("/")) {
-                baseUrl = baseUrl + "/";
-            }
-
-            // check archive
-            List<URL> archiveUrls = new ArrayList<>();
-            String[] archives = StringUtils.split(params.get(ARCHIVE), ',');
-            if (null != archives) {
-                for (final String tmpArchive : archives) {
-                    final String tempUrl = UrlUtils.resolveUrl(baseUrl, tmpArchive.trim());
-                    final URL archiveUrl = UrlUtils.toUrlUnsafe(tempUrl);
-
-                    appletClassLoader.addArchiveToClassPath(archiveUrl);
-                    archiveUrls.add(archiveUrl);
-                }
-            }
-            archives = StringUtils.split(params.get(CACHE_ARCHIVE), ',');
-            if (null != archives) {
-                for (final String tmpArchive : archives) {
-                    final String tempUrl = UrlUtils.resolveUrl(baseUrl, tmpArchive.trim());
-                    final URL archiveUrl = UrlUtils.toUrlUnsafe(tempUrl);
-
-                    appletClassLoader.addArchiveToClassPath(archiveUrl);
-                    archiveUrls.add(archiveUrl);
-                }
-            }
-            archiveUrls = Collections.unmodifiableList(archiveUrls);
-
-            // no archive attribute, single class
-            if (archiveUrls.isEmpty()) {
-                final String tempUrl = UrlUtils.resolveUrl(baseUrl, getAttributeDirect("code"));
-                final URL classUrl = UrlUtils.toUrlUnsafe(tempUrl);
-
-                final WebResponse response = webclient.loadWebResponse(new WebRequest(classUrl));
-                try {
-                    webclient.throwFailingHttpStatusCodeExceptionIfNecessary(response);
-                    appletClassLoader.addClassToClassPath(appletClassName, response);
-                }
-                catch (final FailingHttpStatusCodeException e) {
-                    // that is what the browser does, the applet only fails, if
-                    // the main class is not loadable
-                    LOG.error(e.getMessage(), e);
-                }
-            }
-
-            try {
-                final Class<Applet> appletClass = (Class<Applet>) appletClassLoader.loadClass(appletClassName);
-                applet_ = appletClass.newInstance();
-                applet_.setStub(new AppletStubImpl(getHtmlPageOrNull(), params,
-                        UrlUtils.toUrlUnsafe(baseUrl), UrlUtils.toUrlUnsafe(documentUrl)));
-                applet_.init();
-                applet_.start();
-            }
-            catch (final ClassNotFoundException | InstantiationException | IllegalAccessException e) {
-                if (LOG.isErrorEnabled()) {
-                    LOG.error("Loading applet '" + appletClassName + "' failed\n"
-                            + "    " + e
-                            + "\n    Classpath:\n" + appletClassLoader.info());
-                }
-                throw new RuntimeException(e);
-            }
-        }
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
@@ -468,17 +374,21 @@ public class HtmlObject extends HtmlElement implements ValidatableElement {
      * {@inheritDoc}
      */
     @Override
+    public String getCustomValidity() {
+        return customValidity_;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public void setCustomValidity(final String message) {
         customValidity_ = message;
     }
 
     @Override
     public boolean isCustomErrorValidityState() {
-        if (hasFeature(JS_HTML_OBJECT_VALIDITYSTATE_ISVALID_IGNORES_CUSTOM_ERROR)) {
-            return false;
-        }
-
-        return !StringUtils.isEmpty(customValidity_);
+        return !StringUtils.isEmptyOrNull(customValidity_);
     }
 
     @Override

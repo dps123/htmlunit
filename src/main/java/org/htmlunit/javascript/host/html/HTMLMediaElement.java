@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,13 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.BrowserVersionFeatures.JS_PROMISE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
-import org.eclipse.jetty.util.Promise;
-
+import org.htmlunit.corejs.javascript.Context;
+import org.htmlunit.corejs.javascript.Function;
+import org.htmlunit.corejs.javascript.NativePromise;
+import org.htmlunit.corejs.javascript.Scriptable;
+import org.htmlunit.corejs.javascript.VarScope;
 import org.htmlunit.html.HtmlMedia;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstant;
 import org.htmlunit.javascript.configuration.JsxConstructor;
@@ -32,13 +30,13 @@ import org.htmlunit.javascript.configuration.JsxSetter;
 import org.htmlunit.javascript.host.dom.DOMException;
 import org.htmlunit.javascript.host.dom.Node;
 
-import org.htmlunit.corejs.javascript.Undefined;
-
 /**
  * The JavaScript object {@code HTMLMediaElement}.
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement">MDN Documentation</a>
  */
 @JsxClass
 public class HTMLMediaElement extends HTMLElement {
@@ -47,85 +45,95 @@ public class HTMLMediaElement extends HTMLElement {
      * No information is available about the media resource.
      */
     @JsxConstant
-    public static final short HAVE_NOTHING = 0;
+    public static final int HAVE_NOTHING = 0;
 
     /**
      * Enough of the media resource has been retrieved that the metadata attributes are initialized.
      * Seeking will no longer raise an exception.
      */
     @JsxConstant
-    public static final short HAVE_METADATA = 1;
+    public static final int HAVE_METADATA = 1;
 
     /**
      * Data is available for the current playback position, but not enough to actually play more than one frame.
      */
     @JsxConstant
-    public static final short HAVE_CURRENT_DATA = 2;
+    public static final int HAVE_CURRENT_DATA = 2;
 
     /**
      * Data for the current playback position as well as for at least a little bit of time
      * into the future is available (in other words, at least two frames of video, for example).
      */
     @JsxConstant
-    public static final short HAVE_FUTURE_DATA = 3;
+    public static final int HAVE_FUTURE_DATA = 3;
 
     /**
      * Enough data is available—and the download rate is high enough—that the media
      * can be played through to the end without interruption.
      */
     @JsxConstant
-    public static final short HAVE_ENOUGH_DATA = 4;
+    public static final int HAVE_ENOUGH_DATA = 4;
 
     /** There is no data yet. */
     @JsxConstant
-    public static final short NETWORK_EMPTY = 0;
+    public static final int NETWORK_EMPTY = 0;
 
     /** Network is idle. */
     @JsxConstant
-    public static final short NETWORK_IDLE = 1;
+    public static final int NETWORK_IDLE = 1;
 
     /** The media is loading. */
     @JsxConstant
-    public static final short NETWORK_LOADING = 2;
+    public static final int NETWORK_LOADING = 2;
 
     /** There is no source. */
     @JsxConstant
-    public static final short NETWORK_NO_SOURCE = 3;
+    public static final int NETWORK_NO_SOURCE = 3;
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public HTMLMediaElement() {
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
      * Determines whether the specified media type can be played back.
-     * @param type the type
+     * @param context the context
+     * @param scope the scope
+     * @param thisObj this object
+     * @param args the arguments
+     * @param function the function
      * @return "probably", "maybe", or ""
      */
     @JsxFunction
-    public String canPlayType(final String type) {
-        final HtmlMedia element = (HtmlMedia) getDomNodeOrNull();
-        if (element == null) {
-            return "maybe";
+    public static String canPlayType(final Context context, final VarScope scope,
+            final Scriptable thisObj, final Object[] args, final Function function) {
+        if (!(thisObj instanceof HTMLMediaElement htmlMedia)) {
+            throw JavaScriptEngine.reportRuntimeError(
+                    "HTMLMediaElement.canPlayType() failed - this is not a HTMLMediaElement");
         }
-        return element.canPlayType(type);
+
+        if (args.length == 0) {
+            throw JavaScriptEngine.typeError(
+                    "HTMLMediaElement.canPlayType(): At least 1 argument required, but only 0 passed.");
+        }
+
+        return htmlMedia.getBrowserVersion().canPlayType(JavaScriptEngine.toString(args[0]));
     }
 
     /**
      * Begins playback of the media.
      *
-     * @return a {@link Promise} which is fulfilled when playback has been started,
+     * @return a Promise which is fulfilled when playback has been started,
      *         or is rejected if for any reason playback cannot be started
      */
     @JsxFunction
-    public Object play() {
-        if (getBrowserVersion().hasFeature(JS_PROMISE)) {
-            return setupRejectedPromise(() ->
-                        new DOMException("HtmlUnit does not support media play().", DOMException.NOT_FOUND_ERR));
-        }
-        return Undefined.instance;
+    public NativePromise play() {
+        return setupRejectedPromise(() ->
+                    new DOMException("HtmlUnit does not support media play().", DOMException.NOT_FOUND_ERR));
     }
 
     /**
@@ -133,6 +141,7 @@ public class HTMLMediaElement extends HTMLElement {
      */
     @JsxFunction
     public void pause() {
+        // nothing to do
     }
 
     /**
@@ -142,6 +151,7 @@ public class HTMLMediaElement extends HTMLElement {
      */
     @JsxFunction
     public void load() {
+        // nothing to do
     }
 
     /**
@@ -150,7 +160,7 @@ public class HTMLMediaElement extends HTMLElement {
      */
     @JsxGetter
     @Override
-    public short getNodeType() {
+    public int getNodeType() {
         final HtmlMedia element = (HtmlMedia) getDomNodeOrNull();
         if (element == null) {
             return Node.ELEMENT_NODE;
@@ -167,6 +177,11 @@ public class HTMLMediaElement extends HTMLElement {
         return getNodeNameCustomize();
     }
 
+    /**
+     * Separate method to be able to override this in subclasses.
+     *
+     * @return the node name
+     */
     protected String getNodeNameCustomize() {
         final HtmlMedia element = (HtmlMedia) getDomNodeOrNull();
         if (element == null) {

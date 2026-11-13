@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,44 +14,42 @@
  */
 package org.htmlunit.html;
 
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.IE;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.IOException;
 import java.io.Writer;
 import java.net.URL;
-import java.util.Collections;
+import java.nio.charset.Charset;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.servlet.Servlet;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.openqa.selenium.By;
-import org.openqa.selenium.By.ById;
-import org.openqa.selenium.By.ByTagName;
-import org.openqa.selenium.WebDriver;
-
 import org.htmlunit.FormEncodingType;
 import org.htmlunit.HttpHeader;
 import org.htmlunit.HttpMethod;
 import org.htmlunit.MockWebConnection;
+import org.htmlunit.WebClient;
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
-import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.HtmlUnitNYI;
 import org.htmlunit.util.MimeType;
 import org.htmlunit.util.NameValuePair;
+import org.htmlunit.util.PrimitiveWebServer;
 import org.htmlunit.util.UrlUtils;
+import org.junit.jupiter.api.Test;
+import org.openqa.selenium.By;
+import org.openqa.selenium.By.ById;
+import org.openqa.selenium.By.ByTagName;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.htmlunit.HtmlUnitDriver;
+
+import jakarta.servlet.Servlet;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Tests for {@link HtmlForm}, with BrowserRunner.
@@ -60,18 +58,16 @@ import org.htmlunit.util.UrlUtils;
  * @author Ronald Brill
  * @author Anton Demydenko
  */
-@RunWith(BrowserRunner.class)
 public class HtmlForm2Test extends WebDriverTestCase {
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"myForm", "TypeError"},
-            IE = {"myForm", "myForm"})
+    @Alerts({"myForm", "TypeError"})
     public void formsAccessor_FormsAsFunction() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
@@ -96,11 +92,10 @@ public class HtmlForm2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"myForm", "TypeError"},
-            IE = {"myForm", "myForm"})
+    @Alerts({"myForm", "TypeError"})
     public void formsAccessor_FormsAsFunction2() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
@@ -125,18 +120,17 @@ public class HtmlForm2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"error", "error", "error"},
-            IE = {"textfieldid", "textfieldname", "textfieldid"})
+    @Alerts({"TypeError", "TypeError", "TypeError"})
     public void asFunction() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  var f1 = document.forms[0];\n"
-            + "  try { log(f1('textfieldid').id) } catch (e) { log('error') }\n"
-            + "  try { log(f1('textfieldname').name) } catch (e) { log('error') }\n"
-            + "  try { log(f1(0).id) } catch (e) { log('error') }\n"
+            + "  try { log(f1('textfieldid').id) } catch(e) { logEx(e) }\n"
+            + "  try { log(f1('textfieldname').name) } catch(e) { logEx(e) }\n"
+            + "  try { log(f1(0).id) } catch(e) { logEx(e) }\n"
             + "}\n"
             + "</script></head><body onload='test()'>\n"
             + "<p>hello world</p>\n"
@@ -153,20 +147,19 @@ public class HtmlForm2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "TypeError",
-            IE = {"textfieldid", "textfieldname", "textfieldid"})
+    @Alerts("TypeError")
     public void asFunctionFormsFunction() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  try {\n"
             + "    var f1 = document.forms(0);\n"
-            + "    try { log(f1('textfieldid').id) } catch (e) { log('error') }\n"
-            + "    try { log(f1('textfieldname').name) } catch (e) { log('error') }\n"
-            + "    try { log(f1(0).id) } catch (e) { log('error') }\n"
-            + "  } catch (e) { log('TypeError') }\n"
+            + "    try { log(f1('textfieldid').id) } catch(e) { logEx(e) }\n"
+            + "    try { log(f1('textfieldname').name) } catch(e) { logEx(e) }\n"
+            + "    try { log(f1(0).id) } catch(e) { logEx(e) }\n"
+            + "  } catch(e) { logEx(e) }\n"
             + "}\n"
             + "</script></head><body onload='test()'>\n"
             + "<p>hello world</p>\n"
@@ -184,19 +177,21 @@ public class HtmlForm2Test extends WebDriverTestCase {
      */
     @Test
     public void base() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "  <base href='" + URL_SECOND + "'>\n"
             + "</head><body>\n"
             + "<form action='two.html'>\n"
             + "  <input type='submit'>\n"
             + "</form></body></html>";
 
-        getMockWebConnection().setDefaultResponse("<html><head></head><body>foo</body></html>");
+        getMockWebConnection().setDefaultResponse(DOCTYPE_HTML + "<html><head></head><body>foo</body></html>");
 
         final WebDriver driver = loadPage2(html);
         driver.findElement(new ByTagName("input")).click();
+        sleepRealBrowser(400);
 
+        assertEquals(2, getMockWebConnection().getRequestCount());
         final URL requestedUrl = getMockWebConnection().getLastWebRequest().getUrl();
         final URL expectedUrl = new URL(URL_SECOND, "two.html");
         assertEquals(expectedUrl, requestedUrl);
@@ -207,19 +202,21 @@ public class HtmlForm2Test extends WebDriverTestCase {
      */
     @Test
     public void emptyActionWithBase() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "  <base href='" + URL_SECOND + "'>\n"
             + "</head><body>\n"
             + "<form>\n"
             + "  <input type='submit'>\n"
             + "</form></body></html>";
 
-        getMockWebConnection().setDefaultResponse("<html><head></head><body>foo</body></html>");
+        getMockWebConnection().setDefaultResponse(DOCTYPE_HTML + "<html><head></head><body>foo</body></html>");
 
         final WebDriver driver = loadPage2(html);
         driver.findElement(new ByTagName("input")).click();
+        sleepRealBrowser(400);
 
+        assertEquals(2, getMockWebConnection().getRequestCount());
         final URL requestedUrl = getMockWebConnection().getLastWebRequest().getUrl();
         assertEquals(URL_FIRST.toExternalForm(), requestedUrl);
     }
@@ -229,8 +226,8 @@ public class HtmlForm2Test extends WebDriverTestCase {
      */
     @Test
     public void emptyActionWithBase2() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "  <base href='" + URL_SECOND + "'>\n"
             + "</head><body>\n"
             + "<form>\n"
@@ -238,27 +235,28 @@ public class HtmlForm2Test extends WebDriverTestCase {
             + "  <input type='submit'>\n"
             + "</form></body></html>";
 
-        getMockWebConnection().setDefaultResponse("<html><head></head><body>foo</body></html>");
+        getMockWebConnection().setDefaultResponse(DOCTYPE_HTML + "<html><head></head><body>foo</body></html>");
 
         final WebDriver driver = loadPage2(html);
         driver.findElement(new ByTagName("input")).click();
 
+        assertEquals(1, getMockWebConnection().getRequestCount());
         final URL requestedUrl = getMockWebConnection().getLastWebRequest().getUrl();
         assertEquals(URL_FIRST.toExternalForm(), requestedUrl);
     }
 
     /**
-      * Simulates a bug report where using JavaScript to submit a form that contains a
-      * JavaScript action causes a an "IllegalArgumentException: JavaScript URLs can only
-      * be used to load content into frames and iframes".
-      *
-      * @throws Exception if the test fails
-      */
+     * Simulates a bug report where using JavaScript to submit a form that contains a
+     * JavaScript action causes a an "IllegalArgumentException: JavaScript URLs can only
+     * be used to load content into frames and iframes".
+     *
+     * @throws Exception if the test fails
+     */
     @Test
     @Alerts("clicked")
     public void jSSubmit_JavaScriptAction() throws Exception {
-        final String html
-            = "<html><head><title>First</title></head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><title>First</title></head>\n"
             + "<body onload='document.getElementById(\"aForm\").submit()'>\n"
             + "<form id='aForm' action='javascript:alert(\"clicked\")'"
             + "</form>\n"
@@ -271,15 +269,18 @@ public class HtmlForm2Test extends WebDriverTestCase {
      * @throws Exception if the test page can't be loaded
      */
     @Test
-    @Alerts({"1", "val2"})
+    @Alerts({"1", "val2", "3", "3"})
     public void malformedHtml_nestedForms() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
             + "    log(document.forms.length);\n"
             + "    log(document.forms[0].field2.value);\n"
+
+            + "    log(document.forms[0].length);\n"
+            + "    log(document.forms[0].elements.length);\n"
             + "  }\n"
             + "</script></head><body onload='test()'>\n"
             + "<form id='form1' method='get' action='foo'>\n"
@@ -297,11 +298,12 @@ public class HtmlForm2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts({"§§URL§§?par%F6m=Hello+G%FCnter", "par\u00F6m", "Hello G\u00FCnter"})
+    @Alerts({"§§URL§§/?par%F6m=Hello+G%FCnter", "GET /?par%F6m=Hello+G%FCnter HTTP/1.1"})
     public void encodingSubmit() throws Exception {
         stopWebServers();
-        final String html =
-            "<html>\n"
+
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <meta http-equiv='Content-Type' content='text/html; charset=UTF-8'>\n"
             + "</head>\n"
@@ -312,17 +314,26 @@ public class HtmlForm2Test extends WebDriverTestCase {
             + "  </form>\n"
             + "</body></html>";
 
-        expandExpectedAlertsVariables(URL_FIRST);
-        final WebDriver driver = loadPage2(html, URL_FIRST, "text/html;charset=ISO-8859-1", ISO_8859_1, ISO_8859_1);
-        driver.findElement(new ById("mySubmit")).click();
+        final String response = "HTTP/1.1 200 OK\r\n"
+                + "Content-Length: " + (html.length()) + "\r\n"
+                + "Content-Type: text/html;charset=ISO-8859-1\r\n"
+                + "\r\n"
+                + html;
 
-        assertEquals(getExpectedAlerts()[0], driver.getCurrentUrl());
+        try (PrimitiveWebServer primitiveWebServer = new PrimitiveWebServer(null, response, null)) {
+            final URL url = new URL("http://localhost:" + primitiveWebServer.getPort());
+            expandExpectedAlertsVariables(url);
 
-        final List<NameValuePair> requestedParams =
-                getMockWebConnection().getLastWebRequest().getRequestParameters();
-        assertEquals(1, requestedParams.size());
-        assertEquals(getExpectedAlerts()[1], requestedParams.get(0).getName());
-        assertEquals(getExpectedAlerts()[2], requestedParams.get(0).getValue());
+            final WebDriver driver = getWebDriver();
+            driver.get(url.toExternalForm());
+
+            driver.findElement(new ById("mySubmit")).click();
+            sleepRealBrowser(400);
+
+            assertEquals(getExpectedAlerts()[0], driver.getCurrentUrl());
+            assertEquals(2, primitiveWebServer.getRequests().size());
+            assertTrue(primitiveWebServer.getRequests().get(1).contains(getExpectedAlerts()[1]));
+        }
     }
 
     /**
@@ -332,8 +343,8 @@ public class HtmlForm2Test extends WebDriverTestCase {
     @Test
     @Alerts({"null", "§§URL§§path?query"})
     public void originRefererHeaderGet() throws Exception {
-        final String firstHtml
-            = "<html>\n"
+        final String firstHtml = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "  <form method='get' action='" + URL_SECOND + "'>\n"
@@ -341,7 +352,7 @@ public class HtmlForm2Test extends WebDriverTestCase {
             + "  </form>\n"
             + "</body>\n"
             + "</html>";
-        final String secondHtml = "<html><body></body></html>";
+        final String secondHtml = DOCTYPE_HTML + "<html><body></body></html>";
 
         final MockWebConnection webConnection = getMockWebConnection();
         final URL requestUrl = new URL(URL_FIRST, "/path?query");
@@ -351,7 +362,9 @@ public class HtmlForm2Test extends WebDriverTestCase {
         final WebDriver driver = loadPage2(firstHtml, requestUrl);
 
         driver.findElement(new ById("mySubmit")).click();
+        sleepRealBrowser(400);
 
+        assertEquals(2, getMockWebConnection().getRequestCount());
         final Map<String, String> lastAdditionalHeaders = webConnection.getLastAdditionalHeaders();
         assertEquals(getExpectedAlerts()[0], "" + lastAdditionalHeaders.get(HttpHeader.ORIGIN));
         assertEquals(getExpectedAlerts()[1], "" + lastAdditionalHeaders.get(HttpHeader.REFERER));
@@ -362,11 +375,10 @@ public class HtmlForm2Test extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = {"§§URL§§", "§§URL§§/path?query"},
-            IE = {"null", "§§URL§§/path?query"})
+    @Alerts({"§§URL§§", "§§URL§§/path?query"})
     public void originRefererHeaderPost() throws Exception {
-        final String firstHtml
-            = "<html>\n"
+        final String firstHtml = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "  <form method='post' action='" + URL_SECOND + "'>\n"
@@ -374,7 +386,7 @@ public class HtmlForm2Test extends WebDriverTestCase {
             + "  </form>\n"
             + "</body>\n"
             + "</html>";
-        final String secondHtml = "<html><body></body></html>";
+        final String secondHtml = DOCTYPE_HTML + "<html><body></body></html>";
 
         final MockWebConnection webConnection = getMockWebConnection();
         final URL requestUrl = new URL(URL_FIRST, "/path?query");
@@ -386,26 +398,28 @@ public class HtmlForm2Test extends WebDriverTestCase {
         final WebDriver driver = loadPage2(firstHtml, requestUrl);
 
         driver.findElement(new ById("mySubmit")).click();
+        sleepRealBrowser(400);
 
+        assertEquals(2, getMockWebConnection().getRequestCount());
         final Map<String, String> lastAdditionalHeaders = webConnection.getLastAdditionalHeaders();
-        assertEquals(getExpectedAlerts()[0], "" + lastAdditionalHeaders.get(HttpHeader.ORIGIN));
-        assertEquals(getExpectedAlerts()[1], "" + lastAdditionalHeaders.get(HttpHeader.REFERER));
+        assertEquals(getExpectedAlerts()[0], lastAdditionalHeaders.get(HttpHeader.ORIGIN));
+        assertEquals(getExpectedAlerts()[1], lastAdditionalHeaders.get(HttpHeader.REFERER));
     }
 
     /**
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(CHROME = "text/html,application/xhtml+xml,application/xml;q=0.9,"
-                    + "image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-            EDGE = "text/html,application/xhtml+xml,application/xml;q=0.9,"
-                    + "image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-            FF = "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-            FF_ESR = "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-            IE = "text/html, application/xhtml+xml, image/jxr, */*")
+    @Alerts(CHROME = "text/html,application/xhtml+xml,application/xml;"
+                    + "q=0.9,image/jxl,image/avif,image/webp,image/apng,*/*;"
+                    + "q=0.8,application/signed-exchange;v=b3;q=0.7",
+            EDGE = "text/html,application/xhtml+xml,application/xml;"
+                    + "q=0.9,image/avif,image/webp,image/apng,*/*;"
+                    + "q=0.8,application/signed-exchange;v=b3;q=0.7",
+            FF = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            FF_ESR = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
     public void acceptHeader() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head></head><body>\n"
             + "  <form action='test2'>\n"
             + "    <input type=submit id='mySubmit'>\n"
@@ -434,7 +448,8 @@ public class HtmlForm2Test extends WebDriverTestCase {
             request.setCharacterEncoding(UTF_8.name());
             response.setContentType(MimeType.TEXT_HTML);
             final Writer writer = response.getWriter();
-            final String html = "<html><head><script>\n"
+            final String html = DOCTYPE_HTML
+                    + "<html><head><script>\n"
                     + "function test() {\n"
                     + "  alert('" + request.getHeader(HttpHeader.ACCEPT) + "');\n"
                     + "}\n"
@@ -448,11 +463,13 @@ public class HtmlForm2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "gzip, deflate, br",
-            IE = "gzip, deflate")
+    @Alerts("gzip, deflate, br, zstd")
+    @HtmlUnitNYI(CHROME = "gzip, deflate, br",
+            EDGE = "gzip, deflate, br",
+            FF = "gzip, deflate, br",
+            FF_ESR = "gzip, deflate, br")
     public void acceptEncodingHeader() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head></head><body>\n"
             + "  <form action='test2'>\n"
             + "    <input type=submit id='mySubmit'>\n"
@@ -472,7 +489,7 @@ public class HtmlForm2Test extends WebDriverTestCase {
      */
     @Test
     public void formMultipartEncodingTypeTest() throws Exception {
-        final String html = "<!DOCTYPE html>\n"
+        final String html = DOCTYPE_HTML
             + "<html><head></head>\n"
             + "<body>\n"
             + "  <p>hello world</p>\n"
@@ -484,8 +501,8 @@ public class HtmlForm2Test extends WebDriverTestCase {
             + "    <button id='myButton' type='submit'>Submit</button>\n"
             + "  </form>\n"
             + "</body></html>";
-        final String secondContent
-            = "<html><head><title>second</title></head><body>\n"
+        final String secondContent = DOCTYPE_HTML
+            + "<html><head><title>second</title></head><body>\n"
             + "  <p>hello world</p>\n"
             + "</body></html>";
 
@@ -493,6 +510,7 @@ public class HtmlForm2Test extends WebDriverTestCase {
 
         final WebDriver driver = loadPage2(html, URL_FIRST);
         driver.findElement(By.id("myButton")).click();
+        sleepRealBrowser(400);
 
         assertEquals(2, getMockWebConnection().getRequestCount());
         assertEquals(URL_SECOND.toString(), getMockWebConnection().getLastWebRequest().getUrl());
@@ -504,7 +522,7 @@ public class HtmlForm2Test extends WebDriverTestCase {
      */
     @Test
     public void formUrlEncodedEncodingTypeTest() throws Exception {
-        final String html = "<!DOCTYPE html>\n"
+        final String html = DOCTYPE_HTML
             + "<html><head></head>\n"
             + "<body>\n"
             + "  <p>hello world</p>\n"
@@ -516,8 +534,8 @@ public class HtmlForm2Test extends WebDriverTestCase {
             + "  </form>\n"
             + "</body></html>";
 
-        final String secondContent
-            = "<html><head><title>second</title></head><body>\n"
+        final String secondContent = DOCTYPE_HTML
+            + "<html><head><title>second</title></head><body>\n"
             + "  <p>hello world</p>\n"
             + "</body></html>";
 
@@ -525,6 +543,7 @@ public class HtmlForm2Test extends WebDriverTestCase {
 
         final WebDriver driver = loadPage2(html, URL_FIRST);
         driver.findElement(By.id("myButton")).click();
+        sleepRealBrowser(400);
 
         assertEquals(2, getMockWebConnection().getRequestCount());
         assertEquals(URL_SECOND.toString(), getMockWebConnection().getLastWebRequest().getUrl());
@@ -535,11 +554,9 @@ public class HtmlForm2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"2", "third"},
-            IE = {"1", "third"})
-    @HtmlUnitNYI(IE = {"2", "third"})
+    @Alerts({"2", "third"})
     public void buttonWithFormAction() throws Exception {
-        final String html = "<!DOCTYPE html>\n"
+        final String html = DOCTYPE_HTML
             + "<html><head><title>first</title></head>\n"
             + "<body>\n"
             + "  <p>hello world</p>\n"
@@ -549,21 +566,24 @@ public class HtmlForm2Test extends WebDriverTestCase {
             + "  </form>\n"
             + "</body></html>";
 
-        final String secondContent = "<html><head><title>second</title></head>\n"
+        final String secondContent = DOCTYPE_HTML
+                + "<html><head><title>second</title></head>\n"
                 + "<body>\n"
                 + "  <p>hello world</p>\n"
                 + "</body></html>";
 
-        final String thirdContent = "<html><head><title>third</title></head>\n"
-            + "<body>\n"
-            + "  <p>hello world</p>\n"
-            + "</body></html>";
+        final String thirdContent = DOCTYPE_HTML
+                + "<html><head><title>third</title></head>\n"
+                + "<body>\n"
+                + "  <p>hello world</p>\n"
+                + "</body></html>";
 
         getMockWebConnection().setResponse(URL_SECOND, secondContent);
         getMockWebConnection().setResponse(URL_THIRD, thirdContent);
 
         final WebDriver driver = loadPage2(html);
         driver.findElement(By.id("myButton")).click();
+        sleepRealBrowser(400);
 
         assertEquals(Integer.parseInt(getExpectedAlerts()[0]), getMockWebConnection().getRequestCount());
         assertTrue(driver.getPageSource().contains(getExpectedAlerts()[1]));
@@ -575,7 +595,7 @@ public class HtmlForm2Test extends WebDriverTestCase {
     @Test
     @Alerts({"2", "third"})
     public void buttonWithFormActionWithoutType() throws Exception {
-        final String html = "<!DOCTYPE html>\n"
+        final String html = DOCTYPE_HTML
             + "<html><head><title>first</title></head>\n"
             + "<body>\n"
             + "  <p>hello world</p>\n"
@@ -585,21 +605,24 @@ public class HtmlForm2Test extends WebDriverTestCase {
             + "  </form>\n"
             + "</body></html>";
 
-        final String secondContent = "<html><head><title>second</title></head>\n"
+        final String secondContent = DOCTYPE_HTML
+                + "<html><head><title>second</title></head>\n"
                 + "<body>\n"
                 + "  <p>hello world</p>\n"
                 + "</body></html>";
 
-        final String thirdContent = "<html><head><title>third</title></head>\n"
-            + "<body>\n"
-            + "  <p>hello world</p>\n"
-            + "</body></html>";
+        final String thirdContent = DOCTYPE_HTML
+                + "<html><head><title>third</title></head>\n"
+                + "<body>\n"
+                + "  <p>hello world</p>\n"
+                + "</body></html>";
 
         getMockWebConnection().setResponse(URL_SECOND, secondContent);
         getMockWebConnection().setResponse(URL_THIRD, thirdContent);
 
         final WebDriver driver = loadPage2(html);
         driver.findElement(By.id("myButton")).click();
+        sleepRealBrowser(400);
 
         assertEquals(Integer.parseInt(getExpectedAlerts()[0]), getMockWebConnection().getRequestCount());
         assertTrue(driver.getPageSource().contains(getExpectedAlerts()[1]));
@@ -610,7 +633,7 @@ public class HtmlForm2Test extends WebDriverTestCase {
      */
     @Test
     public void buttonWithFormActionNegative() throws Exception {
-        final String html = "<!DOCTYPE html>\n"
+        final String html = DOCTYPE_HTML
             + "<html><head></head>\n"
             + "<body>\n"
             + "  <p>hello world</p>\n"
@@ -634,7 +657,7 @@ public class HtmlForm2Test extends WebDriverTestCase {
     @Test
     @Alerts({"2", "third/"})
     public void inputTypeSubmitWithFormAction() throws Exception {
-        final String html = "<!DOCTYPE html>\n"
+        final String html = DOCTYPE_HTML
             + "<html><head></head>\n"
             + "<body>\n"
             + "  <p>hello world</p>\n"
@@ -650,6 +673,7 @@ public class HtmlForm2Test extends WebDriverTestCase {
 
         final WebDriver driver = loadPage2(html);
         driver.findElement(By.id("myButton")).click();
+        sleepRealBrowser(400);
 
         assertEquals(Integer.parseInt(getExpectedAlerts()[0]), getMockWebConnection().getRequestCount());
         assertTrue(getMockWebConnection().getLastWebRequest()
@@ -660,10 +684,9 @@ public class HtmlForm2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "third content",
-            IE = "second content")
+    @Alerts("third content")
     public void inputTypeImageWithFormAction() throws Exception {
-        final String html = "<!DOCTYPE html>\n"
+        final String html = DOCTYPE_HTML
             + "<html><head></head>\n"
             + "<body>\n"
             + "  <p>hello world</p>\n"
@@ -679,6 +702,7 @@ public class HtmlForm2Test extends WebDriverTestCase {
 
         final WebDriver driver = loadPage2(html);
         driver.findElement(By.id("myButton")).click();
+        sleepRealBrowser(400);
 
         assertEquals(2, getMockWebConnection().getRequestCount());
         assertTrue("Incorrect conent of new window", driver.getPageSource().contains(getExpectedAlerts()[0]));
@@ -689,7 +713,7 @@ public class HtmlForm2Test extends WebDriverTestCase {
      */
     @Test
     public void buttonSubmitWithFormMethod() throws Exception {
-        final String html = "<!DOCTYPE html>\n"
+        final String html = DOCTYPE_HTML
             + "<html><head></head>\n"
             + "<body>\n"
             + "  <p>hello world</p>\n"
@@ -705,6 +729,7 @@ public class HtmlForm2Test extends WebDriverTestCase {
 
         final WebDriver driver = loadPage2(html);
         driver.findElement(By.id("myButton")).click();
+        sleepRealBrowser(400);
 
         assertEquals(2, getMockWebConnection().getRequestCount());
         assertEquals(URL_SECOND.toString(), getMockWebConnection().getLastWebRequest().getUrl());
@@ -716,7 +741,7 @@ public class HtmlForm2Test extends WebDriverTestCase {
      */
     @Test
     public void inputTypeSubmitWithFormMethod() throws Exception {
-        final String html = "<!DOCTYPE html>\n"
+        final String html = DOCTYPE_HTML
             + "<html><head></head>\n"
             + "<body>\n"
             + "  <p>hello world</p>\n"
@@ -731,6 +756,7 @@ public class HtmlForm2Test extends WebDriverTestCase {
 
         final WebDriver driver = loadPage2(html);
         driver.findElement(By.id("myButton")).click();
+        sleepRealBrowser(400);
 
         assertEquals(2, getMockWebConnection().getRequestCount());
         assertEquals(URL_SECOND.toString(), getMockWebConnection().getLastWebRequest().getUrl());
@@ -741,10 +767,9 @@ public class HtmlForm2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "GET",
-            IE = "POST")
+    @Alerts("GET")
     public void inputTypeImageWithFormMethod() throws Exception {
-        final String html = "<!DOCTYPE html>\n"
+        final String html = DOCTYPE_HTML
             + "<html><head></head>\n"
             + "<body>\n"
             + "  <p>hello world</p>\n"
@@ -759,6 +784,7 @@ public class HtmlForm2Test extends WebDriverTestCase {
 
         final WebDriver driver = loadPage2(html);
         driver.findElement(By.id("myButton")).click();
+        sleepRealBrowser(400);
 
         assertEquals(2, getMockWebConnection().getRequestCount());
         assertEquals(URL_SECOND.toString(),
@@ -771,7 +797,7 @@ public class HtmlForm2Test extends WebDriverTestCase {
      */
     @Test
     public void buttonWithFormEnctype() throws Exception {
-        final String html = "<!DOCTYPE html>\n"
+        final String html = DOCTYPE_HTML
             + "<html><head></head>\n"
             + "<body>\n"
             + "  <p>hello world</p>\n"
@@ -789,6 +815,7 @@ public class HtmlForm2Test extends WebDriverTestCase {
 
         final WebDriver driver = loadPage2(html);
         driver.findElement(By.id("myButton")).click();
+        sleepRealBrowser(400);
 
         assertEquals(2, getMockWebConnection().getRequestCount());
         assertEquals(URL_SECOND.toString(), getMockWebConnection().getLastWebRequest().getUrl());
@@ -800,7 +827,7 @@ public class HtmlForm2Test extends WebDriverTestCase {
      */
     @Test
     public void inputTypeSubmitWithFormEnctype() throws Exception {
-        final String html = "<!DOCTYPE html>\n"
+        final String html = DOCTYPE_HTML
             + "<html><head></head>\n"
             + "<body>\n"
             + "  <p>hello world</p>\n"
@@ -818,6 +845,7 @@ public class HtmlForm2Test extends WebDriverTestCase {
 
         final WebDriver driver = loadPage2(html);
         driver.findElement(By.id("myButton")).click();
+        sleepRealBrowser(400);
 
         assertEquals(2, getMockWebConnection().getRequestCount());
         assertEquals(URL_SECOND.toString(), getMockWebConnection().getLastWebRequest().getUrl());
@@ -828,10 +856,9 @@ public class HtmlForm2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "application/x-www-form-urlencoded",
-            IE = "multipart/form-data")
+    @Alerts("application/x-www-form-urlencoded")
     public void inputTypeImageWithFormEnctype() throws Exception {
-        final String html = "<!DOCTYPE html>\n"
+        final String html = DOCTYPE_HTML
             + "<html><head></head>\n"
             + "<body>\n"
             + "  <p>hello world</p>\n"
@@ -847,7 +874,9 @@ public class HtmlForm2Test extends WebDriverTestCase {
 
         final WebDriver driver = loadPage2(html, URL_FIRST);
         driver.findElement(By.id("myButton")).click();
+        sleepRealBrowser(400);
 
+        assertEquals(2, getMockWebConnection().getRequestCount());
         assertEquals(URL_SECOND.toString(), getMockWebConnection().getLastWebRequest().getUrl());
         assertEquals(getExpectedAlerts()[0],
                     getMockWebConnection().getLastWebRequest().getEncodingType().getName());
@@ -858,7 +887,7 @@ public class HtmlForm2Test extends WebDriverTestCase {
      */
     @Test
     public void buttonWithFormTarget() throws Exception {
-        final String html = "<!DOCTYPE html>\n"
+        final String html = DOCTYPE_HTML
             + "<html><head></head>\n"
             + "<body>\n"
             + "  <p>hello world</p>\n"
@@ -900,7 +929,7 @@ public class HtmlForm2Test extends WebDriverTestCase {
     @Test
     @Alerts("second content")
     public void inputTypeSubmitWithFormTarget() throws Exception {
-        final String html = "<!DOCTYPE html>\n"
+        final String html = DOCTYPE_HTML
             + "<html><head></head>\n"
             + "<body>\n"
             + "  <p>hello world</p>\n"
@@ -939,11 +968,9 @@ public class HtmlForm2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "2",
-            IE = "1")
-    @NotYetImplemented(IE)
+    @Alerts("2")
     public void inputTypeImageWithFormTarget() throws Exception {
-        final String html = "<!DOCTYPE html>\n"
+        final String html = DOCTYPE_HTML
             + "<html><head></head>\n"
             + "<body>\n"
             + "  <p>hello world</p>\n"
@@ -993,7 +1020,8 @@ public class HtmlForm2Test extends WebDriverTestCase {
             request.setCharacterEncoding(UTF_8.name());
             response.setContentType(MimeType.TEXT_HTML);
             final Writer writer = response.getWriter();
-            final String html = "<html><head><script>\n"
+            final String html = DOCTYPE_HTML
+                    + "<html><head><script>\n"
                     + "function test() {\n"
                     + "  alert('" + request.getHeader(HttpHeader.ACCEPT_ENCODING) + "');\n"
                     + "}\n"
@@ -1009,7 +1037,8 @@ public class HtmlForm2Test extends WebDriverTestCase {
     @Test
     @Alerts("second")
     public void novalidate() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head><title>first</title></head>\n"
             + "<body>\n"
             + "  <form name='testForm' action='\" + URL_SECOND + \"' novalidate>\n"
@@ -1026,7 +1055,9 @@ public class HtmlForm2Test extends WebDriverTestCase {
 
         final WebDriver driver = loadPage2(html);
         driver.findElement(By.id("submit")).click();
+        sleepRealBrowser(400);
 
+        assertEquals(2, getMockWebConnection().getRequestCount());
         assertEquals(getExpectedAlerts()[0], driver.getTitle());
     }
 
@@ -1036,7 +1067,8 @@ public class HtmlForm2Test extends WebDriverTestCase {
     @Test
     @Alerts("second")
     public void submitFormnovalidate() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head><title>first</title></head>\n"
             + "<body>\n"
             + "  <form name='testForm' action='\" + URL_SECOND + \"'>\n"
@@ -1053,7 +1085,9 @@ public class HtmlForm2Test extends WebDriverTestCase {
 
         final WebDriver driver = loadPage2(html);
         driver.findElement(By.id("submit")).click();
+        sleepRealBrowser(400);
 
+        assertEquals(2, getMockWebConnection().getRequestCount());
         assertEquals(getExpectedAlerts()[0], driver.getTitle());
     }
 
@@ -1063,7 +1097,8 @@ public class HtmlForm2Test extends WebDriverTestCase {
     @Test
     @Alerts("second")
     public void submitButtonFormnovalidate() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head><title>first</title></head>\n"
             + "<body>\n"
             + "  <form name='testForm' action='\" + URL_SECOND + \"'>\n"
@@ -1080,7 +1115,9 @@ public class HtmlForm2Test extends WebDriverTestCase {
 
         final WebDriver driver = loadPage2(html);
         driver.findElement(By.id("submit")).click();
+        sleepRealBrowser(400);
 
+        assertEquals(2, getMockWebConnection().getRequestCount());
         assertEquals(getExpectedAlerts()[0], driver.getTitle());
     }
 
@@ -1090,7 +1127,8 @@ public class HtmlForm2Test extends WebDriverTestCase {
     @Test
     @Alerts("second")
     public void defaultButtonFormnovalidate() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head><title>first</title></head>\n"
             + "<body>\n"
             + "  <form name='testForm' action='\" + URL_SECOND + \"'>\n"
@@ -1107,7 +1145,9 @@ public class HtmlForm2Test extends WebDriverTestCase {
 
         final WebDriver driver = loadPage2(html);
         driver.findElement(By.id("submit")).click();
+        sleepRealBrowser(400);
 
+        assertEquals(2, getMockWebConnection().getRequestCount());
         assertEquals(getExpectedAlerts()[0], driver.getTitle());
     }
 
@@ -1115,12 +1155,10 @@ public class HtmlForm2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"radioParam2#radioValue2", "selectParam#selectValue", "textParam#textValue",
-        "textareaParam#textarea value"},
-            IE = {})
+    @Alerts({"radioParam2#radioValue2", "selectParam#selectValue", "textParam#textValue",
+             "textareaParam#textarea value"})
     public void submitUsingFormAttribute() throws Exception {
-        final String html =
-            "<!DOCTYPE html>\n"
+        final String html = DOCTYPE_HTML
             + "<html>\n"
             + "<head>\n"
             + "</head>\n"
@@ -1151,10 +1189,13 @@ public class HtmlForm2Test extends WebDriverTestCase {
 
         final WebDriver driver = loadPage2(html);
         driver.findElement(new ById("mySubmit")).click();
+        sleepRealBrowser(400);
+
+        assertEquals(2, getMockWebConnection().getRequestCount());
 
         final List<NameValuePair> requestedParams =
                 getMockWebConnection().getLastWebRequest().getRequestParameters();
-        Collections.sort(requestedParams, Comparator.comparing(NameValuePair::getName));
+        requestedParams.sort(Comparator.comparing(NameValuePair::getName));
 
         assertEquals(getExpectedAlerts().length, requestedParams.size());
 
@@ -1168,12 +1209,10 @@ public class HtmlForm2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"radioParam2#radioValue2", "selectParam#selectValue", "textParam#textValue",
-        "textareaParam#textarea value"},
-            IE = {})
+    @Alerts({"radioParam2#radioValue2", "selectParam#selectValue", "textParam#textValue",
+             "textareaParam#textarea value"})
     public void submitUsingFormAttributeElementsDeclaredBeforeForm() throws Exception {
-        final String html =
-            "<!DOCTYPE html>\n"
+        final String html = DOCTYPE_HTML
             + "<html>\n"
             + "<head>\n"
             + "</head>\n"
@@ -1206,10 +1245,13 @@ public class HtmlForm2Test extends WebDriverTestCase {
 
         final WebDriver driver = loadPage2(html);
         driver.findElement(new ById("mySubmit")).click();
+        sleepRealBrowser(400);
+
+        assertEquals(2, getMockWebConnection().getRequestCount());
 
         final List<NameValuePair> requestedParams =
                 getMockWebConnection().getLastWebRequest().getRequestParameters();
-        Collections.sort(requestedParams, Comparator.comparing(NameValuePair::getName));
+        requestedParams.sort(Comparator.comparing(NameValuePair::getName));
 
         assertEquals(getExpectedAlerts().length, requestedParams.size());
 
@@ -1223,11 +1265,9 @@ public class HtmlForm2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "textParam#textValue",
-            IE = {})
+    @Alerts("textParam#textValue")
     public void submitUsingFormAttributeElementsDeeplyNested() throws Exception {
-        final String html =
-            "<!DOCTYPE html>\n"
+        final String html = DOCTYPE_HTML
             + "<html>\n"
             + "<head>\n"
             + "</head>\n"
@@ -1246,10 +1286,13 @@ public class HtmlForm2Test extends WebDriverTestCase {
 
         final WebDriver driver = loadPage2(html);
         driver.findElement(new ById("mySubmit")).click();
+        sleepRealBrowser(400);
+
+        assertEquals(2, getMockWebConnection().getRequestCount());
 
         final List<NameValuePair> requestedParams =
                 getMockWebConnection().getLastWebRequest().getRequestParameters();
-        Collections.sort(requestedParams, Comparator.comparing(NameValuePair::getName));
+        requestedParams.sort(Comparator.comparing(NameValuePair::getName));
 
         assertEquals(getExpectedAlerts().length, requestedParams.size());
 
@@ -1263,11 +1306,9 @@ public class HtmlForm2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "hiddenParam#form1",
-            IE = "hiddenParam#form2")
+    @Alerts("hiddenParam#form1")
     public void submitFromInsideAnother() throws Exception {
-        final String html =
-            "<!DOCTYPE html>\n"
+        final String html = DOCTYPE_HTML
             + "<html>\n"
             + "<head>\n"
             + "</head>\n"
@@ -1285,10 +1326,13 @@ public class HtmlForm2Test extends WebDriverTestCase {
 
         final WebDriver driver = loadPage2(html);
         driver.findElement(new ById("mySubmit")).click();
+        sleepRealBrowser(400);
+
+        assertEquals(2, getMockWebConnection().getRequestCount());
 
         final List<NameValuePair> requestedParams =
                 getMockWebConnection().getLastWebRequest().getRequestParameters();
-        Collections.sort(requestedParams, Comparator.comparing(NameValuePair::getName));
+        requestedParams.sort(Comparator.comparing(NameValuePair::getName));
 
         assertEquals(getExpectedAlerts().length, requestedParams.size());
 
@@ -1302,11 +1346,9 @@ public class HtmlForm2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {},
-            IE = "hiddenParam#form2")
+    @Alerts({})
     public void submitFromInsideAnotherInvalidFormRef() throws Exception {
-        final String html =
-            "<!DOCTYPE html>\n"
+        final String html = DOCTYPE_HTML
             + "<html>\n"
             + "<head>\n"
             + "</head>\n"
@@ -1325,9 +1367,11 @@ public class HtmlForm2Test extends WebDriverTestCase {
         final WebDriver driver = loadPage2(html);
         driver.findElement(new ById("mySubmit")).click();
 
+        assertEquals(1, getMockWebConnection().getRequestCount());
+
         final List<NameValuePair> requestedParams =
                 getMockWebConnection().getLastWebRequest().getRequestParameters();
-        Collections.sort(requestedParams, Comparator.comparing(NameValuePair::getName));
+        requestedParams.sort(Comparator.comparing(NameValuePair::getName));
 
         assertEquals(getExpectedAlerts().length, requestedParams.size());
 
@@ -1456,17 +1500,21 @@ public class HtmlForm2Test extends WebDriverTestCase {
     }
 
     private void submitParams(final String controls) throws Exception {
-        final String html = "<html><head><title>foo</title></head><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><title>foo</title></head><body>\n"
             + "<form id='form1' method='post'>\n"
             + controls
             + "</form></body></html>";
 
         final WebDriver driver = loadPage2(html);
         driver.findElement(new ById("mySubmit")).click();
+        sleepRealBrowser(400);
+
+        assertEquals(2, getMockWebConnection().getRequestCount());
 
         final List<NameValuePair> requestedParams =
                 getMockWebConnection().getLastWebRequest().getRequestParameters();
-        Collections.sort(requestedParams, Comparator.comparing(NameValuePair::getName));
+        requestedParams.sort(Comparator.comparing(NameValuePair::getName));
 
         assertEquals(getExpectedAlerts().length, requestedParams.size());
 
@@ -1483,22 +1531,25 @@ public class HtmlForm2Test extends WebDriverTestCase {
     @Test
     @Alerts("§§URL§§index.html?test")
     public void submit_refererHeader() throws Exception {
-        final String firstHtml
-            = "<html><head><title>First</title></head><body>\n"
+        final String firstHtml = DOCTYPE_HTML
+            + "<html><head><title>First</title></head><body>\n"
             + "<form method='post' action='" + URL_SECOND + "'>\n"
             + "<input name='button' type='submit' value='PushMe' id='button'/></form>\n"
             + "</body></html>";
-        final String secondHtml = "<html><head><title>Second</title></head><body></body></html>";
+        final String secondHtml = DOCTYPE_HTML + "<html><head><title>Second</title></head><body></body></html>";
 
         expandExpectedAlertsVariables(URL_FIRST);
 
-        final URL indexUrl = new URL(URL_FIRST.toString() + "index.html");
+        final URL indexUrl = new URL(URL_FIRST + "index.html");
 
         getMockWebConnection().setResponse(indexUrl, firstHtml);
         getMockWebConnection().setResponse(URL_SECOND, secondHtml);
 
-        final WebDriver driver = loadPage2(firstHtml, new URL(URL_FIRST.toString() + "index.html?test#ref"));
+        final WebDriver driver = loadPage2(firstHtml, new URL(URL_FIRST + "index.html?test#ref"));
         driver.findElement(By.id("button")).click();
+        sleepRealBrowser(400);
+
+        assertEquals(2, getMockWebConnection().getRequestCount());
 
         final Map<String, String> lastAdditionalHeaders = getMockWebConnection().getLastAdditionalHeaders();
         assertEquals(getExpectedAlerts()[0], lastAdditionalHeaders.get(HttpHeader.REFERER));
@@ -1509,27 +1560,32 @@ public class HtmlForm2Test extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts("§§URL§§index.html?test")
+    @Alerts(DEFAULT = "§§URL§§index.html?test",
+            FF = "null",
+            FF_ESR = "null")
     public void submit_refererHeaderNoreferrer() throws Exception {
-        final String firstHtml
-            = "<html><head><title>First</title></head><body>\n"
+        final String firstHtml = DOCTYPE_HTML
+            + "<html><head><title>First</title></head><body>\n"
             + "<form method='post' action='" + URL_SECOND + "' rel='noreferrer'>\n"
             + "<input name='button' type='submit' value='PushMe' id='button'/></form>\n"
             + "</body></html>";
-        final String secondHtml = "<html><head><title>Second</title></head><body></body></html>";
+        final String secondHtml = DOCTYPE_HTML + "<html><head><title>Second</title></head><body></body></html>";
 
         expandExpectedAlertsVariables(URL_FIRST);
 
-        final URL indexUrl = new URL(URL_FIRST.toString() + "index.html");
+        final URL indexUrl = new URL(URL_FIRST + "index.html");
 
         getMockWebConnection().setResponse(indexUrl, firstHtml);
         getMockWebConnection().setResponse(URL_SECOND, secondHtml);
 
-        final WebDriver driver = loadPage2(firstHtml, new URL(URL_FIRST.toString() + "index.html?test#ref"));
+        final WebDriver driver = loadPage2(firstHtml, new URL(URL_FIRST + "index.html?test#ref"));
         driver.findElement(By.id("button")).click();
+        sleepRealBrowser(400);
+
+        assertEquals(2, getMockWebConnection().getRequestCount());
 
         final Map<String, String> lastAdditionalHeaders = getMockWebConnection().getLastAdditionalHeaders();
-        assertEquals(getExpectedAlerts()[0], lastAdditionalHeaders.get(HttpHeader.REFERER));
+        assertEquals(getExpectedAlerts()[0], "" + lastAdditionalHeaders.get(HttpHeader.REFERER));
     }
 
     /**
@@ -1537,27 +1593,32 @@ public class HtmlForm2Test extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts("§§URL§§index.html?test")
+    @Alerts(DEFAULT = "§§URL§§index.html?test",
+            FF = "null",
+            FF_ESR = "null")
     public void submit_refererHeaderNoreferrerCaseSensitive() throws Exception {
-        final String firstHtml
-            = "<html><head><title>First</title></head><body>\n"
+        final String firstHtml = DOCTYPE_HTML
+            + "<html><head><title>First</title></head><body>\n"
             + "<form method='post' action='" + URL_SECOND + "' rel='NoReferrer'>\n"
             + "<input name='button' type='submit' value='PushMe' id='button'/></form>\n"
             + "</body></html>";
-        final String secondHtml = "<html><head><title>Second</title></head><body></body></html>";
+        final String secondHtml = DOCTYPE_HTML + "<html><head><title>Second</title></head><body></body></html>";
 
         expandExpectedAlertsVariables(URL_FIRST);
 
-        final URL indexUrl = new URL(URL_FIRST.toString() + "index.html");
+        final URL indexUrl = new URL(URL_FIRST + "index.html");
 
         getMockWebConnection().setResponse(indexUrl, firstHtml);
         getMockWebConnection().setResponse(URL_SECOND, secondHtml);
 
-        final WebDriver driver = loadPage2(firstHtml, new URL(URL_FIRST.toString() + "index.html?test#ref"));
+        final WebDriver driver = loadPage2(firstHtml, new URL(URL_FIRST + "index.html?test#ref"));
         driver.findElement(By.id("button")).click();
+        sleepRealBrowser(400);
+
+        assertEquals(2, getMockWebConnection().getRequestCount());
 
         final Map<String, String> lastAdditionalHeaders = getMockWebConnection().getLastAdditionalHeaders();
-        assertEquals(getExpectedAlerts()[0], lastAdditionalHeaders.get(HttpHeader.REFERER));
+        assertEquals(getExpectedAlerts()[0], "" + lastAdditionalHeaders.get(HttpHeader.REFERER));
     }
 
     /**
@@ -1565,39 +1626,42 @@ public class HtmlForm2Test extends WebDriverTestCase {
      * @throws Exception on test failure
      */
     @Test
-    @Alerts("§§URL§§index.html?test")
+    @Alerts(DEFAULT = "§§URL§§index.html?test",
+            FF = "null",
+            FF_ESR = "null")
     public void submit_refererHeaderNoreferrerGet() throws Exception {
-        final String firstHtml
-            = "<html><head><title>First</title></head><body>\n"
+        final String firstHtml = DOCTYPE_HTML
+            + "<html><head><title>First</title></head><body>\n"
             + "<form method='get' action='" + URL_SECOND + "' rel='NoReferrer'>\n"
             + "<input name='button' type='submit' value='PushMe' id='button'/></form>\n"
             + "</body></html>";
-        final String secondHtml = "<html><head><title>Second</title></head><body></body></html>";
+        final String secondHtml = DOCTYPE_HTML + "<html><head><title>Second</title></head><body></body></html>";
 
         expandExpectedAlertsVariables(URL_FIRST);
 
-        final URL indexUrl = new URL(URL_FIRST.toString() + "index.html");
+        final URL indexUrl = new URL(URL_FIRST + "index.html");
 
         getMockWebConnection().setResponse(indexUrl, firstHtml);
         getMockWebConnection().setResponse(URL_SECOND, secondHtml);
 
-        final WebDriver driver = loadPage2(firstHtml, new URL(URL_FIRST.toString() + "index.html?test#ref"));
+        final WebDriver driver = loadPage2(firstHtml, new URL(URL_FIRST + "index.html?test#ref"));
         driver.findElement(By.id("button")).click();
+        sleepRealBrowser(400);
+
+        assertEquals(2, getMockWebConnection().getRequestCount());
 
         final Map<String, String> lastAdditionalHeaders = getMockWebConnection().getLastAdditionalHeaders();
-        assertEquals(getExpectedAlerts()[0], lastAdditionalHeaders.get(HttpHeader.REFERER));
+        assertEquals(getExpectedAlerts()[0], "" + lastAdditionalHeaders.get(HttpHeader.REFERER));
     }
 
     /**
      * @throws Exception on test failure
      */
     @Test
-    @Alerts(DEFAULT = "NoReferrer",
-            FF_ESR = "undefined",
-            IE = "undefined")
+    @Alerts("NoReferrer")
     public void relAttribute() throws Exception {
-        final String html
-            = "<html><head></head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head></head>\n"
             + "<body>\n"
             + "<form method='get' action='" + URL_SECOND + "' rel='NoReferrer'>\n"
             + "  <input name='button' type='submit' value='PushMe' id='button'/>\n"
@@ -1609,5 +1673,340 @@ public class HtmlForm2Test extends WebDriverTestCase {
             + "</body></html>";
 
         loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts({"[object HTMLFormElement]", "[object HTMLInputElement]", "true",
+             "[object HTMLInputElement]", "true"})
+    public void inputNameProperty() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<head></head>\n"
+            + "<body>\n"
+            + "  <form id='testForm' name='testForm' action='/dosomething\' method='POST'>\n"
+            + "    <input type='submit' name='button' value='PushMe' id='button'/>\n"
+            + "    <input type='hidden' name='hiddenParam' value='hiddenValue'>\n"
+            + "  </form>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  log(testForm);\n"
+            + "  log(testForm.button);\n"
+            + "  log(testForm.button !== undefined);\n"
+            + "  log(testForm.hiddenParam);\n"
+            + "  log(testForm.hiddenParam !== undefined);\n"
+            + "</script>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts({"[object HTMLFormElement]", "[object HTMLInputElement]", "true",
+             "[object HTMLInputElement]", "true"})
+    public void inputHasOwnProperty() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<head></head>\n"
+            + "<body>\n"
+            + "  <form id='testForm' name='testForm' action='/dosomething\' method='POST'>\n"
+            + "    <input type='submit' name='button' value='PushMe' id='button'/>\n"
+            + "    <input type='hidden' name='hiddenParam' value='hiddenValue'>\n"
+            + "  </form>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  log(testForm);\n"
+            + "  log(testForm.button);\n"
+            + "  log(testForm.hasOwnProperty('button'));\n"
+            + "  log(testForm.hiddenParam);\n"
+            + "  log(testForm.hasOwnProperty('hiddenParam'));\n"
+            + "</script>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+
+    /**
+     * @throws Exception on test failure
+     */
+    @Test
+    @Alerts({"[object HTMLFormElement]", "[object HTMLInputElement]",
+             "undefined", "undefined", "[object HTMLInputElement]", "true", "false", "false",
+             "undefined", "undefined", "[object HTMLInputElement]", "true", "false", "false"})
+    public void inputGetOwnPropertyDescriptor() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
+            + "<head></head>\n"
+            + "<body>\n"
+            + "  <form id='testForm' name='testForm' action='/dosomething\' method='POST'>\n"
+            + "    <input type='submit' name='button' value='PushMe' id='button'/>\n"
+            + "    <input type='hidden' name='hiddenParam' value='hiddenValue'>\n"
+            + "  </form>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  log(testForm);\n"
+            + "  log(testForm.button);\n"
+
+            + "  var prop = Object.getOwnPropertyDescriptor(testForm, 'button');\n"
+            + "  log(prop.get);\n"
+            + "  log(prop.set);\n"
+            + "  log(prop.value);\n"
+            + "  log(prop.configurable);\n"
+            + "  log(prop.enumerable);\n"
+            + "  log(prop.writable);\n"
+
+            + "  prop = Object.getOwnPropertyDescriptor(testForm, 'hiddenParam');\n"
+            + "  log(prop.get);\n"
+            + "  log(prop.set);\n"
+            + "  log(prop.value);\n"
+            + "  log(prop.configurable);\n"
+            + "  log(prop.enumerable);\n"
+            + "  log(prop.writable);\n"
+
+            + "</script>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("second/?hiddenName=hiddenValue")
+    public void inputHiddenAdded() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head></head>\n"
+            + "<body>\n"
+            + "  <p>hello world</p>\n"
+            + "  <form id='myForm' method='GET' action='" + URL_SECOND + "'>\n"
+            + "    <input id='myButton' type='submit' />\n"
+            + "  </form>\n"
+            + "  <script>\n"
+            + "    var i = document.createElement('input');\n"
+            + "    i.setAttribute('type', 'hidden');\n"
+            + "    i.setAttribute('id', 'hiddenId');\n"
+            + "    i.setAttribute('name', 'hiddenName');\n"
+            + "    i.setAttribute('value', 'hiddenValue');\n"
+
+            + "    var f = document.getElementById('myForm');\n"
+            + "    f.appendChild(i);\n"
+            + "  </script>\n"
+            + "</body></html>";
+
+        final String secondContent = "second content";
+        getMockWebConnection().setResponse(URL_SECOND, secondContent);
+
+        final WebDriver driver = loadPage2(html);
+        driver.findElement(By.id("myButton")).click();
+        sleepRealBrowser(400);
+
+        assertEquals(2, getMockWebConnection().getRequestCount());
+
+        final String url = getMockWebConnection().getLastWebRequest().getUrl().toExternalForm();
+        assertTrue(url.endsWith(getExpectedAlerts()[0]));
+    }
+
+    /**
+     * @throws Exception if the test page can't be loaded
+     */
+    @Test
+    @Alerts({"2", "inp", "submitButton"})
+    public void elements() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    log(document.forms[0].elements.length);\n"
+            + "    log(document.forms[0].elements[0].id);\n"
+            + "    log(document.forms[0].elements[1].id);\n"
+            + "  }\n"
+            + "</script>\n"
+            + "</head>\n"
+            + "<body onload='test()'>\n"
+            + "<form id='form1' method='get' action='foo'>\n"
+            + "  <input name='field1' value='val1' id='inp'/>\n"
+            + "  <input type='submit' id='submitButton'/>\n"
+            + "</form>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test page can't be loaded
+     */
+    @Test
+    @Alerts({"1", "[object HTMLInputElement]"})
+    public void elementsDetached() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    let frm = document.createElement('form');\n"
+            + "    frm.appendChild(document.createElement('input'));\n"
+            + "    frm.remove();\n"
+            + "    log(frm.elements.length);\n"
+            + "    log(frm.elements[0]);\n"
+            + "  }\n"
+            + "</script>\n"
+            + "</head>\n"
+            + "<body onload='test()'>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test page can't be loaded
+     */
+    @Test
+    @Alerts({"2", "inpt1", "inpt2", "1", "inpt1"})
+    public void elementsDetachedFormAttribute() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "  function test() {\n"
+            + "    let frm = document.getElementById('formId');\n"
+
+            + "    log(frm.elements.length);\n"
+            + "    log(frm.elements[0].id);\n"
+            + "    log(frm.elements[1].id);\n"
+
+            + "    frm.remove();\n"
+            + "    log(frm.elements.length);\n"
+            + "    log(frm.elements[0].id);\n"
+            + "  }\n"
+            + "</script>\n"
+            + "</head>\n"
+            + "<body onload='test()'>\n"
+            + "  <form id='formId'>\n"
+            + "    <input id='inpt1' type='text' name='textParam' value='textValue'>\n"
+            + "  </form>\n"
+
+            + "  <input form='formId' id='inpt2' type='text' name='textParam' value='textValue'>\n"
+            + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void submitRequestCharset() throws Exception {
+        submitRequestCharset("utf-8", null, null, null, ISO_8859_1);
+        submitRequestCharset(null, "utf-8", null, null, ISO_8859_1);
+        submitRequestCharset("iso-8859-1", null, "utf-8", null, ISO_8859_1);
+        submitRequestCharset("iso-8859-1", null, "utf-8, iso-8859-1", null, ISO_8859_1);
+        submitRequestCharset("utf-8", null, "iso-8859-1 utf-8", null, ISO_8859_1);
+        submitRequestCharset("iso-8859-1", null, "utf-8, iso-8859-1", null, ISO_8859_1);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void submitRequestCharsetTextPlain() throws Exception {
+        submitRequestCharset("utf-8", null, null, "text/plain", null);
+        submitRequestCharset(null, "utf-8", null, "text/plain", null);
+        submitRequestCharset("iso-8859-1", null, "utf-8", "text/plain", null);
+        submitRequestCharset("iso-8859-1", null, "utf-8, iso-8859-1", "text/plain", null);
+        submitRequestCharset("utf-8", null, "iso-8859-1 utf-8", "text/plain", null);
+        submitRequestCharset("iso-8859-1", null, "utf-8, iso-8859-1", "text/plain", null);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void submitRequestCharsetMultipartFormData() throws Exception {
+        submitRequestCharset("utf-8", null, null, "multipart/form-data", null);
+        submitRequestCharset(null, "utf-8", null, "multipart/form-data", null);
+        submitRequestCharset("iso-8859-1", null, "utf-8", "multipart/form-data", null);
+        submitRequestCharset("iso-8859-1", null, "utf-8, iso-8859-1", "multipart/form-data", null);
+        submitRequestCharset("utf-8", null, "iso-8859-1 utf-8", "multipart/form-data", null);
+        submitRequestCharset("iso-8859-1", null, "utf-8, iso-8859-1", "multipart/form-data", null);
+    }
+
+    /**
+     * Utility for {@link #submitRequestCharset()}
+     * @param headerCharset the charset for the content type header if not null
+     * @param metaCharset the charset for the meta http-equiv content type tag if not null
+     * @param formCharset the charset for the form's accept-charset attribute if not null
+     * @param expectedRequestCharset the charset expected for the form submission
+     * @throws Exception if the test fails
+     */
+    private void submitRequestCharset(final String headerCharset,
+            final String metaCharset, final String formCharset,
+            final String formEnctype,
+            final Charset expectedRequestCharset) throws Exception {
+
+        final String formAcceptCharset;
+        if (formCharset == null) {
+            formAcceptCharset = "";
+        }
+        else {
+            formAcceptCharset = " accept-charset='" + formCharset + "'";
+        }
+
+        final String formEnc;
+        if (formEnctype == null) {
+            formEnc = "";
+        }
+        else {
+            formEnc = " enctype='" + formEnctype + "'";
+        }
+
+        final String metaContentType;
+        if (metaCharset == null) {
+            metaContentType = "";
+        }
+        else {
+            metaContentType = "<meta http-equiv='Content-Type' content='text/html; charset="
+                + metaCharset + "'>\n";
+        }
+
+        final String html = DOCTYPE_HTML
+            + "<html><head><title>foo</title>\n"
+            + metaContentType
+            + "</head><body>\n"
+            + "<form name='form1' method='post' action='foo'" + formAcceptCharset + formEnc + ">\n"
+            + "<input type='text' name='textField' value='foo'/>\n"
+            + "<input type='text' name='nonAscii' value='Flo\u00DFfahrt'/>\n"
+            + "<input type='submit' name='button' id='myButton' value='foo'/>\n"
+            + "</form></body></html>";
+
+        String contentType = MimeType.TEXT_HTML;
+        if (headerCharset != null) {
+            contentType += ";charset=" + headerCharset;
+        }
+        getMockWebConnection().setDefaultResponse(html, 200, "ok", contentType);
+
+        final WebDriver driver = loadPage2(URL_FIRST, null);
+        driver.findElement(By.id("myButton")).click();
+        sleepRealBrowser(400);
+
+        assertSame(expectedRequestCharset, getMockWebConnection().getLastWebRequest().getCharset());
+
+        if (driver instanceof HtmlUnitDriver) {
+            final WebClient webClient = ((HtmlUnitDriver) driver).getWebClient();
+
+            final HtmlPage page = webClient.getPage(URL_FIRST);
+
+            final HtmlForm form = page.getFormByName("form1");
+            form.getInputByName("button").click();
+
+            assertSame(expectedRequestCharset, getMockWebConnection().getLastWebRequest().getCharset());
+        }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,56 @@
  */
 package org.htmlunit.javascript.host.crypto;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
+import java.math.BigInteger;
+import java.nio.ByteBuffer;
+import java.security.GeneralSecurityException;
+import java.security.Key;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.Signature;
+import java.security.SignatureException;
+import java.security.spec.AlgorithmParameterSpec;
+import java.security.spec.ECGenParameterSpec;
+import java.security.spec.MGF1ParameterSpec;
+import java.security.spec.PSSParameterSpec;
+import java.security.spec.RSAKeyGenParameterSpec;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.Mac;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.OAEPParameterSpec;
+import javax.crypto.spec.PSource;
+import javax.crypto.spec.SecretKeySpec;
+
+import org.htmlunit.corejs.javascript.Context;
+import org.htmlunit.corejs.javascript.EcmaError;
+import org.htmlunit.corejs.javascript.NativePromise;
+import org.htmlunit.corejs.javascript.Scriptable;
+import org.htmlunit.corejs.javascript.ScriptableObject;
+import org.htmlunit.corejs.javascript.typedarrays.NativeArrayBuffer;
+import org.htmlunit.corejs.javascript.typedarrays.NativeArrayBufferView;
 import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.host.dom.DOMException;
-
-import org.htmlunit.corejs.javascript.Context;
 
 /**
  * A JavaScript object for {@code SubtleCrypto}.
@@ -33,86 +71,1101 @@ import org.htmlunit.corejs.javascript.Context;
  * @author Ahmed Ashour
  * @author Ronald Brill
  * @author Atsushi Nakagawa
+ * @author Lai Quang Duong
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto">MDN Documentation</a>
  */
 @JsxClass
 public class SubtleCrypto extends HtmlUnitScriptable {
 
     /**
-     * Creates an instance.
+     * Maps each crypto operation to its supported algorithm names.
+     * @see <a href="https://w3c.github.io/webcrypto/#algorithm-overview">Algorithm Overview</a>
      */
-    public SubtleCrypto() {
+    private static final Map<String, Set<String>> OPERATION_TO_SUPPORTED_ALGORITHMS = Map.ofEntries(
+            Map.entry("encrypt", Set.of("RSA-OAEP", "AES-CTR", "AES-CBC", "AES-GCM")),
+            Map.entry("decrypt", Set.of("RSA-OAEP", "AES-CTR", "AES-CBC", "AES-GCM")),
+            Map.entry("sign", Set.of("RSASSA-PKCS1-v1_5", "RSA-PSS", "ECDSA", "HMAC")),
+            Map.entry("verify", Set.of("RSASSA-PKCS1-v1_5", "RSA-PSS", "ECDSA", "HMAC")),
+            Map.entry("digest", Set.of("SHA-1", "SHA-256", "SHA-384", "SHA-512")),
+            Map.entry("generateKey", Set.of("RSASSA-PKCS1-v1_5", "RSA-PSS", "RSA-OAEP",
+                    "ECDSA", "ECDH", "AES-CTR", "AES-CBC", "AES-GCM", "AES-KW", "HMAC")),
+            Map.entry("importKey", Set.of("RSASSA-PKCS1-v1_5", "RSA-PSS", "RSA-OAEP", "ECDSA", "ECDH",
+                    "AES-CTR", "AES-CBC", "AES-GCM", "AES-KW", "HMAC", "HKDF", "PBKDF2")),
+            Map.entry("wrapKey", Set.of("RSA-OAEP", "AES-CTR", "AES-CBC", "AES-GCM", "AES-KW")),
+            Map.entry("unwrapKey", Set.of("RSA-OAEP", "AES-CTR", "AES-CBC", "AES-GCM", "AES-KW")),
+            Map.entry("deriveBits", Set.of("ECDH", "HKDF", "PBKDF2")),
+            Map.entry("deriveKey", Set.of("ECDH", "HKDF", "PBKDF2"))
+    );
+
+    /**
+     * The registered algorithm names, keyed by their ASCII lowercase form.
+     * @see <a href="https://w3c.github.io/webcrypto/#algorithm-normalization-normalize-an-algorithm">
+     *     Normalize an algorithm</a>
+     */
+    private static final Map<String, String> REGISTERED_ALGORITHM_NAMES = new HashMap<>();
+
+    static {
+        for (final Set<String> names : OPERATION_TO_SUPPORTED_ALGORITHMS.values()) {
+            for (final String name : names) {
+                REGISTERED_ALGORITHM_NAMES.put(toAsciiLowerCase(name), name);
+            }
+        }
+    }
+
+    /**
+     * The recognized cryptographic key usages.
+     *
+     * @see <a href="https://w3c.github.io/webcrypto/#dfn-RecognizedKeyUsage">RecognizedKeyUsage</a>
+     */
+    private static final Set<String> RECOGNIZED_KEY_USAGES = Collections.unmodifiableSet(
+            new LinkedHashSet<>(List.of("encrypt", "decrypt", "sign", "verify",
+                    "deriveKey", "deriveBits", "wrapKey", "unwrapKey")));
+
+    /**
+     * The key formats.
+     * @see <a href="https://w3c.github.io/webcrypto/#dfn-KeyFormat">KeyFormat</a>
+     */
+    private static final Set<String> KEY_FORMATS = Set.of("raw", "spki", "pkcs8", "jwk");
+
+    /**
+     * The valid authentication tag lengths for AES-GCM, in bits.
+     *
+     * @see <a href="https://w3c.github.io/webcrypto/#aes-gcm-operations">AES-GCM encrypt, step 6</a>
+     */
+    private static final Set<Integer> VALID_AES_GCM_TAG_LENGTHS = Set.of(32, 64, 96, 104, 112, 120, 128);
+
+    private static class InvalidAccessException extends RuntimeException {
+        InvalidAccessException(final String message) {
+            super(message);
+        }
+    }
+
+    private static class DataException extends RuntimeException {
+        DataException(final String message) {
+            super(message);
+        }
+    }
+
+    private static class OperationException extends RuntimeException {
+        OperationException(final String message) {
+            super(message);
+        }
     }
 
     /**
      * Creates an instance.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
+    @JsxConstructor
     public void jsConstructor() {
-        throw Context.reportRuntimeError("Illegal constructor.");
+        throw JavaScriptEngine.typeErrorIllegalConstructor();
     }
 
-    private Object notImplemented() {
+    private NativePromise rejectNotACryptoKey(final String operation) {
+        return rejectWithTypeError("Failed to execute '" + operation
+                + "' on 'SubtleCrypto': parameter 2 is not of type 'CryptoKey'.");
+    }
+
+    private NativePromise rejectWithTypeError(final String message) {
+        return setupRejectedPromise(() -> JavaScriptEngine.toErrorObject(
+                JavaScriptEngine.typeError(message), getParentScope()));
+    }
+
+    private NativePromise notImplemented() {
         return setupRejectedPromise(() ->
-                new DOMException("Operation is not supported", DOMException.NOT_SUPPORTED_ERR));
+                createDOMException("Operation is not supported", DOMException.NOT_SUPPORTED_ERR));
     }
 
+    /**
+     * Encrypts data using the given key and algorithm.
+     * @see <a href="https://w3c.github.io/webcrypto/#SubtleCrypto-method-encrypt">SubtleCrypto.encrypt()</a>
+     * @param algorithm the algorithm identifier with parameters
+     * @param key the CryptoKey to encrypt with
+     * @param data the data to encrypt
+     * @return a Promise that fulfills with an ArrayBuffer containing the ciphertext
+     */
     @JsxFunction
-    public Object encrypt() {
+    public NativePromise encrypt(final Object algorithm, final Object key, final Object data) {
+        if (!(key instanceof CryptoKey cryptoKey)) {
+            return rejectNotACryptoKey("encrypt");
+        }
+
+        return doCipher(algorithm, cryptoKey, data, Cipher.ENCRYPT_MODE);
+    }
+
+    /**
+     * Decrypts data using the given key and algorithm.
+     * @see <a href="https://w3c.github.io/webcrypto/#SubtleCrypto-method-decrypt">SubtleCrypto.decrypt()</a>
+     * @param algorithm the algorithm identifier with parameters
+     * @param key the CryptoKey to decrypt with
+     * @param data the data to decrypt
+     * @return a Promise that fulfills with an ArrayBuffer containing the plaintext
+     */
+    @JsxFunction
+    public NativePromise decrypt(final Object algorithm, final Object key, final Object data) {
+        if (!(key instanceof CryptoKey cryptoKey)) {
+            return rejectNotACryptoKey("decrypt");
+        }
+
+        return doCipher(algorithm, cryptoKey, data, Cipher.DECRYPT_MODE);
+    }
+
+    /**
+     * Shared encrypt/decrypt implementation.
+     */
+    private NativePromise doCipher(final Object algorithm, final CryptoKey key,
+            final Object data, final int cipherMode) {
+        final String operation = switch (cipherMode) {
+            case Cipher.ENCRYPT_MODE -> "encrypt";
+            case Cipher.DECRYPT_MODE -> "decrypt";
+            default -> throw new IllegalArgumentException("Invalid cipher mode: " + cipherMode);
+        };
+
+        final byte[] result;
+        try {
+            final String algorithmName = resolveAlgorithmName(algorithm);
+            ensureAlgorithmIsSupported(operation, algorithmName);
+            ensureKeyAlgorithmMatches(algorithmName, key);
+            ensureKeyUsage(key, operation);
+
+            final ByteBuffer inputData = asByteBuffer(data);
+
+            switch (algorithmName) {
+                case "AES-CBC": {
+                    // https://w3c.github.io/webcrypto/#aes-cbc-operations
+                    final byte[] iv = getRequiredBuffer(toAlgorithmParams(algorithm, algorithmName), "iv");
+                    if (iv.length != 16) {
+                        throw new OperationException("The iv must be 16 bytes long");
+                    }
+                    final byte[] input = toByteArray(inputData);
+                    if (cipherMode == Cipher.DECRYPT_MODE && (input.length == 0 || input.length % 16 != 0)) {
+                        throw new OperationException("The ciphertext length must be a non-zero multiple of 16 bytes");
+                    }
+                    final SecretKey secretKey = getInternalKey(key, SecretKey.class);
+                    final Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+                    cipher.init(cipherMode, secretKey, new IvParameterSpec(iv));
+                    result = cipher.doFinal(input);
+                    break;
+                }
+                case "AES-GCM": {
+                    // https://w3c.github.io/webcrypto/#aes-gcm-operations
+                    final Scriptable params = toAlgorithmParams(algorithm, algorithmName);
+                    // the spec only defines an upper limit; browsers reject an empty iv with OperationError
+                    final byte[] iv = getRequiredBuffer(params, "iv");
+                    if (iv.length == 0) {
+                        throw new OperationException("The iv must not be empty");
+                    }
+
+                    final int tagLength;
+                    final Object tagLengthProp = ScriptableObject.getProperty(params, "tagLength");
+                    if (tagLengthProp instanceof Number num) {
+                        tagLength = num.intValue();
+                        if (!VALID_AES_GCM_TAG_LENGTHS.contains(tagLength)) {
+                            throw new OperationException("The tag length " + tagLength + " is not supported");
+                        }
+                    }
+                    else {
+                        tagLength = 128;
+                    }
+
+                    final byte[] input = toByteArray(inputData);
+                    if (cipherMode == Cipher.DECRYPT_MODE && input.length * 8L < tagLength) {
+                        throw new OperationException("The ciphertext is shorter than the tag");
+                    }
+
+                    final SecretKey secretKey = getInternalKey(key, SecretKey.class);
+                    final Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+                    cipher.init(cipherMode, secretKey, new GCMParameterSpec(tagLength, iv));
+
+                    final Object aadProp = ScriptableObject.getProperty(params, "additionalData");
+                    if (aadProp instanceof Scriptable) {
+                        final ByteBuffer aad = asByteBuffer(aadProp);
+                        cipher.updateAAD(toByteArray(aad));
+                    }
+
+                    result = cipher.doFinal(input);
+                    break;
+                }
+                case "AES-CTR": {
+                    // https://w3c.github.io/webcrypto/#aes-ctr-operations
+                    final Scriptable params = toAlgorithmParams(algorithm, algorithmName);
+                    final byte[] counter = getRequiredBuffer(params, "counter");
+                    if (counter.length != 16) {
+                        throw new OperationException("The counter must be 16 bytes long");
+                    }
+
+                    final int counterLength = (int) getRequiredNumber(params, "length");
+                    if (counterLength < 1 || counterLength > 128) {
+                        throw new OperationException("The counter length must be between 1 and 128 bits");
+                    }
+
+                    final SecretKey secretKey = getInternalKey(key, SecretKey.class);
+                    result = aesCtr(cipherMode, secretKey, counter, counterLength, toByteArray(inputData));
+                    break;
+                }
+                case "RSA-OAEP": {
+                    // https://w3c.github.io/webcrypto/#rsa-oaep-operations
+                    final String hash = ((RsaHashedKeyAlgorithm) key.getKeyAlgorithm()).getHash();
+
+                    // all RsaOaepParams members are optional, the algorithm may be a plain name
+                    final byte[] label;
+                    final Object labelProp = algorithm instanceof Scriptable params
+                            ? ScriptableObject.getProperty(params, "label")
+                            : Scriptable.NOT_FOUND;
+                    if (labelProp instanceof Scriptable) {
+                        final ByteBuffer labelBuf = asByteBuffer(labelProp);
+                        label = toByteArray(labelBuf);
+                    }
+                    else {
+                        label = new byte[0];
+                    }
+
+                    final MGF1ParameterSpec mgf1Spec = new MGF1ParameterSpec(hash);
+                    final AlgorithmParameterSpec oaepSpec = new OAEPParameterSpec(
+                            hash, "MGF1", mgf1Spec, new PSource.PSpecified(label));
+
+                    final Key internalKey;
+                    if (cipherMode == Cipher.ENCRYPT_MODE) {
+                        internalKey = getInternalKey(key, PublicKey.class);
+                    }
+                    else {
+                        internalKey = getInternalKey(key, PrivateKey.class);
+                    }
+
+                    final Cipher cipher = Cipher.getInstance("RSA/ECB/OAEPPadding");
+                    cipher.init(cipherMode, internalKey, oaepSpec);
+                    result = cipher.doFinal(toByteArray(inputData));
+                    break;
+                }
+                default:
+                    throw new UnsupportedOperationException(operation + " " + algorithmName);
+            }
+        }
+        catch (final EcmaError e) {
+            return setupRejectedPromise(() -> JavaScriptEngine.toErrorObject(e, getParentScope()));
+        }
+        catch (final InvalidAccessException e) {
+            return setupRejectedPromise(() -> createDOMException(e.getMessage(), DOMException.INVALID_ACCESS_ERR));
+        }
+        catch (final DataException e) {
+            return setupRejectedPromise(() -> createDOMException(e.getMessage(), DOMException.DATA_ERR));
+        }
+        catch (final OperationException e) {
+            return setupRejectedPromise(() -> createDOMException(e.getMessage(), DOMException.OPERATION_ERR));
+        }
+        catch (final IllegalArgumentException e) {
+            return setupRejectedPromise(() -> createDOMException(e.getMessage(), DOMException.SYNTAX_ERR));
+        }
+        catch (final BadPaddingException e) {
+            return setupRejectedPromise(() -> createDOMException("Decryption failed", DOMException.OPERATION_ERR));
+        }
+        catch (final NoSuchAlgorithmException | NoSuchPaddingException | UnsupportedOperationException e) {
+            return setupRejectedPromise(() -> createDOMException("Operation is not supported: " + e.getMessage(),
+                    DOMException.NOT_SUPPORTED_ERR));
+        }
+        catch (final GeneralSecurityException e) {
+            return setupRejectedPromise(() -> createDOMException("The operation failed: " + e.getMessage(),
+                    DOMException.OPERATION_ERR));
+        }
+        return setupPromise(() -> createArrayBuffer(result));
+    }
+
+    /**
+     * AES-CTR encryption/decryption where only the rightmost {@code counterLength} bits of the
+     * counter block are incremented; Java's AES/CTR always increments the whole 128-bit block.
+     * @see <a href="https://w3c.github.io/webcrypto/#aes-ctr-operations">AES-CTR</a>
+     */
+    private static byte[] aesCtr(final int cipherMode, final SecretKey key, final byte[] counter,
+            final int counterLength, final byte[] input) throws GeneralSecurityException {
+        final BigInteger blocks = BigInteger.valueOf((input.length + 15L) / 16);
+        final BigInteger counterValues = BigInteger.ONE.shiftLeft(counterLength);
+        if (blocks.compareTo(counterValues) > 0) {
+            throw new DataException("The counter would repeat");
+        }
+
+        final BigInteger counterBlock = new BigInteger(1, counter);
+        final BigInteger counterPart = counterBlock.mod(counterValues);
+        final BigInteger blocksUntilWrap = counterValues.subtract(counterPart);
+
+        final Cipher cipher = Cipher.getInstance("AES/CTR/NoPadding");
+        cipher.init(cipherMode, key, new IvParameterSpec(counter));
+        if (blocks.compareTo(blocksUntilWrap) <= 0) {
+            return cipher.doFinal(input);
+        }
+
+        // process up to the wrap with the given counter block, the rest starts with the counter part set to zero
+        final int firstLength = blocksUntilWrap.intValueExact() * 16;
+        final byte[] result = new byte[input.length];
+        cipher.doFinal(input, 0, firstLength, result, 0);
+
+        final Cipher wrapped = Cipher.getInstance("AES/CTR/NoPadding");
+        wrapped.init(cipherMode, key, new IvParameterSpec(toCounterBlock(counterBlock.subtract(counterPart))));
+        wrapped.doFinal(input, firstLength, input.length - firstLength, result, firstLength);
+        return result;
+    }
+
+    private static byte[] toCounterBlock(final BigInteger value) {
+        final byte[] bytes = value.toByteArray();
+        final byte[] block = new byte[16];
+        final int length = Math.min(bytes.length, 16);
+        System.arraycopy(bytes, bytes.length - length, block, 16 - length, length);
+        return block;
+    }
+
+    /**
+     * Signs data using the given key.
+     * @see <a href="https://w3c.github.io/webcrypto/#SubtleCrypto-method-sign">SubtleCrypto.sign()</a>
+     * @param algorithm the algorithm identifier (String or object with name property)
+     * @param key the CryptoKey to sign with
+     * @param data the data to sign
+     * @return a Promise that fulfills with an ArrayBuffer containing the signature
+     */
+    @JsxFunction
+    public NativePromise sign(final Object algorithm, final Object key, final Object data) {
+        if (!(key instanceof CryptoKey cryptoKey)) {
+            return rejectNotACryptoKey("sign");
+        }
+
+        return doSignOrVerify(algorithm, cryptoKey, null, data, true);
+    }
+
+    /**
+     * Verifies a signature using the given key.
+     * @see <a href="https://w3c.github.io/webcrypto/#SubtleCrypto-method-verify">SubtleCrypto.verify()</a>
+     * @param algorithm the algorithm identifier (String or object with name property)
+     * @param key the CryptoKey to verify with
+     * @param signature the signature to verify
+     * @param data the data that was signed
+     * @return a Promise that fulfills with a boolean indicating whether the signature is valid
+     */
+    @JsxFunction
+    public NativePromise verify(final Object algorithm, final Object key,
+            final Object signature, final Object data) {
+        if (!(key instanceof CryptoKey cryptoKey)) {
+            return rejectNotACryptoKey("verify");
+        }
+
+        return doSignOrVerify(algorithm, cryptoKey, signature, data, false);
+    }
+
+    /**
+     * Shared sign/verify implementation.
+     */
+    private NativePromise doSignOrVerify(final Object algorithm, final CryptoKey key,
+            final Object existingSignature, final Object data, final boolean isSigning) {
+        final Object result;
+        try {
+            final String algorithmName = resolveAlgorithmName(algorithm);
+            final String operation = isSigning ? "sign" : "verify";
+            ensureAlgorithmIsSupported(operation, algorithmName);
+            ensureKeyAlgorithmMatches(algorithmName, key);
+            ensureKeyUsage(key, operation);
+
+            final ByteBuffer inputData = asByteBuffer(data);
+
+            switch (algorithmName) {
+                case "HMAC": {
+                    // https://w3c.github.io/webcrypto/#hmac-operations
+                    final SecretKey secretKey = getInternalKey(key, SecretKey.class);
+                    final Mac mac = Mac.getInstance(secretKey.getAlgorithm());
+                    mac.init(secretKey);
+                    mac.update(inputData);
+                    final byte[] macBytes = mac.doFinal();
+                    if (isSigning) {
+                        result = macBytes;
+                    }
+                    else {
+                        result = MessageDigest.isEqual(macBytes,
+                                toByteArray(asByteBuffer(existingSignature)));
+                    }
+                    break;
+                }
+                case "RSASSA-PKCS1-v1_5":
+                    // https://w3c.github.io/webcrypto/#rsassa-pkcs1
+                case "RSA-PSS":
+                    // https://w3c.github.io/webcrypto/#rsa-pss
+                case "ECDSA": {
+                    // https://w3c.github.io/webcrypto/#ecdsa-operations
+                    final Signature sig = "ECDSA".equals(algorithmName)
+                            ? resolveEcdsaSignature(algorithm)
+                            : resolveRsaSignature(algorithmName, algorithm, key);
+                    if (isSigning) {
+                        sig.initSign(getInternalKey(key, PrivateKey.class));
+                        sig.update(inputData);
+                        result = sig.sign();
+                    }
+                    else {
+                        final byte[] signature = toByteArray(asByteBuffer(existingSignature));
+                        sig.initVerify(getInternalKey(key, PublicKey.class));
+                        sig.update(inputData);
+
+                        boolean valid;
+                        try {
+                            valid = sig.verify(signature);
+                        }
+                        catch (final SignatureException e) {
+                            // e.g. an RSA signature that does not have the length of the modulus
+                            valid = false;
+                        }
+                        result = valid;
+                    }
+                    break;
+                }
+                default:
+                    throw new UnsupportedOperationException(operation + " " + algorithmName);
+            }
+        }
+        catch (final EcmaError e) {
+            return setupRejectedPromise(() -> JavaScriptEngine.toErrorObject(e, getParentScope()));
+        }
+        catch (final InvalidAccessException e) {
+            return setupRejectedPromise(() -> createDOMException(e.getMessage(), DOMException.INVALID_ACCESS_ERR));
+        }
+        catch (final IllegalArgumentException e) {
+            return setupRejectedPromise(() -> createDOMException(e.getMessage(), DOMException.SYNTAX_ERR));
+        }
+        catch (final NoSuchAlgorithmException | UnsupportedOperationException e) {
+            return setupRejectedPromise(() -> createDOMException("Operation is not supported: " + e.getMessage(),
+                    DOMException.NOT_SUPPORTED_ERR));
+        }
+        catch (final GeneralSecurityException e) {
+            return setupRejectedPromise(() -> createDOMException("The operation failed: " + e.getMessage(),
+                    DOMException.OPERATION_ERR));
+        }
+
+        if (isSigning) {
+            return setupPromise(() -> createArrayBuffer((byte[]) result));
+        }
+        return setupPromise(() -> result);
+    }
+
+    /**
+     * Resolves the RSA {@link Signature} instance for the given algorithm.
+     */
+    private static Signature resolveRsaSignature(final String algorithmName, final Object algorithmParams,
+            final CryptoKey key) throws GeneralSecurityException {
+        final String hash = ((RsaHashedKeyAlgorithm) key.getKeyAlgorithm()).getHash();
+        final String javaHash = hash.replace("-", "");
+
+        if ("RSASSA-PKCS1-v1_5".equals(algorithmName)) {
+            return Signature.getInstance(javaHash + "withRSA");
+        }
+
+        final int saltLength = (int) getRequiredNumber(toAlgorithmParams(algorithmParams, algorithmName), "saltLength");
+
+        final MGF1ParameterSpec mgf1Spec = new MGF1ParameterSpec(hash);
+        final PSSParameterSpec pssSpec = new PSSParameterSpec(hash, "MGF1", mgf1Spec, saltLength, 1);
+        final Signature sig = Signature.getInstance("RSASSA-PSS");
+        sig.setParameter(pssSpec);
+        return sig;
+    }
+
+    /**
+     * Resolves the ECDSA {@link Signature} instance for the given algorithm params.
+     */
+    private static Signature resolveEcdsaSignature(final Object algorithmParams)
+            throws GeneralSecurityException {
+        final Scriptable params = toAlgorithmParams(algorithmParams, "ECDSA");
+        final String hash = resolveAlgorithmName(getRequiredMember(params, "hash"));
+        final String javaHash = hash.replace("-", "");
+        return Signature.getInstance(javaHash + "withECDSAinP1363Format");
+    }
+
+    private static byte[] toByteArray(final ByteBuffer buffer) {
+        final byte[] result = new byte[buffer.remaining()];
+        buffer.get(result);
+        return result;
+    }
+
+    /**
+     * Generates a digest of the given data.
+     * @see <a href="https://w3c.github.io/webcrypto/#SubtleCrypto-method-digest">SubtleCrypto.digest()</a>
+     * @param hashAlgorithm a string or an object with a single property name containing the hash algorithm to use
+     * @param data an object containing the data to be digested
+     * @return a Promise that fulfills with an ArrayBuffer containing the digest
+     */
+    @JsxFunction
+    public NativePromise digest(final Object hashAlgorithm, final Object data) {
+        final byte[] digest;
+        try {
+            final ByteBuffer inputData = asByteBuffer(data);
+            final String algorithm = resolveAlgorithmName(hashAlgorithm);
+            ensureAlgorithmIsSupported("digest", algorithm);
+
+            final MessageDigest messageDigest = MessageDigest.getInstance(algorithm);
+            messageDigest.update(inputData);
+            digest = messageDigest.digest();
+        }
+        catch (final EcmaError e) {
+            return setupRejectedPromise(() -> JavaScriptEngine.toErrorObject(e, getParentScope()));
+        }
+        catch (final IllegalArgumentException e) {
+            return setupRejectedPromise(() -> createDOMException(e.getMessage(), DOMException.SYNTAX_ERR));
+        }
+        catch (final GeneralSecurityException | UnsupportedOperationException e) {
+            return setupRejectedPromise(() -> createDOMException("Operation is not supported: " + e.getMessage(),
+                    DOMException.NOT_SUPPORTED_ERR));
+        }
+        return setupPromise(() -> createArrayBuffer(digest));
+    }
+
+    /**
+     * Generates a new key (for symmetric algorithms) or key pair (for public-key algorithms).
+     * @see <a href="https://w3c.github.io/webcrypto/#SubtleCrypto-method-generateKey">SubtleCrypto.generateKey()</a>
+     * @param keyGenParams algorithm-specific key generation parameters
+     * @param isExtractable whether the key(s) can be exported
+     * @param keyUsages permitted operations for the key(s)
+     * @return a Promise that fulfills with a CryptoKey or CryptoKeyPair
+     */
+    @JsxFunction
+    public NativePromise generateKey(final Object keyGenParams, final boolean isExtractable,
+            final Object keyUsages) {
+        final Object result;
+        try {
+            final List<String> requestedUsages = toKeyUsages(keyUsages);
+            final String algorithm = resolveAlgorithmName(keyGenParams);
+            ensureAlgorithmIsSupported("generateKey", algorithm);
+
+            final Scriptable params = toAlgorithmParams(keyGenParams, algorithm);
+
+            switch (algorithm) {
+                case "RSASSA-PKCS1-v1_5":
+                case "RSA-PSS":
+                case "RSA-OAEP": {
+                    final RsaHashedKeyAlgorithm rsaParams = RsaHashedKeyAlgorithm.from(params);
+                    final List<String> usages = resolveKeyUsages(algorithm, requestedUsages);
+
+                    final KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("RSA");
+                    keyPairGen.initialize(new RSAKeyGenParameterSpec(
+                            rsaParams.getModulusLength(), rsaParams.getPublicExponentAsBigInteger()));
+                    final KeyPair keyPair = keyPairGen.generateKeyPair();
+
+                    result = createKeyPair(keyPair, rsaParams, isExtractable, usages);
+                    break;
+                }
+                case "ECDSA":
+                case "ECDH": {
+                    final EcKeyAlgorithm ecParams = EcKeyAlgorithm.from(params);
+                    final List<String> usages = resolveKeyUsages(algorithm, requestedUsages);
+
+                    final KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("EC");
+                    keyPairGen.initialize(new ECGenParameterSpec(ecParams.getJavaCurveName()));
+                    final KeyPair keyPair = keyPairGen.generateKeyPair();
+
+                    result = createKeyPair(keyPair, ecParams, isExtractable, usages);
+                    break;
+                }
+                case "AES-CBC":
+                case "AES-CTR":
+                case "AES-GCM":
+                case "AES-KW": {
+                    final AesKeyAlgorithm aesParams = AesKeyAlgorithm.from(params);
+                    final List<String> usages = resolveKeyUsages(algorithm, requestedUsages);
+                    if (usages.isEmpty()) {
+                        throw new IllegalArgumentException("An invalid or illegal string was specified");
+                    }
+                    if (!AesKeyAlgorithm.SUPPORTED_LENGTHS.contains(aesParams.getLength())) {
+                        throw new OperationException("The AES key length must be 128, 192 or 256 bits");
+                    }
+
+                    final KeyGenerator keyGen = KeyGenerator.getInstance("AES");
+                    keyGen.init(aesParams.getLength());
+                    final SecretKey secretKey = keyGen.generateKey();
+
+                    result = CryptoKey.create(getParentScope(), secretKey, isExtractable, aesParams, usages);
+                    break;
+                }
+                case "HMAC": {
+                    final HmacKeyAlgorithm hmacParams = HmacKeyAlgorithm.from(params);
+                    final List<String> usages = resolveKeyUsages(algorithm, requestedUsages);
+                    if (usages.isEmpty()) {
+                        throw new IllegalArgumentException("An invalid or illegal string was specified");
+                    }
+                    if (hmacParams.getLength() == 0) {
+                        throw new OperationException("The HMAC key length must not be 0");
+                    }
+
+                    final KeyGenerator keyGen = KeyGenerator.getInstance(hmacParams.getJavaName());
+                    keyGen.init(hmacParams.getLength());
+                    final SecretKey secretKey = keyGen.generateKey();
+
+                    result = CryptoKey.create(getParentScope(), secretKey, isExtractable, hmacParams, usages);
+                    break;
+                }
+                default:
+                    throw new UnsupportedOperationException("generateKey " + algorithm);
+            }
+        }
+        catch (final EcmaError e) {
+            return setupRejectedPromise(() -> JavaScriptEngine.toErrorObject(e, getParentScope()));
+        }
+        catch (final OperationException e) {
+            return setupRejectedPromise(() -> createDOMException(e.getMessage(), DOMException.OPERATION_ERR));
+        }
+        catch (final IllegalArgumentException e) {
+            return setupRejectedPromise(() -> createDOMException(e.getMessage(), DOMException.SYNTAX_ERR));
+        }
+        catch (final NoSuchAlgorithmException | UnsupportedOperationException e) {
+            return setupRejectedPromise(() -> createDOMException("Operation is not supported: " + e.getMessage(),
+                    DOMException.NOT_SUPPORTED_ERR));
+        }
+        catch (final GeneralSecurityException e) {
+            return setupRejectedPromise(() -> createDOMException("The operation failed: " + e.getMessage(),
+                    DOMException.OPERATION_ERR));
+        }
+        return setupPromise(() -> result);
+    }
+
+    /**
+     * Creates a CryptoKeyPair (plain JS object with publicKey/privateKey) from a Java KeyPair.
+     * The public key is always extractable regardless of the extractable parameter.
+     * Usages are split: public gets {encrypt,verify,wrapKey},
+     * private gets {decrypt,sign,unwrapKey,deriveBits,deriveKey}.
+     */
+    private Scriptable createKeyPair(final KeyPair keyPair, final KeyAlgorithm algorithm,
+            final boolean isExtractable, final List<String> allUsages) {
+        final Set<String> publicUsageSet = Set.of("encrypt", "verify", "wrapKey");
+        final Set<String> privateUsageSet = Set.of("decrypt", "sign", "unwrapKey", "deriveBits", "deriveKey");
+
+        final List<String> publicUsages = new ArrayList<>();
+        final List<String> privateUsages = new ArrayList<>();
+        for (final String usage : allUsages) {
+            if (publicUsageSet.contains(usage)) {
+                publicUsages.add(usage);
+            }
+            if (privateUsageSet.contains(usage)) {
+                privateUsages.add(usage);
+            }
+        }
+
+        // if privateKey usages would be empty, throw SyntaxError
+        if (privateUsages.isEmpty()) {
+            throw new IllegalArgumentException("An invalid or illegal string was specified");
+        }
+
+        // public key is always extractable
+        final CryptoKey publicKey = CryptoKey.create(
+                getParentScope(), keyPair.getPublic(), true, algorithm, publicUsages);
+        final CryptoKey privateKey = CryptoKey.create(
+                getParentScope(), keyPair.getPrivate(), isExtractable, algorithm, privateUsages);
+
+        final Scriptable keyPairObj = JavaScriptEngine.newObject(getParentScope());
+        ScriptableObject.putProperty(keyPairObj, "publicKey", publicKey);
+        ScriptableObject.putProperty(keyPairObj, "privateKey", privateKey);
+        return keyPairObj;
+    }
+
+    /**
+     * Not yet implemented.
+     *
+     * @return a Promise which will be fulfilled with a CryptoKey object representing the new key
+     */
+    @JsxFunction
+    public NativePromise deriveKey() {
         return notImplemented();
     }
 
+    /**
+     * Not yet implemented.
+     *
+     * @return a Promise which will be fulfilled with an ArrayBuffer containing the derived bits
+     */
     @JsxFunction
-    public Object decrypt() {
+    public NativePromise deriveBits() {
         return notImplemented();
     }
 
+    /**
+     * Imports a key from external, portable key material.
+     * @see <a href="https://w3c.github.io/webcrypto/#SubtleCrypto-method-importKey">SubtleCrypto.importKey()</a>
+     * @param format the data format ("raw", "pkcs8", "spki", "jwk")
+     * @param keyData the key material (BufferSource for raw/pkcs8/spki, JsonWebKey for jwk)
+     * @param keyImportParams algorithm-specific import parameters
+     * @param isExtractable whether the key can be exported
+     * @param keyUsages permitted operations for this key
+     * @return a Promise that fulfills with the imported CryptoKey
+     */
     @JsxFunction
-    public Object sign() {
+    public NativePromise importKey(final String format, final Scriptable keyData,
+            final Object keyImportParams, final boolean isExtractable, final Object keyUsages) {
+
+        final CryptoKey key;
+        try {
+            ensureKeyFormat(format);
+            final List<String> requestedUsages = toKeyUsages(keyUsages);
+            final String algorithm = resolveAlgorithmName(keyImportParams);
+            ensureAlgorithmIsSupported("importKey", algorithm);
+
+            if (!"raw".equals(format)) {
+                return notImplemented();
+            }
+            key = importRawKey(algorithm, keyData, keyImportParams, isExtractable, requestedUsages);
+        }
+        catch (final EcmaError e) {
+            return setupRejectedPromise(() -> JavaScriptEngine.toErrorObject(e, getParentScope()));
+        }
+        catch (final DataException e) {
+            return setupRejectedPromise(() -> createDOMException(e.getMessage(), DOMException.DATA_ERR));
+        }
+        catch (final IllegalArgumentException e) {
+            return setupRejectedPromise(() -> createDOMException(e.getMessage(), DOMException.SYNTAX_ERR));
+        }
+        catch (final UnsupportedOperationException e) {
+            return setupRejectedPromise(() -> createDOMException("Operation is not supported: " + e.getMessage(),
+                    DOMException.NOT_SUPPORTED_ERR));
+        }
+        return setupPromise(() -> key);
+    }
+
+    private CryptoKey importRawKey(final String algorithm, final Scriptable keyData,
+            final Object keyImportParams, final boolean isExtractable, final List<String> requestedUsages) {
+        // a plain string is only valid for algorithms without import parameters
+        if ("HMAC".equals(algorithm) && !(keyImportParams instanceof Scriptable)) {
+            throw JavaScriptEngine.typeError("HmacImportParams: hash: Missing or not an AlgorithmIdentifier");
+        }
+
+        final ByteBuffer byteBuffer = asByteBuffer(keyData);
+        final byte[] rawBytes = new byte[byteBuffer.remaining()];
+        byteBuffer.get(rawBytes);
+        final int bitLength = rawBytes.length * 8;
+        if (bitLength == 0) {
+            throw new DataException("The key data must not be empty");
+        }
+
+        final List<String> usages = resolveKeyUsages(algorithm, requestedUsages);
+
+        final KeyAlgorithm keyAlgorithm;
+        final SecretKey internalKey;
+        if ("HMAC".equals(algorithm)) {
+            final HmacKeyAlgorithm params = HmacKeyAlgorithm.from((Scriptable) keyImportParams, bitLength);
+            final int length = params.getLength();
+            if (length > bitLength || length <= bitLength - 8) {
+                throw new DataException("The length " + length + " does not match the key data");
+            }
+
+            keyAlgorithm = params;
+            internalKey = new SecretKeySpec(rawBytes, params.getJavaName());
+        }
+        else if (AesKeyAlgorithm.isSupported(algorithm)) {
+            if (!AesKeyAlgorithm.SUPPORTED_LENGTHS.contains(bitLength)) {
+                throw new DataException("The AES key data must be 128, 192 or 256 bits long");
+            }
+            keyAlgorithm = new AesKeyAlgorithm(algorithm, bitLength);
+            internalKey = new SecretKeySpec(rawBytes, "AES");
+        }
+        else {
+            throw new UnsupportedOperationException("importKey raw " + algorithm);
+        }
+
+        // secret keys need a usage; this is checked after the key data
+        if (usages.isEmpty()) {
+            throw new IllegalArgumentException("An invalid or illegal string was specified");
+        }
+        return CryptoKey.create(getParentScope(), internalKey, isExtractable, keyAlgorithm, usages);
+    }
+
+    /**
+     * Exports a key in the specified format.
+     * @see <a href="https://w3c.github.io/webcrypto/#SubtleCrypto-method-exportKey">SubtleCrypto.exportKey()</a>
+     * @param format the data format ("raw", "pkcs8", "spki", "jwk")
+     * @param key the CryptoKey to export
+     * @return a Promise that fulfills with the key data
+     */
+    @JsxFunction
+    public NativePromise exportKey(final String format, final Object key) {
+        if (!KEY_FORMATS.contains(format)) {
+            return rejectWithTypeError("'" + format + "' is not a valid key format");
+        }
+        if (!(key instanceof CryptoKey cryptoKey)) {
+            return rejectNotACryptoKey("exportKey");
+        }
+
+        final byte[] result;
+        try {
+            if (!cryptoKey.getExtractable()) {
+                return setupRejectedPromise(() -> createDOMException(
+                        "A parameter or an operation is not supported by the underlying object",
+                        DOMException.INVALID_ACCESS_ERR));
+            }
+
+            if (!"raw".equals(format)) {
+                return notImplemented();
+            }
+            if (!(cryptoKey.getInternalKey() instanceof SecretKey secretKey)) {
+                throw new IllegalArgumentException(
+                        "Data provided to an operation does not meet requirements");
+            }
+            result = secretKey.getEncoded();
+        }
+        catch (final IllegalArgumentException e) {
+            return setupRejectedPromise(() -> createDOMException(e.getMessage(), DOMException.SYNTAX_ERR));
+        }
+        catch (final UnsupportedOperationException e) {
+            return setupRejectedPromise(() -> createDOMException("Operation is not supported: " + e.getMessage(),
+                    DOMException.NOT_SUPPORTED_ERR));
+        }
+        return setupPromise(() -> createArrayBuffer(result));
+    }
+
+    /**
+     * Not yet implemented.
+     *
+     * @return a Promise that fulfills with an ArrayBuffer containing the encrypted exported key
+     */
+    @JsxFunction
+    public NativePromise wrapKey() {
         return notImplemented();
     }
 
+    /**
+     * Not yet implemented.
+     *
+     * @return a Promise that fulfills with the unwrapped key as a CryptoKey object
+     */
     @JsxFunction
-    public Object verify() {
+    public NativePromise unwrapKey() {
         return notImplemented();
     }
 
-    @JsxFunction
-    public Object digest() {
-        return notImplemented();
+    /**
+     * Checks if the specified crypto operation supports the given algorithm.
+     * @see <a href="https://w3c.github.io/webcrypto/#algorithm-overview">Algorithm Overview</a>
+     * @param operation the crypto operation (e.g. "digest", "sign")
+     * @param algorithm the algorithm name (e.g. "SHA-256", "HMAC")
+     * @throws UnsupportedOperationException if the operation does not support the algorithm
+     */
+    private static void ensureKeyFormat(final String format) {
+        if (!KEY_FORMATS.contains(format)) {
+            throw JavaScriptEngine.typeError("'" + format + "' is not a valid key format");
+        }
     }
 
-    @JsxFunction
-    public Object generateKey() {
-        return notImplemented();
+    private static void ensureAlgorithmIsSupported(final String operation, final String algorithm) {
+        final Set<String> supportedAlgorithms = OPERATION_TO_SUPPORTED_ALGORITHMS.get(operation);
+        if (supportedAlgorithms == null || !supportedAlgorithms.contains(algorithm)) {
+            throw new UnsupportedOperationException(operation + " " + algorithm);
+        }
     }
 
-    @JsxFunction
-    public Object deriveKey() {
-        return notImplemented();
+    /**
+     * Verifies that the operation's algorithm name matches the key's algorithm name.
+     * @param algorithmName the algorithm name from the operation parameters
+     * @param key the CryptoKey being used
+     * @throws InvalidAccessException if the algorithm names don't match
+     */
+    private static void ensureKeyAlgorithmMatches(final String algorithmName, final CryptoKey key) {
+        final String keyAlgoName = key.getKeyAlgorithm().getName();
+        if (!algorithmName.equals(keyAlgoName)) {
+            throw new InvalidAccessException(
+                    "A parameter or an operation is not supported by the underlying object");
+        }
     }
 
-    @JsxFunction
-    public Object deriveBits() {
-        return notImplemented();
+    /**
+     * Verifies that the key's usages include the specified usage.
+     * @param key the CryptoKey being used
+     * @param usage the required usage (e.g. "encrypt", "sign")
+     * @throws InvalidAccessException if the key doesn't have the required usage
+     */
+    private static void ensureKeyUsage(final CryptoKey key, final String usage) {
+        if (!key.getUsagesInternal().contains(usage)) {
+            throw new InvalidAccessException(
+                    "A parameter or an operation is not supported by the underlying object");
+        }
     }
 
-    @JsxFunction
-    public Object importKey() {
-        return notImplemented();
+    /**
+     * Resolves the algorithm name from the given {@code AlgorithmIdentifier}.
+     * Registered names are matched ASCII case-insensitive and returned in their registered
+     * spelling (e.g. "aes-gcm" is resolved to "AES-GCM").
+     * @see <a href="https://w3c.github.io/webcrypto/#dfn-AlgorithmIdentifier">
+     *     AlgorithmIdentifier</a>Like WebIDL does, values that are not an object are converted to a string.
+     * @param algorithm the algorithm identifier (String or Scriptable with name property)
+     * @return the resolved algorithm name
+     * @throws EcmaError (TypeError) if the algorithm object has no name
+     */
+    static String resolveAlgorithmName(final Object algorithm) {
+        if (algorithm instanceof Scriptable obj) {
+            return toRegisteredName(JavaScriptEngine.toString(getRequiredMember(obj, "name")));
+        }
+        return toRegisteredName(JavaScriptEngine.toString(algorithm));
     }
 
-    @JsxFunction
-    public Object exportKey() {
-        return notImplemented();
+    private static String toRegisteredName(final String name) {
+        return REGISTERED_ALGORITHM_NAMES.getOrDefault(toAsciiLowerCase(name), name);
     }
 
-    @JsxFunction
-    public Object wrapKey() {
-        return notImplemented();
+    private static String toAsciiLowerCase(final String value) {
+        final char[] chars = value.toCharArray();
+        for (int i = 0; i < chars.length; i++) {
+            if (chars[i] >= 'A' && chars[i] <= 'Z') {
+                chars[i] = (char) (chars[i] + ('a' - 'A'));
+            }
+        }
+        return new String(chars);
     }
 
-    @JsxFunction
-    public Object unwrapKey() {
-        return notImplemented();
+    /**
+     * Converts ArrayBuffer or ArrayBufferView to a ByteBuffer.
+     * @param data the buffer source object
+     * @return the ByteBuffer wrapping the data
+     * @throws EcmaError (TypeError) if data is not an ArrayBuffer or ArrayBufferView
+     */
+    static ByteBuffer asByteBuffer(final Object data) {
+        if (data instanceof NativeArrayBuffer nativeBuffer) {
+            // get a copy of the bytes held by the buffer source: a detached buffer holds no bytes
+            if (nativeBuffer.isDetached()) {
+                return ByteBuffer.allocate(0);
+            }
+            return nativeBuffer.getByteBuffer();
+        }
+        else if (data instanceof NativeArrayBufferView arrayBufferView) {
+            // getByteLength() still reports the original length for a view on a detached buffer
+            if (arrayBufferView.getBuffer().isDetached()) {
+                return ByteBuffer.allocate(0);
+            }
+            return arrayBufferView.getBuffer()
+                    .getByteBuffer()
+                    .position(arrayBufferView.getByteOffset())
+                    .limit(arrayBufferView.getByteOffset() + arrayBufferView.getByteLength())
+                    .slice();
+        }
+        else {
+            throw JavaScriptEngine.typeError(
+                    "Argument could not be converted to any of: ArrayBufferView, ArrayBuffer.");
+        }
+    }
+
+    /**
+     * Returns the algorithm parameters; an algorithm that requires parameters
+     * can't be given as a plain name.
+     * @param algorithm the algorithm identifier
+     * @param algorithmName the resolved algorithm name
+     * @return the algorithm parameters
+     * @throws EcmaError (TypeError) if the algorithm is not an object
+     */
+    static Scriptable toAlgorithmParams(final Object algorithm, final String algorithmName) {
+        if (algorithm instanceof Scriptable params) {
+            return params;
+        }
+        throw JavaScriptEngine.typeError(algorithmName + ": the algorithm parameters are missing");
+    }
+
+    /**
+     * Returns a required member of an algorithm dictionary.
+     * @param dictionary the dictionary
+     * @param member the member name
+     * @return the value
+     * @throws EcmaError (TypeError) if the member is missing (like WebIDL does)
+     */
+    static Object getRequiredMember(final Scriptable dictionary, final String member) {
+        final Object value = ScriptableObject.getProperty(dictionary, member);
+        if (value == Scriptable.NOT_FOUND || JavaScriptEngine.isUndefined(value)) {
+            throw JavaScriptEngine.typeError("The required member '" + member + "' is missing");
+        }
+        return value;
+    }
+
+    /**
+     * Returns a required numeric member of an algorithm dictionary.
+     * @param dictionary the dictionary
+     * @param member the member name
+     * @return the value
+     * @throws EcmaError (TypeError) if the member is missing or not a finite number
+     */
+    static double getRequiredNumber(final Scriptable dictionary, final String member) {
+        final double value = JavaScriptEngine.toNumber(getRequiredMember(dictionary, member));
+        if (Double.isNaN(value) || Double.isInfinite(value)) {
+            throw JavaScriptEngine.typeError("The member '" + member + "' is not a finite number");
+        }
+        return value;
+    }
+
+    /**
+     * Returns a required BufferSource member of an algorithm dictionary as byte array.
+     * @param dictionary the dictionary
+     * @param member the member name
+     * @return the bytes
+     * @throws EcmaError (TypeError) if the member is missing or not a BufferSource
+     */
+    static byte[] getRequiredBuffer(final Scriptable dictionary, final String member) {
+        return toByteArray(asByteBuffer(getRequiredMember(dictionary, member)));
+    }
+
+    /**
+     * Creates a NativeArrayBuffer with proper scope and prototype from the given bytes.
+     * @param data the byte array to wrap
+     * @return the new NativeArrayBuffer
+     */
+    NativeArrayBuffer createArrayBuffer(final byte[] data) {
+        final NativeArrayBuffer buffer = new NativeArrayBuffer(data.length);
+        buffer.getByteBuffer().put(data);
+        buffer.setParentScope(getParentScope());
+        buffer.setPrototype(ScriptableObject.getClassPrototype(getParentScope(), buffer.getClassName()));
+        return buffer;
+    }
+
+    /**
+     * Converts the keyUsages argument like WebIDL converts a {@code sequence<KeyUsage>}.
+     * @param keyUsages the JS usages (any iterable)
+     * @return the usages
+     * @throws EcmaError (TypeError) if keyUsages is not iterable or contains an unknown usage
+     */
+    private List<String> toKeyUsages(final Object keyUsages) {
+        final List<String> usages = new ArrayList<>();
+        final boolean isSequence = keyUsages instanceof Scriptable scriptable
+                && JavaScriptEngine.iterate(Context.getCurrentContext(), getParentScope(), scriptable, value -> {
+                    final String usage = JavaScriptEngine.toString(value);
+                    if (!RECOGNIZED_KEY_USAGES.contains(usage)) {
+                        throw JavaScriptEngine.typeError("'" + usage + "' is not a valid key usage");
+                    }
+                    usages.add(usage);
+                });
+        if (!isSequence) {
+            throw JavaScriptEngine.typeError("The key usages are not a sequence");
+        }
+        return usages;
+    }
+
+    /**
+     * Validates the key usages against the algorithm's supported operations.
+     * @param algorithm the algorithm name
+     * @param keyUsages the usages (see {@link #toKeyUsages(Object)})
+     * @return the usages without duplicates, in canonical order
+     * @throws IllegalArgumentException if a usage is not supported by the algorithm
+     */
+    static List<String> resolveKeyUsages(final String algorithm, final List<String> keyUsages) {
+        for (final String usage : keyUsages) {
+            final Set<String> supportedAlgorithms = OPERATION_TO_SUPPORTED_ALGORITHMS.get(usage);
+            if (supportedAlgorithms == null || !supportedAlgorithms.contains(algorithm)) {
+                throw new IllegalArgumentException("An invalid or illegal string was specified");
+            }
+        }
+
+        // maintain canonical ordering per RECOGNIZED_KEY_USAGES
+        final List<String> sortedKeyUsages = new ArrayList<>();
+        for (final String keyUsage : RECOGNIZED_KEY_USAGES) {
+            if (keyUsages.contains(keyUsage)) {
+                sortedKeyUsages.add(keyUsage);
+            }
+        }
+
+        return sortedKeyUsages;
+    }
+
+    /**
+     * Extracts the internal Java key from a CryptoKey, validating it is the expected type.
+     * @param <T> the expected key type
+     * @param cryptoKey the CryptoKey
+     * @param expectedKeyType the expected class (e.g. SecretKey.class)
+     * @return the internal key cast to the expected type
+     * @throws InvalidAccessException if the key is not the expected type
+     */
+    static <T extends Key> T getInternalKey(final CryptoKey cryptoKey, final Class<T> expectedKeyType) {
+        final Key internalKey = cryptoKey.getInternalKey();
+        if (!expectedKeyType.isInstance(internalKey)) {
+            throw new InvalidAccessException("A parameter or an operation is not supported by the underlying object");
+        }
+        return expectedKeyType.cast(internalKey);
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,6 @@
  */
 package org.htmlunit.javascript.host.dom;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
 import org.htmlunit.javascript.HtmlUnitScriptable;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstant;
@@ -27,10 +22,11 @@ import org.htmlunit.javascript.configuration.JsxConstructor;
 /**
  * A JavaScript object for {@code NodeFilter}.
  *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/NodeFilter">MDN Documentation</a>
  * @see <a href="http://www.w3.org/TR/DOM-Level-2-Traversal-Range/traversal.html">
- * DOM-Level-2-Traversal-Range</a>
+ *     DOM-Level-2-Traversal-Range</a>
  *
- * @author <a href="mailto:mike@10gen.com">Mike Dirolf</a>
+ * @author Mike Dirolf
  * @author Ahmed Ashour
  * @author Ronald Brill
  */
@@ -41,19 +37,19 @@ public class NodeFilter extends HtmlUnitScriptable {
      * Accept the node.
      */
     @JsxConstant
-    public static final short FILTER_ACCEPT = org.w3c.dom.traversal.NodeFilter.FILTER_ACCEPT;
+    public static final int FILTER_ACCEPT = org.w3c.dom.traversal.NodeFilter.FILTER_ACCEPT;
 
     /**
      * Reject the node.
      */
     @JsxConstant
-    public static final short FILTER_REJECT = org.w3c.dom.traversal.NodeFilter.FILTER_REJECT;
+    public static final int FILTER_REJECT = org.w3c.dom.traversal.NodeFilter.FILTER_REJECT;
 
     /**
      * Skip the node.
      */
     @JsxConstant
-    public static final short FILTER_SKIP = org.w3c.dom.traversal.NodeFilter.FILTER_SKIP;
+    public static final int FILTER_SKIP = org.w3c.dom.traversal.NodeFilter.FILTER_SKIP;
 
     /** Show all nodes. */
     @JsxConstant
@@ -63,7 +59,8 @@ public class NodeFilter extends HtmlUnitScriptable {
     @JsxConstant
     public static final int SHOW_ELEMENT = org.w3c.dom.traversal.NodeFilter.SHOW_ELEMENT;
 
-    /** Show Attr nodes. Only useful when creating a TreeWalker with an
+    /**
+     * Show Attr nodes. Only useful when creating a TreeWalker with an
      * attribute node as its root. */
     @JsxConstant
     public static final int SHOW_ATTRIBUTE = org.w3c.dom.traversal.NodeFilter.SHOW_ATTRIBUTE;
@@ -112,9 +109,10 @@ public class NodeFilter extends HtmlUnitScriptable {
     public static final int SHOW_NOTATION = org.w3c.dom.traversal.NodeFilter.SHOW_NOTATION;
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public NodeFilter() {
+    @JsxConstructor
+    public void jsConstructor() {
+        // nothing to do
     }
 }

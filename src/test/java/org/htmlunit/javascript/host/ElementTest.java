@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,13 @@
  */
 package org.htmlunit.javascript.host;
 
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.IE;
-
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.html.HtmlPageTest;
 import org.htmlunit.javascript.host.xml.XMLDocumentTest;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
-import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.HtmlUnitNYI;
 import org.htmlunit.util.MimeType;
+import org.junit.jupiter.api.Test;
+import org.openqa.selenium.WebDriver;
 
 /**
  * Tests for {@link Element}.
@@ -37,7 +31,6 @@ import org.htmlunit.util.MimeType;
  * @author Frank Danek
  * @author Anton Demydenko
  */
-@RunWith(BrowserRunner.class)
 public class ElementTest extends WebDriverTestCase {
 
     /**
@@ -47,7 +40,8 @@ public class ElementTest extends WebDriverTestCase {
     @Alerts({"1", "attrName attrValue", "attrValue", "null", "anotherValue",
              "1", "4", "<span id='label'>changed</span>"})
     public void attributes() throws Exception {
-        final String html = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
             + "    var doc = " + XMLDocumentTest.callLoadXMLDocumentFromFile("'foo.xml'") + ";\n"
@@ -85,9 +79,10 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("exception")
+    @Alerts("TypeError")
     public void selectNodes() throws Exception {
-        final String html = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
             + "    var doc = " + XMLDocumentTest.callLoadXMLDocumentFromFile("'" + URL_SECOND + "'") + ";\n"
@@ -95,7 +90,7 @@ public class ElementTest extends WebDriverTestCase {
             + "      var nodes = doc.documentElement.selectNodes('//title');\n"
             + "      log(nodes.length);\n"
             + "      log(nodes[0].tagName);\n"
-            + "    } catch (e) { log('exception'); }\n"
+            + "    } catch(e) { logEx(e); }\n"
             + "  }\n"
             + XMLDocumentTest.LOAD_XML_DOCUMENT_FROM_FILE_FUNCTION
             + "</script></head><body onload='test()'>\n"
@@ -119,10 +114,8 @@ public class ElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"2", "1"})
     public void removeChild() throws Exception {
-        // TODO [IE]SINGLE-VS-BULK test runs when executed as single but breaks as bulk
-        shutDownRealIE();
-
-        final String html = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
             + "    var doc = " + XMLDocumentTest.callLoadXMLDocumentFromFile("'" + URL_SECOND + "'") + ";\n"
@@ -147,7 +140,8 @@ public class ElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"lbl_SettingName", "outerHTML", "undefined"})
     public void getAttributeNode() throws Exception {
-        final String html = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
             + "    var doc = " + XMLDocumentTest.callLoadXMLDocumentFromFile("'" + URL_SECOND + "'") + ";\n"
@@ -195,12 +189,10 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts({"book", "exception"})
+    @Alerts({"book", "TypeError"})
     public void selectNode_root() throws Exception {
-        // TODO [IE]SINGLE-VS-BULK test runs when executed as single but breaks as bulk
-        shutDownRealIE();
-
-        final String html = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
             + "    var doc = " + XMLDocumentTest.callLoadXMLDocumentFromFile("'" + URL_SECOND + "'") + ";\n"
@@ -209,7 +201,7 @@ public class ElementTest extends WebDriverTestCase {
             + "    try {\n"
             + "      log(child.selectNodes('/title').length);\n"
             + "      log(child.selectNodes('title').length);\n"
-            + "    } catch (e) { log('exception'); }\n"
+            + "    } catch(e) { logEx(e); }\n"
             + "  }\n"
             + XMLDocumentTest.LOAD_XML_DOCUMENT_FROM_FILE_FUNCTION
             + "</script></head><body onload='test()'>\n"
@@ -227,7 +219,8 @@ public class ElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"1", "1"})
     public void getElementsByTagNameNS() throws Exception {
-        final String html = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
             + "    var text='<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\\n';\n"
@@ -243,7 +236,7 @@ public class ElementTest extends WebDriverTestCase {
             + "    try {\n"
             + "      log(doc.documentElement.getElementsByTagNameNS('http://myNS', 'template').length);\n"
             + "      log(doc.documentElement.getElementsByTagNameNS(null, 'html').length);\n"
-            + "    } catch (e) { log('exception'); }\n"
+            + "    } catch(e) { logEx(e); }\n"
             + "  }\n"
             + XMLDocumentTest.LOAD_XML_DOCUMENT_FROM_STRING_FUNCTION
             + "</script></head><body onload='test()'>\n"
@@ -258,7 +251,8 @@ public class ElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"1", "2", "3"})
     public void getElementsByTagNameNSAsterisk() throws Exception {
-        final String html = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
             + "    var text='<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\\n';\n"
@@ -275,7 +269,7 @@ public class ElementTest extends WebDriverTestCase {
             + "      log(doc.documentElement.getElementsByTagNameNS('http://myNS', '*').length);\n"
             + "      log(doc.documentElement.getElementsByTagNameNS(null, '*').length);\n"
             + "      log(doc.documentElement.getElementsByTagNameNS('*', '*').length);\n"
-            + "    } catch (e) { log('exception'); }\n"
+            + "    } catch(e) { logEx(e); }\n"
             + "  }\n"
             + XMLDocumentTest.LOAD_XML_DOCUMENT_FROM_STRING_FUNCTION
             + "</script></head><body onload='test()'>\n"
@@ -288,13 +282,10 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"2", "<nested>Three</nested>", "Four",
-                       "1", "Two", "0", "0"},
-            IE = {"2", "undefined", "undefined",
-                  "1", "undefined", "0", "0"})
+    @Alerts({"2", "<nested>Three</nested>", "Four", "1", "Two", "0", "0"})
     public void getElementsByTagNameXml() throws Exception {
-        final String html = "<html><head>\n"
-            + "<meta http-equiv='X-UA-Compatible' content='IE=edge'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "</head><body>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -306,14 +297,8 @@ public class ElementTest extends WebDriverTestCase {
             + "                 '<result>Four</result>',\n"
             + "                 '</ResultSet>'\n"
             + "                ].join('');\n"
-            + "  if (window.DOMParser) {\n"
-            + "    var parser = new DOMParser();\n"
-            + "    xml = parser.parseFromString(xmlString, 'text/xml');\n"
-            + "  } else { // IE\n"
-            + "    var parser = new ActiveXObject('Microsoft.XMLDOM');\n"
-            + "    parser.async = 'false';\n"
-            + "    parser.loadXML(xmlString);\n"
-            + "  }\n"
+            + "  var parser = new DOMParser();\n"
+            + "  xml = parser.parseFromString(xmlString, 'text/xml');\n"
             + "  var xmlDoc = parser.parseFromString(xmlString, 'text/xml');\n"
             + "  var de = xmlDoc.documentElement;\n"
             + "  try {\n"
@@ -332,7 +317,7 @@ public class ElementTest extends WebDriverTestCase {
 
             + "    res = de.getElementsByTagName('rEsulT');\n"
             + "    log(res.length);\n"
-            + "  } catch(e) {log('exception ' + e)}\n"
+            + "  } catch(e) { logEx(e); }\n"
             + "</script></body></html>";
 
         loadPageVerifyTitle2(html);
@@ -344,7 +329,8 @@ public class ElementTest extends WebDriverTestCase {
     @Test
     @Alerts("false")
     public void hasAttribute() throws Exception {
-        final String html = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
             + "    var doc = " + XMLDocumentTest.callLoadXMLDocumentFromFile("'foo.xml'") + ";\n"
@@ -373,10 +359,8 @@ public class ElementTest extends WebDriverTestCase {
     @Test
     @Alerts("true")
     public void attributes2() throws Exception {
-        // TODO [IE]SINGLE-VS-BULK test runs when executed as single but breaks as bulk
-        shutDownRealIE();
-
-        final String html = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
             + "    var doc = " + XMLDocumentTest.callLoadXMLDocumentFromFile("'foo.xml'") + ";\n"
@@ -404,7 +388,8 @@ public class ElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"undefined", "undefined"})
     public void xml() throws Exception {
-        final String html = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  var text = '<a><b c=\"d\">e</b></a>';\n"
@@ -498,8 +483,8 @@ public class ElementTest extends WebDriverTestCase {
     }
 
     private void html(final String methodName) throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -634,9 +619,6 @@ public class ElementTest extends WebDriverTestCase {
                 "[object HTMLDivElement]", "div",
                 "[object HTMLUnknownElement]", "dIv"})
     public void xml_nodeName() throws Exception {
-        // TODO [IE]SINGLE-VS-BULK test runs when executed as single but breaks as bulk
-        shutDownRealIE();
-
         xml("nodeName");
     }
 
@@ -649,9 +631,6 @@ public class ElementTest extends WebDriverTestCase {
                 "[object HTMLDivElement]", "div",
                 "[object HTMLUnknownElement]", "dIv"})
     public void xml_tagName() throws Exception {
-        // TODO [IE]SINGLE-VS-BULK test runs when executed as single but breaks as bulk
-        shutDownRealIE();
-
         xml("tagName");
     }
 
@@ -664,9 +643,6 @@ public class ElementTest extends WebDriverTestCase {
                 "[object HTMLDivElement]", "null",
                 "[object HTMLUnknownElement]", "null"})
     public void xml_prefix() throws Exception {
-        // TODO [IE]SINGLE-VS-BULK test runs when executed as single but breaks as bulk
-        shutDownRealIE();
-
         xml("prefix");
     }
 
@@ -679,9 +655,6 @@ public class ElementTest extends WebDriverTestCase {
                 "[object HTMLDivElement]", "div",
                 "[object HTMLUnknownElement]", "dIv"})
     public void xml_localName() throws Exception {
-        // TODO [IE]SINGLE-VS-BULK test runs when executed as single but breaks as bulk
-        shutDownRealIE();
-
         xml("localName");
     }
 
@@ -694,9 +667,6 @@ public class ElementTest extends WebDriverTestCase {
                 "[object HTMLDivElement]", "undefined",
                 "[object HTMLUnknownElement]", "undefined"})
     public void xml_baseName() throws Exception {
-        // TODO [IE]SINGLE-VS-BULK test runs when executed as single but breaks as bulk
-        shutDownRealIE();
-
         xml("baseName");
     }
 
@@ -709,15 +679,12 @@ public class ElementTest extends WebDriverTestCase {
                 "[object HTMLDivElement]", "http://www.w3.org/1999/xhtml",
                 "[object HTMLUnknownElement]", "http://www.w3.org/1999/xhtml"})
     public void xml_namespaceURI() throws Exception {
-        // TODO [IE]SINGLE-VS-BULK test runs when executed as single but breaks as bulk
-        shutDownRealIE();
-
         xml("namespaceURI");
     }
 
     private void xml(final String methodName) throws Exception {
-        final String html =
-              "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION
@@ -758,17 +725,14 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"prototype found", ""
-                    + "ELEMENT_NODE, ATTRIBUTE_NODE, TEXT_NODE, CDATA_SECTION_NODE, ENTITY_REFERENCE_NODE, "
+    @Alerts({"prototype found", "ELEMENT_NODE, ATTRIBUTE_NODE, TEXT_NODE, CDATA_SECTION_NODE, ENTITY_REFERENCE_NODE, "
                     + "ENTITY_NODE, PROCESSING_INSTRUCTION_NODE, COMMENT_NODE, DOCUMENT_NODE, DOCUMENT_TYPE_NODE, "
                     + "DOCUMENT_FRAGMENT_NODE, NOTATION_NODE, DOCUMENT_POSITION_DISCONNECTED, "
                     + "DOCUMENT_POSITION_PRECEDING, "
                     + "DOCUMENT_POSITION_FOLLOWING, DOCUMENT_POSITION_CONTAINS, DOCUMENT_POSITION_CONTAINED_BY, "
-                    + "DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC, "},
-            IE = {"prototype found", ""})
+                    + "DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC, "})
     public void enumeratedProperties() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -780,7 +744,7 @@ public class ElementTest extends WebDriverTestCase {
             + "      for (var i in Element)\n"
             + "        str += i + ', ';\n"
             + "      log(str);\n"
-            + "    } catch (e) { log('exception occured')}\n"
+            + "    } catch(e) { log('exception occured')}\n"
             + "  }\n"
             + "</script>\n"
             + "</head>\n"
@@ -796,7 +760,8 @@ public class ElementTest extends WebDriverTestCase {
     @Test
     @Alerts("finished")
     public void removeAttribute() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION
@@ -831,11 +796,12 @@ public class ElementTest extends WebDriverTestCase {
     @Test
     @Alerts("function")
     public void getBoundingClientRect() throws Exception {
-        final String html = "<html><body><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body><script>\n"
             + LOG_TITLE_FUNCTION
             + "try {\n"
             + "  log(typeof Element.prototype.getBoundingClientRect);\n"
-            + "} catch (e) { log('exception');}\n"
+            + "} catch(e) { logEx(e);}\n"
             + "</script></body></html>";
         loadPageVerifyTitle2(html);
     }
@@ -846,7 +812,8 @@ public class ElementTest extends WebDriverTestCase {
     @Test
     @Alerts("0")
     public void commentIsElement() throws Exception {
-        final String html = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<div id='myId'><!-- --></div>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -864,7 +831,8 @@ public class ElementTest extends WebDriverTestCase {
     @Test
     @Alerts("undefined")
     public void nodeHasUndefinedInnerText() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -881,14 +849,8 @@ public class ElementTest extends WebDriverTestCase {
             + "        </dashboard>\";\n"
             + "    var xml, tmp;\n"
             + "    try {\n"
-            + "      if (window.DOMParser) {\n"
-            + "        tmp = new DOMParser();\n"
-            + "        xml = tmp.parseFromString(data, 'text/xml');\n"
-            + "      } else { // IE\n"
-            + "        xml = new ActiveXObject('Microsoft.XMLDOM');\n"
-            + "        xml.async = 'false';\n"
-            + "        xml.loadXML(data);\n"
-            + "      }\n"
+            + "      tmp = new DOMParser();\n"
+            + "      xml = tmp.parseFromString(data, 'text/xml');\n"
             + "    } catch(e) {\n"
             + "      xml = undefined;\n"
             + "    }\n"
@@ -908,8 +870,8 @@ public class ElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"3", "first", "third", "second", "second"})
     public void firstElementChild() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -966,10 +928,10 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"§§URL§§", "§§URL§§"},
-            IE = {"undefined", "undefined"})
+    @Alerts({"§§URL§§", "§§URL§§"})
     public void baseURI() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_ + "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
@@ -994,10 +956,10 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"[object HTMLCollection] 1", "[object HTMLCollection] 2", "[object HTMLCollection] 0"},
-            IE = {"exception", "[object HTMLCollection] 2", "[object HTMLCollection] 0"})
+    @Alerts({"[object HTMLCollection] 1", "[object HTMLCollection] 2", "[object HTMLCollection] 0"})
     public void children() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_ + "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  var text = '<hello><child></child></hello>';\n"
@@ -1006,17 +968,17 @@ public class ElementTest extends WebDriverTestCase {
             + "  try {\n"
             + "    var children = doc.documentElement.children;\n"
             + "    log(children + ' ' + children.length);\n"
-            + "  } catch (e) { log('exception'); }\n"
+            + "  } catch(e) { logEx(e); }\n"
 
             + "  try {\n"
             + "    children = document.documentElement.children;\n"
             + "    log(children + ' ' + children.length);\n"
-            + "  } catch (e) { log('exception'); }\n"
+            + "  } catch(e) { logEx(e); }\n"
 
             + "  try {\n"
             + "    children = document.getElementById('myId').children;\n"
             + "    log(children + ' ' + children.length);\n"
-            + "  } catch (e) { log('exception'); }\n"
+            + "  } catch(e) { logEx(e); }\n"
             + "}\n"
             + XMLDocumentTest.LOAD_XML_DOCUMENT_FROM_STRING_FUNCTION
             + "</script></head><body onload='test()'>\n"
@@ -1030,10 +992,10 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"", "a b c"},
-            IE = {"undefined", "a b c"})
+    @Alerts({"", "a b c"})
     public void classList() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_ + "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function test() {\n"
             + "  var text = '<hello><child></child></hello>';\n"
@@ -1057,7 +1019,8 @@ public class ElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"test value", "true", "false", "finished"})
     public void attributeNS() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION
@@ -1086,10 +1049,8 @@ public class ElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"ab", "ab"})
     public void removeAttribute_case_sensitive() throws Exception {
-        // TODO [IE]SINGLE-VS-BULK test runs when executed as single but breaks as bulk
-        shutDownRealIE();
-
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION
@@ -1125,7 +1086,8 @@ public class ElementTest extends WebDriverTestCase {
     @Test
     @Alerts("test")
     public void setAttributeNode() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION
@@ -1150,10 +1112,10 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"undefined", "undefined"},
-            IE = {"available", "null"})
+    @Alerts({"undefined", "undefined"})
     public void currentStyle() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION
@@ -1177,7 +1139,8 @@ public class ElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"undefined", "undefined"})
     public void allowKeyboardInput() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
             + LOG_TITLE_FUNCTION
@@ -1198,8 +1161,8 @@ public class ElementTest extends WebDriverTestCase {
     @Test
     @Alerts("")
     public void enumeratedPropertiesForNativeFunction() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -1220,13 +1183,11 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"function Element() { [native code] }", "[object Element]",
-                       "function Element() { [native code] }"},
-            IE = {"[object Element]", "[object ElementPrototype]", "[object Element]"})
-    @NotYetImplemented(IE)
+    @Alerts({"function Element() { [native code] }", "[object Element]",
+             "function Element() { [native code] }"})
     public void prototypConstructor() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -1234,12 +1195,12 @@ public class ElementTest extends WebDriverTestCase {
             + "      process(Element);\n"
             + "      process(Element.prototype);\n"
             + "      process(Element.prototype.constructor);\n"
-            + "    } catch (e) {log('exception')}\n"
+            + "    } catch(e) { logEx(e) }\n"
             + "  }\n"
             + "  function process(obj) {\n"
             + "    try {\n"
             + "      log(obj);\n"
-            + "    } catch (e) {log('exception')}\n"
+            + "    } catch(e) { logEx(e) }\n"
             + "   }\n"
             + "</script>\n"
             + "</head>\n"
@@ -1253,12 +1214,10 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"function Element() { [native code] }", "[object Element]",
-                       "function Element() { [native code] }"},
-            IE = {"[object Element]", "[object ElementPrototype]", "[object Element]"})
-    @NotYetImplemented(IE)
+    @Alerts({"function Element() { [native code] }", "[object Element]",
+             "function Element() { [native code] }"})
     public void prototypConstructorStandards() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -1284,7 +1243,7 @@ public class ElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"0-0", "0-1", "2-5"})
     public void childElementCount() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -1319,7 +1278,7 @@ public class ElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"1-2", "3-7"})
     public void childElementCountTable() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -1353,7 +1312,7 @@ public class ElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"true", "false"})
     public void hasAttributes() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -1374,10 +1333,9 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "Philippine eagle",
-            IE = "not found")
+    @Alerts("Philippine eagle")
     public void matches() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -1411,10 +1369,9 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"SyntaxError", "done"},
-            IE = "done")
+    @Alerts({"SyntaxError/DOMException", "done"})
     public void matchesInvalidSelector() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -1426,7 +1383,7 @@ public class ElementTest extends WebDriverTestCase {
             + "          log(birds[i].textContent);\n"
             + "        }\n"
             + "      }\n"
-            + "    } catch (e) { log(e.name); }\n"
+            + "    } catch(e) { logEx(e); }\n"
             + "    log('done');\n"
             + "  }\n"
             + "</script>\n"
@@ -1446,7 +1403,7 @@ public class ElementTest extends WebDriverTestCase {
     @Test
     @Alerts({"TypeError", "done"})
     public void matchesWindow() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -1458,7 +1415,7 @@ public class ElementTest extends WebDriverTestCase {
             + "         || docElem.msMatchesSelector;\n"
             + "    try {\n"
             + "      matches.call(window, ':visible')\n"
-            + "    } catch (e) { log(e.name); }\n"
+            + "    } catch(e) { logEx(e); }\n"
             + "    log('done');\n"
             + "  }\n"
             + "</script>\n"
@@ -1477,10 +1434,9 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"div-02", "div-03", "div-01", "article-01", "null"},
-            IE = "no closest")
+    @Alerts({"div-02", "div-03", "div-01", "article-01", "null"})
     public void closest() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -1514,11 +1470,10 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"false", "true", "true", "true", "false", "false"},
-            IE = "toggleAttribute missing")
+    @Alerts({"false", "true", "true", "true", "false", "false"})
     public void toggleAttribute() throws Exception {
-        final String html =
-            "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
             + "    var d0 = document.getElementById('div0');\n"
@@ -1560,8 +1515,7 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "1", "<div id=\"div1\"></div>"},
-            IE = "after missing")
+    @Alerts({"1", "1", "<div id=\"div1\"></div>"})
     public void after_noArgs_empty() throws Exception {
         modifySiblings("after", "after();", "");
     }
@@ -1570,8 +1524,7 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "1", "#HtmlUnit"},
-            IE = "after missing")
+    @Alerts({"1", "1", "#HtmlUnit"})
     public void after_noArgs_notEmpty() throws Exception {
         modifySiblings("after", "after();", "HtmlUnit");
     }
@@ -1580,9 +1533,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "2", "<div id=\"div1\"></div>", "#HeHo",
-                       "childList", "1", "0", "[object HTMLDivElement]", "null"},
-            IE = "after missing")
+    @Alerts({"1", "2", "<div id=\"div1\"></div>", "#HeHo",
+             "childList", "1", "0", "[object HTMLDivElement]", "null"})
     @HtmlUnitNYI(CHROME = {"1", "2", "<div id=\"div1\"></div>", "#HeHo"},
             EDGE = {"1", "2", "<div id=\"div1\"></div>", "#HeHo"},
             FF = {"1", "2", "<div id=\"div1\"></div>", "#HeHo"},
@@ -1595,9 +1547,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "2", "#HtmlUnit", "#HeHo",
-                       "childList", "1", "0", "[object HTMLDivElement]", "null"},
-            IE = "after missing")
+    @Alerts({"1", "2", "#HtmlUnit", "#HeHo",
+             "childList", "1", "0", "[object HTMLDivElement]", "null"})
     @HtmlUnitNYI(CHROME = {"1", "2", "#HtmlUnit", "#HeHo"},
             EDGE = {"1", "2", "#HtmlUnit", "#HeHo"},
             FF = {"1", "2", "#HtmlUnit", "#HeHo"},
@@ -1610,9 +1561,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "2", "<div id=\"div1\"></div>", "<p></p>",
-                       "childList", "1", "0", "[object HTMLDivElement]", "null"},
-            IE = "after missing")
+    @Alerts({"1", "2", "<div id=\"div1\"></div>", "<p></p>",
+             "childList", "1", "0", "[object HTMLDivElement]", "null"})
     @HtmlUnitNYI(CHROME =  {"1", "2", "<div id=\"div1\"></div>", "<p></p>"},
             EDGE = {"1", "2", "<div id=\"div1\"></div>", "<p></p>"},
             FF = {"1", "2", "<div id=\"div1\"></div>", "<p></p>"},
@@ -1625,9 +1575,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "2", "#HtmlUnit", "<p></p>",
-                       "childList", "1", "0", "[object HTMLDivElement]", "null"},
-            IE = "after missing")
+    @Alerts({"1", "2", "#HtmlUnit", "<p></p>",
+             "childList", "1", "0", "[object HTMLDivElement]", "null"})
     @HtmlUnitNYI(CHROME = {"1", "2", "#HtmlUnit", "<p></p>"},
             EDGE = {"1", "2", "#HtmlUnit", "<p></p>"},
             FF = {"1", "2", "#HtmlUnit", "<p></p>"},
@@ -1640,9 +1589,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "2", "<div id=\"div1\"></div>", "#[object Object]",
-                       "childList", "1", "0", "[object HTMLDivElement]", "null"},
-            IE = "after missing")
+    @Alerts({"1", "2", "<div id=\"div1\"></div>", "#[object Object]",
+             "childList", "1", "0", "[object HTMLDivElement]", "null"})
     @HtmlUnitNYI(CHROME = {"1", "2", "<div id=\"div1\"></div>", "#[object Object]"},
             EDGE = {"1", "2", "<div id=\"div1\"></div>", "#[object Object]"},
             FF = {"1", "2", "<div id=\"div1\"></div>", "#[object Object]"},
@@ -1655,9 +1603,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "2", "#HtmlUnit", "#[object Object]",
-                       "childList", "1", "0", "[object HTMLDivElement]", "null"},
-            IE = "after missing")
+    @Alerts({"1", "2", "#HtmlUnit", "#[object Object]",
+             "childList", "1", "0", "[object HTMLDivElement]", "null"})
     @HtmlUnitNYI(CHROME = {"1", "2", "#HtmlUnit", "#[object Object]"},
             EDGE = {"1", "2", "#HtmlUnit", "#[object Object]"},
             FF = {"1", "2", "#HtmlUnit", "#[object Object]"},
@@ -1670,9 +1617,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "4", "#HtmlUnit", "#abcd", "<p></p>", "#[object Object]",
-                       "childList", "3", "0", "[object HTMLDivElement]", "null"},
-            IE = "after missing")
+    @Alerts({"1", "4", "#HtmlUnit", "#abcd", "<p></p>", "#[object Object]",
+             "childList", "3", "0", "[object HTMLDivElement]", "null"})
     @HtmlUnitNYI(CHROME = {"1", "4", "#HtmlUnit", "#abcd", "<p></p>", "#[object Object]"},
             EDGE = {"1", "4", "#HtmlUnit", "#abcd", "<p></p>", "#[object Object]"},
             FF = {"1", "4", "#HtmlUnit", "#abcd", "<p></p>", "#[object Object]"},
@@ -1685,8 +1631,7 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "1", "<div id=\"div1\"></div>"},
-            IE = "before missing")
+    @Alerts({"1", "1", "<div id=\"div1\"></div>"})
     public void before_noArgs_empty() throws Exception {
         modifySiblings("before", "before();", "");
     }
@@ -1695,8 +1640,7 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "1", "#HtmlUnit"},
-            IE = "before missing")
+    @Alerts({"1", "1", "#HtmlUnit"})
     public void before_noArgs_notEmpty() throws Exception {
         modifySiblings("before", "before();", "HtmlUnit");
     }
@@ -1705,9 +1649,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "2",  "#HeHo", "<div id=\"div1\"></div>",
-                       "childList", "1", "0", "null", "[object HTMLDivElement]"},
-            IE = "before missing")
+    @Alerts({"1", "2",  "#HeHo", "<div id=\"div1\"></div>",
+             "childList", "1", "0", "null", "[object HTMLDivElement]"})
     @HtmlUnitNYI(CHROME = {"1", "2",  "#HeHo", "<div id=\"div1\"></div>"},
             EDGE = {"1", "2",  "#HeHo", "<div id=\"div1\"></div>"},
             FF = {"1", "2",  "#HeHo", "<div id=\"div1\"></div>"},
@@ -1720,9 +1663,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "2", "#HeHo", "#HtmlUnit",
-                       "childList", "1", "0", "null", "[object HTMLDivElement]"},
-            IE = "before missing")
+    @Alerts({"1", "2", "#HeHo", "#HtmlUnit",
+             "childList", "1", "0", "null", "[object HTMLDivElement]"})
     @HtmlUnitNYI(CHROME = {"1", "2", "#HeHo", "#HtmlUnit"},
             EDGE = {"1", "2", "#HeHo", "#HtmlUnit"},
             FF = {"1", "2", "#HeHo", "#HtmlUnit"},
@@ -1735,9 +1677,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "2",  "<p></p>", "<div id=\"div1\"></div>",
-                       "childList", "1", "0", "null", "[object HTMLDivElement]"},
-            IE = "before missing")
+    @Alerts({"1", "2",  "<p></p>", "<div id=\"div1\"></div>",
+             "childList", "1", "0", "null", "[object HTMLDivElement]"})
     @HtmlUnitNYI(CHROME = {"1", "2",  "<p></p>", "<div id=\"div1\"></div>"},
             EDGE = {"1", "2",  "<p></p>", "<div id=\"div1\"></div>"},
             FF = {"1", "2",  "<p></p>", "<div id=\"div1\"></div>"},
@@ -1750,9 +1691,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "2", "<p></p>", "#HtmlUnit",
-                       "childList", "1", "0", "null", "[object HTMLDivElement]"},
-            IE = "before missing")
+    @Alerts({"1", "2", "<p></p>", "#HtmlUnit",
+             "childList", "1", "0", "null", "[object HTMLDivElement]"})
     @HtmlUnitNYI(CHROME = {"1", "2", "<p></p>", "#HtmlUnit"},
             EDGE = {"1", "2", "<p></p>", "#HtmlUnit"},
             FF = {"1", "2", "<p></p>", "#HtmlUnit"},
@@ -1765,9 +1705,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "2", "#[object Object]", "<div id=\"div1\"></div>",
-                       "childList", "1", "0", "null", "[object HTMLDivElement]"},
-            IE = "before missing")
+    @Alerts({"1", "2", "#[object Object]", "<div id=\"div1\"></div>",
+             "childList", "1", "0", "null", "[object HTMLDivElement]"})
     @HtmlUnitNYI(CHROME = {"1", "2", "#[object Object]", "<div id=\"div1\"></div>"},
             EDGE = {"1", "2", "#[object Object]", "<div id=\"div1\"></div>"},
             FF = {"1", "2", "#[object Object]", "<div id=\"div1\"></div>"},
@@ -1780,9 +1719,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "2", "#[object Object]", "#HtmlUnit",
-                       "childList", "1", "0", "null", "[object HTMLDivElement]"},
-            IE = "before missing")
+    @Alerts({"1", "2", "#[object Object]", "#HtmlUnit",
+             "childList", "1", "0", "null", "[object HTMLDivElement]"})
     @HtmlUnitNYI(CHROME = {"1", "2", "#[object Object]", "#HtmlUnit"},
             EDGE = {"1", "2", "#[object Object]", "#HtmlUnit"},
             FF = {"1", "2", "#[object Object]", "#HtmlUnit"},
@@ -1795,9 +1733,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "4", "#abcd", "<p></p>", "#[object Object]", "#HtmlUnit",
-                       "childList", "3", "0", "null", "[object HTMLDivElement]"},
-            IE = "before missing")
+    @Alerts({"1", "4", "#abcd", "<p></p>", "#[object Object]", "#HtmlUnit",
+             "childList", "3", "0", "null", "[object HTMLDivElement]"})
     @HtmlUnitNYI(CHROME = {"1", "4", "#abcd", "<p></p>", "#[object Object]", "#HtmlUnit"},
             EDGE = {"1", "4", "#abcd", "<p></p>", "#[object Object]", "#HtmlUnit"},
             FF = {"1", "4", "#abcd", "<p></p>", "#[object Object]", "#HtmlUnit"},
@@ -1810,9 +1747,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "0",
-                       "childList", "0", "1", "null", "null"},
-            IE = "replaceWith missing")
+    @Alerts({"1", "0",
+             "childList", "0", "1", "null", "null"})
     @HtmlUnitNYI(CHROME = {"1", "0"},
             EDGE = {"1", "0"},
             FF = {"1", "0"},
@@ -1825,9 +1761,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "1", "#HeHo",
-                       "childList", "1", "1", "null", "null"},
-            IE = "replaceWith missing")
+    @Alerts({"1", "1", "#HeHo",
+             "childList", "1", "1", "null", "null"})
     @HtmlUnitNYI(CHROME = {"1", "1", "#HeHo"},
             EDGE = {"1", "1", "#HeHo"},
             FF = {"1", "1", "#HeHo"},
@@ -1840,9 +1775,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "1", "#HeHo",
-                       "childList", "1", "1", "null", "null"},
-            IE = "replaceWith missing")
+    @Alerts({"1", "1", "#HeHo",
+             "childList", "1", "1", "null", "null"})
     @HtmlUnitNYI(CHROME = {"1", "1", "#HeHo"},
             EDGE = {"1", "1", "#HeHo"},
             FF = {"1", "1", "#HeHo"},
@@ -1855,9 +1789,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "1", "<p></p>",
-                       "childList", "1", "1", "null", "null"},
-            IE = "replaceWith missing")
+    @Alerts({"1", "1", "<p></p>",
+             "childList", "1", "1", "null", "null"})
     @HtmlUnitNYI(CHROME = {"1", "1", "<p></p>"},
             EDGE = {"1", "1", "<p></p>"},
             FF = {"1", "1", "<p></p>"},
@@ -1870,9 +1803,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "1", "<p></p>",
-                       "childList", "1", "1", "null", "null"},
-            IE = "replaceWith missing")
+    @Alerts({"1", "1", "<p></p>",
+             "childList", "1", "1", "null", "null"})
     @HtmlUnitNYI(CHROME = {"1", "1", "<p></p>"},
             EDGE = {"1", "1", "<p></p>"},
             FF = {"1", "1", "<p></p>"},
@@ -1885,9 +1817,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "1", "#[object Object]",
-                       "childList", "1", "1", "null", "null"},
-            IE = "replaceWith missing")
+    @Alerts({"1", "1", "#[object Object]",
+             "childList", "1", "1", "null", "null"})
     @HtmlUnitNYI(CHROME = {"1", "1", "#[object Object]"},
             EDGE = {"1", "1", "#[object Object]"},
             FF = {"1", "1", "#[object Object]"},
@@ -1900,9 +1831,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "1", "#[object Object]",
-                       "childList", "1", "1", "null", "null"},
-            IE = "replaceWith missing")
+    @Alerts({"1", "1", "#[object Object]",
+             "childList", "1", "1", "null", "null"})
     @HtmlUnitNYI(CHROME = {"1", "1", "#[object Object]"},
             EDGE = {"1", "1", "#[object Object]"},
             FF = {"1", "1", "#[object Object]"},
@@ -1915,9 +1845,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "4", "<p></p>", "#abcd", "<div></div>", "#[object Object]",
-                       "childList", "4", "1", "null", "null"},
-            IE = "replaceWith missing")
+    @Alerts({"1", "4", "<p></p>", "#abcd", "<div></div>", "#[object Object]",
+             "childList", "4", "1", "null", "null"})
     @HtmlUnitNYI(CHROME = {"1", "4", "<p></p>", "#abcd", "<div></div>", "#[object Object]"},
             EDGE = {"1", "4", "<p></p>", "#abcd", "<div></div>", "#[object Object]"},
             FF = {"1", "4", "<p></p>", "#abcd", "<div></div>", "#[object Object]"},
@@ -1930,9 +1859,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "3", "<p></p>", "#abcd", "<div></div>",
-                       "childList", "3", "1", "null", "null"},
-            IE = "replaceWith missing")
+    @Alerts({"1", "3", "<p></p>", "#abcd", "<div></div>",
+             "childList", "3", "1", "null", "null"})
     @HtmlUnitNYI(CHROME = {"1", "3", "<p></p>", "#abcd", "<div></div>"},
             EDGE = {"1", "3", "<p></p>", "#abcd", "<div></div>"},
             FF = {"1", "3", "<p></p>", "#abcd", "<div></div>"},
@@ -1942,8 +1870,8 @@ public class ElementTest extends WebDriverTestCase {
     }
 
     private void modifySiblings(final String check, final String call, final String content) throws Exception {
-        final String html =
-            "<html><head></head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head></head>\n"
             + "<body>\n"
             + "  <div id='div0'><div id='div1'>" + content + "</div></div>\n"
 
@@ -1999,8 +1927,7 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"0", "0"},
-            IE = "append missing")
+    @Alerts({"0", "0"})
     public void append_noArgs_empty() throws Exception {
         modifyChildren("append", "append();", "");
     }
@@ -2009,8 +1936,7 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "1", "#HtmlUnit"},
-            IE = "append missing")
+    @Alerts({"1", "1", "#HtmlUnit"})
     public void append_noArgs_notEmpty() throws Exception {
         modifyChildren("append", "append();", "HtmlUnit");
     }
@@ -2019,9 +1945,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"0", "1", "#HeHo",
-                       "childList", "1", "0", "null", "null"},
-            IE = "append missing")
+    @Alerts({"0", "1", "#HeHo",
+             "childList", "1", "0", "null", "null"})
     @HtmlUnitNYI(CHROME = {"0", "1", "#HeHo"},
             EDGE = {"0", "1", "#HeHo"},
             FF = {"0", "1", "#HeHo"},
@@ -2034,9 +1959,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "2", "#HtmlUnit", "#HeHo",
-                       "childList", "1", "0", "[object Text]", "null"},
-            IE = "append missing")
+    @Alerts({"1", "2", "#HtmlUnit", "#HeHo",
+             "childList", "1", "0", "[object Text]", "null"})
     @HtmlUnitNYI(CHROME = {"1", "2", "#HtmlUnit", "#HeHo"},
             EDGE = {"1", "2", "#HtmlUnit", "#HeHo"},
             FF = {"1", "2", "#HtmlUnit", "#HeHo"},
@@ -2049,9 +1973,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"0", "1", "<p></p>",
-                       "childList", "1", "0", "null", "null"},
-            IE = "append missing")
+    @Alerts({"0", "1", "<p></p>",
+             "childList", "1", "0", "null", "null"})
     @HtmlUnitNYI(CHROME = {"0", "1", "<p></p>"},
             EDGE = {"0", "1", "<p></p>"},
             FF = {"0", "1", "<p></p>"},
@@ -2064,9 +1987,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "2", "#HtmlUnit", "<p></p>",
-                       "childList", "1", "0", "[object Text]", "null"},
-            IE = "append missing")
+    @Alerts({"1", "2", "#HtmlUnit", "<p></p>",
+             "childList", "1", "0", "[object Text]", "null"})
     @HtmlUnitNYI(CHROME = {"1", "2", "#HtmlUnit", "<p></p>"},
             EDGE = {"1", "2", "#HtmlUnit", "<p></p>"},
             FF = {"1", "2", "#HtmlUnit", "<p></p>"},
@@ -2079,9 +2001,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"0", "1", "#[object Object]",
-                       "childList", "1", "0", "null", "null"},
-            IE = "append missing")
+    @Alerts({"0", "1", "#[object Object]",
+             "childList", "1", "0", "null", "null"})
     @HtmlUnitNYI(CHROME = {"0", "1", "#[object Object]"},
             EDGE = {"0", "1", "#[object Object]"},
             FF = {"0", "1", "#[object Object]"},
@@ -2094,9 +2015,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "2", "#HtmlUnit", "#[object Object]",
-                       "childList", "1", "0", "[object Text]", "null"},
-            IE = "append missing")
+    @Alerts({"1", "2", "#HtmlUnit", "#[object Object]",
+             "childList", "1", "0", "[object Text]", "null"})
     @HtmlUnitNYI(CHROME = {"1", "2", "#HtmlUnit", "#[object Object]"},
             EDGE = {"1", "2", "#HtmlUnit", "#[object Object]"},
             FF = {"1", "2", "#HtmlUnit", "#[object Object]"},
@@ -2109,9 +2029,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "4", "#HtmlUnit", "#abcd", "<p></p>", "#[object Object]",
-                       "childList", "3", "0", "[object Text]", "null"},
-            IE = "append missing")
+    @Alerts({"1", "4", "#HtmlUnit", "#abcd", "<p></p>", "#[object Object]",
+             "childList", "3", "0", "[object Text]", "null"})
     @HtmlUnitNYI(CHROME = {"1", "4", "#HtmlUnit", "#abcd", "<p></p>", "#[object Object]"},
             EDGE = {"1", "4", "#HtmlUnit", "#abcd", "<p></p>", "#[object Object]"},
             FF = {"1", "4", "#HtmlUnit", "#abcd", "<p></p>", "#[object Object]"},
@@ -2124,8 +2043,7 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"0", "0"},
-            IE = "prepend missing")
+    @Alerts({"0", "0"})
     public void prepend_noArgs_empty() throws Exception {
         modifyChildren("prepend", "prepend();", "");
     }
@@ -2134,8 +2052,7 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "1", "#HtmlUnit"},
-            IE = "prepend missing")
+    @Alerts({"1", "1", "#HtmlUnit"})
     public void prepend_noArgs_notEmpty() throws Exception {
         modifyChildren("prepend", "prepend();", "HtmlUnit");
     }
@@ -2144,9 +2061,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"0", "1", "#HeHo",
-                       "childList", "1", "0", "null", "null"},
-            IE = "prepend missing")
+    @Alerts({"0", "1", "#HeHo",
+             "childList", "1", "0", "null", "null"})
     @HtmlUnitNYI(CHROME = {"0", "1", "#HeHo"},
             EDGE = {"0", "1", "#HeHo"},
             FF = {"0", "1", "#HeHo"},
@@ -2159,9 +2075,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "2", "#HeHo", "#HtmlUnit",
-                       "childList", "1", "0", "null", "[object Text]"},
-            IE = "prepend missing")
+    @Alerts({"1", "2", "#HeHo", "#HtmlUnit",
+             "childList", "1", "0", "null", "[object Text]"})
     @HtmlUnitNYI(CHROME = {"1", "2", "#HeHo", "#HtmlUnit"},
             EDGE = {"1", "2", "#HeHo", "#HtmlUnit"},
             FF = {"1", "2", "#HeHo", "#HtmlUnit"},
@@ -2174,9 +2089,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"0", "1", "<p></p>",
-                       "childList", "1", "0", "null", "null"},
-            IE = "prepend missing")
+    @Alerts({"0", "1", "<p></p>",
+             "childList", "1", "0", "null", "null"})
     @HtmlUnitNYI(CHROME = {"0", "1", "<p></p>"},
             EDGE = {"0", "1", "<p></p>"},
             FF = {"0", "1", "<p></p>"},
@@ -2189,9 +2103,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "2", "<p></p>", "#HtmlUnit",
-                       "childList", "1", "0", "null", "[object Text]"},
-            IE = "prepend missing")
+    @Alerts({"1", "2", "<p></p>", "#HtmlUnit",
+             "childList", "1", "0", "null", "[object Text]"})
     @HtmlUnitNYI(CHROME = {"1", "2", "<p></p>", "#HtmlUnit"},
             EDGE = {"1", "2", "<p></p>", "#HtmlUnit"},
             FF = {"1", "2", "<p></p>", "#HtmlUnit"},
@@ -2204,9 +2117,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"0", "1", "#[object Object]",
-                       "childList", "1", "0", "null", "null"},
-            IE = "prepend missing")
+    @Alerts({"0", "1", "#[object Object]",
+             "childList", "1", "0", "null", "null"})
     @HtmlUnitNYI(CHROME = {"0", "1", "#[object Object]"},
             EDGE = {"0", "1", "#[object Object]"},
             FF = {"0", "1", "#[object Object]"},
@@ -2219,9 +2131,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "2", "#[object Object]", "#HtmlUnit",
-                       "childList", "1", "0", "null", "[object Text]"},
-            IE = "prepend missing")
+    @Alerts({"1", "2", "#[object Object]", "#HtmlUnit",
+             "childList", "1", "0", "null", "[object Text]"})
     @HtmlUnitNYI(CHROME = {"1", "2", "#[object Object]", "#HtmlUnit"},
             EDGE = {"1", "2", "#[object Object]", "#HtmlUnit"},
             FF = {"1", "2", "#[object Object]", "#HtmlUnit"},
@@ -2234,9 +2145,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "4", "#abcd", "<p></p>", "#[object Object]", "#HtmlUnit",
-                       "childList", "3", "0", "null", "[object Text]"},
-            IE = "prepend missing")
+    @Alerts({"1", "4", "#abcd", "<p></p>", "#[object Object]", "#HtmlUnit",
+             "childList", "3", "0", "null", "[object Text]"})
     @HtmlUnitNYI(CHROME = {"1", "4", "#abcd", "<p></p>", "#[object Object]", "#HtmlUnit"},
             EDGE = {"1", "4", "#abcd", "<p></p>", "#[object Object]", "#HtmlUnit"},
             FF = {"1", "4", "#abcd", "<p></p>", "#[object Object]", "#HtmlUnit"},
@@ -2249,8 +2159,7 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"0", "0"},
-            IE = "replaceChildren missing")
+    @Alerts({"0", "0"})
     public void replaceChildren_noArgs_empty() throws Exception {
         modifyChildren("replaceChildren", "replaceChildren();", "");
     }
@@ -2259,9 +2168,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "1", "#HeHo",
-                       "childList", "1", "1", "null", "null"},
-            IE = "replaceChildren missing")
+    @Alerts({"1", "1", "#HeHo",
+             "childList", "1", "1", "null", "null"})
     @HtmlUnitNYI(CHROME = {"1", "1", "#HeHo"},
             EDGE = {"1", "1", "#HeHo"},
             FF = {"1", "1", "#HeHo"},
@@ -2274,9 +2182,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"0", "1", "#HeHo",
-                       "childList", "1", "0", "null", "null"},
-            IE = "replaceChildren missing")
+    @Alerts({"0", "1", "#HeHo",
+             "childList", "1", "0", "null", "null"})
     @HtmlUnitNYI(CHROME = {"0", "1", "#HeHo"},
             EDGE = {"0", "1", "#HeHo"},
             FF = {"0", "1", "#HeHo"},
@@ -2289,9 +2196,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "1", "<p></p>",
-                       "childList", "1", "1", "null", "null"},
-            IE = "replaceChildren missing")
+    @Alerts({"1", "1", "<p></p>",
+             "childList", "1", "1", "null", "null"})
     @HtmlUnitNYI(CHROME = {"1", "1", "<p></p>"},
             EDGE = {"1", "1", "<p></p>"},
             FF = {"1", "1", "<p></p>"},
@@ -2304,9 +2210,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"0", "1", "<p></p>",
-                       "childList", "1", "0", "null", "null"},
-            IE = "replaceChildren missing")
+    @Alerts({"0", "1", "<p></p>",
+             "childList", "1", "0", "null", "null"})
     @HtmlUnitNYI(CHROME = {"0", "1", "<p></p>"},
             EDGE = {"0", "1", "<p></p>"},
             FF = {"0", "1", "<p></p>"},
@@ -2319,9 +2224,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "1", "#[object Object]",
-                       "childList", "1", "1", "null", "null"},
-            IE = "replaceChildren missing")
+    @Alerts({"1", "1", "#[object Object]",
+             "childList", "1", "1", "null", "null"})
     @HtmlUnitNYI(CHROME = {"1", "1", "#[object Object]"},
             EDGE = {"1", "1", "#[object Object]"},
             FF = {"1", "1", "#[object Object]"},
@@ -2334,9 +2238,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"0", "1", "#[object Object]",
-                       "childList", "1", "0", "null", "null"},
-            IE = "replaceChildren missing")
+    @Alerts({"0", "1", "#[object Object]",
+             "childList", "1", "0", "null", "null"})
     @HtmlUnitNYI(CHROME = {"0", "1", "#[object Object]"},
             EDGE = {"0", "1", "#[object Object]"},
             FF = {"0", "1", "#[object Object]"},
@@ -2349,9 +2252,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"1", "4", "<p></p>", "#abcd", "<div></div>", "#[object Object]",
-                       "childList", "4", "1", "null", "null"},
-            IE = "replaceChildren missing")
+    @Alerts({"1", "4", "<p></p>", "#abcd", "<div></div>", "#[object Object]",
+             "childList", "4", "1", "null", "null"})
     @HtmlUnitNYI(CHROME = {"1", "4", "<p></p>", "#abcd", "<div></div>", "#[object Object]"},
             EDGE = {"1", "4", "<p></p>", "#abcd", "<div></div>", "#[object Object]"},
             FF = {"1", "4", "<p></p>", "#abcd", "<div></div>", "#[object Object]"},
@@ -2364,9 +2266,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"2", "3", "<p></p>", "#abcd", "<div></div>",
-                       "childList", "3", "2", "null", "null"},
-            IE = "replaceChildren missing")
+    @Alerts({"2", "3", "<p></p>", "#abcd", "<div></div>",
+             "childList", "3", "2", "null", "null"})
     @HtmlUnitNYI(CHROME = {"2", "3", "<p></p>", "#abcd", "<div></div>"},
             EDGE = {"2", "3", "<p></p>", "#abcd", "<div></div>"},
             FF = {"2", "3", "<p></p>", "#abcd", "<div></div>"},
@@ -2379,9 +2280,8 @@ public class ElementTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"4", "3", "<p></p>", "#abcd", "<div></div>",
-                       "childList", "3", "4", "null", "null"},
-            IE = "replaceChildren missing")
+    @Alerts({"4", "3", "<p></p>", "#abcd", "<div></div>",
+             "childList", "3", "4", "null", "null"})
     @HtmlUnitNYI(CHROME = {"4", "3", "<p></p>", "#abcd", "<div></div>"},
             EDGE = {"4", "3", "<p></p>", "#abcd", "<div></div>"},
             FF = {"4", "3", "<p></p>", "#abcd", "<div></div>"},
@@ -2391,8 +2291,8 @@ public class ElementTest extends WebDriverTestCase {
     }
 
     private void modifyChildren(final String check, final String call, final String content) throws Exception {
-        final String html =
-            "<html><head></head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head></head>\n"
             + "<body>\n"
             + "  <div id='div0'>" + content + "</div>\n"
 
@@ -2441,5 +2341,290 @@ public class ElementTest extends WebDriverTestCase {
             + "</body></html>";
 
         loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts(DEFAULT = {"0,0", "10,30", "22,64", "5,0", "5,0", "onscroll 5,0"},
+            FF = {"0,0", "10,30", "22,64", "5,0", "type error", "5,0", "onscroll 5,0"},
+            FF_ESR = {"0,0", "10,30", "22,64", "5,0", "type error", "5,0", "onscroll 5,0"})
+    @HtmlUnitNYI(CHROME = {"0,0", "onscroll 10,30", "10,30", "onscroll 22,64", "22,64",
+                           "onscroll 5,0", "5,0", "type error", "5,0"},
+            EDGE = {"0,0", "onscroll 10,30", "10,30", "onscroll 22,64", "22,64",
+                    "onscroll 5,0", "5,0", "type error", "5,0"},
+            FF = {"0,0", "onscroll 10,30", "10,30", "onscroll 22,64", "22,64",
+                  "onscroll 5,0", "5,0", "type error", "5,0"},
+            FF_ESR = {"0,0", "onscroll 10,30", "10,30", "onscroll 22,64", "22,64",
+                      "onscroll 5,0", "5,0", "type error", "5,0"})
+    public void scrollBy() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body onload='test()'>\n"
+            + "<div id='d' style='width: 100px;height: 99px;overflow: scroll;'>\n"
+            + "<div style='width:10000px;height:10000px;background-color:blue;'></div>\n"
+            + "</div>"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var d = document.getElementById('d');\n"
+            + "  d.onscroll = (event) => { log('onscroll ' + d.scrollLeft + ',' + d.scrollTop); };"
+
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+
+            + "  d.scrollBy(10, 30);\n"
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+
+            + "  d.scrollBy(12, 34);\n"
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+
+            + "  d.scrollBy(-17, -100);\n"
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+
+            + "  try { d.scrollBy(44); } catch(e) { log('type error'); }\n"
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+            + "}\n"
+            + "</script></body></html>";
+
+        final WebDriver driver = loadPage2(html);
+        verifyTitle2(DEFAULT_WAIT_TIME, driver, getExpectedAlerts());
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"0,0", "10,30", "22,64", "5,0", "49,0", "49,0", "onscroll 49,0"})
+    @HtmlUnitNYI(CHROME = {"0,0", "onscroll 10,30", "10,30", "onscroll 22,64", "22,64",
+                           "onscroll 5,0", "5,0", "onscroll 49,0", "49,0", "onscroll 49,0", "49,0"},
+            EDGE = {"0,0", "onscroll 10,30", "10,30", "onscroll 22,64", "22,64",
+                    "onscroll 5,0", "5,0", "onscroll 49,0", "49,0", "onscroll 49,0", "49,0"},
+            FF = {"0,0", "onscroll 10,30", "10,30", "onscroll 22,64", "22,64",
+                  "onscroll 5,0", "5,0", "onscroll 49,0", "49,0", "onscroll 49,0", "49,0"},
+            FF_ESR = {"0,0", "onscroll 10,30", "10,30", "onscroll 22,64", "22,64",
+                      "onscroll 5,0", "5,0", "onscroll 49,0", "49,0", "onscroll 49,0", "49,0"})
+    public void scrollByOptions() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body onload='test()'>\n"
+            + "<div id='d' style='width: 100px;height: 99px;overflow: scroll;'>\n"
+            + "<div style='width:10000px;height:10000px;background-color:blue;'></div>\n"
+            + "</div>"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var d = document.getElementById('d');\n"
+            + "  d.onscroll = (event) => { log('onscroll ' + d.scrollLeft + ',' + d.scrollTop); };"
+
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+
+            + "  d.scrollBy({left: 10, top: 30});\n"
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+
+            + "  d.scrollBy({left: 12, top: 34});\n"
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+
+            + "  d.scrollBy({left: -17, top: -100});\n"
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+
+            + "  d.scrollBy({left: 44});\n"
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+
+            + "  d.scrollBy({abcd: 7});\n"
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+            + "}\n"
+            + "</script></body></html>";
+
+        final WebDriver driver = loadPage2(html);
+        verifyTitle2(DEFAULT_WAIT_TIME, driver, getExpectedAlerts());
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts(DEFAULT = {"0,0", "10,30", "12,34", "0,0", "0,0", "onscroll 0,0"},
+            FF = {"0,0", "10,30", "12,34", "0,0", "type error", "0,0", "onscroll 0,0"},
+            FF_ESR = {"0,0", "10,30", "12,34", "0,0", "type error", "0,0", "onscroll 0,0"})
+    @HtmlUnitNYI(CHROME = {"0,0", "onscroll 10,30", "10,30", "onscroll 12,34", "12,34",
+                           "onscroll 0,0", "0,0", "type error", "0,0"},
+            EDGE = {"0,0", "onscroll 10,30", "10,30", "onscroll 12,34", "12,34",
+                    "onscroll 0,0", "0,0", "type error", "0,0"},
+            FF = {"0,0", "onscroll 10,30", "10,30", "onscroll 12,34", "12,34",
+                  "onscroll 0,0", "0,0", "type error", "0,0"},
+            FF_ESR = {"0,0", "onscroll 10,30", "10,30", "onscroll 12,34", "12,34",
+                      "onscroll 0,0", "0,0", "type error", "0,0"})
+    public void scrollTo() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body onload='test()'>\n"
+            + "<div id='d' style='width: 100px;height: 99px;overflow: scroll;'>\n"
+            + "<div style='width:10000px;height:10000px;background-color:blue;'></div>\n"
+            + "</div>"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var d = document.getElementById('d');\n"
+            + "  d.onscroll = (event) => { log('onscroll ' + d.scrollLeft + ',' + d.scrollTop); };"
+
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+
+            + "  d.scrollTo(10, 30);\n"
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+
+            + "  d.scrollTo(12, 34);\n"
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+
+            + "  d.scrollTo(-17, -100);\n"
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+
+            + "  try { d.scrollTo(44); } catch(e) { log('type error'); }\n"
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+            + "}\n"
+            + "</script></body></html>";
+
+        final WebDriver driver = loadPage2(html);
+        verifyTitle2(DEFAULT_WAIT_TIME, driver, getExpectedAlerts());
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"0,0", "10,30", "12,34", "0,0", "44,0", "44,0", "onscroll 44,0"})
+    @HtmlUnitNYI(CHROME = {"0,0", "onscroll 10,30", "10,30", "onscroll 12,34", "12,34",
+                           "onscroll 0,0", "0,0", "onscroll 44,0", "44,0", "onscroll 44,0", "44,0"},
+            EDGE = {"0,0", "onscroll 10,30", "10,30", "onscroll 12,34", "12,34",
+                    "onscroll 0,0", "0,0", "onscroll 44,0", "44,0", "onscroll 44,0", "44,0"},
+            FF = {"0,0", "onscroll 10,30", "10,30", "onscroll 12,34", "12,34",
+                  "onscroll 0,0", "0,0", "onscroll 44,0", "44,0", "onscroll 44,0", "44,0"},
+            FF_ESR = {"0,0", "onscroll 10,30", "10,30", "onscroll 12,34", "12,34",
+                      "onscroll 0,0", "0,0", "onscroll 44,0", "44,0", "onscroll 44,0", "44,0"})
+    public void scrollToOptions() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body onload='test()'>\n"
+            + "<div id='d' style='width: 100px;height: 99px;overflow: scroll;'>\n"
+            + "<div style='width:10000px;height:10000px;background-color:blue;'></div>\n"
+            + "</div>"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var d = document.getElementById('d');\n"
+            + "  d.onscroll = (event) => { log('onscroll ' + d.scrollLeft + ',' + d.scrollTop); };"
+
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+
+            + "  d.scrollTo({left: 10, top: 30});\n"
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+
+            + "  d.scrollTo({left: 12, top: 34});\n"
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+
+            + "  d.scrollTo({left: -17, top: -100});\n"
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+
+            + "  d.scrollTo({left: 44});\n"
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+
+            + "  d.scrollTo({abcd: 7});\n"
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+            + "}\n"
+            + "</script></body></html>";
+
+        final WebDriver driver = loadPage2(html);
+        verifyTitle2(DEFAULT_WAIT_TIME, driver, getExpectedAlerts());
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts(DEFAULT = {"0,0", "10,30", "12,34", "0,0", "0,0", "onscroll 0,0"},
+            FF = {"0,0", "10,30", "12,34", "0,0", "type error", "0,0"},
+            FF_ESR = {"0,0", "10,30", "12,34", "0,0", "type error", "0,0"})
+    @HtmlUnitNYI(CHROME = {"0,0", "onscroll 10,30", "10,30", "onscroll 12,34", "12,34",
+                           "onscroll 0,0", "0,0", "type error", "0,0"},
+            EDGE = {"0,0", "onscroll 10,30", "10,30", "onscroll 12,34", "12,34",
+                    "onscroll 0,0", "0,0", "type error", "0,0"},
+            FF = {"0,0", "onscroll 10,30", "10,30", "onscroll 12,34", "12,34",
+                  "onscroll 0,0", "0,0", "type error", "0,0"},
+            FF_ESR = {"0,0", "onscroll 10,30", "10,30", "onscroll 12,34", "12,34",
+                      "onscroll 0,0", "0,0", "type error", "0,0"})
+    public void scroll() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body onload='test()'>\n"
+            + "<div id='d' style='width: 100px;height: 99px;overflow: scroll;'>\n"
+            + "<div style='width:10000px;height:10000px;background-color:blue;'></div>\n"
+            + "</div>"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var d = document.getElementById('d');\n"
+            + "  d.onscroll = (event) => { log('onscroll ' + d.scrollLeft + ',' + d.scrollTop); };"
+
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+
+            + "  d.scroll(10, 30);\n"
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+
+            + "  d.scroll(12, 34);\n"
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+
+            + "  d.scroll(-17, -100);\n"
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+
+            + "  try { d.scroll(44); } catch(e) { log('type error'); }\n"
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+            + "}\n"
+            + "</script></body></html>";
+
+        final WebDriver driver = loadPage2(html);
+        verifyTitle2(DEFAULT_WAIT_TIME, driver, getExpectedAlerts());
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"0,0", "10,30", "12,34", "0,0", "44,0", "44,0", "onscroll 44,0"})
+    @HtmlUnitNYI(CHROME = {"0,0", "onscroll 10,30", "10,30", "onscroll 12,34", "12,34",
+                           "onscroll 0,0", "0,0", "onscroll 44,0", "44,0", "onscroll 44,0", "44,0"},
+            EDGE = {"0,0", "onscroll 10,30", "10,30", "onscroll 12,34", "12,34",
+                    "onscroll 0,0", "0,0", "onscroll 44,0", "44,0", "onscroll 44,0", "44,0"},
+            FF = {"0,0", "onscroll 10,30", "10,30", "onscroll 12,34", "12,34",
+                  "onscroll 0,0", "0,0", "onscroll 44,0", "44,0", "onscroll 44,0", "44,0"},
+            FF_ESR = {"0,0", "onscroll 10,30", "10,30", "onscroll 12,34", "12,34",
+                      "onscroll 0,0", "0,0", "onscroll 44,0", "44,0", "onscroll 44,0", "44,0"})
+    public void scrollOptions() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body onload='test()'>\n"
+            + "<div id='d' style='width: 100px;height: 99px;overflow: scroll;'>\n"
+            + "<div style='width:10000px;height:10000px;background-color:blue;'></div>\n"
+            + "</div>"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  var d = document.getElementById('d');\n"
+            + "  d.onscroll = (event) => { log('onscroll ' + d.scrollLeft + ',' + d.scrollTop); };"
+
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+
+            + "  d.scroll({left: 10, top: 30});\n"
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+
+            + "  d.scroll({left: 12, top: 34});\n"
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+
+            + "  d.scroll({left: -17, top: -100});\n"
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+
+            + "  d.scroll({left: 44});\n"
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+
+            + "  d.scroll({abcd: 7});\n"
+            + "  log(d.scrollLeft + ',' + d.scrollTop);\n"
+            + "}\n"
+            + "</script></body></html>";
+
+        final WebDriver driver = loadPage2(html);
+        verifyTitle2(DEFAULT_WAIT_TIME, driver, getExpectedAlerts());
     }
 }

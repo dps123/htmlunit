@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ import java.lang.ref.WeakReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.htmlunit.Page;
 import org.htmlunit.WebWindow;
 import org.htmlunit.html.HtmlPage;
@@ -28,6 +27,7 @@ import org.htmlunit.html.HtmlPage;
  *
  * @author Daniel Gredler
  * @author Ronald Brill
+ * @author Sven Strickroth
  */
 abstract class JavaScriptExecutionJob extends BasicJavaScriptJob {
 
@@ -43,7 +43,7 @@ abstract class JavaScriptExecutionJob extends BasicJavaScriptJob {
     /**
      * Creates a new JavaScript execution job, where the JavaScript code to execute is a string.
      * @param initialDelay the initial amount of time to wait before executing this job
-     * @param period the amount of time to wait between executions of this job (may be {@code null})
+     * @param period the amount of time to wait between executions of this job (perhaps {@code null})
      * @param label the label for the job
      * @param window the window to which the job belongs
      */
@@ -70,15 +70,11 @@ abstract class JavaScriptExecutionJob extends BasicJavaScriptJob {
         try {
             // Verify that the window is still open
             if (w.isClosed()) {
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("Enclosing window is now closed. Execution cancelled.");
-                }
+                LOG.debug("Enclosing window is now closed. Execution cancelled.");
                 return;
             }
             if (!w.getWebClient().containsWebWindow(w)) {
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("Enclosing window is now closed. Execution cancelled.");
-                }
+                LOG.debug("Enclosing window is now closed. Execution cancelled.");
                 return;
             }
 
@@ -86,9 +82,7 @@ abstract class JavaScriptExecutionJob extends BasicJavaScriptJob {
             final Page enclosedPage = w.getEnclosedPage();
             if (enclosedPage == null || !enclosedPage.isHtmlPage()) {
                 if (enclosedPage == null) {
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug("The page that originated this job doesn't exist anymore. Execution cancelled.");
-                    }
+                    LOG.debug("The page that originated this job doesn't exist anymore. Execution cancelled.");
                     return;
                 }
                 if (LOG.isDebugEnabled()) {

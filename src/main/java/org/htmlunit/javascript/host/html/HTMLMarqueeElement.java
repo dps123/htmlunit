@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,6 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
-
 import org.htmlunit.html.HtmlMarquee;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
@@ -31,22 +25,26 @@ import org.htmlunit.javascript.configuration.JsxSetter;
  *
  * @author Ronald Brill
  * @author Ahmed Ashour
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLMarqueeElement">MDN Documentation</a>
  */
-@JsxClass(domClass = HtmlMarquee.class, value = {CHROME, EDGE, FF, FF_ESR, IE})
+@JsxClass(domClass = HtmlMarquee.class)
 public class HTMLMarqueeElement extends HTMLElement {
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public HTMLMarqueeElement() {
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
      * Returns the {@code width} property.
      * @return the {@code width} property
      */
-    @JsxGetter({CHROME, EDGE, IE})
+    @JsxGetter
     public int getWidth() {
         final String value = getDomNodeOrDie().getAttributeDirect("width");
         final Integer intValue = HTMLCanvasElement.getValue(value);
@@ -58,9 +56,9 @@ public class HTMLMarqueeElement extends HTMLElement {
 
     /**
      * Sets the {@code width} property.
-     * @param width the {@code width} property
+     * @param width the {@code width} property value
      */
-    @JsxSetter({CHROME, EDGE, IE})
+    @JsxSetter
     public void setWidth(final int width) {
         getDomNodeOrDie().setAttribute("width", Integer.toString(width));
     }
@@ -69,7 +67,7 @@ public class HTMLMarqueeElement extends HTMLElement {
      * Returns the {@code height} property.
      * @return the {@code height} property
      */
-    @JsxGetter({CHROME, EDGE, IE})
+    @JsxGetter
     public int getHeight() {
         final String value = getDomNodeOrDie().getAttributeDirect("height");
         final Integer intValue = HTMLCanvasElement.getValue(value);
@@ -81,9 +79,9 @@ public class HTMLMarqueeElement extends HTMLElement {
 
     /**
      * Sets the {@code height} property.
-     * @param height the {@code height} property
+     * @param height the {@code height} property value
      */
-    @JsxSetter({CHROME, EDGE, IE})
+    @JsxSetter
     public void setHeight(final int height) {
         getDomNodeOrDie().setAttribute("height", Integer.toString(height));
     }
@@ -92,7 +90,7 @@ public class HTMLMarqueeElement extends HTMLElement {
      * Returns the value of the {@code bgColor} property.
      * @return the value of the {@code bgColor} property
      */
-    @JsxGetter({CHROME, EDGE, IE})
+    @JsxGetter
     public String getBgColor() {
         return getDomNodeOrDie().getAttribute("bgColor");
     }
@@ -101,7 +99,7 @@ public class HTMLMarqueeElement extends HTMLElement {
      * Sets the value of the {@code bgColor} property.
      * @param bgColor the value of the {@code bgColor} property
      */
-    @JsxSetter({CHROME, EDGE, IE})
+    @JsxSetter
     public void setBgColor(final String bgColor) {
         setColorAttribute("bgColor", bgColor);
     }

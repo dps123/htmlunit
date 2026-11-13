@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,8 @@
  */
 package org.htmlunit.javascript.host.intl;
 
-import static org.htmlunit.BrowserVersionFeatures.JS_DATE_WITH_LEFT_TO_RIGHT_MARK;
-
 import java.time.ZoneId;
 import java.time.chrono.Chronology;
-import java.time.chrono.HijrahChronology;
 import java.time.chrono.JapaneseChronology;
 import java.time.chrono.ThaiBuddhistChronology;
 import java.time.format.DateTimeFormatter;
@@ -30,33 +27,47 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.htmlunit.BrowserVersion;
+import org.htmlunit.corejs.javascript.Context;
+import org.htmlunit.corejs.javascript.Function;
+import org.htmlunit.corejs.javascript.FunctionObject;
+import org.htmlunit.corejs.javascript.NativeArray;
+import org.htmlunit.corejs.javascript.Scriptable;
+import org.htmlunit.corejs.javascript.VarScope;
 import org.htmlunit.javascript.HtmlUnitScriptable;
-import org.htmlunit.javascript.RecursiveFunctionObject;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
+import org.htmlunit.javascript.configuration.JsxStaticFunction;
+import org.htmlunit.javascript.configuration.JsxSymbolConstant;
 import org.htmlunit.javascript.host.Window;
-
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.Function;
-import org.htmlunit.corejs.javascript.NativeArray;
-import org.htmlunit.corejs.javascript.ScriptRuntime;
-import org.htmlunit.corejs.javascript.Scriptable;
+import org.htmlunit.util.StringUtils;
 
 /**
- * A JavaScript object for {@code DateTimeFormat}.
+ * A JavaScript object for Intl.DateTimeFormat.
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ * @author Lai Quang Duong
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat">MDN Documentation</a>
  */
 @JsxClass
 public class DateTimeFormat extends HtmlUnitScriptable {
+
+    /** Symbol.toStringTag support. */
+    @JsxSymbolConstant
+    public static final String TO_STRING_TAG = "Intl.DateTimeFormat";
 
     private static final ConcurrentHashMap<String, String> CHROME_FORMATS_ = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, String> EDGE_FORMATS_ = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, String> FF_FORMATS_ = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, String> FF_ESR_FORMATS_ = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<String, String> IE_FORMATS_ = new ConcurrentHashMap<>();
+
+    private static final ConcurrentHashMap<String, Chronology> CHROME_CHRONOLOGIES_ = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, Chronology> EDGE_CHRONOLOGIES_ = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, Chronology> FF_CHRONOLOGIES_ = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, Chronology> FF_ESR_CHRONOLOGIES_ = new ConcurrentHashMap<>();
 
     private transient DateTimeFormatHelper formatter_;
 
@@ -71,13 +82,10 @@ public class DateTimeFormat extends HtmlUnitScriptable {
         final String yyyySlash = "\u200EYYYY\u200E/\u200EMM\u200E/\u200Edd";
         final String yyyyDash = "\u200EYYYY\u200E-\u200EMM\u200E-\u200Edd";
         final String yyyyDotBlankDot = "\u200EYYYY\u200E. \u200EMM\u200E. \u200Edd.";
-        final String yyyyDotBlankDotIE = "\u200EYYYY\u200E. \u200EMM\u200E. \u200Edd\u200E.";
-        final String rightToLeft = "\u200Fdd\u200F/\u200FMM\u200F/\u200FYYYY";
 
         final Map<String, String> commonFormats = new HashMap<>();
-        commonFormats.put("", mmSlash);
+        commonFormats.put("", ddDot);
         commonFormats.put("ar", "dd\u200F/MM\u200F/YYYY");
-        commonFormats.put("ar-SA", "d\u200F/M\u200F/YYYY هـ");
         commonFormats.put("ban", mmSlash);
         commonFormats.put("be", ddDot);
         commonFormats.put("bg", ddDot + "\u200E \u0433.");
@@ -86,6 +94,8 @@ public class DateTimeFormat extends HtmlUnitScriptable {
         commonFormats.put("da", ddDot);
         commonFormats.put("de", ddDot);
         commonFormats.put("el", ddSlash);
+        commonFormats.put("en", mmSlash);
+        commonFormats.put("en-CA", yyyyDash);
         commonFormats.put("en-NZ", ddSlash);
         commonFormats.put("en-PA", ddSlash);
         commonFormats.put("en-PR", ddSlash);
@@ -120,7 +130,7 @@ public class DateTimeFormat extends HtmlUnitScriptable {
         commonFormats.put("ko", yyyyDotBlankDot);
         commonFormats.put("lt", yyyyDash);
         commonFormats.put("lv", ddDotDot);
-        commonFormats.put("mk", ddDot);
+        commonFormats.put("mk", ddDot + "\u200E \u0433.");
         commonFormats.put("ms", ddSlash);
         commonFormats.put("mt", mmSlash);
         commonFormats.put("nl", ddDash);
@@ -141,87 +151,63 @@ public class DateTimeFormat extends HtmlUnitScriptable {
         commonFormats.put("zh", yyyySlash);
         commonFormats.put("zh-HK", ddSlash);
         commonFormats.put("zh-SG", "\u200EYYYY\u200E\u5E74\u200EMM\u200E\u6708\u200Edd\u200E\u65E5");
-        commonFormats.put("en-CA", mmSlash);
         commonFormats.put("fr-CH", ddDot);
-
-        CHROME_FORMATS_.putAll(commonFormats);
-        EDGE_FORMATS_.putAll(commonFormats);
-
-        IE_FORMATS_.putAll(commonFormats);
 
         FF_FORMATS_.putAll(commonFormats);
         FF_ESR_FORMATS_.putAll(commonFormats);
 
-        CHROME_FORMATS_.put("be", mmSlash);
-        CHROME_FORMATS_.put("en-CA", yyyyDash);
-        CHROME_FORMATS_.put("ga", mmSlash);
-        CHROME_FORMATS_.put("is", mmSlash);
-        CHROME_FORMATS_.put("mk", mmSlash);
+        commonFormats.put("be", mmSlash);
+        commonFormats.put("ga", mmSlash);
+        commonFormats.put("is", mmSlash);
+        commonFormats.put("mk", mmSlash);
+
+        EDGE_FORMATS_.putAll(commonFormats);
+
+        CHROME_FORMATS_.putAll(commonFormats);
         CHROME_FORMATS_.put("sq", mmSlash);
 
-        FF_ESR_FORMATS_.put("en-CA", yyyyDash);
-        FF_ESR_FORMATS_.put("sr", ddDotDot);
+        final Map<String, Chronology> commonChronologies = new HashMap<>();
+        commonChronologies.put("ja-JP-u-ca-japanese", JapaneseChronology.INSTANCE);
+        commonChronologies.put("th", ThaiBuddhistChronology.INSTANCE);
+        commonChronologies.put("th-TH", ThaiBuddhistChronology.INSTANCE);
 
-        IE_FORMATS_.put("ar", rightToLeft);
-        IE_FORMATS_.put("ar-AE", rightToLeft);
-        IE_FORMATS_.put("ar-BH", rightToLeft);
-        IE_FORMATS_.put("ar-DZ", "\u200Fdd\u200F-\u200FMM\u200F-\u200FYYYY");
-        IE_FORMATS_.put("ar-MA", "\u200Fdd\u200F-\u200FMM\u200F-\u200FYYYY");
-        IE_FORMATS_.put("ar-SA", rightToLeft);
-        IE_FORMATS_.put("ar-TN", "\u200Fdd\u200F-\u200FMM\u200F-\u200FYYYY");
-        IE_FORMATS_.put("ban", ddDot);
-        IE_FORMATS_.put("cs", ddDot);
-        IE_FORMATS_.put("da", ddDash);
-        IE_FORMATS_.put("en-CA", yyyyDash);
-        IE_FORMATS_.put("en-IN", ddDash);
-        IE_FORMATS_.put("en-PH", ddSlash);
-        IE_FORMATS_.put("es-US", mmSlash);
-        IE_FORMATS_.put("hi", ddDash);
-        IE_FORMATS_.put("hr", ddDotDot);
-        IE_FORMATS_.put("hu", yyyyDotBlankDotIE);
-        IE_FORMATS_.put("it-CH", ddDot);
-        IE_FORMATS_.put("iw", ddSlash);
-        IE_FORMATS_.put("ja", "\u200EYYYY\u200E\u5E74\u200EMM\u200E\u6708\u200Edd\u200E\u65E5");
-        IE_FORMATS_.put("ja-JP-u-ca-japanese", "\u200Eyy\u200E/\u200EMM\u200E/\u200Edd");
-        IE_FORMATS_.put("ko", "\u200EYYYY\u200E\uB144 \u200EMM\u200E\uC6D4 \u200Edd\u200E\uC77C");
-        IE_FORMATS_.put("lv", ddDot);
-        IE_FORMATS_.put("mt", ddSlash);
-        IE_FORMATS_.put("no", ddDot);
-        IE_FORMATS_.put("sr", ddDotDot);
-        IE_FORMATS_.put("sr-BA", ddDot);
-        IE_FORMATS_.put("sr-CS", ddDot);
-        IE_FORMATS_.put("sr-ME", ddDot);
-        IE_FORMATS_.put("sr-RS", ddDot);
-        IE_FORMATS_.put("zh", "\u200EYYYY\u200E\u5E74\u200EMM\u200E\u6708\u200Edd\u200E\u65E5");
-        IE_FORMATS_.put("zh-HK", "\u200EYYYY\u200E\u5E74\u200EMM\u200E\u6708\u200Edd\u200E\u65E5");
+        FF_CHRONOLOGIES_.putAll(commonChronologies);
+        FF_ESR_CHRONOLOGIES_.putAll(commonChronologies);
+        CHROME_CHRONOLOGIES_.putAll(commonChronologies);
+        EDGE_CHRONOLOGIES_.putAll(commonChronologies);
     }
 
     /**
      * Default constructor.
      */
     public DateTimeFormat() {
+        super();
     }
 
     private DateTimeFormat(final String[] locales, final BrowserVersion browserVersion) {
+        super();
+
         final Map<String, String> formats;
+        final Map<String, Chronology> chronologies;
         if (browserVersion.isChrome()) {
             formats = CHROME_FORMATS_;
+            chronologies = CHROME_CHRONOLOGIES_;
         }
         else if (browserVersion.isEdge()) {
             formats = EDGE_FORMATS_;
-        }
-        else if (browserVersion.isIE()) {
-            formats = IE_FORMATS_;
+            chronologies = EDGE_CHRONOLOGIES_;
         }
         else if (browserVersion.isFirefoxESR()) {
             formats = FF_ESR_FORMATS_;
+            chronologies = FF_ESR_CHRONOLOGIES_;
         }
         else {
             formats = FF_FORMATS_;
+            chronologies = FF_CHRONOLOGIES_;
         }
 
-        String locale = "";
-        String pattern = null;
+        String locale = browserVersion.getBrowserLocale().toLanguageTag();
+        String pattern = getPattern(formats, locale);
 
         for (final String l : locales) {
             pattern = getPattern(formats, l);
@@ -233,76 +219,123 @@ public class DateTimeFormat extends HtmlUnitScriptable {
         if (pattern == null) {
             pattern = formats.get("");
         }
-        if (!browserVersion.hasFeature(JS_DATE_WITH_LEFT_TO_RIGHT_MARK) && !locale.startsWith("ar")) {
+
+        if (!locale.startsWith("ar")) {
             pattern = pattern.replace("\u200E", "");
         }
 
-        formatter_ = new DateTimeFormatHelper(locale, browserVersion, pattern);
+        final Chronology chronology = getChronology(chronologies, locale);
+
+        formatter_ = new DateTimeFormatHelper(locale, chronology, pattern);
     }
 
     private static String getPattern(final Map<String, String> formats, final String locale) {
         if ("no-NO-NY".equals(locale)) {
-            throw ScriptRuntime.rangeError("Invalid language tag: " + locale);
+            throw JavaScriptEngine.rangeError("Invalid language tag: " + locale);
         }
-        String pattern = formats.get(locale);
-        if (pattern == null && locale.indexOf('-') != -1) {
-            pattern = formats.get(locale.substring(0, locale.indexOf('-')));
+        String tag = locale;
+        String pattern = formats.get(tag);
+        while (pattern == null && tag.indexOf('-') != -1) {
+            tag = tag.substring(0, tag.lastIndexOf('-'));
+            pattern = formats.get(tag);
         }
         return pattern;
+    }
+
+    private static Chronology getChronology(final Map<String, Chronology> chronologies, final String locale) {
+        String tag = locale;
+        Chronology chronology = chronologies.get(tag);
+        while (chronology == null && tag.indexOf('-') != -1) {
+            tag = tag.substring(0, tag.lastIndexOf('-'));
+            chronology = chronologies.get(tag);
+        }
+        return chronology;
     }
 
     /**
      * JavaScript constructor.
      * @param cx the current context
-     * @param args the arguments to the WebSocket constructor
+     * @param scope the scope
+     * @param args the arguments to the DateTimeFormat constructor
      * @param ctorObj the function object
-     * @param inNewExpr Is new or not
-     * @return the java object to allow JavaScript to access
+     * @param inNewExpr {@code true} if invoked with the {@code new} operator
+     * @return the Java object that JavaScript can access
      */
     @JsxConstructor
-    public static Scriptable jsConstructor(final Context cx, final Object[] args, final Function ctorObj,
-            final boolean inNewExpr) {
+    public static Scriptable jsConstructor(final Context cx, final VarScope scope,
+            final Object[] args, final Function ctorObj, final boolean inNewExpr) {
         final String[] locales;
         if (args.length != 0) {
-            if (args[0] instanceof NativeArray) {
-                final NativeArray array = (NativeArray) args[0];
+            if (args[0] instanceof NativeArray array) {
                 locales = new String[(int) array.getLength()];
                 for (int i = 0; i < locales.length; i++) {
-                    locales[i] = Context.toString(array.get(i));
+                    locales[i] = JavaScriptEngine.toString(array.get(i));
                 }
             }
             else {
-                locales = new String[] {Context.toString(args[0])};
+                locales = new String[] {JavaScriptEngine.toString(args[0])};
             }
         }
         else {
-            locales = new String[] {""};
+            locales = new String[0];
         }
+
         final Window window = getWindow(ctorObj);
         final DateTimeFormat format = new DateTimeFormat(locales, window.getBrowserVersion());
-        format.setParentScope(window);
-        format.setPrototype(((RecursiveFunctionObject) ctorObj).getClassPrototype());
+        format.setParentScope(getTopLevelScope(scope));
+        format.setPrototype(((FunctionObject) ctorObj).getClassPrototype());
         return format;
     }
 
     /**
      * Formats a date according to the locale and formatting options of this {@code DateTimeFormat} object.
      * @param object the JavaScript object to convert
-     * @return the dated formated
+     * @return the formatted date
      */
     @JsxFunction
     public String format(final Object object) {
         final Date date = (Date) Context.jsToJava(object, Date.class);
-        return formatter_.format(date);
+        return formatter_.format(date, Context.getCurrentContext().getTimeZone().toZoneId());
     }
 
     /**
-     * @return A new object with properties reflecting the locale and date and time formatting options
-     * computed during the initialization of the given {@code DateTimeFormat} object.
+     * Returns the resolved options for this Intl.DateTimeFormat object.
+     * @return a new object with properties reflecting the locale and date and time formatting options
+     *         computed during the initialization of the given {@code DateTimeFormat} object.
      */
     @JsxFunction
     public Scriptable resolvedOptions() {
-        return Context.getCurrentContext().newObject(getParentScope());
+        final Context cx = Context.getCurrentContext();
+        final Scriptable options = JavaScriptEngine.newObject(getParentScope());
+        options.put("timeZone", options, cx.getTimeZone().getID());
+
+        if (StringUtils.isEmptyOrNull(formatter_.locale_)) {
+            options.put("locale", options, cx.getLocale().toLanguageTag());
+        }
+        else {
+            options.put("locale", options, formatter_.locale_);
+        }
+        return options;
+    }
+
+    /**
+     * Returns an array containing those of the provided locales that are supported
+     * without having to fall back to the default locale.
+     * @param localesArgument A string with a BCP 47 language tag, or an array of such strings
+     * @param options unused
+     * @return an array containing supported locales
+     */
+    @JsxStaticFunction
+    public static Scriptable supportedLocalesOf(final Scriptable localesArgument, final Scriptable options) {
+        return Intl.supportedLocalesOf(localesArgument);
+    }
+
+    @Override
+    public Object getDefaultValue(final Class<?> hint) {
+        if (String.class.equals(hint) || hint == null) {
+            return "[object Intl.DateTimeFormat]";
+        }
+        return super.getDefaultValue(hint);
     }
 
     /**
@@ -311,52 +344,34 @@ public class DateTimeFormat extends HtmlUnitScriptable {
     static final class DateTimeFormatHelper {
 
         private final DateTimeFormatter formatter_;
-        private Chronology chronology_;
+        private final Chronology chronology_;
+        private final String locale_;
 
-        DateTimeFormatHelper(final String locale, final BrowserVersion browserVersion, final String pattern) {
+        DateTimeFormatHelper(final String locale, final Chronology chronology, final String pattern) {
+            locale_ = locale;
+            chronology_ = chronology;
+
             if (locale.startsWith("ar")
-                    && (!"ar-DZ".equals(locale)
-                                    && !"ar-LY".equals(locale)
-                                    && !"ar-MA".equals(locale)
-                                    && !"ar-TN".equals(locale))) {
+                    && !"ar-DZ".equals(locale)
+                    && !"ar-LY".equals(locale)
+                    && !"ar-MA".equals(locale)
+                    && !"ar-TN".equals(locale)) {
                 final DecimalStyle decimalStyle = DecimalStyle.STANDARD.withZeroDigit('\u0660');
                 formatter_ = DateTimeFormatter.ofPattern(pattern).withDecimalStyle(decimalStyle);
             }
             else {
                 formatter_ = DateTimeFormatter.ofPattern(pattern);
             }
-
-            switch (locale) {
-                case "ja-JP-u-ca-japanese":
-                    chronology_ = JapaneseChronology.INSTANCE;
-                    break;
-
-                case "ar":
-                    if (browserVersion.hasFeature(JS_DATE_WITH_LEFT_TO_RIGHT_MARK)) {
-                        chronology_ = HijrahChronology.INSTANCE;
-                    }
-                    break;
-
-                case "ar-SA":
-                    chronology_ = HijrahChronology.INSTANCE;
-                    break;
-
-                case "th":
-                case "th-TH":
-                    chronology_ = ThaiBuddhistChronology.INSTANCE;
-                    break;
-
-                default:
-            }
         }
 
         /**
          * Formats a date according to the locale and formatting options of this {@code DateTimeFormat} object.
          * @param date the JavaScript object to convert
-         * @return the dated formated
+         * @param zoneId the current time zone id
+         * @return the formatted date
          */
-        String format(final Date date) {
-            TemporalAccessor zonedDateTime = date.toInstant().atZone(ZoneId.systemDefault());
+        String format(final Date date, final ZoneId zoneId) {
+            TemporalAccessor zonedDateTime = date.toInstant().atZone(zoneId);
             if (chronology_ != null) {
                 zonedDateTime = chronology_.date(zonedDateTime);
             }

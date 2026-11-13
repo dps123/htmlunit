@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,26 +15,23 @@
 package org.htmlunit.javascript.host.event;
 
 import static org.htmlunit.BrowserVersionFeatures.JS_EVENT_INPUT_CTOR_INPUTTYPE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
 
+import org.htmlunit.corejs.javascript.ScriptableObject;
+import org.htmlunit.html.DomNode;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxGetter;
 
-import org.htmlunit.corejs.javascript.ScriptRuntime;
-import org.htmlunit.corejs.javascript.ScriptableObject;
-import org.htmlunit.corejs.javascript.Undefined;
-
 /**
- * A JavaScript object for {@code InputEvent}.
+ * JavaScript host object for {@code InputEvent}.
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/InputEvent">MDN Documentation</a>
  */
-@JsxClass({CHROME, EDGE, FF, FF_ESR})
+@JsxClass
 public class InputEvent extends UIEvent {
 
     private String data_;
@@ -42,15 +39,32 @@ public class InputEvent extends UIEvent {
     private boolean isComposing_;
 
     /**
-     * Default constructor.
+     * Creates a new event instance.
      */
     public InputEvent() {
+        super();
         data_ = "";
         inputType_ = "";
     }
 
     /**
-     * JavaScript constructor.
+     * Creates a new input event for the given DOM node; used when typing changes the text
+     * of a text control. Like in the browsers, the event bubbles but can't be canceled.
+     *
+     * @param domNode the DOM node that triggered the event
+     * @param type the event type
+     * @param inputType the input type (e.g. {@code insertText} or {@code deleteContentBackward})
+     * @param data the inserted text or {@code null} if no text was inserted
+     */
+    public InputEvent(final DomNode domNode, final String type, final String inputType, final String data) {
+        super(domNode, type);
+        inputType_ = inputType;
+        data_ = data;
+        setCancelable(false);
+    }
+
+    /**
+     * Creates an instance of this event.
      *
      * @param type the event type
      * @param details the event details (optional)
@@ -60,46 +74,49 @@ public class InputEvent extends UIEvent {
     public void jsConstructor(final String type, final ScriptableObject details) {
         super.jsConstructor(type, details);
 
-        if (details != null && !Undefined.isUndefined(details)) {
+        if (details != null && !JavaScriptEngine.isUndefined(details)) {
             if (getBrowserVersion().hasFeature(JS_EVENT_INPUT_CTOR_INPUTTYPE)) {
                 final Object inputType = details.get("inputType", details);
                 if (!isMissingOrUndefined(inputType)) {
-                    inputType_ = ScriptRuntime.toString(inputType);
+                    inputType_ = JavaScriptEngine.toString(inputType);
                 }
             }
 
             final Object dataObj = details.get("data", details);
             if (!isMissingOrUndefined(dataObj)) {
-                data_ = ScriptRuntime.toString(dataObj);
+                data_ = JavaScriptEngine.toString(dataObj);
             }
 
             final Object isComposing = details.get("isComposing", details);
             if (!isMissingOrUndefined(isComposing)) {
-                setIsComposing(ScriptRuntime.toBoolean(isComposing));
+                setIsComposing(JavaScriptEngine.toBoolean(isComposing));
             }
         }
     }
 
     /**
-     * Returns whether or not the event is fired after the compositionstart and before the compositionend events.
-     * @return whether or not the event is fired while composing
+     * Returns whether this event is fired after the {@code compositionstart} and before the {@code compositionend} events.
+     *
+     * @return {@code true} if the event is fired while composing
      */
     @JsxGetter
-    public boolean getIsComposing() {
+    public boolean isIsComposing() {
         return isComposing_;
     }
 
     /**
-     * Sets whether or not this event is fired after the compositionstart and before the compositionend events.
-     * @param isComposing whether or not this event is fired while composing
+     * Sets whether this event is fired after the {@code compositionstart} and before the {@code compositionend} events.
+     *
+     * @param isComposing {@code true} if the event is fired while composing
      */
     protected void setIsComposing(final boolean isComposing) {
         isComposing_ = isComposing;
     }
 
     /**
-     * Retrieves the data contained.
-     * @return the data contained
+     * Returns the data contained in the event.
+     *
+     * @return the data
      */
     @JsxGetter
     public Object getData() {
@@ -107,8 +124,9 @@ public class InputEvent extends UIEvent {
     }
 
     /**
-     * Retrieves the inputType.
-     * @return the inputType
+     * Returns the input type of the event.
+     *
+     * @return the input type
      */
     @JsxGetter
     public Object getInputType() {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,33 +14,31 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
 import org.htmlunit.html.HtmlDetails;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.configuration.JsxSetter;
-
-import org.htmlunit.corejs.javascript.ScriptRuntime;
 
 /**
  * The JavaScript object {@code HTMLDetailsElement}.
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLDetailsElement">MDN Documentation</a>
  */
-@JsxClass(domClass = HtmlDetails.class, value = {CHROME, EDGE, FF, FF_ESR})
+@JsxClass(domClass = HtmlDetails.class)
 public class HTMLDetailsElement extends HTMLElement {
 
     /**
-     * Creates a new instance.
+     * JavaScript constructor.
      */
+    @Override
     @JsxConstructor
-    public HTMLDetailsElement() {
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
@@ -53,17 +51,33 @@ public class HTMLDetailsElement extends HTMLElement {
     }
 
     /**
-     * Sets the open attribute.
+     * Sets the {@code open} property.
      * @param newValue the new value to set
      */
     @JsxSetter
     public void setOpen(final Object newValue) {
-        final boolean bool = ScriptRuntime.toBoolean(newValue);
-        if (bool) {
-            getDomNodeOrDie().setAttribute("open", "");
-        }
-        else {
-            getDomNodeOrDie().removeAttribute("open");
-        }
+        final boolean bool = JavaScriptEngine.toBoolean(newValue);
+
+        ((HtmlDetails) getDomNodeOrDie()).setOpen(bool);
+    }
+
+    /**
+     * Returns the {@code name} property.
+     * @return the {@code name} property
+     */
+    @JsxGetter
+    @Override
+    public String getName() {
+        return super.getName();
+    }
+
+    /**
+     * Sets the {@code name} property.
+     * @param newValue the new value to set
+     */
+    @JsxSetter
+    @Override
+    public void setName(final String newValue) {
+        super.setName(newValue);
     }
 }

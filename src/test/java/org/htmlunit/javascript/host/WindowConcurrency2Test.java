@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,21 +14,17 @@
  */
 package org.htmlunit.javascript.host;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.htmlunit.WebDriverTestCase;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
-
-import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
 
 /**
  * Tests for {@link Window} that use background jobs.
  *
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class WindowConcurrency2Test extends WebDriverTestCase {
 
     /**
@@ -40,8 +36,8 @@ public class WindowConcurrency2Test extends WebDriverTestCase {
     @Test
     @Alerts("xxx")
     public void setIntervalZeroDelay() throws Exception {
-        final String html
-            = "<html><body><div id='d'></div>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body><div id='d'></div>\n"
             + "<script>\n"
             + "  var count = 0;\n"
 
@@ -59,6 +55,6 @@ public class WindowConcurrency2Test extends WebDriverTestCase {
 
         final WebDriver driver = loadPage2(html);
 
-        verify(() -> driver.findElement(By.id("d")).getText(), getExpectedAlerts()[0]);
+        assertEquals(getExpectedAlerts()[0], () -> driver.findElement(By.id("d")).getText(), DEFAULT_WAIT_TIME);
     }
 }

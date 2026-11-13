@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,9 +23,8 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import org.apache.commons.io.FileUtils;
-import org.junit.Test;
-
 import org.htmlunit.general.ElementPropertiesTest;
+import org.junit.jupiter.api.Test;
 
 /**
  * Generates HTML file with all <tt>NotYetImplemented</tt> methods.
@@ -35,7 +34,7 @@ import org.htmlunit.general.ElementPropertiesTest;
  */
 public class NotYetImplementedTest {
 
-    private Set<String> entries_ = new TreeSet<>();
+    private final Set<String> entries_ = new TreeSet<>();
 
     /**
      * @throws Exception if the test fails
@@ -59,6 +58,7 @@ public class NotYetImplementedTest {
                 else {
                     if (fileName.endsWith(".java")
                             && !"SimpleWebTestCase.java".equals(fileName)
+                            && !"AnnotationUtilsTest.java".equals(fileName)
                             && !"NotYetImplementedTest.java".equals(fileName)
                             && !"CodeStyleTest.java".equals(fileName)) {
                         final List<String> lines = FileUtils.readLines(file, ISO_8859_1);
@@ -121,22 +121,16 @@ public class NotYetImplementedTest {
                         browser += "EDGE";
                     }
                     if (nyiString.contains("FF_ESR = ")) {
-                        if (browser.length() > 0) {
+                        if (!browser.isEmpty()) {
                             browser += ", ";
                         }
                         browser += "FF_ESR";
                     }
                     if (nyiString.contains("FF = ")) {
-                        if (browser.length() > 0) {
+                        if (!browser.isEmpty()) {
                             browser += ", ";
                         }
                         browser += "FF";
-                    }
-                    if (nyiString.contains("IE = ")) {
-                        if (browser.length() > 0) {
-                            browser += ", ";
-                        }
-                        browser += "IE";
                     }
                 }
                 if (browser.length() < 2) {
@@ -169,7 +163,7 @@ public class NotYetImplementedTest {
                 break;
             }
             if (start != -1) {
-                if (builder.length() != 0) {
+                if (!builder.isEmpty()) {
                     builder.append(' ');
                 }
                 builder.append(line, start, line.length() - (end ? 2 : 0));
@@ -204,7 +198,6 @@ public class NotYetImplementedTest {
         String lastFile = null;
 
         int count = 0;
-        int countIE = 0;
         int countFFESR = 0;
         int countFF = 0;
         int countChrome = 0;
@@ -239,7 +232,7 @@ public class NotYetImplementedTest {
                 builder.append("</td>\n");
                 lastFile = file;
             }
-            builder.append("    <td>").append(Integer.toString(count++)).append("</td>\n");
+            builder.append("    <td>").append(count++).append("</td>\n");
 
             builder.append("    <td><a target='_blank' href='https://github.com/HtmlUnit/htmlunit/blob/master/")
                     .append(file)
@@ -254,10 +247,6 @@ public class NotYetImplementedTest {
             builder.append("    <td>").append(description).append("</td>\n");
             builder.append("  </tr>\n");
 
-            if (browser.contains("IE")) {
-                countIE++;
-            }
-
             if (browser.contains("FF_ESR")) {
                 browser = browser.replace("FF_ESR", "");
                 countFFESR++;
@@ -269,7 +258,6 @@ public class NotYetImplementedTest {
                 countChrome++;
             }
             if (browser.contains("All")) {
-                countIE++;
                 countFFESR++;
                 countFF++;
                 countChrome++;
@@ -280,13 +268,8 @@ public class NotYetImplementedTest {
         final StringBuilder overview = new StringBuilder();
         overview.append("<table class='bottomBorder'>\n");
         overview.append("  <tr>\n");
-        overview.append("    <td class='numeric'>").append(Integer.toString(count)).append("</td>\n");
+        overview.append("    <td class='numeric'>").append(count).append("</td>\n");
         overview.append("    <td>methods marked as NotYetImplemented</td>\n");
-        overview.append("  </tr>\n");
-
-        overview.append("  <tr>\n");
-        overview.append("    <td class='numeric'>").append(Integer.toString(countIE)).append("</td>\n");
-        overview.append("    <td>for IE</td>\n");
         overview.append("  </tr>\n");
 
         overview.append("  <tr>\n");
@@ -300,7 +283,7 @@ public class NotYetImplementedTest {
         overview.append("  </tr>\n");
 
         overview.append("  <tr>\n");
-        overview.append("    <td class='numeric'>").append(Integer.toString(countChrome)).append("</td>\n");
+        overview.append("    <td class='numeric'>").append(countChrome).append("</td>\n");
         overview.append("    <td>for Chrome</td>\n");
         overview.append("  </tr>\n");
 

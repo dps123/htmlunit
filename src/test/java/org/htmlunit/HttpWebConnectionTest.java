@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  */
 package org.htmlunit;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
@@ -22,6 +22,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.Writer;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -31,31 +32,32 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.servlet.Servlet;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.ProtocolVersion;
 import org.apache.http.StatusLine;
+import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicHttpResponse;
 import org.apache.http.message.BasicStatusLine;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.html.HtmlPage;
-import org.htmlunit.junit.BrowserRunner;
+import org.htmlunit.http.HttpStatus;
 import org.htmlunit.util.KeyDataPair;
 import org.htmlunit.util.MimeType;
+import org.htmlunit.util.NameValuePair;
+import org.htmlunit.util.PrimitiveWebServer;
 import org.htmlunit.util.ServletContentWrapper;
+import org.junit.jupiter.api.Test;
+
+import jakarta.servlet.Servlet;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Tests methods in {@link HttpWebConnection}.
@@ -66,7 +68,6 @@ import org.htmlunit.util.ServletContentWrapper;
  * @author Ronald Brill
  * @author Carsten Steul
  */
-@RunWith(BrowserRunner.class)
 public class HttpWebConnectionTest extends WebServerTestCase {
 
     /**
@@ -167,39 +168,6 @@ public class HttpWebConnectionTest extends WebServerTestCase {
     }
 
     /**
-     * Tests creation of a web response.
-     * @throws Exception if the test fails
-     */
-    @Test
-    public void makeWebResponse() throws Exception {
-        final URL url = new URL("http://htmlunit.sourceforge.net/");
-        final String content = "<html><head></head><body></body></html>";
-        final DownloadedContent downloadedContent = new DownloadedContent.InMemory(content.getBytes());
-        final long loadTime = 500L;
-
-        final ProtocolVersion protocolVersion = new ProtocolVersion("HTTP", 1, 0);
-        final StatusLine statusLine = new BasicStatusLine(protocolVersion, WebResponse.OK, null);
-        final HttpResponse httpResponse = new BasicHttpResponse(statusLine);
-
-        final HttpEntity responseEntity = new StringEntity(content);
-        httpResponse.setEntity(responseEntity);
-
-        final HttpWebConnection connection = new HttpWebConnection(getWebClient());
-        final Method method = connection.getClass().getDeclaredMethod("makeWebResponse",
-                HttpResponse.class, WebRequest.class, DownloadedContent.class, long.class);
-        method.setAccessible(true);
-        final WebResponse response = (WebResponse) method.invoke(connection,
-                httpResponse, new WebRequest(url), downloadedContent, new Long(loadTime));
-
-        assertEquals(WebResponse.OK, response.getStatusCode());
-        assertEquals(url, response.getWebRequest().getUrl());
-        assertEquals(loadTime, response.getLoadTime());
-        assertEquals(content, response.getContentAsString());
-        assertEquals(content.getBytes(), IOUtils.toByteArray(response.getContentAsStream()));
-        assertEquals(new ByteArrayInputStream(content.getBytes()), response.getContentAsStream());
-    }
-
-    /**
      * Tests Jetty.
      * @throws Exception on failure
      */
@@ -212,8 +180,8 @@ public class HttpWebConnectionTest extends WebServerTestCase {
         final WebConnection defaultConnection = client.getWebConnection();
         assertTrue(
                 "HttpWebConnection should be the default",
-                HttpWebConnection.class.isInstance(defaultConnection));
-        assertTrue("Response should be valid HTML", HtmlPage.class.isInstance(page));
+                defaultConnection instanceof HttpWebConnection);
+        assertTrue("Response should be valid HTML", page instanceof HtmlPage);
     }
 
     /**
@@ -302,7 +270,7 @@ public class HttpWebConnectionTest extends WebServerTestCase {
     public void emptyPut() throws Exception {
         final Map<String, Class<? extends Servlet>> servlets = new HashMap<>();
         servlets.put("/test", EmptyPutServlet.class);
-        startWebServer("./", null, servlets);
+        startWebServer("./", servlets);
 
         final String[] expectedAlerts = {"1"};
         final WebClient client = getWebClient();
@@ -322,7 +290,8 @@ public class HttpWebConnectionTest extends WebServerTestCase {
     public static class EmptyPutServlet extends ServletContentWrapper {
         /** Constructor. */
         public EmptyPutServlet() {
-            super("<html>\n"
+            super(DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "  <script>\n"
                 + "    function test() {\n"
@@ -354,7 +323,7 @@ public class HttpWebConnectionTest extends WebServerTestCase {
         final Map<String, Class<? extends Servlet>> servlets = new HashMap<>();
         servlets.put("/test1", Cookie1Servlet.class);
         servlets.put("/test2", Cookie2Servlet.class);
-        startWebServer("./", null, servlets);
+        startWebServer("./", servlets);
 
         final WebClient client = getWebClient();
 
@@ -377,7 +346,7 @@ public class HttpWebConnectionTest extends WebServerTestCase {
          */
         @Override
         protected void doGet(final HttpServletRequest request, final HttpServletResponse response) throws IOException {
-            response.addCookie(new javax.servlet.http.Cookie("key1", "value1"));
+            response.addCookie(new jakarta.servlet.http.Cookie("key1", "value1"));
             response.setStatus(HttpServletResponse.SC_MOVED_TEMPORARILY);
             final String location = request.getRequestURL().toString().replace("test1", "test2");
             response.setHeader("Location", location);
@@ -400,7 +369,7 @@ public class HttpWebConnectionTest extends WebServerTestCase {
                 writer.write("No Cookies");
             }
             else {
-                for (final javax.servlet.http.Cookie c : request.getCookies()) {
+                for (final jakarta.servlet.http.Cookie c : request.getCookies()) {
                     writer.write(c.getName() + '=' + c.getValue());
                 }
             }
@@ -414,7 +383,7 @@ public class HttpWebConnectionTest extends WebServerTestCase {
     public void remotePort() throws Exception {
         final Map<String, Class<? extends Servlet>> servlets = new HashMap<>();
         servlets.put("/test", RemotePortServlet.class);
-        startWebServer("./", null, servlets);
+        startWebServer("./", servlets);
 
         final WebClient client = getWebClient();
 
@@ -450,35 +419,25 @@ public class HttpWebConnectionTest extends WebServerTestCase {
      */
     @Test
     public void contentLengthSmallerThanContent() throws Exception {
-        final Map<String, Class<? extends Servlet>> servlets = new HashMap<>();
-        servlets.put("/contentLengthSmallerThanContent", ContentLengthSmallerThanContentServlet.class);
-        startWebServer("./", null, servlets);
-
-        final WebClient client = getWebClient();
-        final HtmlPage page = client.getPage(URL_FIRST + "contentLengthSmallerThanContent");
-        assertEquals("visible text", page.asNormalizedText());
-    }
-
-    /**
-     * Servlet for {@link #contentLengthSmallerThanContent()}.
-     */
-    public static class ContentLengthSmallerThanContentServlet extends ServletContentWrapper {
-
-        /** Constructor. */
-        public ContentLengthSmallerThanContentServlet() {
-            super("<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<body>\n"
                 + "  <p>visible text</p>\n"
                 + "  <p>missing text</p>\n"
                 + "</body>\n"
-                + "</html>");
-        }
+                + "</html>";
+        int contentLenght = html.indexOf("<p>missing text</p>");
+        final String response = "HTTP/1.1 200 OK\r\n"
+                + "Content-Length: " + contentLenght + "\r\n"
+                + "Content-Type: text/html\r\n"
+                + "\r\n"
+                + html;
 
-        @Override
-        protected void doGet(final HttpServletRequest request, final HttpServletResponse response)
-            throws IOException, ServletException {
-            response.setContentLength(getContent().indexOf("<p>missing text</p>"));
-            super.doGet(request, response);
+        try (PrimitiveWebServer primitiveWebServer = new PrimitiveWebServer(null, response, null)) {
+            final WebClient client = getWebClient();
+
+            final HtmlPage page = client.getPage("http://localhost:" + primitiveWebServer.getPort());
+            assertEquals("visible text", page.asNormalizedText());
         }
     }
 
@@ -487,23 +446,8 @@ public class HttpWebConnectionTest extends WebServerTestCase {
      */
     @Test
     public void contentLengthSmallerThanContentLargeContent() throws Exception {
-        final Map<String, Class<? extends Servlet>> servlets = new HashMap<>();
-        servlets.put("/contentLengthSmallerThanContent", ContentLengthSmallerThanContentLargeContentServlet.class);
-        startWebServer("./", null, servlets);
-
-        final WebClient client = getWebClient();
-        final HtmlPage page = client.getPage(URL_FIRST + "contentLengthSmallerThanContent");
-        assertTrue(page.asNormalizedText(), page.asNormalizedText().endsWith("visible text"));
-    }
-
-    /**
-     * Servlet for {@link #contentLengthSmallerThanContentLargeContent()}.
-     */
-    public static class ContentLengthSmallerThanContentLargeContentServlet extends ServletContentWrapper {
-
-        /** Constructor. */
-        public ContentLengthSmallerThanContentLargeContentServlet() {
-            super("<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<body>\n"
                 + "  <p>"
                 + StringUtils.repeat("HtmlUnit  ", 1024 * 1024)
@@ -511,14 +455,19 @@ public class HttpWebConnectionTest extends WebServerTestCase {
                 + "  <p>visible text</p>\n"
                 + "  <p>missing text</p>\n"
                 + "</body>\n"
-                + "</html>");
-        }
+                + "</html>";
+        int contentLenght = html.indexOf("<p>missing text</p>");
+        final String response = "HTTP/1.1 200 OK\r\n"
+                + "Content-Length: " + contentLenght + "\r\n"
+                + "Content-Type: text/html\r\n"
+                + "\r\n"
+                + html;
 
-        @Override
-        protected void doGet(final HttpServletRequest request, final HttpServletResponse response)
-            throws IOException, ServletException {
-            response.setContentLength(getContent().indexOf("<p>missing text</p>"));
-            super.doGet(request, response);
+        try (PrimitiveWebServer primitiveWebServer = new PrimitiveWebServer(null, response, null)) {
+            final WebClient client = getWebClient();
+
+            final HtmlPage page = client.getPage("http://localhost:" + primitiveWebServer.getPort());
+            assertTrue(page.asNormalizedText(), page.asNormalizedText().endsWith("visible text"));
         }
     }
 
@@ -531,7 +480,7 @@ public class HttpWebConnectionTest extends WebServerTestCase {
                 + "Content-Length: 2000\r\n"
                 + "Content-Type: text/html\r\n"
                 + "\r\n"
-                + "<html><body><p>visible text</p></body></html>";
+                + DOCTYPE_HTML + "<html><body><p>visible text</p></body></html>";
 
         try (PrimitiveWebServer primitiveWebServer = new PrimitiveWebServer(null, response, null)) {
             final WebClient client = getWebClient();
@@ -562,4 +511,160 @@ public class HttpWebConnectionTest extends WebServerTestCase {
         return (T) field.get(o);
     }
 
+    /**
+     * Tests creation of a web response.
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void makeWebResponse() throws Exception {
+        final URL url = new URL("http://htmlunit.sourceforge.net/");
+        final String content = DOCTYPE_HTML + "<html><head></head><body></body></html>";
+        final DownloadedContent downloadedContent = new DownloadedContent.InMemory(content.getBytes());
+        final long loadTime = 500L;
+
+        final ProtocolVersion protocolVersion = new ProtocolVersion("HTTP", 1, 0);
+        final StatusLine statusLine = new BasicStatusLine(protocolVersion, HttpStatus.OK_200, null);
+        final HttpResponse httpResponse = new BasicHttpResponse(statusLine);
+
+        final HttpEntity responseEntity = new StringEntity(content);
+        httpResponse.setEntity(responseEntity);
+
+        try (HttpWebConnection connection = new HttpWebConnection(getWebClient())) {
+            final Method method = connection.getClass().getDeclaredMethod("makeWebResponse",
+                    HttpResponse.class, WebRequest.class, DownloadedContent.class, long.class);
+            final WebResponse response = (WebResponse) method.invoke(connection,
+                    httpResponse, new WebRequest(url), downloadedContent, Long.valueOf(loadTime));
+
+            assertEquals(HttpStatus.OK_200, response.getStatusCode());
+            assertEquals(url, response.getWebRequest().getUrl());
+            assertEquals(loadTime, response.getLoadTime());
+            assertEquals(content, response.getContentAsString());
+            try (InputStream is = response.getContentAsStream()) {
+                assertEquals(content.getBytes(), IOUtils.toByteArray(is));
+            }
+            try (InputStream is = response.getContentAsStream()) {
+                assertEquals(new ByteArrayInputStream(content.getBytes()), is);
+            }
+        }
+    }
+
+    /**
+     * Test for overwriting the
+     * {@link HttpWebConnection#downloadResponse(HttpUriRequest, WebRequest, HttpResponse, long)}
+     * method.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void contentBlocking() throws Exception {
+        final byte[] content = new byte[] {77, 44};
+        final List<NameValuePair> headers = new ArrayList<>();
+        headers.add(new NameValuePair("Content-Encoding", "gzip"));
+        headers.add(new NameValuePair(HttpHeader.CONTENT_LENGTH, String.valueOf(content.length)));
+
+        final MockWebConnection conn = getMockWebConnection();
+        conn.setResponse(URL_FIRST, content, 200, "OK", MimeType.APPLICATION_JSON, headers);
+
+        startWebServer(conn);
+
+        final WebClient client = getWebClient();
+        client.setWebConnection(new HttpWebConnection(client) {
+            @Override
+            protected WebResponse downloadResponse(final HttpUriRequest httpMethod,
+                    final WebRequest webRequest, final HttpResponse httpResponse,
+                    final long startTime) {
+
+                httpMethod.abort();
+
+                final DownloadedContent downloaded = new DownloadedContent.InMemory(null);
+                final long endTime = System.currentTimeMillis();
+                final WebResponse response = makeWebResponse(httpResponse, webRequest, downloaded, endTime - startTime);
+                response.markAsBlocked("test blocking");
+                return response;
+            }
+        });
+
+        final UnexpectedPage page = client.getPage(URL_FIRST);
+        assertTrue(page.getWebResponse().wasBlocked());
+        assertEquals("test blocking", page.getWebResponse().getBlockReason());
+    }
+
+    /**
+     * Test for overwriting the
+     * {@link HttpWebConnection#downloadResponse(HttpUriRequest, WebRequest, HttpResponse, long)}
+     * method.
+     *
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void contentSizeBlocking() throws Exception {
+        stopWebServer();
+
+        final Map<String, Class<? extends Servlet>> servlets = new HashMap<>();
+        servlets.put("/big", BigContentServlet.class);
+        startWebServer("./", servlets);
+
+        BigContentServlet.CANCEL_ = false;
+
+        final WebClient client = getWebClient();
+        client.setWebConnection(new HttpWebConnection(client) {
+            @Override
+            protected WebResponse downloadResponse(final HttpUriRequest httpMethod,
+                    final WebRequest webRequest, final HttpResponse httpResponse,
+                    final long startTime) throws IOException {
+
+                final int contentLength = Integer.parseInt(
+                        httpResponse.getFirstHeader(HttpHeader.CONTENT_LENGTH).getValue());
+
+                if (contentLength < 1_000) {
+                    return super.downloadResponse(httpMethod, webRequest, httpResponse, startTime);
+                }
+
+                httpMethod.abort();
+
+                final DownloadedContent downloaded = new DownloadedContent.InMemory(null);
+                final long endTime = System.currentTimeMillis();
+                final WebResponse response = makeWebResponse(httpResponse, webRequest, downloaded, endTime - startTime);
+                response.markAsBlocked("blocking " + contentLength);
+                return response;
+            }
+        });
+
+        final TextPage page = client.getPage(URL_FIRST + "big");
+        assertTrue(page.getWebResponse().wasBlocked());
+        assertEquals("blocking 10240000", page.getWebResponse().getBlockReason());
+        assertTrue("blocks sent " + BigContentServlet.SENT_, BigContentServlet.SENT_ < 5000);
+
+        BigContentServlet.CANCEL_ = true;
+    }
+
+    /**
+     * Servlet for bigContent().
+     */
+    public static class BigContentServlet extends HttpServlet {
+
+        /** Helper. */
+        public static int SENT_;
+        /** Helper. */
+        public static boolean CANCEL_;
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        protected void doGet(final HttpServletRequest request, final HttpServletResponse response) throws IOException {
+            final int blockSize = 1024;
+            final int blockCount = 10_000;
+
+            response.setHeader(HttpHeader.CONTENT_LENGTH, String.valueOf(blockSize * blockCount));
+
+            final byte[] buffer = new byte[blockSize];
+            try (OutputStream out = response.getOutputStream()) {
+                for (int i = 0; i < blockCount && !CANCEL_; i++) {
+                    SENT_++;
+                    out.write(buffer);
+                }
+            }
+        }
+    }
 }

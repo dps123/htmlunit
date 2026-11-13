@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,10 @@
  */
 package org.htmlunit.javascript.host.file;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.html.HtmlPageTest;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
+import org.htmlunit.junit.annotation.Alerts;
 import org.htmlunit.util.MimeType;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link org.htmlunit.javascript.host.file.Blob}.
@@ -30,7 +25,6 @@ import org.htmlunit.util.MimeType;
  * @author Ronald Brill
  * @author Lai Quang Duong
  */
-@RunWith(BrowserRunner.class)
 public class BlobTest extends WebDriverTestCase {
 
     /**
@@ -39,7 +33,7 @@ public class BlobTest extends WebDriverTestCase {
     @Test
     @Alerts({"3", MimeType.TEXT_HTML})
     public void properties() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html>\n"
             + "<head>\n"
             + "<script>\n"
@@ -63,10 +57,9 @@ public class BlobTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"function", "Hello HtmlUnit"},
-            IE = {"undefined", "TypeError true"})
+    @Alerts({"function", "Hello HtmlUnit"})
     public void text() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
                 + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
@@ -117,8 +110,7 @@ public class BlobTest extends WebDriverTestCase {
     }
 
     private void type(final String type) throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html>\n"
             + "<head>\n"
             + "<script>\n"
@@ -142,8 +134,7 @@ public class BlobTest extends WebDriverTestCase {
     @Test
     @Alerts("")
     public void typeDefault() throws Exception {
-        final String html
-            = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html>\n"
             + "<head>\n"
             + "<script>\n"
@@ -165,10 +156,9 @@ public class BlobTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"0", "", ""},
-            IE = {"0", "", "TypeError true"})
+    @Alerts({"0", "", ""})
     public void ctorNoArgs() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
                 + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
@@ -196,10 +186,9 @@ public class BlobTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"0", "", ""},
-            IE = {"0", "", "TypeError true"})
+    @Alerts({"0", "", ""})
     public void ctorEmpty() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
                 + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
@@ -227,10 +216,9 @@ public class BlobTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"8", "", "HtmlUnit"},
-            IE = {"8", "", "TypeError true"})
+    @Alerts({"8", "", "HtmlUnit"})
     public void ctorString() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
                 + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
@@ -258,10 +246,9 @@ public class BlobTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"8", "application/octet-stream", "HtmlUnit"},
-            IE = {"8", "application/octet-stream", "TypeError true"})
+    @Alerts({"8", "application/octet-stream", "HtmlUnit"})
     public void ctorStringWithOptions() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
                 + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
@@ -289,10 +276,9 @@ public class BlobTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"16", "", "HtmlUnitis great"},
-            IE = {"16", "", "TypeError true"})
+    @Alerts({"16", "", "HtmlUnitis great"})
     public void ctorStrings() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
                 + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
@@ -320,10 +306,9 @@ public class BlobTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"12", "", "HtmlUnitMMMK"},
-            IE = {"12", "", "TypeError true"})
+    @Alerts({"12", "", "HtmlUnitMMMK"})
     public void ctorMixed() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
                 + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
@@ -355,10 +340,9 @@ public class BlobTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"34", "", "HtmlUnitHtmlUnitMMMKMKHtmlUnitMMMK"},
-            IE = {"34", "", "TypeError true"})
+    @Alerts({"34", "", "HtmlUnitHtmlUnitMMMKMKHtmlUnitMMMK"})
     public void ctorMixedBlobs() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
                 + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
@@ -391,10 +375,9 @@ public class BlobTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"function", "Hello HtmlUnit"},
-            IE = {"undefined", "TypeError true"})
+    @Alerts({"function", "Hello HtmlUnit"})
     public void arrayBuffer() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
                 + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
@@ -423,10 +406,9 @@ public class BlobTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"12", "", "function", "3", "", "tml"},
-            IE = {"12", "", "function", "3", "", "TypeError true"})
+    @Alerts({"12", "", "function", "3", "", "tml"})
     public void slice() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
                 + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
@@ -465,8 +447,7 @@ public class BlobTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"12", "", "12", "", "HtmlUnitMMMK"},
-            IE = {"12", "", "12", "", "TypeError true"})
+    @Alerts({"12", "", "12", "", "HtmlUnitMMMK"})
     public void sliceWhole() throws Exception {
         slice("blob.slice();");
     }
@@ -475,8 +456,7 @@ public class BlobTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"12", "", "9", "", "lUnitMMMK"},
-            IE = {"12", "", "9", "", "TypeError true"})
+    @Alerts({"12", "", "9", "", "lUnitMMMK"})
     public void sliceStartOnly() throws Exception {
         slice("blob.slice(3);");
     }
@@ -485,8 +465,7 @@ public class BlobTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"12", "", "7", "", "nitMMMK"},
-            IE = {"12", "", "7", "", "TypeError true"})
+    @Alerts({"12", "", "7", "", "nitMMMK"})
     public void sliceStartOnlyNegative() throws Exception {
         slice("blob.slice(-7);");
     }
@@ -495,8 +474,7 @@ public class BlobTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"12", "", "12", "", "HtmlUnitMMMK"},
-            IE = {"12", "", "12", "", "TypeError true"})
+    @Alerts({"12", "", "12", "", "HtmlUnitMMMK"})
     public void sliceStartOnlyNegativeOutside() throws Exception {
         slice("blob.slice(-123);");
     }
@@ -505,8 +483,7 @@ public class BlobTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"12", "", "3", "", "mlU"},
-            IE = {"12", "", "3", "", "TypeError true"})
+    @Alerts({"12", "", "3", "", "mlU"})
     public void sliceEndNegative() throws Exception {
         slice("blob.slice(2, -7);");
     }
@@ -515,8 +492,7 @@ public class BlobTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"12", "", "10", "", "mlUnitMMMK"},
-            IE = {"12", "", "10", "", "TypeError true"})
+    @Alerts({"12", "", "10", "", "mlUnitMMMK"})
     public void sliceEndOutside() throws Exception {
         slice("blob.slice(2, 1234);");
     }
@@ -525,8 +501,7 @@ public class BlobTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"12", "", "0", "", ""},
-            IE = {"12", "", "0", "", "TypeError true"})
+    @Alerts({"12", "", "0", "", ""})
     public void sliceBothOutside() throws Exception {
         slice("blob.slice(123, 1234);");
     }
@@ -535,8 +510,7 @@ public class BlobTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"12", "", "0", "", ""},
-            IE = {"12", "", "0", "", "TypeError true"})
+    @Alerts({"12", "", "0", "", ""})
     public void sliceNoIntersection() throws Exception {
         slice("blob.slice(5, 4);");
     }
@@ -545,8 +519,7 @@ public class BlobTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"12", "", "1", "", "U"},
-            IE = {"12", "", "1", "", "TypeError true"})
+    @Alerts({"12", "", "1", "", "U"})
     public void sliceEmptyIntersection() throws Exception {
         slice("blob.slice(4, 5);");
     }
@@ -555,8 +528,7 @@ public class BlobTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"12", "", "12", "", "HtmlUnitMMMK"},
-            IE = {"12", "", "12", "", "TypeError true"})
+    @Alerts({"12", "", "12", "", "HtmlUnitMMMK"})
     public void sliceWrongStart() throws Exception {
         slice("blob.slice('four');");
     }
@@ -565,8 +537,7 @@ public class BlobTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"12", "", "0", "", ""},
-            IE = {"12", "", "0", "", "TypeError true"})
+    @Alerts({"12", "", "0", "", ""})
     public void sliceWrongEnd() throws Exception {
         slice("blob.slice(1, 'four');");
     }
@@ -575,9 +546,7 @@ public class BlobTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"12", "", "1", "type", "t"},
-            IE = {"12", "", "1", "tyPE", "TypeError true"})
-    @HtmlUnitNYI(IE = {"12", "", "1", "type", "TypeError true"})
+    @Alerts({"12", "", "1", "type", "t"})
     public void sliceContentType() throws Exception {
         slice("blob.slice(1, 2, 'tyPE');");
     }
@@ -586,14 +555,13 @@ public class BlobTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"12", "", "1", "7", "t"},
-            IE = {"12", "", "1", "7", "TypeError true"})
+    @Alerts({"12", "", "1", "7", "t"})
     public void sliceContentTypeNotString() throws Exception {
         slice("blob.slice(1, 2, 7);");
     }
 
     private void slice(final String slice) throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
                 + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"

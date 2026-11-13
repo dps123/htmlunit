@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,26 +14,15 @@
  */
 package org.htmlunit.javascript.host.css;
 
-import static org.htmlunit.BrowserVersionFeatures.CSS_CSSTEXT_IE_STYLE;
-import static org.htmlunit.BrowserVersionFeatures.JS_PAGERULE_SELECTORTEXT_EMPTY;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
-
 import java.util.Locale;
 
-import org.apache.commons.lang3.StringUtils;
-import org.htmlunit.cssparser.dom.CSSPageRuleImpl;
-import org.w3c.dom.DOMException;
-
-import org.htmlunit.BrowserVersion;
 import org.htmlunit.css.WrappedCssStyleDeclaration;
+import org.htmlunit.cssparser.dom.CSSPageRuleImpl;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.configuration.JsxSetter;
+import org.w3c.dom.DOMException;
 
 /**
  * A JavaScript object for {@code CSSPageRule}.
@@ -41,7 +30,7 @@ import org.htmlunit.javascript.configuration.JsxSetter;
  * @author Ahmed Ashour
  * @author Ronald Brill
  * @author Frank Danek
- * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/CSSPageRule">MDN doc</a>
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/CSSPageRule">MDN Documentation</a>
  */
 @JsxClass
 public class CSSPageRule extends CSSRule {
@@ -50,12 +39,13 @@ public class CSSPageRule extends CSSRule {
      * Creates a new instance.
      */
     public CSSPageRule() {
+        super();
     }
 
     /**
      * Creates an instance.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
+    @JsxConstructor
     @Override
     public void jsConstructor() {
         super.jsConstructor();
@@ -74,12 +64,8 @@ public class CSSPageRule extends CSSRule {
      * Returns the textual representation of the selector for the rule set.
      * @return the textual representation of the selector for the rule set
      */
-    @JsxGetter({CHROME, EDGE, IE})
+    @JsxGetter
     public String getSelectorText() {
-        if (getBrowserVersion().hasFeature(JS_PAGERULE_SELECTORTEXT_EMPTY)) {
-            return "";
-        }
-
         final String selectorText = getPageRule().getSelectorText();
         if (selectorText != null) {
             return selectorText.toLowerCase(Locale.ROOT);
@@ -91,12 +77,12 @@ public class CSSPageRule extends CSSRule {
      * Sets the textual representation of the selector for the rule set.
      * @param selectorText the textual representation of the selector for the rule set
      */
-    @JsxSetter({CHROME, EDGE})
+    @JsxSetter
     public void setSelectorText(final String selectorText) {
         try {
             getPageRule().setSelectorText(selectorText);
         }
-        catch (final DOMException e) {
+        catch (final DOMException ignored) {
             // ignore
         }
     }
@@ -107,7 +93,8 @@ public class CSSPageRule extends CSSRule {
      */
     @JsxGetter
     public CSSStyleDeclaration getStyle() {
-        final WrappedCssStyleDeclaration styleDeclaration = new WrappedCssStyleDeclaration(getPageRule().getStyle());
+        final WrappedCssStyleDeclaration styleDeclaration
+                = new WrappedCssStyleDeclaration(getPageRule().getStyle(), getBrowserVersion());
         return new CSSStyleDeclaration(getParentStyleSheet(), styleDeclaration);
     }
 
@@ -117,20 +104,5 @@ public class CSSPageRule extends CSSRule {
      */
     private CSSPageRuleImpl getPageRule() {
         return (CSSPageRuleImpl) getRule();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getCssText() {
-        String cssText = super.getCssText();
-        final BrowserVersion browserVersion = getBrowserVersion();
-        if (browserVersion.hasFeature(CSS_CSSTEXT_IE_STYLE)) {
-            cssText = StringUtils.replace(cssText, " { }", "  {\n\t\n}");
-            cssText = StringUtils.replace(cssText, " { ", "  {\n\t");
-            cssText = StringUtils.replace(cssText, "; }", ";\n}");
-        }
-        return cssText;
     }
 }

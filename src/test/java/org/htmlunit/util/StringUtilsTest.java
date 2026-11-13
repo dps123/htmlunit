@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,18 +15,228 @@
 package org.htmlunit.util;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.Test;
-
-import org.htmlunit.SimpleWebTestCase;
 import org.htmlunit.html.impl.Color;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link StringUtils}.
  *
  * @author Ronald Brill
  */
-public class StringUtilsTest extends SimpleWebTestCase {
+public class StringUtilsTest {
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void isEmptyString() throws Exception {
+        assertFalse(StringUtils.isEmptyString(null));
+        assertTrue(StringUtils.isEmptyString(""));
+        assertFalse(StringUtils.isEmptyString(" "));
+        assertFalse(StringUtils.isEmptyString("\t"));
+        assertFalse(StringUtils.isEmptyString("\r"));
+        assertFalse(StringUtils.isEmptyString("\n"));
+        assertFalse(StringUtils.isEmptyString("string"));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void isEmptyOrNull() throws Exception {
+        assertTrue(StringUtils.isEmptyOrNull(null));
+        assertTrue(StringUtils.isEmptyOrNull(""));
+        assertFalse(StringUtils.isEmptyOrNull(" "));
+        assertFalse(StringUtils.isEmptyOrNull("\t"));
+        assertFalse(StringUtils.isEmptyOrNull("\r"));
+        assertFalse(StringUtils.isEmptyOrNull("\n"));
+        assertFalse(StringUtils.isEmptyOrNull("string"));
+    }
+
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void defaultIfEmptyOrNull() throws Exception {
+        assertEquals("X", StringUtils.defaultIfEmptyOrNull(null, "X"));
+        assertEquals("X", StringUtils.defaultIfEmptyOrNull("", "X"));
+
+        assertEquals(" ", StringUtils.defaultIfEmptyOrNull(" ", "X"));
+        assertEquals("a", StringUtils.defaultIfEmptyOrNull("a", "X"));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void isBlank() throws Exception {
+        assertTrue(StringUtils.isBlank(null));
+        assertTrue(StringUtils.isBlank(""));
+        assertTrue(StringUtils.isBlank(" "));
+        assertTrue(StringUtils.isBlank("\t"));
+        assertTrue(StringUtils.isBlank("\r"));
+        assertTrue(StringUtils.isBlank("\n"));
+
+        assertFalse(StringUtils.isBlank("x"));
+        assertFalse(StringUtils.isBlank("string"));
+        assertFalse(StringUtils.isBlank("    x"));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void isNotBlank() throws Exception {
+        assertFalse(StringUtils.isNotBlank(null));
+        assertFalse(StringUtils.isNotBlank(""));
+        assertFalse(StringUtils.isNotBlank(" "));
+        assertFalse(StringUtils.isNotBlank("\t"));
+        assertFalse(StringUtils.isNotBlank("\r"));
+        assertFalse(StringUtils.isNotBlank("\n"));
+
+        assertTrue(StringUtils.isNotBlank("x"));
+        assertTrue(StringUtils.isNotBlank("string"));
+        assertTrue(StringUtils.isNotBlank("    x"));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void equalsChar() throws Exception {
+        assertFalse(StringUtils.equalsChar('#', null));
+        assertFalse(StringUtils.equalsChar('#', ""));
+        assertFalse(StringUtils.equalsChar('#', " "));
+        assertTrue(StringUtils.equalsChar('#', "#"));
+        assertFalse(StringUtils.equalsChar('#', "##"));
+        assertFalse(StringUtils.equalsChar('#', " #"));
+        assertFalse(StringUtils.equalsChar('#', "# "));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void startsWithIgnoreCase() throws Exception {
+        assertTrue(StringUtils.startsWithIgnoreCase("abcd", "a"));
+        assertTrue(StringUtils.startsWithIgnoreCase("abcd", "ab"));
+        assertTrue(StringUtils.startsWithIgnoreCase("abcd", "abcd"));
+        assertTrue(StringUtils.startsWithIgnoreCase("abcd", "A"));
+        assertTrue(StringUtils.startsWithIgnoreCase("abcd", "AB"));
+        assertTrue(StringUtils.startsWithIgnoreCase("Abcd", "abCd"));
+
+        assertFalse(StringUtils.startsWithIgnoreCase("AB", "x"));
+        assertFalse(StringUtils.startsWithIgnoreCase("AB", "xxzOO"));
+        assertFalse(StringUtils.startsWithIgnoreCase("", "x"));
+        assertFalse(StringUtils.startsWithIgnoreCase("abcd", "bc"));
+
+        assertFalse(StringUtils.startsWithIgnoreCase(null, "x"));
+
+        Assertions.assertThrows(IllegalArgumentException.class, () -> StringUtils.startsWithIgnoreCase("AB", null));
+        Assertions.assertThrows(IllegalArgumentException.class, () -> StringUtils.startsWithIgnoreCase("AB", ""));
+        Assertions.assertThrows(IllegalArgumentException.class, () -> StringUtils.startsWithIgnoreCase("", ""));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void endsWithIgnoreCase() throws Exception {
+        assertTrue(StringUtils.endsWithIgnoreCase("abcd", "d"));
+        assertTrue(StringUtils.endsWithIgnoreCase("abcd", "cd"));
+        assertTrue(StringUtils.endsWithIgnoreCase("abcd", "abcd"));
+        assertTrue(StringUtils.endsWithIgnoreCase("abcd", "D"));
+        assertTrue(StringUtils.endsWithIgnoreCase("abcd", "CD"));
+        assertTrue(StringUtils.endsWithIgnoreCase("Abcd", "abCd"));
+
+        assertFalse(StringUtils.endsWithIgnoreCase("AB", "x"));
+        assertFalse(StringUtils.endsWithIgnoreCase("AB", "xxzOO"));
+        assertFalse(StringUtils.endsWithIgnoreCase("", "x"));
+        assertFalse(StringUtils.endsWithIgnoreCase("abcd", "bc"));
+
+        assertFalse(StringUtils.endsWithIgnoreCase(null, "x"));
+
+        Assertions.assertThrows(IllegalArgumentException.class, () -> StringUtils.endsWithIgnoreCase("AB", null));
+        Assertions.assertThrows(IllegalArgumentException.class, () -> StringUtils.endsWithIgnoreCase("AB", ""));
+        Assertions.assertThrows(IllegalArgumentException.class, () -> StringUtils.endsWithIgnoreCase("", ""));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void containsIgnoreCase() throws Exception {
+        assertTrue(StringUtils.containsIgnoreCase("abcd", "a"));
+        assertTrue(StringUtils.containsIgnoreCase("abcd", "b"));
+        assertTrue(StringUtils.containsIgnoreCase("abcd", "c"));
+        assertTrue(StringUtils.containsIgnoreCase("abcd", "d"));
+        assertTrue(StringUtils.containsIgnoreCase("abcd", "A"));
+        assertTrue(StringUtils.containsIgnoreCase("abcd", "B"));
+        assertTrue(StringUtils.containsIgnoreCase("abcd", "C"));
+        assertTrue(StringUtils.containsIgnoreCase("abcd", "D"));
+        assertTrue(StringUtils.containsIgnoreCase("abcd", "cd"));
+        assertTrue(StringUtils.containsIgnoreCase("abcd", "Cd"));
+        assertTrue(StringUtils.containsIgnoreCase("abcd", "abcd"));
+        assertTrue(StringUtils.containsIgnoreCase("abcd", "D"));
+        assertTrue(StringUtils.containsIgnoreCase("abcd", "CD"));
+        assertTrue(StringUtils.containsIgnoreCase("Abcd", "abCd"));
+
+        assertFalse(StringUtils.containsIgnoreCase("AB", "x"));
+        assertFalse(StringUtils.containsIgnoreCase("AB", "xxzOO"));
+        assertFalse(StringUtils.containsIgnoreCase("", "x"));
+        assertFalse(StringUtils.containsIgnoreCase("abcd", "bd"));
+
+        assertFalse(StringUtils.containsIgnoreCase(null, "x"));
+
+        Assertions.assertThrows(IllegalArgumentException.class, () -> StringUtils.containsIgnoreCase("AB", null));
+        Assertions.assertThrows(IllegalArgumentException.class, () -> StringUtils.containsIgnoreCase("AB", ""));
+        Assertions.assertThrows(IllegalArgumentException.class, () -> StringUtils.containsIgnoreCase("", ""));
+    }
+
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void containsOnly() {
+        assertFalse(StringUtils.containsOnly(null, "x".toCharArray()));
+        assertFalse(StringUtils.containsOnly("", "x".toCharArray()));
+        assertFalse(StringUtils.containsOnly("a", "x".toCharArray()));
+        assertFalse(StringUtils.containsOnly("ax", "x".toCharArray()));
+        assertFalse(StringUtils.containsOnly("xa", "x".toCharArray()));
+
+        assertTrue(StringUtils.containsOnly("x", "ax".toCharArray()));
+        assertTrue(StringUtils.containsOnly("aa", "ax".toCharArray()));
+        assertTrue(StringUtils.containsOnly("ax", "ax".toCharArray()));
+        assertTrue(StringUtils.containsOnly("axaaa", "ax".toCharArray()));
+        assertTrue(StringUtils.containsOnly("xaaxxxaa", "xa".toCharArray()));
+
+        Assertions.assertThrows(IllegalArgumentException.class, () -> StringUtils.containsOnly("AB", null));
+        Assertions.assertThrows(IllegalArgumentException.class,
+                () -> StringUtils.containsOnly("AB", ArrayUtils.EMPTY_CHAR_ARRAY));
+    }
+
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void toRootLowerCase() throws Exception {
+        assertEquals("abcd", StringUtils.toRootLowerCase("abcd"));
+        assertEquals("abcd", StringUtils.toRootLowerCase("ABcD"));
+
+        assertEquals("", StringUtils.toRootLowerCase(""));
+        assertNull(StringUtils.toRootLowerCase(null));
+    }
 
     /**
      * @throws Exception if the test fails
@@ -148,5 +358,491 @@ public class StringUtilsTest extends SimpleWebTestCase {
         result = StringUtils.toByteArray("htmlunit", UTF_8);
         assertEquals(8, result.length);
         assertEquals(104, result[0]);
+    }
+
+    /**
+     * Test for method {@link StringUtils#replaceChars(String, String, String)}.
+     */
+    @Test
+    public void replaceChars() {
+        assertNull(StringUtils.replaceChars(null, "", ""));
+        assertEquals("", StringUtils.replaceChars("", "", null));
+        assertEquals("abc", StringUtils.replaceChars("abc", null, null));
+        assertEquals("abc", StringUtils.replaceChars("abc", "", ""));
+        assertEquals("ac", StringUtils.replaceChars("abc", "b", null));
+        assertEquals("ac", StringUtils.replaceChars("abc", "b", ""));
+        assertEquals("ayzya", StringUtils.replaceChars("abcba", "bc", "yz"));
+        assertEquals("ayya", StringUtils.replaceChars("abcba", "bc", "y"));
+        assertEquals("ayzya", StringUtils.replaceChars("abcba", "bc", "yzx"));
+
+        assertEquals("abc", StringUtils.replaceChars("abc", "d", "e"));
+
+        assertEquals("ebc", StringUtils.replaceChars("abc", "a", "e"));
+        assertEquals("bc", StringUtils.replaceChars("abc", "a", ""));
+
+        assertEquals("abe", StringUtils.replaceChars("abc", "c", "e"));
+        assertEquals("ab", StringUtils.replaceChars("abc", "c", null));
+    }
+
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void escapeXmlAttributeValue() throws Exception {
+        final StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 1024; i++) {
+            sb.append((char) i);
+        }
+
+        final StringBuilder expected = new StringBuilder("\t\n\r");
+        for (int i = 32; i < 1024; i++) {
+            if (i == '&') {
+                expected.append("&amp;");
+            }
+            else if (i == '<') {
+                expected.append("&lt;");
+            }
+            else if (i == '"') {
+                expected.append("&quot;");
+            }
+            else {
+                expected.append((char) i);
+            }
+        }
+
+        assertEquals(expected.toString(), StringUtils.escapeXmlAttributeValue(sb.toString()));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void escapeXmlAttributeValueBorderCases() throws Exception {
+        assertNull(StringUtils.escapeXmlAttributeValue(null));
+        assertEquals("", StringUtils.escapeXmlAttributeValue(""));
+
+        // [#x20-#xD7FF]
+        assertEquals("", StringUtils.escapeXmlAttributeValue("\u001f"));
+        assertEquals("\u0020", StringUtils.escapeXmlAttributeValue("\u0020"));
+        assertEquals("\u0021", StringUtils.escapeXmlAttributeValue("\u0021"));
+
+        assertEquals("\uD7FE", StringUtils.escapeXmlAttributeValue("\uD7FE"));
+        assertEquals("\uD7FF", StringUtils.escapeXmlAttributeValue("\uD7FF"));
+        assertEquals("", StringUtils.escapeXmlAttributeValue("\uD800"));
+
+        // [#xE000-#xFFFD]
+        assertEquals("", StringUtils.escapeXmlAttributeValue("\uDFFF"));
+        assertEquals("\uE000", StringUtils.escapeXmlAttributeValue("\uE000"));
+        assertEquals("\uE001", StringUtils.escapeXmlAttributeValue("\uE001"));
+
+        assertEquals("\uFFFC", StringUtils.escapeXmlAttributeValue("\uFFFC"));
+        assertEquals("\uFFFD", StringUtils.escapeXmlAttributeValue("\uFFFD"));
+        assertEquals("", StringUtils.escapeXmlAttributeValue("\uFFFE"));
+
+        // [#x10000-#x10FFFF]
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void escapeXml() throws Exception {
+        final StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 1024; i++) {
+            sb.append((char) i);
+        }
+
+        final StringBuilder expected = new StringBuilder("\t\n\r");
+        for (int i = 32; i < 1024; i++) {
+            if (i == '&') {
+                expected.append("&amp;");
+            }
+            else if (i == '<') {
+                expected.append("&lt;");
+            }
+            else if (i == '>') {
+                expected.append("&gt;");
+            }
+            else if (i == '\'') {
+                expected.append("&apos;");
+            }
+            else if (i == '"') {
+                expected.append("&quot;");
+            }
+            else {
+                expected.append((char) i);
+            }
+        }
+
+        assertEquals(expected.toString(), StringUtils.escapeXml(sb.toString()));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void escapeXmlBorderCases() throws Exception {
+        assertNull(StringUtils.escapeXml(null));
+        assertEquals("", StringUtils.escapeXml(""));
+
+        // [#x20-#xD7FF]
+        assertEquals("", StringUtils.escapeXml("\u001f"));
+        assertEquals("\u0020", StringUtils.escapeXml("\u0020"));
+        assertEquals("\u0021", StringUtils.escapeXml("\u0021"));
+
+        assertEquals("\uD7FE", StringUtils.escapeXml("\uD7FE"));
+        assertEquals("\uD7FF", StringUtils.escapeXml("\uD7FF"));
+        assertEquals("", StringUtils.escapeXml("\uD800"));
+
+        // [#xE000-#xFFFD]
+        assertEquals("", StringUtils.escapeXml("\uDFFF"));
+        assertEquals("\uE000", StringUtils.escapeXml("\uE000"));
+        assertEquals("\uE001", StringUtils.escapeXml("\uE001"));
+
+        assertEquals("\uFFFC", StringUtils.escapeXml("\uFFFC"));
+        assertEquals("\uFFFD", StringUtils.escapeXml("\uFFFD"));
+        assertEquals("", StringUtils.escapeXml("\uFFFE"));
+
+        // [#x10000-#x10FFFF]
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void substringBefore() throws Exception {
+        assertThrows(IllegalArgumentException.class, () -> StringUtils.substringBefore(null, null));
+        assertThrows(IllegalArgumentException.class, () -> StringUtils.substringBefore(null, ""));
+
+        assertEquals("", StringUtils.substringBefore("", "a"));
+        assertEquals("xyz", StringUtils.substringBefore("xyz", "a"));
+        assertEquals("", StringUtils.substringBefore("a", "a"));
+        assertEquals("x", StringUtils.substringBefore("xaba", "a"));
+        assertEquals(" ", StringUtils.substringBefore(" a", "a"));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void toInt() throws Exception {
+        assertEquals(17, StringUtils.toInt(null, 17));
+        assertEquals(17, StringUtils.toInt("", 17));
+        assertEquals(17, StringUtils.toInt(" ", 17));
+        assertEquals(4, StringUtils.toInt("\t", 4));
+        assertEquals(4, StringUtils.toInt("two", 4));
+
+        assertEquals(21, StringUtils.toInt("21", 4));
+        assertEquals(-21, StringUtils.toInt("-21", 4));
+        assertEquals(0, StringUtils.toInt(" 21 ", 0));
+        assertEquals(0, StringUtils.toInt(" -  21  \t", 0));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void toFloat() throws Exception {
+        assertEquals(17.2f, StringUtils.toFloat(null, 17.2f));
+        assertEquals(17.2f, StringUtils.toFloat("", 17.2f));
+        assertEquals(17.2f, StringUtils.toFloat(" ", 17.2f));
+        assertEquals(4f, StringUtils.toFloat("\t", 4f));
+        assertEquals(4f, StringUtils.toFloat("two", 4));
+
+        assertEquals(21f, StringUtils.toFloat("21", 4.1f));
+        assertEquals(-21f, StringUtils.toFloat("-21", 4.1f));
+        assertEquals(21f, StringUtils.toFloat(" 21 ", 0));
+        assertEquals(0, StringUtils.toFloat(" -  21  \t", 0f));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void substringAfter() throws Exception {
+        assertNull(StringUtils.substringAfter(null, null));
+        assertNull(StringUtils.substringAfter(null, ""));
+        assertNull(StringUtils.substringAfter(null, "abc"));
+
+        assertEquals(StringUtils.EMPTY_STRING, StringUtils.substringAfter("", null));
+        assertEquals(StringUtils.EMPTY_STRING, StringUtils.substringAfter("", ""));
+        assertEquals(StringUtils.EMPTY_STRING, StringUtils.substringAfter("", "abc"));
+
+        assertEquals(StringUtils.EMPTY_STRING, StringUtils.substringAfter(StringUtils.EMPTY_STRING, null));
+        assertEquals(StringUtils.EMPTY_STRING, StringUtils.substringAfter(StringUtils.EMPTY_STRING, ""));
+        assertEquals(StringUtils.EMPTY_STRING, StringUtils.substringAfter(StringUtils.EMPTY_STRING, "abc"));
+
+        assertEquals(StringUtils.EMPTY_STRING, StringUtils.substringAfter("abc", null));
+        assertEquals("abc", StringUtils.substringAfter("abc", ""));
+
+        assertEquals("bc", StringUtils.substringAfter("abc", "a"));
+        assertEquals("cba", StringUtils.substringAfter("abcba", "b"));
+        assertEquals("", StringUtils.substringAfter("abc", "c"));
+        assertEquals("", StringUtils.substringAfter("abc", "d"));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void trimRight() throws Exception {
+        assertNull(StringUtils.trimRight(null));
+        assertEquals(StringUtils.EMPTY_STRING, StringUtils.trimRight(""));
+        assertEquals("", StringUtils.trimRight(StringUtils.EMPTY_STRING));
+
+        assertEquals("abc", StringUtils.trimRight("abc"));
+        assertEquals("  abc", StringUtils.trimRight("  abc"));
+        assertEquals("abc", StringUtils.trimRight("abc  "));
+        assertEquals(" a b c", StringUtils.trimRight(" a b c "));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    void plainPathIsUnchanged() {
+        // 1. No-op inputs — nothing to remove
+        assertEquals("/a/b/c", StringUtils.removeDots("/a/b/c"));
+        assertEquals("/", StringUtils.removeDots("/"));
+        assertEquals("/foo", StringUtils.removeDots("/foo"));
+        assertEquals("/a/b/", StringUtils.removeDots("/a/b/"));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    void leadingSingleDotSegment() {
+        // /./a  →  /a
+        assertEquals("/a", StringUtils.removeDots("/./a"));
+
+        // /../a  →  /a
+        assertEquals("/a", StringUtils.removeDots("/../a"));
+
+        // /././a  →  /a
+        assertEquals("/a", StringUtils.removeDots("/././a"));
+
+        // /../../a  →  /a
+        assertEquals("/a", StringUtils.removeDots("/../../a"));
+
+        // /./../a  →  /a
+        assertEquals("/a", StringUtils.removeDots("/./../a"));
+
+        // "/..&" is the special-cased literal handled after REMOVE_DOTS_PATTERN
+        assertEquals("/", StringUtils.removeDots("/.."));
+
+        assertEquals("/", StringUtils.removeDots("/."));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    void midPathSingleDot() {
+        // /a/./b  →  /a/b
+        assertEquals("/a/b", StringUtils.removeDots("/a/./b"));
+
+        // /a/././b  →  /a/b  (loop must re-run)
+        assertEquals("/a/b", StringUtils.removeDots("/a/././b"));
+
+        // /a/./b/./c  →  /a/b/c
+        assertEquals("/a/b/c", StringUtils.removeDots("/a/./b/./c"));
+
+        assertEquals("/a", StringUtils.removeDots("/a/."));
+
+        // /a/./  →  /a/  (DOT_PATTERN matches the middle "/./" )
+        assertEquals("/a/", StringUtils.removeDots("/a/./"));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    void midPathDoubleDot() {
+        // /a/b/../c  →  /a/c
+        assertEquals("/a/c", StringUtils.removeDots("/a/b/../c"));
+
+        // /a/../b  →  /b
+        assertEquals("/b", StringUtils.removeDots("/a/../b"));
+
+        // /a/b/c/../../d  →  /a/d  (two sequential collapses, loop re-runs)
+        assertEquals("/a/d", StringUtils.removeDots("/a/b/c/../../d"));
+
+        // /a/b/../  →  /a/
+        assertEquals("/a/", StringUtils.removeDots("/a/b/../"));
+
+        assertEquals("/b", StringUtils.removeDots("/a/../../b"));
+
+        // /../  at beginning: REMOVE_DOTS_PATTERN handles it → "/"
+        assertEquals("/", StringUtils.removeDots("/../"));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    void leadingAndMidSingleDots() {
+        // /./a/./b  →  leading "./" stripped first → /a/./b → /a/b
+        assertEquals("/a/b", StringUtils.removeDots("/./a/./b"));
+
+        // /../a/b/../c  →  leading "/../" → /a/b/../c  →  /a/c
+        assertEquals("/a/c", StringUtils.removeDots("/../a/b/../c"));
+
+        // /a/./b/../c  →  single dot first: /a/b/../c  →  double dot: /a/c
+        assertEquals("/a/c", StringUtils.removeDots("/a/./b/../c"));
+
+        assertEquals("/a/b/e", StringUtils.removeDots("/a/b/./c/d/../../e"));
+
+        assertEquals("/", StringUtils.removeDots("/././."));
+
+        // Backslashes are not separators; the path is treated literally.
+        assertEquals("/a\\b\\c", StringUtils.removeDots("/a\\b\\c"));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    void rfc3986Example() {
+        // /a/b/c/./../../g  →  /a/g
+        assertEquals("/a/g", StringUtils.removeDots("/a/b/c/./../../g"));
+
+        // /mid/content=5/../6  →  /mid/6
+        assertEquals("/mid/6", StringUtils.removeDots("/mid/content=5/../6"));
+
+        // /../../../g  →  leading pattern strips all  → /g
+        assertEquals("/g", StringUtils.removeDots("/../../../g"));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    void dotInFilename() {
+        // /a/file.txt  — the "." is inside a segment name, not a separator
+        assertEquals("/a/file.txt", StringUtils.removeDots("/a/file.txt"));
+
+        // /a/.hidden  — starts with dot but no surrounding slashes on right
+        assertEquals("/a/.hidden", StringUtils.removeDots("/a/.hidden"));
+
+        // /a/file..txt  — double dot inside a name, not a segment
+        assertEquals("/a/file..txt", StringUtils.removeDots("/a/file..txt"));
+
+        // /a/.../b  — "..." is three dots, not a special dot segment
+        assertEquals("/a/.../b", StringUtils.removeDots("/a/.../b"));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void escapeHtmlText() throws Exception {
+        final StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 1024; i++) {
+            sb.append((char) i);
+        }
+
+        // unlike escapeXml, nothing is removed and the quotes stay as they are
+        final StringBuilder expected = new StringBuilder();
+        for (int i = 0; i < 1024; i++) {
+            if (i == '&') {
+                expected.append("&amp;");
+            }
+            else if (i == '<') {
+                expected.append("&lt;");
+            }
+            else if (i == '>') {
+                expected.append("&gt;");
+            }
+            else if (i == '\u00A0') {
+                expected.append("&nbsp;");
+            }
+            else {
+                expected.append((char) i);
+            }
+        }
+
+        assertEquals(expected.toString(), StringUtils.escapeHtmlText(sb.toString()));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void escapeHtmlTextBorderCases() throws Exception {
+        assertNull(StringUtils.escapeHtmlText(null));
+        assertEquals("", StringUtils.escapeHtmlText(""));
+
+        assertEquals("&amp;", StringUtils.escapeHtmlText("&"));
+        assertEquals("&lt;", StringUtils.escapeHtmlText("<"));
+        assertEquals("&gt;", StringUtils.escapeHtmlText(">"));
+        assertEquals("&nbsp;", StringUtils.escapeHtmlText("\u00A0"));
+
+        // first, last, and consecutive characters
+        assertEquals("&nbsp;a", StringUtils.escapeHtmlText("\u00A0a"));
+        assertEquals("a&nbsp;", StringUtils.escapeHtmlText("a\u00A0"));
+        assertEquals("&nbsp;&nbsp;", StringUtils.escapeHtmlText("\u00A0\u00A0"));
+        assertEquals("a&amp;&amp;b", StringUtils.escapeHtmlText("a&&b"));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void escapeHtmlTextQuotes() throws Exception {
+        // quotes are only escaped in attribute values, not in text
+        assertEquals("\"q\" 'a'", StringUtils.escapeHtmlText("\"q\" 'a'"));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void escapeHtmlTextDoesNotEscapeTwice() throws Exception {
+        // an entity-like text is data and has to survive as data
+        assertEquals("&amp;amp;", StringUtils.escapeHtmlText("&amp;"));
+        assertEquals("&amp;nbsp;", StringUtils.escapeHtmlText("&nbsp;"));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void escapeHtmlTextKeepsOtherCharacters() throws Exception {
+        // not valid in XML 1.0, but the HTML serialization keeps them
+        assertEquals("\u0000\u0001\u001f", StringUtils.escapeHtmlText("\u0000\u0001\u001f"));
+        assertEquals("\uFFFE\uFFFF", StringUtils.escapeHtmlText("\uFFFE\uFFFF"));
+
+        // lone surrogates
+        assertEquals("\uD800", StringUtils.escapeHtmlText("\uD800"));
+        assertEquals("\uDFFF", StringUtils.escapeHtmlText("\uDFFF"));
+
+        // surrogate pairs, also next to a character that gets escaped
+        assertEquals("\uD83D\uDE00", StringUtils.escapeHtmlText("\uD83D\uDE00"));
+        assertEquals("\uD83D\uDE00&amp;", StringUtils.escapeHtmlText("\uD83D\uDE00&"));
+        assertEquals("&amp;\uD83D\uDE00", StringUtils.escapeHtmlText("&\uD83D\uDE00"));
+
+        // other space characters are not touched, only the plain non-breaking space is
+        assertEquals("\u2007\u202F\u3000 ", StringUtils.escapeHtmlText("\u2007\u202F\u3000 "));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void escapeHtmlTextSameInstanceIfNothingToEscape() throws Exception {
+        final String text = "nothing to escape here";
+        assertSame(text, StringUtils.escapeHtmlText(text));
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    public void escapeHtmlTextInnerHtmlExample() throws Exception {
+        // the text used in InnerHtmlSerializationTest, as browsers serialize it
+        assertEquals("&lt;b id=\"x\"&gt;a &amp;amp; b &amp; c \"q\"&lt;/b&gt;&nbsp;z",
+                StringUtils.escapeHtmlText("<b id=\"x\">a &amp; b & c \"q\"</b>\u00A0z"));
     }
 }

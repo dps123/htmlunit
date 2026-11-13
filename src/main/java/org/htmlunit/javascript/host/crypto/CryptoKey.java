@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,29 +14,159 @@
  */
 package org.htmlunit.javascript.host.crypto;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
+import java.security.Key;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
+import javax.crypto.SecretKey;
+
+import org.htmlunit.corejs.javascript.Scriptable;
+import org.htmlunit.corejs.javascript.VarScope;
 import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
+import org.htmlunit.javascript.configuration.JsxGetter;
 
 /**
  * A JavaScript object for {@code CryptoKey}.
  *
+ * @see <a href="https://w3c.github.io/webcrypto/#dfn-CryptoKey">CryptoKey</a>
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/CryptoKey">MDN Documentation</a>
+ *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ * @author Lai Quang Duong
  */
-@JsxClass({CHROME, EDGE, FF, FF_ESR})
+@JsxClass
 public class CryptoKey extends HtmlUnitScriptable {
 
+    private Key internalKey_;
+    private String type_;
+    private boolean isExtractable_;
+    private KeyAlgorithm algorithm_;
+    private Set<String> usages_;
+
+    // the JavaScript objects returned by the algorithm and usages properties, created on first access
+    private Scriptable algorithmObject_;
+    private Scriptable usagesObject_;
+
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
     @JsxConstructor
-    public CryptoKey() {
+    public void jsConstructor() {
+        throw JavaScriptEngine.typeErrorIllegalConstructor();
     }
 
+    /**
+     * Creates a properly scoped CryptoKey from the given parameters.
+     *
+     * @param scope the JS scope
+     * @param internalKey the Java key (SecretKey, PublicKey, or PrivateKey)
+     * @param isExtractable whether the key can be exported
+     * @param algorithm the key algorithm
+     * @param usages the permitted key usages
+     * @return the new CryptoKey
+     */
+    static CryptoKey create(final VarScope scope, final Key internalKey, final boolean isExtractable,
+            final KeyAlgorithm algorithm, final Collection<String> usages) {
+        if (internalKey == null) {
+            throw new IllegalArgumentException("The provided key can't be null");
+        }
+
+        final CryptoKey key = new CryptoKey();
+        key.internalKey_ = internalKey;
+
+        if (internalKey instanceof PublicKey) {
+            key.type_ = "public";
+        }
+        else if (internalKey instanceof PrivateKey) {
+            key.type_ = "private";
+        }
+        else if (internalKey instanceof SecretKey) {
+            key.type_ = "secret";
+        }
+        else {
+            throw new IllegalStateException("Unsupported key type: " + internalKey.getClass());
+        }
+
+        key.isExtractable_ = isExtractable;
+        key.algorithm_ = algorithm;
+        key.usages_ = new LinkedHashSet<>(usages);
+
+        key.setParentScope(scope);
+        key.setPrototype(getWindow(key).getPrototype(CryptoKey.class));
+        return key;
+    }
+
+    /**
+     * Returns the underlying Java key.
+     * @return the Java key (opaque {@code [[handle]]} internal slot)
+     */
+    public Key getInternalKey() {
+        return internalKey_;
+    }
+
+    /**
+     * Returns the type of key this represents.
+     * @return the key type: "public", "private", or "secret"
+     */
+    @JsxGetter
+    public String getType() {
+        return type_;
+    }
+
+    /**
+     * Returns whether the key material may be exported.
+     * @return whether the key material may be exported
+     */
+    @JsxGetter
+    public boolean getExtractable() {
+        return isExtractable_;
+    }
+
+    /**
+     * Returns the algorithm descriptor object. The object is created once for every key; changing it
+     * does not change the key.
+     * @return the algorithm descriptor object
+     */
+    @JsxGetter
+    public Scriptable getAlgorithm() {
+        if (algorithmObject_ == null) {
+            algorithmObject_ = algorithm_.toScriptableObject(getParentScope());
+        }
+        return algorithmObject_;
+    }
+
+    /**
+     * Returns the key algorithm for internal use.
+     * @return the key algorithm ({@code [[algorithm]]} internal slot)
+     */
+    KeyAlgorithm getKeyAlgorithm() {
+        return algorithm_;
+    }
+
+    /**
+     * Returns the permitted key usages. The array is created once for every key.
+     * @return the permitted key usages as a JS array
+     */
+    @JsxGetter
+    public Scriptable getUsages() {
+        if (usagesObject_ == null) {
+            usagesObject_ = JavaScriptEngine.newArray(getParentScope(), usages_.toArray());
+        }
+        return usagesObject_;
+    }
+
+    /**
+     * Returns the permitted key usages for internal use.
+     * @return the permitted key usages as a Java set (for internal use)
+     */
+    public Set<String> getUsagesInternal() {
+        return usages_;
+    }
 }

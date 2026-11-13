@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,6 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
-import org.htmlunit.html.DomNode;
-import org.htmlunit.html.DomText;
 import org.htmlunit.html.HtmlTitle;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
@@ -33,15 +26,19 @@ import org.htmlunit.javascript.configuration.JsxSetter;
  * @author Ahmed Ashour
  * @author Sudhan Moghe
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLTitleElement">MDN Documentation</a>
  */
 @JsxClass(domClass = HtmlTitle.class)
 public class HTMLTitleElement extends HTMLElement {
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public HTMLTitleElement() {
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
@@ -49,12 +46,9 @@ public class HTMLTitleElement extends HTMLElement {
      * @return the {@code text} attribute
      */
     @JsxGetter
-    public Object getText() {
-        final DomNode firstChild = getDomNodeOrDie().getFirstChild();
-        if (firstChild != null) {
-            return firstChild.getNodeValue();
-        }
-        return "";
+    public String getText() {
+        final HtmlTitle htmlTitle = (HtmlTitle) getDomNodeOrDie();
+        return htmlTitle.getText();
     }
 
     /**
@@ -63,14 +57,7 @@ public class HTMLTitleElement extends HTMLElement {
      */
     @JsxSetter
     public void setText(final String text) {
-        final DomNode htmlElement = getDomNodeOrDie();
-        DomNode firstChild = htmlElement.getFirstChild();
-        if (firstChild == null) {
-            firstChild = new DomText(htmlElement.getPage(), text);
-            htmlElement.appendChild(firstChild);
-        }
-        else {
-            firstChild.setNodeValue(text);
-        }
+        final HtmlTitle htmlTitle = (HtmlTitle) getDomNodeOrDie();
+        htmlTitle.setText(text);
     }
 }

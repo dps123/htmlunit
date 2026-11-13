@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,62 +14,71 @@
  */
 package org.htmlunit.javascript.host.intl;
 
-import org.htmlunit.javascript.HtmlUnitScriptable;
-import org.htmlunit.javascript.RecursiveFunctionObject;
-import org.htmlunit.javascript.configuration.JsxClass;
-import org.htmlunit.javascript.configuration.JsxConstructor;
-import org.htmlunit.javascript.host.Window;
-
 import org.htmlunit.corejs.javascript.Context;
 import org.htmlunit.corejs.javascript.Function;
+import org.htmlunit.corejs.javascript.FunctionObject;
 import org.htmlunit.corejs.javascript.NativeArray;
 import org.htmlunit.corejs.javascript.Scriptable;
+import org.htmlunit.corejs.javascript.VarScope;
+import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
+import org.htmlunit.javascript.configuration.JsxClass;
+import org.htmlunit.javascript.configuration.JsxConstructor;
+import org.htmlunit.javascript.configuration.JsxSymbolConstant;
 
 /**
- * A JavaScript object for {@code Collator}.
+ * A JavaScript object for Intl.Collator.
  *
  * @author Ahmed Ashour
+ * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/Collator">MDN Documentation</a>
  */
 @JsxClass
 public class Collator extends HtmlUnitScriptable {
 
-    /**
-     * The default constructor.
-     */
-    public Collator() {
-    }
+    /** Symbol.toStringTag support. */
+    @JsxSymbolConstant
+    public static final String TO_STRING_TAG = "Intl.Collator";
 
     /**
      * JavaScript constructor.
      * @param cx the current context
-     * @param args the arguments to the WebSocket constructor
+     * @param scope the scope
+     * @param args the arguments to the Collator constructor
      * @param ctorObj the function object
-     * @param inNewExpr Is new or not
-     * @return the java object to allow JavaScript to access
+     * @param inNewExpr {@code true} if invoked with the {@code new} operator
+     * @return the Java object that JavaScript can access
      */
     @JsxConstructor
-    public static Scriptable jsConstructor(final Context cx, final Object[] args, final Function ctorObj,
-            final boolean inNewExpr) {
+    public static Scriptable jsConstructor(final Context cx, final VarScope scope,
+            final Object[] args, final Function ctorObj, final boolean inNewExpr) {
         final String[] locales;
-        if (args.length != 0) {
-            if (args[0] instanceof NativeArray) {
-                final NativeArray array = (NativeArray) args[0];
+        if (args.length == 0) {
+            locales = new String[] {""};
+        }
+        else {
+            if (args[0] instanceof NativeArray array) {
                 locales = new String[(int) array.getLength()];
                 for (int i = 0; i < locales.length; i++) {
-                    locales[i] = Context.toString(array.get(i));
+                    locales[i] = JavaScriptEngine.toString(array.get(i));
                 }
             }
             else {
-                locales = new String[] {Context.toString(args[0])};
+                locales = new String[] {JavaScriptEngine.toString(args[0])};
             }
         }
-        else {
-            locales = new String[] {""};
-        }
-        final Window window = getWindow(ctorObj);
         final Collator format = new Collator(/*locales, window.getBrowserVersion()*/);
-        format.setParentScope(window);
-        format.setPrototype(((RecursiveFunctionObject) ctorObj).getClassPrototype());
+        format.setParentScope(scope);
+        format.setPrototype(((FunctionObject) ctorObj).getClassPrototype());
         return format;
+    }
+
+    @Override
+    public Object getDefaultValue(final Class<?> hint) {
+        if (String.class.equals(hint) || hint == null) {
+            return "[object Intl.Collator]";
+        }
+        return super.getDefaultValue(hint);
     }
 }

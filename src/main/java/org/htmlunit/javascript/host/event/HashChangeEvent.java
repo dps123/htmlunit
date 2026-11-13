@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,29 +14,22 @@
  */
 package org.htmlunit.javascript.host.event;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
+import org.htmlunit.corejs.javascript.ScriptableObject;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
-import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
 
-import org.htmlunit.corejs.javascript.ScriptableObject;
-import org.htmlunit.corejs.javascript.Undefined;
-
 /**
- * JavaScript object representing the HashChangeEvent.
- * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/window.onhashchange">Mozilla Developer Network</a>
- * @see <a href="http://msdn.microsoft.com/en-us/library/cc288209.aspx">MSDN</a>
+ * JavaScript host object for {@code HashChangeEvent}.
  *
  * @author Ronald Brill
  * @author Marc Guillemot
  * @author Frank Danek
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HashChangeEvent">MDN Documentation</a>
  */
-@JsxClass({CHROME, EDGE, FF, FF_ESR})
+@JsxClass
 public class HashChangeEvent extends Event {
 
     private String oldURL_ = "";
@@ -46,7 +39,7 @@ public class HashChangeEvent extends Event {
      * Creates a new event instance.
      */
     public HashChangeEvent() {
-        setEventType("");
+        super("");
     }
 
     /**
@@ -71,52 +64,38 @@ public class HashChangeEvent extends Event {
      * {@inheritDoc}
      */
     @Override
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
+    @JsxConstructor
     public void jsConstructor(final String type, final ScriptableObject details) {
         super.jsConstructor(type, details);
 
-        String oldURL = "";
-        String newURL = "";
-        if (details != null && !Undefined.isUndefined(details)) {
-            oldURL = (String) details.get("oldURL");
-            newURL = (String) details.get("newURL");
+        if (details != null && !JavaScriptEngine.isUndefined(details)) {
+            if (details.has("oldURL", details)) {
+                oldURL_ = JavaScriptEngine.toString(details.get("oldURL"));
+            }
+
+            if (details.has("newURL", details)) {
+                newURL_ = JavaScriptEngine.toString(details.get("newURL"));
+            }
         }
-        oldURL_ = oldURL;
-        newURL_ = newURL;
     }
 
     /**
-     * Initializes this event.
+     * Returns the old URL before the hash change.
      *
-     * @param type the event type
-     * @param bubbles whether or not the event should bubble
-     * @param cancelable whether or not the event the event should be cancelable
-     * @param oldURL the old URL
-     * @param newURL the new URL
-     */
-    @JsxFunction({FF, FF_ESR})
-    public void initHashChangeEvent(final String type, final boolean bubbles, final boolean cancelable,
-        final String oldURL, final String newURL) {
-        initEvent(type, bubbles, cancelable);
-        oldURL_ = oldURL;
-        newURL_ = newURL;
-    }
-
-    /**
-     * Returns the old URL.
      * @return the old URL
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
-    public Object getOldURL() {
+    @JsxGetter
+    public String getOldURL() {
         return oldURL_;
     }
 
     /**
-     * Returns the new URL.
+     * Returns the new URL after the hash change.
+     *
      * @return the new URL
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
-    public Object getNewURL() {
+    @JsxGetter
+    public String getNewURL() {
         return newURL_;
     }
 }

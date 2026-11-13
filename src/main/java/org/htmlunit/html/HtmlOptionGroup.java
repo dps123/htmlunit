@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
  */
 package org.htmlunit.html;
 
-import static org.htmlunit.BrowserVersionFeatures.CSS_DISPLAY_BLOCK2;
-
 import java.util.Map;
 
 import org.htmlunit.SgmlPage;
@@ -23,9 +21,9 @@ import org.htmlunit.SgmlPage;
 /**
  * Wrapper for the HTML element "optgroup".
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author David K. Taylor
- * @author <a href="mailto:cse@dynabean.de">Christian Sell</a>
+ * @author Christian Sell
  * @author David D. Kilzer
  * @author Ahmed Ashour
  * @author Daniel Gredler
@@ -38,7 +36,7 @@ public class HtmlOptionGroup extends HtmlElement implements DisabledElement {
     public static final String TAG_NAME = "optgroup";
 
     /**
-     * Creates an instance of HtmlOptionGroup
+     * Creates an instance of HtmlOptionGroup.
      *
      * @param qualifiedName the qualified name of the element type to instantiate
      * @param page the HtmlPage that contains this element
@@ -47,19 +45,6 @@ public class HtmlOptionGroup extends HtmlElement implements DisabledElement {
     HtmlOptionGroup(final String qualifiedName, final SgmlPage page,
             final Map<String, DomAttr> attributes) {
         super(qualifiedName, page, attributes);
-    }
-
-    /**
-     * Returns {@code true} if the disabled attribute is set for this element. Note that this
-     * method always returns {@code false} when emulating IE, because IE does not allow individual
-     * option groups to be disabled.
-     *
-     * @return {@code true} if the disabled attribute is set for this element (always {@code false}
-     *         when emulating IE)
-     */
-    @Override
-    public final boolean isDisabled() {
-        return hasAttribute(ATTRIBUTE_DISABLED);
     }
 
     /**
@@ -105,9 +90,6 @@ public class HtmlOptionGroup extends HtmlElement implements DisabledElement {
      */
     @Override
     public DisplayStyle getDefaultStyleDisplay() {
-        if (hasFeature(CSS_DISPLAY_BLOCK2)) {
-            return DisplayStyle.BLOCK;
-        }
-        return DisplayStyle.INLINE;
+        return DisplayStyle.BLOCK;
     }
 }

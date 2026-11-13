@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,28 +25,26 @@ import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 import org.apache.commons.io.ByteOrderMark;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.htmlunit.HttpHeader;
+import org.htmlunit.cyberneko.xerces.util.StandardEncodingTranslator;
 
 /**
  * Sniffs encoding settings from HTML, XML or other content. The HTML encoding sniffing algorithm is based on the
- * <a href="http://www.whatwg.org/specs/web-apps/current-work/multipage/parsing.html#determining-the-character-encoding">HTML5
+ * <a href="https://html.spec.whatwg.org/multipage/parsing.html#determining-the-character-encoding">HTML5
  * encoding sniffing algorithm</a>.
  *
  * @author Daniel Gredler
  * @author Ahmed Ashour
  * @author Ronald Brill
+ * @author Lai Quang Duong
  */
 public final class EncodingSniffer {
 
@@ -61,7 +59,7 @@ public final class EncodingSniffer {
         new byte[] {'-'}
     };
 
-    /** Sequence(s) of bytes indicating the beginning of a <code>meta</code> HTML tag. */
+    /** Sequence(s) of bytes indicating the beginning of a {@code meta} HTML tag. */
     private static final byte[][] META_START = {
         new byte[] {'<'},
         new byte[] {'m', 'M'},
@@ -91,340 +89,22 @@ public final class EncodingSniffer {
     private static final byte[] WHITESPACE = {0x09, 0x0A, 0x0C, 0x0D, 0x20, 0x3E};
     private static final byte[] COMMENT_END = {'-', '-', '>'};
 
-    /** <a href="http://encoding.spec.whatwg.org/#encodings">Reference</a> */
-    private static final Map<String, String> ENCODING_FROM_LABEL;
-    static {
-        ENCODING_FROM_LABEL = new HashMap<>();
-
-        // The Encoding
-        // ------------
-        ENCODING_FROM_LABEL.put("unicode-1-1-utf-8", "utf-8");
-        ENCODING_FROM_LABEL.put("utf-8", "utf-8");
-        ENCODING_FROM_LABEL.put("utf8", "utf-8");
-
-        // Legacy single-byte encodings
-        // ----------------------------
-
-        // ibm866
-        ENCODING_FROM_LABEL.put("866", "ibm866");
-        ENCODING_FROM_LABEL.put("cp866", "ibm866");
-        ENCODING_FROM_LABEL.put("csibm866", "ibm866");
-        ENCODING_FROM_LABEL.put("ibm866", "ibm866");
-
-        // iso-8859-2
-        ENCODING_FROM_LABEL.put("csisolatin2", "iso-8859-2");
-        ENCODING_FROM_LABEL.put("iso-8859-2", "iso-8859-2");
-        ENCODING_FROM_LABEL.put("iso-ir-101", "iso-8859-2");
-        ENCODING_FROM_LABEL.put("iso8859-2", "iso-8859-2");
-        ENCODING_FROM_LABEL.put("iso88592", "iso-8859-2");
-        ENCODING_FROM_LABEL.put("iso_8859-2", "iso-8859-2");
-        ENCODING_FROM_LABEL.put("iso_8859-2:1987", "iso-8859-2");
-        ENCODING_FROM_LABEL.put("l2", "iso-8859-2");
-        ENCODING_FROM_LABEL.put("latin2", "iso-8859-2");
-
-        // iso-8859-3
-        ENCODING_FROM_LABEL.put("csisolatin3", "iso-8859-3");
-        ENCODING_FROM_LABEL.put("iso-8859-3", "iso-8859-3");
-        ENCODING_FROM_LABEL.put("iso-ir-109", "iso-8859-3");
-        ENCODING_FROM_LABEL.put("iso8859-3", "iso-8859-3");
-        ENCODING_FROM_LABEL.put("iso88593", "iso-8859-3");
-        ENCODING_FROM_LABEL.put("iso_8859-3", "iso-8859-3");
-        ENCODING_FROM_LABEL.put("iso_8859-3:1988", "iso-8859-3");
-        ENCODING_FROM_LABEL.put("l3", "iso-8859-3");
-        ENCODING_FROM_LABEL.put("latin3", "iso-8859-3");
-
-        // iso-8859-4
-        ENCODING_FROM_LABEL.put("csisolatin4", "iso-8859-4");
-        ENCODING_FROM_LABEL.put("iso-8859-4", "iso-8859-4");
-        ENCODING_FROM_LABEL.put("iso-ir-110", "iso-8859-4");
-        ENCODING_FROM_LABEL.put("iso8859-4", "iso-8859-4");
-        ENCODING_FROM_LABEL.put("iso88594", "iso-8859-4");
-        ENCODING_FROM_LABEL.put("iso_8859-4", "iso-8859-4");
-        ENCODING_FROM_LABEL.put("iso_8859-4:1988", "iso-8859-4");
-        ENCODING_FROM_LABEL.put("l4", "iso-8859-4");
-        ENCODING_FROM_LABEL.put("latin4", "iso-8859-4");
-
-        // iso-8859-5
-        ENCODING_FROM_LABEL.put("csisolatincyrillic", "iso-8859-5");
-        ENCODING_FROM_LABEL.put("cyrillic", "iso-8859-5");
-        ENCODING_FROM_LABEL.put("iso-8859-5", "iso-8859-5");
-        ENCODING_FROM_LABEL.put("iso-ir-144", "iso-8859-5");
-        ENCODING_FROM_LABEL.put("iso8859-5", "iso-8859-5");
-        ENCODING_FROM_LABEL.put("iso88595", "iso-8859-5");
-        ENCODING_FROM_LABEL.put("iso_8859-5", "iso-8859-5");
-        ENCODING_FROM_LABEL.put("iso_8859-5:1988", "iso-8859-5");
-
-        // iso-8859-6
-        ENCODING_FROM_LABEL.put("arabic", "iso-8859-6");
-        ENCODING_FROM_LABEL.put("asmo-708", "iso-8859-6");
-        ENCODING_FROM_LABEL.put("csiso88596e", "iso-8859-6");
-        ENCODING_FROM_LABEL.put("csiso88596i", "iso-8859-6");
-        ENCODING_FROM_LABEL.put("csisolatinarabic", "iso-8859-6");
-        ENCODING_FROM_LABEL.put("ecma-114", "iso-8859-6");
-        ENCODING_FROM_LABEL.put("iso-8859-6", "iso-8859-6");
-        ENCODING_FROM_LABEL.put("iso-8859-6-e", "iso-8859-6");
-        ENCODING_FROM_LABEL.put("iso-8859-6-i", "iso-8859-6");
-        ENCODING_FROM_LABEL.put("iso-ir-127", "iso-8859-6");
-        ENCODING_FROM_LABEL.put("iso8859-6", "iso-8859-6");
-        ENCODING_FROM_LABEL.put("iso88596", "iso-8859-6");
-        ENCODING_FROM_LABEL.put("iso_8859-6", "iso-8859-6");
-        ENCODING_FROM_LABEL.put("iso_8859-6:1987", "iso-8859-6");
-
-        // iso-8859-7
-        ENCODING_FROM_LABEL.put("csisolatingreek", "iso-8859-7");
-        ENCODING_FROM_LABEL.put("ecma-118", "iso-8859-7");
-        ENCODING_FROM_LABEL.put("elot_928", "iso-8859-7");
-        ENCODING_FROM_LABEL.put("greek", "iso-8859-7");
-        ENCODING_FROM_LABEL.put("greek8", "iso-8859-7");
-        ENCODING_FROM_LABEL.put("iso-8859-7", "iso-8859-7");
-        ENCODING_FROM_LABEL.put("iso-ir-126", "iso-8859-7");
-        ENCODING_FROM_LABEL.put("iso8859-7", "iso-8859-7");
-        ENCODING_FROM_LABEL.put("iso88597", "iso-8859-7");
-        ENCODING_FROM_LABEL.put("iso_8859-7", "iso-8859-7");
-        ENCODING_FROM_LABEL.put("iso_8859-7:1987", "iso-8859-7");
-        ENCODING_FROM_LABEL.put("sun_eu_greek", "iso-8859-7");
-
-        // iso-8859-8
-        ENCODING_FROM_LABEL.put("csiso88598e", "iso-8859-8");
-        ENCODING_FROM_LABEL.put("csisolatinhebrew", "iso-8859-8");
-        ENCODING_FROM_LABEL.put("hebrew", "iso-8859-8");
-        ENCODING_FROM_LABEL.put("iso-8859-8", "iso-8859-8");
-        ENCODING_FROM_LABEL.put("iso-8859-8-e", "iso-8859-8");
-        ENCODING_FROM_LABEL.put("iso-ir-138", "iso-8859-8");
-        ENCODING_FROM_LABEL.put("iso8859-8", "iso-8859-8");
-        ENCODING_FROM_LABEL.put("iso88598", "iso-8859-8");
-        ENCODING_FROM_LABEL.put("iso_8859-8", "iso-8859-8");
-        ENCODING_FROM_LABEL.put("iso_8859-8:1988", "iso-8859-8");
-        ENCODING_FROM_LABEL.put("visual", "iso-8859-8");
-
-        // iso-8859-8-i
-        ENCODING_FROM_LABEL.put("csiso88598i", "iso-8859-8-i");
-        ENCODING_FROM_LABEL.put("iso-8859-8-i", "iso-8859-8-i");
-        ENCODING_FROM_LABEL.put("logical", "iso-8859-8-i");
-
-        // iso-8859-10
-        ENCODING_FROM_LABEL.put("csisolatin6", "iso-8859-10");
-        ENCODING_FROM_LABEL.put("iso-8859-10", "iso-8859-10");
-        ENCODING_FROM_LABEL.put("iso-ir-157", "iso-8859-10");
-        ENCODING_FROM_LABEL.put("iso8859-10", "iso-8859-10");
-        ENCODING_FROM_LABEL.put("iso885910", "iso-8859-10");
-        ENCODING_FROM_LABEL.put("l6", "iso-8859-10");
-        ENCODING_FROM_LABEL.put("latin6", "iso-8859-10");
-
-        // iso-8859-13
-        ENCODING_FROM_LABEL.put("iso-8859-13", "iso-8859-13");
-        ENCODING_FROM_LABEL.put("iso8859-13", "iso-8859-13");
-        ENCODING_FROM_LABEL.put("iso885913", "iso-8859-13");
-
-        // iso-8859-14
-        ENCODING_FROM_LABEL.put("iso-8859-14", "iso-8859-14");
-        ENCODING_FROM_LABEL.put("iso8859-14", "iso-8859-14");
-        ENCODING_FROM_LABEL.put("iso885914", "iso-8859-14");
-
-        // iso-8859-15
-        ENCODING_FROM_LABEL.put("csisolatin9", "iso-8859-15");
-        ENCODING_FROM_LABEL.put("iso-8859-15", "iso-8859-15");
-        ENCODING_FROM_LABEL.put("iso8859-15", "iso-8859-15");
-        ENCODING_FROM_LABEL.put("iso885915", "iso-8859-15");
-        ENCODING_FROM_LABEL.put("iso_8859-15", "iso-8859-15");
-        ENCODING_FROM_LABEL.put("l9", "iso-8859-15");
-
-        // iso-8859-16
-        ENCODING_FROM_LABEL.put("iso-8859-16", "iso-8859-16");
-
-        // koi8-r
-        ENCODING_FROM_LABEL.put("cskoi8r", "koi8-r");
-        ENCODING_FROM_LABEL.put("koi", "koi8-r");
-        ENCODING_FROM_LABEL.put("koi8", "koi8-r");
-        ENCODING_FROM_LABEL.put("koi8-r", "koi8-r");
-        ENCODING_FROM_LABEL.put("koi8_r", "koi8-r");
-
-        // koi8-u
-        ENCODING_FROM_LABEL.put("koi8-u", "koi8-u");
-
-        // macintosh
-        ENCODING_FROM_LABEL.put("csmacintosh", "macintosh");
-        ENCODING_FROM_LABEL.put("mac", "macintosh");
-        ENCODING_FROM_LABEL.put("macintosh", "macintosh");
-        ENCODING_FROM_LABEL.put("x-mac-roman", "macintosh");
-
-        // windows-874
-        ENCODING_FROM_LABEL.put("dos-874", "windows-874");
-        ENCODING_FROM_LABEL.put("iso-8859-11", "windows-874");
-        ENCODING_FROM_LABEL.put("iso8859-11", "windows-874");
-        ENCODING_FROM_LABEL.put("iso885911", "windows-874");
-        ENCODING_FROM_LABEL.put("tis-620", "windows-874");
-        ENCODING_FROM_LABEL.put("windows-874", "windows-874");
-
-        // windows-1250
-        ENCODING_FROM_LABEL.put("cp1250", "windows-1250");
-        ENCODING_FROM_LABEL.put("windows-1250", "windows-1250");
-        ENCODING_FROM_LABEL.put("x-cp1250", "windows-1250");
-
-        // windows-1251
-        ENCODING_FROM_LABEL.put("cp1251", "windows-1251");
-        ENCODING_FROM_LABEL.put("windows-1251", "windows-1251");
-        ENCODING_FROM_LABEL.put("x-cp1251", "windows-1251");
-
-        // windows-1252
-        ENCODING_FROM_LABEL.put("ansi_x3.4-1968", "windows-1252");
-        ENCODING_FROM_LABEL.put("ascii", "windows-1252");
-        ENCODING_FROM_LABEL.put("cp1252", "windows-1252");
-        ENCODING_FROM_LABEL.put("cp819", "windows-1252");
-        ENCODING_FROM_LABEL.put("csisolatin1", "windows-1252");
-        ENCODING_FROM_LABEL.put("ibm819", "windows-1252");
-        ENCODING_FROM_LABEL.put("iso-8859-1", "windows-1252");
-        ENCODING_FROM_LABEL.put("iso-ir-100", "windows-1252");
-        ENCODING_FROM_LABEL.put("iso8859-1", "windows-1252");
-        ENCODING_FROM_LABEL.put("iso88591", "windows-1252");
-        ENCODING_FROM_LABEL.put("iso_8859-1", "windows-1252");
-        ENCODING_FROM_LABEL.put("iso_8859-1:1987", "windows-1252");
-        ENCODING_FROM_LABEL.put("l1", "windows-1252");
-        ENCODING_FROM_LABEL.put("latin1", "windows-1252");
-        ENCODING_FROM_LABEL.put("us-ascii", "windows-1252");
-        ENCODING_FROM_LABEL.put("windows-1252", "windows-1252");
-        ENCODING_FROM_LABEL.put("x-cp1252", "windows-1252");
-
-        // windows-1253
-        ENCODING_FROM_LABEL.put("cp1253", "windows-1253");
-        ENCODING_FROM_LABEL.put("windows-1253", "windows-1253");
-        ENCODING_FROM_LABEL.put("x-cp1253", "windows-1253");
-
-        // windows-1254
-        ENCODING_FROM_LABEL.put("cp1254", "windows-1254");
-        ENCODING_FROM_LABEL.put("csisolatin5", "windows-1254");
-        ENCODING_FROM_LABEL.put("iso-8859-9", "windows-1254");
-        ENCODING_FROM_LABEL.put("iso-ir-148", "windows-1254");
-        ENCODING_FROM_LABEL.put("iso8859-9", "windows-1254");
-        ENCODING_FROM_LABEL.put("iso88599", "windows-1254");
-        ENCODING_FROM_LABEL.put("iso_8859-9", "windows-1254");
-        ENCODING_FROM_LABEL.put("iso_8859-9:1989", "windows-1254");
-        ENCODING_FROM_LABEL.put("l5", "windows-1254");
-        ENCODING_FROM_LABEL.put("latin5", "windows-1254");
-        ENCODING_FROM_LABEL.put("windows-1254", "windows-1254");
-        ENCODING_FROM_LABEL.put("x-cp1254", "windows-1254");
-
-        // windows-1255
-        ENCODING_FROM_LABEL.put("cp1255", "windows-1255");
-        ENCODING_FROM_LABEL.put("windows-1255", "windows-1255");
-        ENCODING_FROM_LABEL.put("x-cp1255", "windows-1255");
-
-        // windows-1256
-        ENCODING_FROM_LABEL.put("cp1256", "windows-1256");
-        ENCODING_FROM_LABEL.put("windows-1256", "windows-1256");
-        ENCODING_FROM_LABEL.put("x-cp1256", "windows-1256");
-
-        // windows-1257
-        ENCODING_FROM_LABEL.put("cp1257", "windows-1257");
-        ENCODING_FROM_LABEL.put("windows-1257", "windows-1257");
-        ENCODING_FROM_LABEL.put("x-cp1257", "windows-1257");
-
-        // windows-1258
-        ENCODING_FROM_LABEL.put("cp1258", "windows-1258");
-        ENCODING_FROM_LABEL.put("windows-1258", "windows-1258");
-        ENCODING_FROM_LABEL.put("x-cp1258", "windows-1258");
-
-        // x-mac-cyrillic
-        ENCODING_FROM_LABEL.put("x-mac-cyrillic", "x-mac-cyrillic");
-        ENCODING_FROM_LABEL.put("x-mac-ukrainian", "x-mac-cyrillic");
-
-        // Legacy multi-byte Chinese (simplified) encodings
-        // ------------------------------------------------
-
-        // gb18030
-        ENCODING_FROM_LABEL.put("chinese", "gb18030");
-        ENCODING_FROM_LABEL.put("csgb2312", "gb18030");
-        ENCODING_FROM_LABEL.put("csiso58gb231280", "gb18030");
-        ENCODING_FROM_LABEL.put("gb18030", "gb18030");
-        ENCODING_FROM_LABEL.put("gb2312", "gb18030");
-        ENCODING_FROM_LABEL.put("gb_2312", "gb18030");
-        ENCODING_FROM_LABEL.put("gb_2312-80", "gb18030");
-        ENCODING_FROM_LABEL.put("gbk", "gb18030");
-        ENCODING_FROM_LABEL.put("iso-ir-58", "gb18030");
-        ENCODING_FROM_LABEL.put("x-gbk", "gb18030");
-
-        // hz-gb-2312
-        ENCODING_FROM_LABEL.put("hz-gb-2312", "hz-gb-2312");
-
-        // Legacy multi-byte Chinese (traditional) encodings
-        // ------------------------------------------------
-
-        // big5
-        ENCODING_FROM_LABEL.put("big5", "big5");
-        ENCODING_FROM_LABEL.put("big5-hkscs", "big5");
-        ENCODING_FROM_LABEL.put("cn-big5", "big5");
-        ENCODING_FROM_LABEL.put("csbig5", "big5");
-        ENCODING_FROM_LABEL.put("x-x-big5", "big5");
-
-        // Legacy multi-byte Japanese encodings
-        // ------------------------------------
-
-        // euc-jp
-        ENCODING_FROM_LABEL.put("cseucpkdfmtjapanese", "euc-jp");
-        ENCODING_FROM_LABEL.put("euc-jp", "euc-jp");
-        ENCODING_FROM_LABEL.put("x-euc-jp", "euc-jp");
-
-        // iso-2022-jp
-        ENCODING_FROM_LABEL.put("csiso2022jp", "iso-2022-jp");
-        ENCODING_FROM_LABEL.put("iso-2022-jp", "iso-2022-jp");
-
-        // iso-2022-jp
-        ENCODING_FROM_LABEL.put("csshiftjis", "shift_jis");
-        ENCODING_FROM_LABEL.put("ms_kanji", "shift_jis");
-        ENCODING_FROM_LABEL.put("shift-jis", "shift_jis");
-        ENCODING_FROM_LABEL.put("shift_jis", "shift_jis");
-        ENCODING_FROM_LABEL.put("sjis", "shift_jis");
-        ENCODING_FROM_LABEL.put("windows-31j", "shift_jis");
-        ENCODING_FROM_LABEL.put("x-sjis", "shift_jis");
-
-        // Legacy multi-byte Korean encodings
-        // ------------------------------------
-
-        // euc-kr
-        ENCODING_FROM_LABEL.put("cseuckr", "euc-kr");
-        ENCODING_FROM_LABEL.put("csksc56011987", "euc-kr");
-        ENCODING_FROM_LABEL.put("euc-kr", "euc-kr");
-        ENCODING_FROM_LABEL.put("iso-ir-149", "euc-kr");
-        ENCODING_FROM_LABEL.put("korean", "euc-kr");
-        ENCODING_FROM_LABEL.put("ks_c_5601-1987", "euc-kr");
-        ENCODING_FROM_LABEL.put("ks_c_5601-1989", "euc-kr");
-        ENCODING_FROM_LABEL.put("ksc5601", "euc-kr");
-        ENCODING_FROM_LABEL.put("ksc_5601", "euc-kr");
-        ENCODING_FROM_LABEL.put("windows-949", "euc-kr");
-
-        // Legacy miscellaneous encodings
-        // ------------------------------------
-
-        // replacement
-        ENCODING_FROM_LABEL.put("csiso2022kr", "replacement");
-        ENCODING_FROM_LABEL.put("iso-2022-cn", "replacement");
-        ENCODING_FROM_LABEL.put("iso-2022-cn-ext", "replacement");
-        ENCODING_FROM_LABEL.put("iso-2022-kr", "replacement");
-
-        // utf-16be
-        ENCODING_FROM_LABEL.put("utf-16be", "utf-16be");
-
-        // utf-16le
-        ENCODING_FROM_LABEL.put("utf-16", "utf-16le");
-        ENCODING_FROM_LABEL.put("utf-16le", "utf-16le");
-
-        // x-user-defined
-        ENCODING_FROM_LABEL.put("x-user-defined", "x-user-defined");
-    }
-
     private static final byte[] XML_DECLARATION_PREFIX = "<?xml ".getBytes(US_ASCII);
 
+    private static final byte[] CSS_CHARSET_DECLARATION_PREFIX = "@charset \"".getBytes(US_ASCII);
+
     /**
-     * The number of HTML bytes to sniff for encoding info embedded in <code>meta</code> tags;
-     * relatively large because we don't have a fallback.
+     * The number of HTML bytes to sniff for encoding info embedded in {@code meta} tags.
      */
-    private static final int SIZE_OF_HTML_CONTENT_SNIFFED = 4096;
+    private static final int SIZE_OF_HTML_CONTENT_SNIFFED = 1024;
 
     /**
      * The number of XML bytes to sniff for encoding info embedded in the XML declaration;
-     * relatively small because it's always at the very beginning of the file.
+     * relatively small because it is always at the very beginning of the file.
      */
     private static final int SIZE_OF_XML_CONTENT_SNIFFED = 512;
+
+    private static final int SIZE_OF_CSS_CONTENT_SNIFFED = 1024;
 
     /**
      * Disallow instantiation of this class.
@@ -434,80 +114,12 @@ public final class EncodingSniffer {
     }
 
     /**
-     * <p>If the specified content is HTML content, this method sniffs encoding settings
-     * from the specified HTML content and/or the corresponding HTTP headers based on the
-     * <a href="http://www.whatwg.org/specs/web-apps/current-work/multipage/parsing.html#determining-the-character-encoding">HTML5
-     * encoding sniffing algorithm</a>.</p>
-     *
-     * <p>If the specified content is XML content, this method sniffs encoding settings
-     * from the specified XML content and/or the corresponding HTTP headers using a custom algorithm.</p>
-     *
-     * <p>Otherwise, this method sniffs encoding settings from the specified content of unknown type by looking for
-     * <code>Content-Type</code> information in the HTTP headers and
-     * <a href="http://en.wikipedia.org/wiki/Byte_Order_Mark">Byte Order Mark</a> information in the content.</p>
-     *
-     * <p>Note that if an encoding is found but it is not supported on the current platform, this method returns
-     * {@code null}, as if no encoding had been found.</p>
-     *
-     * @param headers the HTTP response headers sent back with the content to be sniffed
-     * @param content the content to be sniffed
-     * @return the encoding sniffed from the specified content and/or the corresponding HTTP headers,
-     *         or {@code null} if the encoding could not be determined
-     * @throws IOException if an IO error occurs
-     */
-    public static Charset sniffEncoding(final List<NameValuePair> headers, final InputStream content)
-        throws IOException {
-        final Charset charset;
-        if (isHtml(headers)) {
-            charset = sniffHtmlEncoding(headers, content);
-        }
-        else if (isXml(headers)) {
-            charset = sniffXmlEncoding(headers, content);
-        }
-        else {
-            charset = sniffUnknownContentTypeEncoding(headers, content);
-        }
-
-        // this is was browsers do
-        if (charset != null) {
-            if ("US-ASCII".equals(charset.name())) {
-                return Charset.forName("windows-1252");
-            }
-            if ("GB2312".equals(charset.name())) {
-                return Charset.forName("GBK");
-            }
-        }
-        return charset;
-    }
-
-    /**
-     * Returns {@code true} if the specified HTTP response headers indicate an HTML response.
-     *
-     * @param headers the HTTP response headers
-     * @return {@code true} if the specified HTTP response headers indicate an HTML response
-     */
-    static boolean isHtml(final List<NameValuePair> headers) {
-        return contentTypeEndsWith(headers, MimeType.TEXT_HTML);
-    }
-
-    /**
-     * Returns {@code true} if the specified HTTP response headers indicate an XML response.
-     *
-     * @param headers the HTTP response headers
-     * @return {@code true} if the specified HTTP response headers indicate an XML response
-     */
-    static boolean isXml(final List<NameValuePair> headers) {
-        return contentTypeEndsWith(headers, MimeType.TEXT_XML, MimeType.APPLICATION_XML, "text/vnd.wap.wml", "+xml");
-    }
-
-    /**
-     * Returns {@code true} if the specified HTTP response headers contain a <code>Content-Type</code> that
+     * Returns {@code true} if the specified HTTP response headers contain a {@code Content-Type} that
      * ends with one of the specified strings.
      *
      * @param headers the HTTP response headers
      * @param contentTypeEndings the content type endings to search for
-     * @return {@code true} if the specified HTTP response headers contain a <code>Content-Type</code> that
-     *         ends with one of the specified strings
+     * @return {@code true} if the {@code Content-Type} header ends with one of the specified strings
      */
     static boolean contentTypeEndsWith(final List<NameValuePair> headers, final String... contentTypeEndings) {
         for (final NameValuePair pair : headers) {
@@ -531,127 +143,12 @@ public final class EncodingSniffer {
     }
 
     /**
-     * <p>Sniffs encoding settings from the specified HTML content and/or the corresponding HTTP headers based on the
-     * <a href="http://www.whatwg.org/specs/web-apps/current-work/multipage/parsing.html#determining-the-character-encoding">HTML5
-     * encoding sniffing algorithm</a>.</p>
-     *
-     * <p>Note that if an encoding is found but it is not supported on the current platform, this method returns
-     * {@code null}, as if no encoding had been found.</p>
-     *
-     * @param headers the HTTP response headers sent back with the HTML content to be sniffed
-     * @param content the HTML content to be sniffed
-     * @return the encoding sniffed from the specified HTML content and/or the corresponding HTTP headers,
-     *         or {@code null} if the encoding could not be determined
-     * @throws IOException if an IO error occurs
-     */
-    public static Charset sniffHtmlEncoding(final List<NameValuePair> headers, final InputStream content)
-        throws IOException {
-
-        Charset encoding = sniffEncodingFromHttpHeaders(headers);
-        if (encoding != null || content == null) {
-            return encoding;
-        }
-
-        byte[] bytes = read(content, 3);
-        encoding = sniffEncodingFromUnicodeBom(bytes);
-        if (encoding != null) {
-            return encoding;
-        }
-
-        bytes = readAndPrepend(content, SIZE_OF_HTML_CONTENT_SNIFFED, bytes);
-        encoding = sniffEncodingFromMetaTag(bytes);
-        return encoding;
-    }
-
-    /**
-     * <p>Sniffs encoding settings from the specified XML content and/or the corresponding HTTP headers using
-     * a custom algorithm.</p>
-     *
-     * <p>Note that if an encoding is found but it is not supported on the current platform, this method returns
-     * {@code null}, as if no encoding had been found.</p>
-     *
-     * @param headers the HTTP response headers sent back with the XML content to be sniffed
-     * @param content the XML content to be sniffed
-     * @return the encoding sniffed from the specified XML content and/or the corresponding HTTP headers,
-     *         or {@code null} if the encoding could not be determined
-     * @throws IOException if an IO error occurs
-     */
-    public static Charset sniffXmlEncoding(final List<NameValuePair> headers, final InputStream content)
-        throws IOException {
-
-        Charset encoding = sniffEncodingFromHttpHeaders(headers);
-        if (encoding != null || content == null) {
-            return encoding;
-        }
-
-        byte[] bytes = read(content, 3);
-        encoding = sniffEncodingFromUnicodeBom(bytes);
-        if (encoding != null) {
-            return encoding;
-        }
-
-        bytes = readAndPrepend(content, SIZE_OF_XML_CONTENT_SNIFFED, bytes);
-        encoding = sniffEncodingFromXmlDeclaration(bytes);
-        return encoding;
-    }
-
-    /**
-     * <p>Sniffs encoding settings from the specified content of unknown type by looking for <code>Content-Type</code>
-     * information in the HTTP headers and <a href="http://en.wikipedia.org/wiki/Byte_Order_Mark">Byte Order Mark</a>
-     * information in the content.</p>
-     *
-     * <p>Note that if an encoding is found but it is not supported on the current platform, this method returns
-     * {@code null}, as if no encoding had been found.</p>
-     *
-     * @param headers the HTTP response headers sent back with the content to be sniffed
-     * @param content the content to be sniffed
-     * @return the encoding sniffed from the specified content and/or the corresponding HTTP headers,
-     *         or {@code null} if the encoding could not be determined
-     * @throws IOException if an IO error occurs
-     */
-    public static Charset sniffUnknownContentTypeEncoding(final List<NameValuePair> headers, final InputStream content)
-        throws IOException {
-
-        Charset encoding = sniffEncodingFromHttpHeaders(headers);
-        if (encoding != null || content == null) {
-            return encoding;
-        }
-
-        final byte[] bytes = read(content, 3);
-        encoding = sniffEncodingFromUnicodeBom(bytes);
-        return encoding;
-    }
-
-    /**
-     * Attempts to sniff an encoding from the specified HTTP headers.
-     *
-     * @param headers the HTTP headers to examine
-     * @return the encoding sniffed from the specified HTTP headers, or {@code null} if the encoding
-     *         could not be determined
-     */
-    public static Charset sniffEncodingFromHttpHeaders(final List<NameValuePair> headers) {
-        for (final NameValuePair pair : headers) {
-            final String name = pair.getName();
-            if (HttpHeader.CONTENT_TYPE_LC.equalsIgnoreCase(name)) {
-                final Charset encoding = extractEncodingFromContentType(pair.getValue());
-                if (encoding != null) {
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug("Encoding found in HTTP headers: '" + encoding + "'.");
-                    }
-                    return encoding;
-                }
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Attempts to sniff an encoding from a <a href="http://en.wikipedia.org/wiki/Byte_Order_Mark">Byte Order Mark</a>
+     * Attempts to sniff an encoding from a
+     * <a href="https://en.wikipedia.org/wiki/Byte_order_mark">Byte Order Mark</a>
      * in the specified byte array.
      *
      * @param bytes the bytes to check for a Byte Order Mark
-     * @return the encoding sniffed from the specified bytes, or {@code null} if the encoding
-     *         could not be determined
+     * @return the encoding sniffed from the specified bytes, or {@code null} if it could not be determined
      */
     static Charset sniffEncodingFromUnicodeBom(final byte[] bytes) {
         if (bytes == null) {
@@ -676,10 +173,11 @@ public final class EncodingSniffer {
     }
 
     /**
-     * Returns whether the specified byte array starts with the given {@link ByteOrderMark}, or not.
+     * Returns whether the specified byte array starts with the given {@link ByteOrderMark}.
+     *
      * @param bytes the byte array to check
-     * @param bom the {@link ByteOrderMark}
-     * @return whether the specified byte array starts with the given {@link ByteOrderMark}, or not
+     * @param bom the {@link ByteOrderMark} to look for
+     * @return {@code true} if the byte array starts with the given {@link ByteOrderMark}
      */
     private static boolean startsWith(final byte[] bytes, final ByteOrderMark bom) {
         final byte[] bomBytes = bom.getBytes();
@@ -688,13 +186,14 @@ public final class EncodingSniffer {
     }
 
     /**
-     * Attempts to sniff an encoding from an HTML <code>meta</code> tag in the specified byte array.
+     * Attempts to sniff an encoding from an HTML {@code meta} tag in the specified input stream.
      *
-     * @param bytes the bytes to check for an HTML <code>meta</code> tag
-     * @return the encoding sniffed from the specified bytes, or {@code null} if the encoding
-     *         could not be determined
+     * @param is the content stream to check for an HTML {@code meta} tag
+     * @return the encoding sniffed from the stream, or {@code null} if it could not be determined
+     * @throws IOException if an I/O error occurs
      */
-    static Charset sniffEncodingFromMetaTag(final byte[] bytes) {
+    public static Charset sniffEncodingFromMetaTag(final InputStream is) throws IOException {
+        final byte[] bytes = read(is, SIZE_OF_HTML_CONTENT_SNIFFED);
         for (int i = 0; i < bytes.length; i++) {
             if (matches(bytes, i, COMMENT_START)) {
                 i = indexOfSubArray(bytes, COMMENT_END, i);
@@ -707,15 +206,23 @@ public final class EncodingSniffer {
                 i += META_START.length;
                 for (Attribute att = getAttribute(bytes, i); att != null; att = getAttribute(bytes, i)) {
                     i = att.getUpdatedIndex();
-                    final String name = att.getName();
-                    final String value = att.getValue();
+                    final String name = att.getName().toLowerCase(Locale.ROOT);
                     if ("charset".equals(name) || "content".equals(name)) {
+                        final String value = att.getValue().toLowerCase(Locale.ROOT);
                         Charset charset = null;
                         if ("charset".equals(name)) {
                             charset = toCharset(value);
+                            // https://html.spec.whatwg.org/multipage/parsing.html#prescan-a-byte-stream-to-determine-its-encoding
+                            if (charset == null && "x-user-defined".equals(value)) {
+                                charset = Charset.forName("windows-1252");
+                            }
                         }
                         else if ("content".equals(name)) {
                             charset = extractEncodingFromContentType(value);
+                            // https://html.spec.whatwg.org/multipage/parsing.html#prescan-a-byte-stream-to-determine-its-encoding
+                            if (charset == null && value != null && value.contains("x-user-defined")) {
+                                charset = Charset.forName("windows-1252");
+                            }
                             if (charset == null) {
                                 continue;
                             }
@@ -765,13 +272,13 @@ public final class EncodingSniffer {
     }
 
     /**
-     * Extracts an attribute from the specified byte array, starting at the specified index, using the
-     * <a href="http://www.whatwg.org/specs/web-apps/current-work/multipage/parsing.html#concept-get-attributes-when-sniffing">HTML5
+     * Extracts an attribute from the specified byte array starting at the specified index, using the
+     * <a href="https://html.spec.whatwg.org/multipage/parsing.html#concept-get-attributes-when-sniffing">HTML5
      * attribute algorithm</a>.
      *
      * @param bytes the byte array to extract an attribute from
      * @param startFrom the index to start searching from
-     * @return the next attribute in the specified byte array, or {@code null} if one is not available
+     * @return the next attribute in the specified byte array, or {@code null} if none is available
      */
     static Attribute getAttribute(final byte[] bytes, final int startFrom) {
         if (startFrom >= bytes.length) {
@@ -870,15 +377,14 @@ public final class EncodingSniffer {
     }
 
     /**
-     * Extracts an encoding from the specified <code>Content-Type</code> value using
-     * <a href="http://ietfreport.isoc.org/idref/draft-abarth-mime-sniff/">the IETF algorithm</a>; if
-     * no encoding is found, this method returns {@code null}.
+     * Extracts an encoding from the specified {@code Content-Type} value using
+     * <a href="https://www.ietf.org/rfc/rfc2616.txt">the IETF algorithm</a>; if
+     * no encoding is found, returns {@code null}.
      *
-     * @param s the <code>Content-Type</code> value to search for an encoding
-     * @return the encoding found in the specified <code>Content-Type</code> value, or {@code null} if no
-     *         encoding was found
+     * @param s the {@code Content-Type} value to search for an encoding
+     * @return the encoding found in the specified value, or {@code null} if none was found
      */
-    static Charset extractEncodingFromContentType(final String s) {
+    public static Charset extractEncodingFromContentType(final String s) {
         if (s == null) {
             return null;
         }
@@ -902,16 +408,14 @@ public final class EncodingSniffer {
         if (bytes[i] != '=') {
             return null;
         }
-        i++;
-        if (i == bytes.length) {
-            return null;
-        }
-        while (bytes[i] == 0x09 || bytes[i] == 0x0A || bytes[i] == 0x0C || bytes[i] == 0x0D || bytes[i] == 0x20) {
+        do {
             i++;
             if (i == bytes.length) {
                 return null;
             }
         }
+        while (bytes[i] == 0x09 || bytes[i] == 0x0A || bytes[i] == 0x0C || bytes[i] == 0x0D || bytes[i] == 0x20);
+
         if (bytes[i] == '"') {
             if (bytes.length <= i + 1) {
                 return null;
@@ -946,10 +450,12 @@ public final class EncodingSniffer {
      * Searches the specified XML content for an XML declaration and returns the encoding if found,
      * otherwise returns {@code null}.
      *
-     * @param bytes the XML content to sniff
+     * @param is the content stream to check for a charset declaration
      * @return the encoding of the specified XML content, or {@code null} if it could not be determined
+     * @throws IOException if an I/O error occurs
      */
-    static Charset sniffEncodingFromXmlDeclaration(final byte[] bytes) {
+    public static Charset sniffEncodingFromXmlDeclaration(final InputStream is) throws IOException {
+        final byte[] bytes = read(is, SIZE_OF_XML_CONTENT_SNIFFED);
         Charset encoding = null;
         if (bytes.length > 5
                 && XML_DECLARATION_PREFIX[0] == bytes[0]
@@ -961,25 +467,26 @@ public final class EncodingSniffer {
             final int index = ArrayUtils.indexOf(bytes, (byte) '?', 2);
             if (index + 1 < bytes.length && bytes[index + 1] == '>') {
                 final String declaration = new String(bytes, 0, index + 2, US_ASCII);
+
                 int start = declaration.indexOf("encoding");
                 if (start != -1) {
                     start += 8;
-                    char delimiter;
-                outer:
-                    while (true) {
-                        switch (declaration.charAt(start)) {
-                            case '"':
-                            case '\'':
-                                delimiter = declaration.charAt(start);
-                                start = start + 1;
-                                break outer;
-
-                            default:
-                                start++;
+                    Character delimiter = null;
+                    while (start < declaration.length()) {
+                        final char c = declaration.charAt(start);
+                        if (c == '"' || c == '\'') {
+                            delimiter = c;
+                            start++;
+                            break;
+                        }
+                        start++;
+                    }
+                    if (delimiter != null) {
+                        final int end = declaration.indexOf(delimiter, start);
+                        if (end != -1) {
+                            encoding = toCharset(declaration.substring(start, end));
                         }
                     }
-                    final int end = declaration.indexOf(delimiter, start);
-                    encoding = toCharset(declaration.substring(start, end));
                 }
             }
         }
@@ -990,17 +497,51 @@ public final class EncodingSniffer {
     }
 
     /**
-     * Returns {@code Charset} if the specified charset name is supported on this platform.
+     * Parses and returns the charset declaration at the start of a CSS file if present,
+     * otherwise returns {@code null}.
+     * e.g. {@code @charset "UTF-8"}
      *
-     * @param charsetName the charset name to check
-     * @return {@code Charset} if the specified charset name is supported on this platform
+     * @param is the input stream to parse
+     * @return the charset found at the start of the CSS file, or {@code null} if none
+     * @throws IOException if an I/O error occurs
+     */
+    public static Charset sniffEncodingFromCssDeclaration(final InputStream is) throws IOException {
+        final byte[] bytes = read(is, SIZE_OF_CSS_CONTENT_SNIFFED);
+        if (bytes.length < CSS_CHARSET_DECLARATION_PREFIX.length) {
+            return null;
+        }
+        for (int i = 0; i < CSS_CHARSET_DECLARATION_PREFIX.length; i++) {
+            if (bytes[i] != CSS_CHARSET_DECLARATION_PREFIX[i]) {
+                return null;
+            }
+        }
+
+        Charset encoding = null;
+        final int index = ArrayUtils.indexOf(bytes, (byte) '"', CSS_CHARSET_DECLARATION_PREFIX.length);
+        if (index != -1 && index + 1 < bytes.length && bytes[index + 1] == ';') {
+            encoding = toCharset(new String(bytes, CSS_CHARSET_DECLARATION_PREFIX.length, index - CSS_CHARSET_DECLARATION_PREFIX.length, US_ASCII));
+            // https://www.w3.org/TR/css-syntax-3/#input-byte-stream "Why use utf-8 when the declaration says utf-16?"
+            if (encoding == UTF_16BE || encoding == UTF_16LE) {
+                encoding = UTF_8;
+            }
+        }
+        return encoding;
+    }
+
+    /**
+     * Returns the {@link Charset} for the specified charset name if it is supported on this platform,
+     * or {@code null} if it is not.
+     *
+     * @param charsetName the charset name to look up
+     * @return the {@link Charset} for the given name, or {@code null} if unsupported
      */
     public static Charset toCharset(final String charsetName) {
-        if (StringUtils.isEmpty(charsetName)) {
+        final String nameFromLabel = translateEncodingLabel(charsetName);
+        if (nameFromLabel == null) {
             return null;
         }
         try {
-            return Charset.forName(charsetName);
+            return Charset.forName(nameFromLabel);
         }
         catch (final IllegalCharsetNameException | UnsupportedCharsetException e) {
             return null;
@@ -1008,14 +549,13 @@ public final class EncodingSniffer {
     }
 
     /**
-     * Returns {@code true} if the byte in the specified byte array at the specified index matches one of the
-     * specified byte array patterns.
+     * Returns {@code true} if the byte in the specified byte array at the specified index matches
+     * one of the specified byte array patterns.
      *
      * @param bytes the byte array to search in
      * @param i the index at which to search
      * @param sought the byte array patterns to search for
-     * @return {@code true} if the byte in the specified byte array at the specified index matches one of the
-     *         specified byte array patterns
+     * @return {@code true} if the byte at index {@code i} matches one of the patterns
      */
     static boolean matches(final byte[] bytes, final int i, final byte[][] sought) {
         if (i + sought.length > bytes.length) {
@@ -1038,18 +578,18 @@ public final class EncodingSniffer {
     }
 
     /**
-     * Skips ahead to the first occurrence of any of the specified targets within the specified array,
-     * starting at the specified index. This method returns <code>-1</code> if none of the targets are found.
+     * Skips ahead to the first occurrence of any of the specified target bytes within the specified array,
+     * starting at the specified index. Returns {@code -1} if none of the targets are found.
      *
      * @param bytes the array to search through
-     * @param startFrom the index to start looking at
-     * @param targets the targets to search for
-     * @return the index of the first occurrence of the specified targets within the specified array
+     * @param startFrom the index to start looking from
+     * @param targets the target bytes to search for
+     * @return the index of the first occurrence of any target byte, or {@code -1} if not found
      */
     static int skipToAnyOf(final byte[] bytes, final int startFrom, final byte[] targets) {
         int i = startFrom;
         for ( ; i < bytes.length; i++) {
-            if (ArrayUtils.contains(targets, bytes[i])) {
+            if (org.htmlunit.util.ArrayUtils.contains(targets, bytes[i])) {
                 break;
             }
         }
@@ -1061,12 +601,12 @@ public final class EncodingSniffer {
 
     /**
      * Finds the first index of the specified sub-array inside the specified array, starting at the
-     * specified index. This method returns <code>-1</code> if the specified sub-array cannot be found.
+     * specified index. Returns {@code -1} if the sub-array cannot be found.
      *
-     * @param array the array to traverse for looking for the sub-array
+     * @param array the array to traverse
      * @param subarray the sub-array to find
-     * @param startIndex the start index to traverse forwards from
-     * @return the index of the sub-array within the array
+     * @param startIndex the index to start traversing from
+     * @return the index of the sub-array within the array, or {@code -1} if not found
      */
     static int indexOfSubArray(final byte[] array, final byte[] subarray, final int startIndex) {
         for (int i = startIndex; i < array.length; i++) {
@@ -1090,19 +630,19 @@ public final class EncodingSniffer {
     }
 
     /**
-     * Attempts to read <code>size</code> bytes from the specified input stream. Note that this method is not guaranteed
-     * to be able to read <code>size</code> bytes; however, the returned byte array will always be the exact length of the
-     * number of bytes read.
+     * Attempts to read {@code size} bytes from the specified input stream. Note that this method is not guaranteed
+     * to read exactly {@code size} bytes; however, the returned byte array will always be the exact length of the
+     * number of bytes actually read.
      *
      * @param content the input stream to read from
      * @param size the number of bytes to try to read
      * @return the bytes read from the specified input stream
-     * @throws IOException if an IO error occurs
+     * @throws IOException if an I/O error occurs
      */
     static byte[] read(final InputStream content, final int size) throws IOException {
         byte[] bytes = new byte[size];
         // using IOUtils guarantees that it will read as many bytes as possible before giving up;
-        // this may not always be the case for subclasses of InputStream} - eg. GZIPInputStream
+        // this may not always be the case for subclasses of InputStream - e.g. GZIPInputStream
         final int count = IOUtils.read(content, bytes);
         if (count < size) {
             final byte[] smaller = new byte[count];
@@ -1113,23 +653,22 @@ public final class EncodingSniffer {
     }
 
     /**
-     * Attempts to read <code>size</code> bytes from the specified input stream and then prepends the specified prefix to
-     * the bytes read, returning the resultant byte array. Note that this method is not guaranteed to be able to read
-     * <code>size</code> bytes; however, the returned byte array will always be the exact length of the number of bytes
-     * read plus the length of the prefix array.
+     * Attempts to read {@code size} bytes from the specified input stream and then prepends the specified prefix,
+     * returning the resulting byte array. Note that this method is not guaranteed to read exactly {@code size} bytes;
+     * however, the returned byte array will always be the exact length of the number of bytes read plus the prefix length.
      *
      * @param content the input stream to read from
      * @param size the number of bytes to try to read
-     * @param prefix the byte array to prepend to the bytes read from the specified input stream
-     * @return the bytes read from the specified input stream, prefixed by the specified prefix
-     * @throws IOException if an IO error occurs
+     * @param prefix the byte array to prepend to the bytes read
+     * @return the bytes read from the input stream, prepended by the specified prefix
+     * @throws IOException if an I/O error occurs
      */
     static byte[] readAndPrepend(final InputStream content, final int size, final byte[] prefix) throws IOException {
         final int prefixLength = prefix.length;
         final byte[] joined = new byte[prefixLength + size];
 
         // using IOUtils guarantees that it will read as many bytes as possible before giving up;
-        // this may not always be the case for subclasses of InputStream} - eg. GZIPInputStream
+        // this may not always be the case for subclasses of InputStream - e.g. GZIPInputStream
         final int count = IOUtils.read(content, joined, prefixLength, joined.length - prefixLength);
         if (count < size) {
             final byte[] smaller = new byte[prefixLength + count];
@@ -1146,17 +685,21 @@ public final class EncodingSniffer {
         private final String name_;
         private final String value_;
         private final int updatedIndex_;
+
         Attribute(final String name, final String value, final int updatedIndex) {
             name_ = name;
             value_ = value;
             updatedIndex_ = updatedIndex;
         }
+
         String getName() {
             return name_;
         }
+
         String getValue() {
             return value_;
         }
+
         int getUpdatedIndex() {
             return updatedIndex_;
         }
@@ -1164,18 +707,20 @@ public final class EncodingSniffer {
 
     /**
      * Translates the given encoding label into a normalized form
-     * according to <a href="http://encoding.spec.whatwg.org/#encodings">Reference</a>.
+     * according to the <a href="https://encoding.spec.whatwg.org/#encodings">WHATWG Encoding specification</a>.
+     *
      * @param encodingLabel the label to translate
-     * @return the normalized encoding name or null if not found
+     * @return the normalized encoding name, or {@code null} if not found
      */
-    public static String translateEncodingLabel(final Charset encodingLabel) {
-        if (null == encodingLabel) {
+    public static String translateEncodingLabel(final String encodingLabel) {
+        if (StringUtils.isEmptyOrNull(encodingLabel)) {
             return null;
         }
-        final String encLC = encodingLabel.name().toLowerCase(Locale.ROOT);
-        final String enc = ENCODING_FROM_LABEL.get(encLC);
+
+        final String encLC = encodingLabel.toLowerCase(Locale.ROOT);
+        final String enc = StandardEncodingTranslator.INSTANCE.encodingNameFromLabel(encodingLabel);
         if (encLC.equals(enc)) {
-            return encodingLabel.name();
+            return encLC;
         }
         return enc;
     }

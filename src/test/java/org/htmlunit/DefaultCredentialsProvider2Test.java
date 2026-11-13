@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,26 +14,23 @@
  */
 package org.htmlunit;
 
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.IE;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
-import java.io.StringWriter;
+import java.io.ByteArrayOutputStream;
 import java.net.URL;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.core.Logger;
-import org.apache.logging.log4j.core.appender.WriterAppender;
-import org.apache.logging.log4j.core.config.Configurator;
-import org.apache.logging.log4j.core.layout.PatternLayout;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.html.HtmlPage;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.LoggerContext;
+import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.OutputStreamAppender;
 
 /**
  * Tests for {@link DefaultCredentialsProvider}.
@@ -41,7 +38,6 @@ import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
  * @author Ahmed Ashour
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class DefaultCredentialsProvider2Test extends WebServerTestCase {
 
     /**
@@ -61,7 +57,8 @@ public class DefaultCredentialsProvider2Test extends WebServerTestCase {
 
         // wrong user name
         getWebClient().getCredentialsProvider().clear();
-        ((DefaultCredentialsProvider) getWebClient().getCredentialsProvider()).addCredentials("joe", "jetty");
+        ((DefaultCredentialsProvider) getWebClient().getCredentialsProvider())
+                                        .addCredentials("joe", "jetty".toCharArray());
 
         try {
             loadPage("Hi There");
@@ -81,7 +78,8 @@ public class DefaultCredentialsProvider2Test extends WebServerTestCase {
 
         // wrong user name
         getWebClient().getCredentialsProvider().clear();
-        ((DefaultCredentialsProvider) getWebClient().getCredentialsProvider()).addCredentials("jetty", "secret");
+        ((DefaultCredentialsProvider) getWebClient().getCredentialsProvider())
+                                        .addCredentials("jetty", "secret".toCharArray());
 
         try {
             loadPage("Hi There");
@@ -99,33 +97,43 @@ public class DefaultCredentialsProvider2Test extends WebServerTestCase {
      */
     @Test
     public void basicAuthentication_singleAuthenticaiton() throws Exception {
-        final Logger logger = (Logger) LogManager.getLogger("org.apache.http.headers");
+        final Logger logger = (Logger) LoggerFactory.getLogger("org.apache.http.headers");
         final Level oldLevel = logger.getLevel();
-        Configurator.setLevel(logger.getName(), Level.DEBUG);
+        logger.setLevel(Level.DEBUG);
 
-        final StringWriter stringWriter = new StringWriter();
-        final PatternLayout layout = PatternLayout.newBuilder().withPattern("%msg%n").build();
+        final LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
 
-        final WriterAppender writerAppender = WriterAppender.newBuilder().setName("writeLogger").setTarget(stringWriter)
-                .setLayout(layout).build();
-        writerAppender.start();
+        final PatternLayoutEncoder encoder = new PatternLayoutEncoder();
+        encoder.setContext(context);
+        encoder.setPattern("%msg%n");
+        encoder.start();
 
-        logger.addAppender(writerAppender);
+        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        final OutputStreamAppender<ILoggingEvent> appender = new OutputStreamAppender<>();
+        appender.setContext(context);
+        appender.setEncoder(encoder);
+        appender.setOutputStream(baos);
+        appender.start();
+
+        logger.addAppender(appender);
         try {
-            ((DefaultCredentialsProvider) getWebClient().getCredentialsProvider()).addCredentials("jetty", "jetty");
+            ((DefaultCredentialsProvider) getWebClient().getCredentialsProvider())
+                                            .addCredentials("jetty", "jetty".toCharArray());
 
             loadPage("Hi There");
-            int unauthorizedCount = StringUtils.countMatches(stringWriter.toString(), "HTTP/1.1 401");
+            int unauthorizedCount = StringUtils.countMatches(baos.toString(), "HTTP/1.1 401");
             assertEquals(1, unauthorizedCount);
 
             // and again
             loadPage("Hi There");
-            unauthorizedCount = StringUtils.countMatches(stringWriter.toString(), "HTTP/1.1 401");
+            unauthorizedCount = StringUtils.countMatches(baos.toString(), "HTTP/1.1 401");
             assertEquals(1, unauthorizedCount);
         }
         finally {
-            logger.removeAppender(writerAppender);
-            Configurator.setLevel(logger.getName(), oldLevel);
+            logger.detachAppender(appender);
+            appender.stop();
+            logger.setLevel(oldLevel);
         }
     }
 
@@ -135,7 +143,7 @@ public class DefaultCredentialsProvider2Test extends WebServerTestCase {
     @Test
     @Alerts("SecRet")
     public void basicAuthenticationUserFromUrl() throws Exception {
-        final String html = "<html><body onload='alert(\"SecRet\")'></body></html>";
+        final String html = DOCTYPE_HTML + "<html><body onload='alert(\"SecRet\")'></body></html>";
         getMockWebConnection().setDefaultResponse(html);
 
         getWebClient().getCredentialsProvider().clear();
@@ -148,7 +156,7 @@ public class DefaultCredentialsProvider2Test extends WebServerTestCase {
             //success
         }
 
-        final boolean urlWithCredentials = !getBrowserVersion().isIE();
+        final boolean urlWithCredentials = true;
 
         try {
             //  now a url with credentials
@@ -184,7 +192,7 @@ public class DefaultCredentialsProvider2Test extends WebServerTestCase {
     @Test
     @Alerts("SecRet")
     public void basicAuthenticationUserFromUrlUsedForNextSteps() throws Exception {
-        final String html = "<html><body onload='alert(\"SecRet\")'></body></html>";
+        final String html = DOCTYPE_HTML + "<html><body onload='alert(\"SecRet\")'></body></html>";
         getMockWebConnection().setDefaultResponse(html);
 
         getWebClient().getCredentialsProvider().clear();
@@ -198,7 +206,7 @@ public class DefaultCredentialsProvider2Test extends WebServerTestCase {
             //success
         }
 
-        final boolean urlWithCredentials = !getBrowserVersion().isIE();
+        final boolean urlWithCredentials = true;
 
         try {
             // now a url with credentials
@@ -248,7 +256,7 @@ public class DefaultCredentialsProvider2Test extends WebServerTestCase {
     @Test
     @Alerts("SecRet")
     public void basicAuthenticationUserFromUrlOverwrite() throws Exception {
-        final String html = "<html><body onload='alert(\"SecRet\")'></body></html>";
+        final String html = DOCTYPE_HTML + "<html><body onload='alert(\"SecRet\")'></body></html>";
         getMockWebConnection().setDefaultResponse(html);
 
         getWebClient().getCredentialsProvider().clear();
@@ -262,7 +270,7 @@ public class DefaultCredentialsProvider2Test extends WebServerTestCase {
             //success
         }
 
-        final boolean urlWithCredentials = !getBrowserVersion().isIE();
+        final boolean urlWithCredentials = true;
 
         try {
             // now a url with credentials
@@ -307,11 +315,12 @@ public class DefaultCredentialsProvider2Test extends WebServerTestCase {
     @Test
     @Alerts("SecRet")
     public void basicAuthenticationUserFromUrlOverwriteDefaultCredentials() throws Exception {
-        final String html = "<html><body onload='alert(\"SecRet\")'></body></html>";
+        final String html = DOCTYPE_HTML + "<html><body onload='alert(\"SecRet\")'></body></html>";
         getMockWebConnection().setDefaultResponse(html);
 
         getWebClient().getCredentialsProvider().clear();
-        ((DefaultCredentialsProvider) getWebClient().getCredentialsProvider()).addCredentials("jetty", "jetty");
+        ((DefaultCredentialsProvider) getWebClient().getCredentialsProvider())
+                                        .addCredentials("jetty", "jetty".toCharArray());
 
         // use default credentials
         loadPageWithAlerts(URL_FIRST);
@@ -319,20 +328,10 @@ public class DefaultCredentialsProvider2Test extends WebServerTestCase {
         try {
             final URL url = new URL("http://joe:jetty@localhost:" + PORT + "/");
             final HtmlPage page = loadPage(html, url);
-            if (getBrowserVersion().isIE()) {
-                assertTrue(getCollectedAlerts(page).contains("SecRet"));
-            }
-            else {
-                fail("Should not be authorized");
-            }
+            fail("Should not be authorized");
         }
         catch (final FailingHttpStatusCodeException e) {
-            if (getBrowserVersion().isIE()) {
-                fail("Should be authorized");
-            }
-            else {
-                //success
-            }
+            //success
         }
     }
 
@@ -342,11 +341,12 @@ public class DefaultCredentialsProvider2Test extends WebServerTestCase {
     @Test
     @Alerts("SecRet")
     public void basicAuthenticationUserFromUrlOverwriteWrongDefaultCredentials() throws Exception {
-        final String html = "<html><body onload='alert(\"SecRet\")'></body></html>";
+        final String html = DOCTYPE_HTML + "<html><body onload='alert(\"SecRet\")'></body></html>";
         getMockWebConnection().setDefaultResponse(html);
 
         getWebClient().getCredentialsProvider().clear();
-        ((DefaultCredentialsProvider) getWebClient().getCredentialsProvider()).addCredentials("joe", "hack");
+        ((DefaultCredentialsProvider) getWebClient().getCredentialsProvider())
+                                        .addCredentials("joe", "hack".toCharArray());
 
         // use default wrong credentials
         try {
@@ -357,7 +357,7 @@ public class DefaultCredentialsProvider2Test extends WebServerTestCase {
             //success
         }
 
-        final boolean urlWithCredentials = !getBrowserVersion().isIE();
+        final boolean urlWithCredentials = true;
 
         try {
             // now a url with correct credentials
@@ -380,7 +380,8 @@ public class DefaultCredentialsProvider2Test extends WebServerTestCase {
     @Test
     @Alerts("Hello World")
     public void basicAuthenticationXHR() throws Exception {
-        final String html = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + "var xhr = new XMLHttpRequest();\n"
             + "var handler = function() {\n"
             + "  if (xhr.readyState == 4)\n"
@@ -391,7 +392,8 @@ public class DefaultCredentialsProvider2Test extends WebServerTestCase {
             + "xhr.send('');\n"
             + "</script></head><body></body></html>";
 
-        ((DefaultCredentialsProvider) getWebClient().getCredentialsProvider()).addCredentials("jetty", "jetty");
+        ((DefaultCredentialsProvider) getWebClient().getCredentialsProvider())
+                                        .addCredentials("jetty", "jetty".toCharArray());
         getMockWebConnection().setResponse(URL_FIRST, html);
         getMockWebConnection().setResponse(URL_SECOND, "Hello World");
         loadPageWithAlerts(html, URL_FIRST, DEFAULT_WAIT_TIME);
@@ -401,11 +403,10 @@ public class DefaultCredentialsProvider2Test extends WebServerTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "HTTP ERROR 401",
-            IE = "HTTP ERROR 500")
-    @NotYetImplemented(IE)
+    @Alerts("HTTP ERROR 401")
     public void basicAuthenticationXHRWithUsername() throws Exception {
-        final String html = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + "var xhr = new XMLHttpRequest();\n"
             + "var handler = function() {\n"
             + "  if (xhr.readyState == 4) {\n"
@@ -419,7 +420,8 @@ public class DefaultCredentialsProvider2Test extends WebServerTestCase {
             + "xhr.send('');\n"
             + "</script></head><body></body></html>";
 
-        ((DefaultCredentialsProvider) getWebClient().getCredentialsProvider()).addCredentials("jetty", "jetty");
+        ((DefaultCredentialsProvider) getWebClient().getCredentialsProvider())
+                                        .addCredentials("jetty", "jetty".toCharArray());
         getMockWebConnection().setResponse(URL_FIRST, html);
         getMockWebConnection().setResponse(URL_SECOND, "Hello World");
         loadPageWithAlerts(html, URL_FIRST, DEFAULT_WAIT_TIME);
@@ -431,7 +433,8 @@ public class DefaultCredentialsProvider2Test extends WebServerTestCase {
     @Test
     @Alerts("HTTP ERROR 401")
     public void basicAuthenticationXHRWithUser() throws Exception {
-        final String html = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + "var xhr = new XMLHttpRequest();\n"
             + "var handler = function() {\n"
             + "  if (xhr.readyState == 4) {\n"
@@ -445,7 +448,8 @@ public class DefaultCredentialsProvider2Test extends WebServerTestCase {
             + "xhr.send('');\n"
             + "</script></head><body></body></html>";
 
-        ((DefaultCredentialsProvider) getWebClient().getCredentialsProvider()).addCredentials("jetty", "jetty");
+        ((DefaultCredentialsProvider) getWebClient().getCredentialsProvider())
+                                        .addCredentials("jetty", "jetty".toCharArray());
         getMockWebConnection().setResponse(URL_FIRST, html);
         getMockWebConnection().setResponse(URL_SECOND, "Hello World");
         loadPageWithAlerts(html, URL_FIRST, DEFAULT_WAIT_TIME);

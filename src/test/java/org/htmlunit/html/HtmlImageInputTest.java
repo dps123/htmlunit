@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,38 +14,29 @@
  */
 package org.htmlunit.html;
 
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.CHROME;
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.EDGE;
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.IE;
-
 import java.io.InputStream;
 import java.net.URL;
 import java.util.Collections;
-import java.util.List;
 
 import org.apache.commons.io.IOUtils;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.htmlunit.WebDriverTestCase;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.HtmlUnitNYI;
+import org.htmlunit.util.MimeType;
+import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
-
-import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
-import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
-import org.htmlunit.util.MimeType;
-import org.htmlunit.util.NameValuePair;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.interactions.Actions;
 
 /**
  * Tests for {@link HtmlImageInput}.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author Marc Guillemot
  * @author Ahmed Ashour
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class HtmlImageInputTest extends WebDriverTestCase {
 
     /**
@@ -54,12 +45,12 @@ public class HtmlImageInputTest extends WebDriverTestCase {
     @Test
     @Alerts(DEFAULT = "§§URL§§?button.x=0&button.y=0",
             CHROME = "§§URL§§?button.x=16&button.y=8",
-            EDGE = "§§URL§§?button.x=16&button.y=8",
-            IE = "§§URL§§?button.x=14&button.y=15")
-    @NotYetImplemented({CHROME, EDGE, IE})
+            EDGE = "§§URL§§?button.x=16&button.y=8")
+    @HtmlUnitNYI(CHROME = "§§URL§§?button.x=0&button.y=0",
+            EDGE = "§§URL§§?button.x=0&button.y=0")
     public void click_NoPosition() throws Exception {
-        final String html
-            = "<html><head><title>foo</title></head><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><title>foo</title></head><body>\n"
             + "<form id='form1'>\n"
             + "  <input type='image' name='aButton' value='foo'/>\n"
             + "  <input type='image' name='button' value='foo'/>\n"
@@ -67,6 +58,7 @@ public class HtmlImageInputTest extends WebDriverTestCase {
             + "</form></body></html>";
         final WebDriver webDriver = loadPage2(html);
         webDriver.findElement(By.name("button")).click();
+        sleepRealBrowser(400);
 
         expandExpectedAlertsVariables(URL_FIRST);
         assertEquals(getExpectedAlerts()[0], webDriver.getCurrentUrl());
@@ -78,17 +70,44 @@ public class HtmlImageInputTest extends WebDriverTestCase {
     @Test
     @Alerts(DEFAULT = "§§URL§§?button.x=0&button.y=0",
             CHROME = "§§URL§§?button.x=28&button.y=8",
-            EDGE = "§§URL§§?button.x=28&button.y=8",
-            IE = "§§URL§§?button.x=14&button.y=15")
-    @NotYetImplemented({CHROME, EDGE, IE})
+            EDGE = "§§URL§§?button.x=28&button.y=8")
+    @HtmlUnitNYI(CHROME = "§§URL§§?button.x=0&button.y=0",
+            EDGE = "§§URL§§?button.x=0&button.y=0")
     public void click_NoPosition_NoValue() throws Exception {
-        final String html
-            = "<html><head><title>foo</title></head><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><title>foo</title></head><body>\n"
             + "<form id='form1'>\n"
             + "  <input type='image' name='button'>\n"
             + "</form></body></html>";
         final WebDriver webDriver = loadPage2(html);
         webDriver.findElement(By.name("button")).click();
+        sleepRealBrowser(400);
+
+        expandExpectedAlertsVariables(URL_FIRST);
+        assertEquals(getExpectedAlerts()[0], webDriver.getCurrentUrl());
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts(DEFAULT = "§§URL§§?button.x=0&button.y=0",
+            CHROME = "§§URL§§?button.x=18&button.y=12",
+            EDGE = "§§URL§§?button.x=18&button.y=12")
+    @HtmlUnitNYI(CHROME = "§§URL§§?button.x=0&button.y=0",
+            EDGE = "§§URL§§?button.x=0&button.y=0")
+    public void click_Position() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head><title>foo</title></head><body>\n"
+            + "<form id='form1'>\n"
+            + "  <input type='image' name='button' value='foo'/>\n"
+            + "</form></body></html>";
+        final WebDriver webDriver = loadPage2(html);
+
+        final WebElement elem = webDriver.findElement(By.name("button"));
+        final Actions actions = new Actions(webDriver);
+        actions.moveToElement(elem).moveByOffset(1, 4).click().perform();
+        sleepRealBrowser(400);
 
         expandExpectedAlertsVariables(URL_FIRST);
         assertEquals(getExpectedAlerts()[0], webDriver.getCurrentUrl());
@@ -100,7 +119,8 @@ public class HtmlImageInputTest extends WebDriverTestCase {
     @Test
     @Alerts({"--null", "--null", "--null"})
     public void defaultValues() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -132,7 +152,8 @@ public class HtmlImageInputTest extends WebDriverTestCase {
     @Test
     @Alerts({"--null", "--null", "--null"})
     public void defaultValuesAfterClone() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -169,7 +190,8 @@ public class HtmlImageInputTest extends WebDriverTestCase {
                 "newValue-newValue-newValue", "newValue-newValue-newValue",
                 "newDefault-newDefault-newDefault", "newDefault-newDefault-newDefault"})
     public void resetByClick() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -210,7 +232,8 @@ public class HtmlImageInputTest extends WebDriverTestCase {
                 "newValue-newValue-newValue", "newValue-newValue-newValue",
                 "newDefault-newDefault-newDefault", "newDefault-newDefault-newDefault"})
     public void resetByJS() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -250,7 +273,8 @@ public class HtmlImageInputTest extends WebDriverTestCase {
                 "newValue-newValue-newValue", "attribValue-attribValue-attribValue",
                 "newDefault-newDefault-newDefault"})
     public void value() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -287,7 +311,8 @@ public class HtmlImageInputTest extends WebDriverTestCase {
             FF = "7",
             FF_ESR = "7")
     public void textLength() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -314,7 +339,8 @@ public class HtmlImageInputTest extends WebDriverTestCase {
     @Test
     @Alerts("§§URL§§?imageInput.x=0&imageInput.y=0")
     public void javascriptClick() throws Exception {
-        final String html = "<html><head><title>foo</title>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head><title>foo</title>\n"
                 + "</head><body>\n"
                 + "<form>\n"
                 + "  <input type='image' name='imageInput'>\n"
@@ -325,6 +351,8 @@ public class HtmlImageInputTest extends WebDriverTestCase {
 
         final WebDriver webDriver = loadPage2(html);
         webDriver.findElement(By.id("submit")).click();
+
+        sleepRealBrowser(200);
 
         expandExpectedAlertsVariables(URL_FIRST);
         assertEquals(getExpectedAlerts()[0], webDriver.getCurrentUrl());
@@ -337,7 +365,8 @@ public class HtmlImageInputTest extends WebDriverTestCase {
     @Test
     @Alerts("1")
     public void clickFiresOnMouseDown() throws Exception {
-        final String html = "<html>"
+        final String html = DOCTYPE_HTML
+                + "<html>"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -360,7 +389,8 @@ public class HtmlImageInputTest extends WebDriverTestCase {
     @Test
     @Alerts("1")
     public void clickFiresOnMouseUp() throws Exception {
-        final String html = "<html>"
+        final String html = DOCTYPE_HTML
+                + "<html>"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -382,8 +412,8 @@ public class HtmlImageInputTest extends WebDriverTestCase {
     @Test
     @Alerts("1")
     public void outsideForm() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -409,18 +439,17 @@ public class HtmlImageInputTest extends WebDriverTestCase {
     @HtmlUnitNYI(CHROME = {"§§URL§§abcd/img.gif", "1"},
             EDGE = {"§§URL§§abcd/img.gif", "1"},
             FF = {"§§URL§§abcd/img.gif", "1"},
-            FF_ESR = {"§§URL§§abcd/img.gif", "1"},
-            IE = {"§§URL§§abcd/img.gif", "1"})
+            FF_ESR = {"§§URL§§abcd/img.gif", "1"})
     public void resolveImage() throws Exception {
         try (InputStream is = getClass().getClassLoader().getResourceAsStream("testfiles/tiny-gif.img")) {
             final byte[] directBytes = IOUtils.toByteArray(is);
             final URL urlImage = new URL(URL_SECOND, "abcd/img.gif");
-            final List<NameValuePair> emptyList = Collections.emptyList();
-            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", MimeType.IMAGE_GIF, emptyList);
+            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok",
+                    MimeType.IMAGE_GIF, Collections.emptyList());
         }
 
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -452,18 +481,17 @@ public class HtmlImageInputTest extends WebDriverTestCase {
     @HtmlUnitNYI(CHROME = {"§§URL§§abcd/img.gif", "1"},
             EDGE = {"§§URL§§abcd/img.gif", "1"},
             FF = {"§§URL§§abcd/img.gif", "1"},
-            FF_ESR = {"§§URL§§abcd/img.gif", "1"},
-            IE = {"§§URL§§abcd/img.gif", "1"})
+            FF_ESR = {"§§URL§§abcd/img.gif", "1"})
     public void resolveImageRelative() throws Exception {
         try (InputStream is = getClass().getClassLoader().getResourceAsStream("testfiles/tiny-gif.img")) {
             final byte[] directBytes = IOUtils.toByteArray(is);
             final URL urlImage = new URL(URL_FIRST, "abcd/img.gif");
-            final List<NameValuePair> emptyList = Collections.emptyList();
-            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", MimeType.IMAGE_GIF, emptyList);
+            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok",
+                    MimeType.IMAGE_GIF, Collections.emptyList());
         }
 
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -496,12 +524,12 @@ public class HtmlImageInputTest extends WebDriverTestCase {
         try (InputStream is = getClass().getClassLoader().getResourceAsStream("testfiles/tiny-gif.img")) {
             final byte[] directBytes = IOUtils.toByteArray(is);
             final URL urlImage = new URL(URL_SECOND, "abcd/img.gif");
-            final List<NameValuePair> emptyList = Collections.emptyList();
-            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", MimeType.IMAGE_GIF, emptyList);
+            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok",
+                    MimeType.IMAGE_GIF, Collections.emptyList());
         }
 
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -534,12 +562,12 @@ public class HtmlImageInputTest extends WebDriverTestCase {
         try (InputStream is = getClass().getClassLoader().getResourceAsStream("testfiles/tiny-gif.img")) {
             final byte[] directBytes = IOUtils.toByteArray(is);
             final URL urlImage = new URL(URL_SECOND, "abcd/img.gif");
-            final List<NameValuePair> emptyList = Collections.emptyList();
-            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", MimeType.IMAGE_GIF, emptyList);
+            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok",
+                    MimeType.IMAGE_GIF, Collections.emptyList());
         }
 
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -572,12 +600,12 @@ public class HtmlImageInputTest extends WebDriverTestCase {
         try (InputStream is = getClass().getClassLoader().getResourceAsStream("testfiles/tiny-gif.img")) {
             final byte[] directBytes = IOUtils.toByteArray(is);
             final URL urlImage = new URL(URL_SECOND, "abcd/img.gif");
-            final List<NameValuePair> emptyList = Collections.emptyList();
-            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", MimeType.IMAGE_GIF, emptyList);
+            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok",
+                    MimeType.IMAGE_GIF, Collections.emptyList());
         }
 
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -601,8 +629,8 @@ public class HtmlImageInputTest extends WebDriverTestCase {
     @Test
     @Alerts({"", "§§URL§§abcd/img.gif"})
     public void setSrc() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -630,18 +658,17 @@ public class HtmlImageInputTest extends WebDriverTestCase {
     @HtmlUnitNYI(CHROME = {"", "§§URL§§abcd/img.gif", "1", "1"},
             EDGE = {"", "§§URL§§abcd/img.gif", "1", "1"},
             FF = {"", "§§URL§§abcd/img.gif", "1", "1"},
-            FF_ESR = {"", "§§URL§§abcd/img.gif", "1", "1"},
-            IE = {"", "§§URL§§abcd/img.gif", "1", "1"})
+            FF_ESR = {"", "§§URL§§abcd/img.gif", "1", "1"})
     public void resolveImageOnChange() throws Exception {
         try (InputStream is = getClass().getClassLoader().getResourceAsStream("testfiles/tiny-gif.img")) {
             final byte[] directBytes = IOUtils.toByteArray(is);
             final URL urlImage = new URL(URL_FIRST, "abcd/img.gif");
-            final List<NameValuePair> emptyList = Collections.emptyList();
-            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok", MimeType.IMAGE_GIF, emptyList);
+            getMockWebConnection().setResponse(urlImage, directBytes, 200, "ok",
+                    MimeType.IMAGE_GIF, Collections.emptyList());
         }
 
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -674,7 +701,9 @@ public class HtmlImageInputTest extends WebDriverTestCase {
         driver.findElement(By.id("myUpdate")).click();
         verifyTitle2(driver, getExpectedAlerts()[0], getExpectedAlerts()[1]);
 
-        Thread.sleep(400); // CHROME processes the image async
+        // CHROME processes the image async
+        sleepRealBrowser(400);
+
         assertEquals(expectedRequestCount2, getMockWebConnection().getRequestCount() - startCount);
     }
 
@@ -684,7 +713,8 @@ public class HtmlImageInputTest extends WebDriverTestCase {
     @Test
     @Alerts("--")
     public void minMaxStep() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -712,7 +742,8 @@ public class HtmlImageInputTest extends WebDriverTestCase {
             CHROME = {"true", "true", "true", "true", "true"},
             EDGE = {"true", "true", "true", "true", "true"})
     public void checkValidity() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,14 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
 import java.net.MalformedURLException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.htmlunit.css.CssStyleSheet;
 import org.htmlunit.html.HtmlLink;
 import org.htmlunit.html.HtmlPage;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxGetter;
@@ -34,13 +29,14 @@ import org.htmlunit.javascript.configuration.JsxSetter;
 import org.htmlunit.javascript.host.css.CSSStyleSheet;
 import org.htmlunit.javascript.host.dom.DOMTokenList;
 
-import org.htmlunit.corejs.javascript.Context;
-
 /**
  * The JavaScript object {@code HTMLLinkElement}.
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ * @author Sven Strickroth
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLLinkElement">MDN Documentation</a>
  */
 @JsxClass(domClass = HtmlLink.class)
 public class HTMLLinkElement extends HTMLElement {
@@ -54,15 +50,25 @@ public class HTMLLinkElement extends HTMLElement {
     private CSSStyleSheet sheet_;
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public HTMLLinkElement() {
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
-     * Sets the href property.
-     * @param href href attribute value
+     * {@inheritDoc}
+     */
+    @Override
+    public HtmlLink getDomNodeOrDie() {
+        return (HtmlLink) super.getDomNodeOrDie();
+    }
+
+    /**
+     * Sets the {@code href} property.
+     * @param href the {@code href} property value
      */
     @JsxSetter
     public void setHref(final String href) {
@@ -70,12 +76,12 @@ public class HTMLLinkElement extends HTMLElement {
     }
 
     /**
-     * Returns the value of the href property.
-     * @return the href property
+     * Returns the value of the {@code href} property.
+     * @return the value of the {@code href} property
      */
     @JsxGetter
     public String getHref() {
-        final HtmlLink link = (HtmlLink) getDomNodeOrDie();
+        final HtmlLink link = getDomNodeOrDie();
         final String href = link.getHrefAttribute();
         if (href.isEmpty()) {
             return href;
@@ -89,8 +95,8 @@ public class HTMLLinkElement extends HTMLElement {
     }
 
     /**
-     * Sets the rel property.
-     * @param rel rel attribute value
+     * Sets the {@code rel} property.
+     * @param rel the {@code rel} property value
      */
     @JsxSetter
     public void setRel(final String rel) {
@@ -98,17 +104,17 @@ public class HTMLLinkElement extends HTMLElement {
     }
 
     /**
-     * Returns the value of the rel property.
-     * @return the rel property
+     * Returns the value of the {@code rel} property.
+     * @return the value of the {@code rel} property
      */
     @JsxGetter
     public String getRel() {
-        return ((HtmlLink) getDomNodeOrDie()).getRelAttribute();
+        return getDomNodeOrDie().getRelAttribute();
     }
 
     /**
-     * Sets the rev property.
-     * @param rel rev attribute value
+     * Sets the {@code rev} property.
+     * @param rel the {@code rev} property value
      */
     @JsxSetter
     public void setRev(final String rel) {
@@ -116,17 +122,17 @@ public class HTMLLinkElement extends HTMLElement {
     }
 
     /**
-     * Returns the value of the rev property.
-     * @return the rev property
+     * Returns the value of the {@code rev} property.
+     * @return the value of the {@code rev} property
      */
     @JsxGetter
     public String getRev() {
-        return ((HtmlLink) getDomNodeOrDie()).getRevAttribute();
+        return getDomNodeOrDie().getRevAttribute();
     }
 
     /**
-     * Sets the type property.
-     * @param type type attribute value
+     * Sets the {@code type} property.
+     * @param type the {@code type} property value
      */
     @JsxSetter
     public void setType(final String type) {
@@ -134,12 +140,12 @@ public class HTMLLinkElement extends HTMLElement {
     }
 
     /**
-     * Returns the value of the type property.
-     * @return the type property
+     * Returns the value of the {@code type} property.
+     * @return the value of the {@code type} property
      */
     @JsxGetter
     public String getType() {
-        return ((HtmlLink) getDomNodeOrDie()).getTypeAttribute();
+        return getDomNodeOrDie().getTypeAttribute();
     }
 
     /**
@@ -150,23 +156,18 @@ public class HTMLLinkElement extends HTMLElement {
     public CSSStyleSheet getSheet() {
         if (sheet_ == null) {
             try {
-                final CssStyleSheet sheet =
-                        CssStyleSheet.loadStylesheet(getDomNodeOrDie(), (HtmlLink) getDomNodeOrDie(), null);
-                sheet_ = new CSSStyleSheet(this, this.getWindow(), sheet);
+                final CssStyleSheet sheet = getDomNodeOrDie().getSheet();
+                sheet_ = new CSSStyleSheet(this, getTopLevelScope(getParentScope()), sheet);
             }
             catch (final RuntimeException e) {
                 // Got something unexpected; we can throw an exception in this case.
-                if (LOG.isErrorEnabled()) {
-                    LOG.error("RuntimeException loading stylesheet", e);
-                }
-                throw Context.reportRuntimeError("Exception: " + e);
+                LOG.error("RuntimeException loading stylesheet", e);
+                throw JavaScriptEngine.reportRuntimeError("Exception: " + e);
             }
             catch (final Exception e) {
                 // Got something unexpected; we can throw an exception in this case.
-                if (LOG.isErrorEnabled()) {
-                    LOG.error("Exception loading stylesheet", e);
-                }
-                throw Context.reportRuntimeError("Exception: " + e);
+                LOG.error("Exception loading stylesheet", e);
+                throw JavaScriptEngine.reportRuntimeError("Exception: " + e);
             }
         }
         return sheet_;
@@ -184,9 +185,22 @@ public class HTMLLinkElement extends HTMLElement {
      * Returns the {@code relList} attribute.
      * @return the {@code relList} attribute
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public DOMTokenList getRelList() {
         return new DOMTokenList(this, "rel");
+    }
+
+    /**
+     * Sets the {@code relList} attribute.
+     * @param rel the {@code relList} attribute value
+     */
+    @JsxSetter
+    public void setRelList(final Object rel) {
+        if (JavaScriptEngine.isUndefined(rel)) {
+            setRel("undefined");
+            return;
+        }
+        setRel(JavaScriptEngine.toString(rel));
     }
 
     /**
@@ -206,5 +220,4 @@ public class HTMLLinkElement extends HTMLElement {
     public void setDisabled(final boolean disabled) {
         super.setDisabled(disabled);
     }
-
 }

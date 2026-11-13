@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,6 @@
  */
 package org.htmlunit.html.serializer;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.SimpleWebTestCase;
 import org.htmlunit.html.DomElement;
 import org.htmlunit.html.HtmlElement;
@@ -24,8 +21,8 @@ import org.htmlunit.html.HtmlNumberInput;
 import org.htmlunit.html.HtmlPage;
 import org.htmlunit.html.HtmlTable;
 import org.htmlunit.html.HtmlTableCell;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link HtmlSerializerNormalizedText}.
@@ -33,7 +30,6 @@ import org.htmlunit.junit.BrowserRunner.Alerts;
  *
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
 
     /**
@@ -97,8 +93,8 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
     }
 
     private void getNormalizedTextWhiteSpaceBreak(final String whiteSpace) throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "  <br id='tester' " + (whiteSpace == null ? "" : ("style='white-space: " + whiteSpace + "'")) + ">\n"
@@ -171,8 +167,8 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
     }
 
     private void getNormalizedTextWhiteSpaceInputHidden(final String whiteSpace) throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1'>\n"
@@ -249,8 +245,8 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
     }
 
     private void getNormalizedTextWhiteSpaceScript(final String whiteSpace) throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "  <script id='tester' " + (whiteSpace == null ? "" : ("style='white-space: " + whiteSpace + "'")) + ">"
@@ -324,8 +320,8 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
     }
 
     private void getNormalizedTextWhiteSpaceStyle(final String whiteSpace) throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "  <style id='tester' " + (whiteSpace == null ? "" : ("style='white-space: " + whiteSpace + "'")) + ">"
@@ -399,8 +395,8 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
     }
 
     private void getNormalizedTextWhiteSpaceNoframes(final String whiteSpace) throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "  <noframes id='tester' " + (whiteSpace == null ? "" : ("style='white-space: " + whiteSpace + "'")) + ">"
@@ -480,8 +476,8 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
     }
 
     private void getNormalizedTextWhiteSpaceDiv(final String whiteSpace) throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "  <div id='tester' " + (whiteSpace == null ? "" : ("style='white-space: " + whiteSpace + "'")) + ">"
@@ -573,8 +569,8 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
     }
 
     private void getNormalizedTextWhiteSpacePre(final String whiteSpace) throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "  <pre id='tester' " + (whiteSpace == null ? "" : ("style='white-space: " + whiteSpace + "'")) + ">"
@@ -595,7 +591,7 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
     @Alerts("  A B  C     D \n"
             + "EF\n"
             + "G \n"
-            + " H  <br> I")
+            + " H  <br> I  ")
     public void getNormalizedTextWhiteSpaceTextArea() throws Exception {
         getNormalizedTextWhiteSpaceTextArea(null);
     }
@@ -608,7 +604,7 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
     @Alerts("  A B  C     D \n"
             + "EF\n"
             + "G \n"
-            + " H  <br> I")
+            + " H  <br> I  ")
     public void getNormalizedTextWhiteSpaceTextAreaNormal() throws Exception {
         getNormalizedTextWhiteSpaceTextArea("normal");
     }
@@ -621,7 +617,7 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
     @Alerts("  A B  C     D \n"
             + "EF\n"
             + "G \n"
-            + " H  <br> I")
+            + " H  <br> I  ")
     public void getNormalizedTextWhiteSpaceTextAreaNowrap() throws Exception {
         getNormalizedTextWhiteSpaceTextArea("nowrap");
     }
@@ -634,7 +630,7 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
     @Alerts("  A B  C     D \n"
             + "EF\n"
             + "G \n"
-            + " H  <br> I")
+            + " H  <br> I  ")
     public void getNormalizedTextWhiteSpaceTextAreaPre() throws Exception {
         getNormalizedTextWhiteSpaceTextArea("pre");
     }
@@ -647,7 +643,7 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
     @Alerts("  A B  C     D \n"
             + "EF\n"
             + "G \n"
-            + " H  <br> I")
+            + " H  <br> I  ")
     public void getNormalizedTextWhiteSpaceTextAreaPreWrap() throws Exception {
         getNormalizedTextWhiteSpaceTextArea("pre-wrap");
     }
@@ -660,14 +656,14 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
     @Alerts("  A B  C     D \n"
             + "EF\n"
             + "G \n"
-            + " H  <br> I")
+            + " H  <br> I  ")
     public void getNormalizedTextWhiteSpaceTextAreaPreLine() throws Exception {
         getNormalizedTextWhiteSpaceTextArea("pre-line");
     }
 
     private void getNormalizedTextWhiteSpaceTextArea(final String whiteSpace) throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "  <textarea id='tester' " + (whiteSpace == null ? "" : ("style='white-space: " + whiteSpace + "'")) + ">"
@@ -741,8 +737,8 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
     }
 
     private void getNormalizedTextWhiteSpaceTitle(final String whiteSpace) throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<title id='tester' " + (whiteSpace == null ? "" : ("style='white-space: " + whiteSpace + "'")) + ">"
             + "  A B  C\t \t  D \nEF\nG \n H  <br> I  </title>\n"
@@ -761,8 +757,7 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("A B C D EF G H"
-            + " I")
+    @Alerts("A B C D EF G H \n I")
     public void getNormalizedTextWhiteSpaceSelect() throws Exception {
         getNormalizedTextWhiteSpaceSelect(null);
     }
@@ -772,8 +767,7 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("A B C D EF G H"
-            + " I")
+    @Alerts("A B C D EF G H \n I")
     public void getNormalizedTextWhiteSpaceSelectNormal() throws Exception {
         getNormalizedTextWhiteSpaceSelect("normal");
     }
@@ -783,8 +777,7 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("A B C D EF G H"
-            + " I")
+    @Alerts("A B C D EF G H \n I")
     public void getNormalizedTextWhiteSpaceSelectNowrap() throws Exception {
         getNormalizedTextWhiteSpaceSelect("nowrap");
     }
@@ -794,8 +787,7 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("A B C D EF G H"
-            + " I")
+    @Alerts("A B C D EF G H \n I")
     public void getNormalizedTextWhiteSpaceSelectPre() throws Exception {
         getNormalizedTextWhiteSpaceSelect("pre");
     }
@@ -805,8 +797,7 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("A B C D EF G H"
-            + " I")
+    @Alerts("A B C D EF G H \n I")
     public void getNormalizedTextWhiteSpaceSelectPreWrap() throws Exception {
         getNormalizedTextWhiteSpaceSelect("pre-wrap");
     }
@@ -816,15 +807,14 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("A B C D EF G H"
-            + " I")
+    @Alerts("A B C D EF G H \n I")
     public void getNormalizedTextWhiteSpaceSelectPreLine() throws Exception {
         getNormalizedTextWhiteSpaceSelect("pre-line");
     }
 
     private void getNormalizedTextWhiteSpaceSelect(final String whiteSpace) throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "  <form>\n"
@@ -902,8 +892,8 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
     }
 
     private void getNormalizedTextWhiteSpaceInputSubmit(final String whiteSpace) throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1'>\n"
@@ -926,8 +916,8 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
     @Test
     @Alerts("Submit Query")
     public void getNormalizedTextInputSubmitNoValue() throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1'>\n"
@@ -948,8 +938,8 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
     @Test
     @Alerts("")
     public void getNormalizedTextInputSubmitBlankValue() throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1'>\n"
@@ -1024,8 +1014,8 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
     }
 
     private void getNormalizedTextWhiteSpaceInputReset(final String whiteSpace) throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1'>\n"
@@ -1048,8 +1038,8 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
     @Test
     @Alerts("Reset")
     public void getNormalizedTextInputResetNoValue() throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1'>\n"
@@ -1071,8 +1061,8 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
     @Test
     @Alerts("")
     public void getNormalizedTextInputResetBlankValue() throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1'>\n"
@@ -1147,8 +1137,8 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
     }
 
     private void getNormalizedTextWhiteSpaceInputCheckbox(final String whiteSpace) throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1'>\n"
@@ -1225,8 +1215,8 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
     }
 
     private void getNormalizedTextWhiteSpaceInputRadio(final String whiteSpace) throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1'>\n"
@@ -1339,8 +1329,8 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
     }
 
     private void getNormalizedTextWhiteSpaceOrderedList(final String whiteSpace) throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "  <ol id='tester' " + (whiteSpace == null ? "" : ("style='white-space: " + whiteSpace + "'")) + ">\n"
@@ -1455,8 +1445,8 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
     }
 
     private void getNormalizedTextWhiteSpaceUnorderedList(final String whiteSpace) throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "  <ul id='tester' " + (whiteSpace == null ? "" : ("style='white-space: " + whiteSpace + "'")) + ">\n"
@@ -1692,8 +1682,7 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "Sum",
-            IE = "Sum\ndetail")
+    @Alerts("Sum")
     public void getNormalizedTextDetails() throws Exception {
         getNormalizedTextFormated("<details id='tester'>"
                 + "<summary>Sum</summary>"
@@ -1705,8 +1694,7 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "Sum\nSum2",
-            IE = "SumSum2\ndetail")
+    @Alerts("Sum\nSum2")
     public void getNormalizedTextDetailsTwoSums() throws Exception {
         getNormalizedTextFormated("<details id='tester'>"
                 + "<summary>Sum</summary>"
@@ -1728,8 +1716,8 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
     }
 
     private void getNormalizedTextFormated(final String htmlTesterSnipped) throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "  " + htmlTesterSnipped + "\n"
@@ -1747,7 +1735,8 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
     @Test
     @Alerts("01 Jan 2021")
     public void asTextInsideSpan() throws Exception {
-        final String html = "<html><body><form>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body><form>\n"
             + "<span id='test'>\n"
             + "  <select name='day' size='1'>"
                     + "<option value='1' selected>01</option>"
@@ -1766,13 +1755,12 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
     }
 
     /**
-     * Tests getTableCell(int,int).
-     * @exception Exception If the test fails
+     * @throws Exception If the test fails
      */
     @Test
-    public void getCellAt() throws Exception {
-        final String htmlContent
-            = "<html>"
+    public void tableCell() throws Exception {
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>"
             + "<body>\n"
             + "<table id='table1' summary='Test table'>\n"
             + "<tr>"
@@ -1789,7 +1777,6 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
         final HtmlTable table = page.getHtmlElementById("table1");
 
         final HtmlTableCell cell1 = table.getCellAt(0, 0);
-        // assertEquals("cell1 contents", "cell1acell1b", cell1.asNormalizedText());
         assertEquals("cell1 contents", "cell1a\ncell1b", cell1.asNormalizedText());
 
         final HtmlTableCell cell2 = table.getCellAt(0, 1);
@@ -1805,13 +1792,12 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
     }
 
     /**
-     * Tests getTableCell(int,int).
-     * @exception Exception If the test fails
+     * @throws Exception If the test fails
      */
     @Test
-    public void getCellAtWithBreaks() throws Exception {
-        final String htmlContent
-            = "<html>"
+    public void tableCellWithLineBreaks() throws Exception {
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>"
             + "<body>\n"
             + "<table id='table1' summary='Test table'>\n"
             + "<tr>"
@@ -1828,7 +1814,6 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
         final HtmlTable table = page.getHtmlElementById("table1");
 
         final HtmlTableCell cell1 = table.getCellAt(0, 0);
-        // assertEquals("cell1 contents", "cell1a\ncell1b", cell1.asNormalizedText());
         assertEquals("cell1 contents", "cell1a\n\ncell1b", cell1.asNormalizedText());
 
         final HtmlTableCell cell2 = table.getCellAt(0, 1);
@@ -1859,8 +1844,7 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
     @Test
     @Alerts(DEFAULT = "x y",
             FF = "x ab y",
-            FF_ESR = "x ab y",
-            IE = "x ab y")
+            FF_ESR = "x ab y")
     public void getNormalizedNumberInputInvalidNumber() throws Exception {
         getNormalizedTextFormatedAfterTyping("<p id='tester'>x<input id='inpt' type='number' value=''/>y</p>", "ab");
     }
@@ -1894,8 +1878,8 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
 
     private void getNormalizedTextFormatedAfterTyping(final String htmlTesterSnipped,
                         final String... typed) throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "  " + htmlTesterSnipped + "\n"
@@ -1910,5 +1894,65 @@ public class HtmlSerializerNormalizedText2Test extends SimpleWebTestCase {
 
         final HtmlElement tester = page.getHtmlElementById("tester");
         assertEquals(getExpectedAlerts()[0], tester.asNormalizedText());
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("Title\nSubtitle")
+    public void getNormalizedHgroup() throws Exception {
+        getNormalizedTextFormated("<hgroup id='tester'>"
+                + "<h1>Title</h1>"
+                + "<p>Subtitle</p>"
+                + "</hgroup>");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("Title")
+    public void getNormalizedHgroupHeadingOnly() throws Exception {
+        getNormalizedTextFormated("<hgroup id='tester'>"
+                + "<h1>Title</h1>"
+                + "</hgroup>");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("Title\nSubtitle\nTagline")
+    public void getNormalizedHgroupMultipleChildren() throws Exception {
+        getNormalizedTextFormated("<hgroup id='tester'>"
+                + "<h1>Title</h1>"
+                + "<p>Subtitle</p>"
+                + "<p>Tagline</p>"
+                + "</hgroup>");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("")
+    public void getNormalizedHgroupEmpty() throws Exception {
+        getNormalizedTextFormated("<hgroup id='tester'></hgroup>");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("Outer\nTitle\nSubtitle")
+    public void getNormalizedHgroupNested() throws Exception {
+        getNormalizedTextFormated("<div id='tester'>"
+                + "<p>Outer</p>"
+                + "<hgroup>"
+                + "<h2>Title</h2>"
+                + "<p>Subtitle</p>"
+                + "</hgroup>"
+                + "</div>");
     }
 }

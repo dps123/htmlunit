@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +14,8 @@
  */
 package org.htmlunit.javascript.host.css;
 
-import static org.htmlunit.BrowserVersionFeatures.JS_MEDIA_LIST_ALL;
-import static org.htmlunit.BrowserVersionFeatures.JS_MEDIA_LIST_EMPTY_STRING;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
-import org.htmlunit.cssparser.parser.media.MediaQuery;
-
-import org.htmlunit.BrowserVersion;
 import org.htmlunit.css.CssMediaList;
+import org.htmlunit.cssparser.parser.media.MediaQuery;
 import org.htmlunit.javascript.HtmlUnitScriptable;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
@@ -38,7 +29,7 @@ import org.htmlunit.javascript.configuration.JsxGetter;
  * @author Ronald Brill
  * @author Ahmed Ashour
  * @author Frank Danek
- * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/MediaList">MDN doc</a>
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/MediaList">MDN Documentation</a>
  */
 @JsxClass
 public class MediaList extends HtmlUnitScriptable {
@@ -48,9 +39,17 @@ public class MediaList extends HtmlUnitScriptable {
     /**
      * Creates a new instance.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
     public MediaList() {
+        super();
         cssMediaList_ = null;
+    }
+
+    /**
+     * JavaScript constructor.
+     */
+    @JsxConstructor
+    public void jsConstructor() {
+        // nothing to do
     }
 
     /**
@@ -59,8 +58,9 @@ public class MediaList extends HtmlUnitScriptable {
      * @param cssMediaList the css media list that this host object exposes
      */
     public MediaList(final CSSStyleSheet parent, final CssMediaList cssMediaList) {
+        super();
         cssMediaList_ = cssMediaList;
-        setParentScope(parent);
+        setParentScope(parent.getParentScope());
         setPrototype(getPrototype(getClass()));
     }
 
@@ -95,7 +95,7 @@ public class MediaList extends HtmlUnitScriptable {
     /**
      * The parsable textual representation of the media list.
      * This is a comma-separated list of media.
-     * @return the parsable textual representation.
+     * @return the parsable textual representation
      */
     @JsxGetter
     public String getMediaText() {
@@ -110,13 +110,7 @@ public class MediaList extends HtmlUnitScriptable {
     public Object getDefaultValue(final Class<?> hint) {
         if (getPrototype() != null && cssMediaList_ != null) {
             if (cssMediaList_.getLength() == 0) {
-                final BrowserVersion browserVersion = getBrowserVersion();
-                if (browserVersion.hasFeature(JS_MEDIA_LIST_EMPTY_STRING)) {
-                    return "";
-                }
-                if (browserVersion.hasFeature(JS_MEDIA_LIST_ALL)) {
-                    return "all";
-                }
+                return "";
             }
             return cssMediaList_.getMediaText();
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,12 @@
  */
 package org.htmlunit.html;
 
-import java.util.Arrays;
-
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.htmlunit.WebDriverTestCase;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
-
-import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
 
 /**
  * Tests for {@link HtmlCheckBoxInput}.
@@ -35,7 +29,6 @@ import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
  * @author Marc Guillemot
  * @author Frank Danek
  */
-@RunWith(BrowserRunner.class)
 public class HtmlCheckBoxInput2Test extends WebDriverTestCase {
 
     /**
@@ -331,8 +324,7 @@ public class HtmlCheckBoxInput2Test extends WebDriverTestCase {
             final boolean fromHtml,
             final boolean useFragment,
             boolean cloneNode) throws Exception {
-        String html =
-            HtmlPageTest.STANDARDS_MODE_PREFIX_
+        String html = DOCTYPE_HTML
             + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
@@ -424,8 +416,7 @@ public class HtmlCheckBoxInput2Test extends WebDriverTestCase {
     @Test
     @Alerts({"true-true", "true-true", "false-false", "false-false", "true-true", "false-false"})
     public void defaultChecked() throws Exception {
-        final String html =
-            HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html>\n"
             + "<head>\n"
             + "  <script>\n"
@@ -460,61 +451,53 @@ public class HtmlCheckBoxInput2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("foo,change,")
+    @Alerts({"foo", "change"})
     public void onchangeFires() throws Exception {
-        final String html =
-            HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><title>foo</title>\n"
             + "<script>\n"
-            + "  function debug(string) {\n"
-            + "    document.getElementById('myTextarea').value += string + ',';\n"
-            + "  }\n"
+            + LOG_TEXTAREA_FUNCTION
             + "</script>\n"
             + "</head><body>\n"
             + "<form>\n"
-            + "<input type='checkbox' id='chkbox' onchange='debug(\"foo\");debug(event.type);'>\n"
+            + "  <input type='checkbox' id='chkbox' onchange='log(\"foo\");log(event.type);'>\n"
             + "</form>\n"
-            + "<textarea id='myTextarea'></textarea>\n"
+            + LOG_TEXTAREA
             + "</body></html>";
 
         final WebDriver driver = loadPage2(html);
         driver.findElement(By.id("chkbox")).click();
 
-        assertEquals(Arrays.asList(getExpectedAlerts()).toString(),
-                '[' + driver.findElement(By.id("myTextarea")).getAttribute("value") + ']');
+        verifyTextArea2(driver, getExpectedAlerts());
     }
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("foo,change,boo,blur,")
+    @Alerts({"onchange change", "onblur blur"})
     public void onchangeFires2() throws Exception {
-        final String html =
-            HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><title>foo</title>\n"
             + "<script>\n"
-            + "  function debug(string) {\n"
-            + "    document.getElementById('myTextarea').value += string + ',';\n"
-            + "  }\n"
+            + LOG_TEXTAREA_FUNCTION
             + "</script>\n"
             + "</head><body>\n"
             + "<form>\n"
             + "<input type='checkbox' id='chkbox'"
-            + " onChange='debug(\"foo\");debug(event.type);'"
-            + " onBlur='debug(\"boo\");debug(event.type);'"
+            + "  onChange='log(\"onchange \" + event.type);'"
+            + "  onBlur='log(\"onblur \" + event.type);'"
             + ">\n"
             + "<input type='checkbox' id='chkbox2'>\n"
             + "</form>\n"
-            + "<textarea id='myTextarea'></textarea>\n"
+            + LOG_TEXTAREA
             + "</body></html>";
 
         final WebDriver driver = loadPage2(html);
         driver.findElement(By.id("chkbox")).click();
         driver.findElement(By.id("chkbox2")).click();
 
-        assertEquals(Arrays.asList(getExpectedAlerts()).toString(),
-                '[' + driver.findElement(By.id("myTextarea")).getAttribute("value") + ']');
+        verifyTextArea2(driver, getExpectedAlerts());
     }
 
     /**
@@ -523,15 +506,14 @@ public class HtmlCheckBoxInput2Test extends WebDriverTestCase {
     @Test
     @Alerts("Second")
     public void setChecked() throws Exception {
-        final String firstHtml =
-            HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String firstHtml = DOCTYPE_HTML
             + "<html><head><title>First</title></head><body>\n"
             + "<form>\n"
             + "<input id='myCheckbox' type='checkbox' onchange=\"window.location.href='" + URL_SECOND + "'\">\n"
             + "</form>\n"
             + "</body></html>";
-        final String secondHtml
-            = "<html><head><title>Second</title></head><body></body></html>";
+        final String secondHtml = DOCTYPE_HTML
+            + "<html><head><title>Second</title></head><body></body></html>";
 
         getMockWebConnection().setDefaultResponse(secondHtml);
         final WebDriver driver = loadPage2(firstHtml);
@@ -546,16 +528,15 @@ public class HtmlCheckBoxInput2Test extends WebDriverTestCase {
     @Test
     @Alerts("Second")
     public void setChecked2() throws Exception {
-        final String firstHtml =
-            HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String firstHtml = DOCTYPE_HTML
             + "<html><head><title>First</title></head><body>\n"
             + "<form>\n"
             + "<input id='myCheckbox' type='checkbox' onchange=\"window.location.href='" + URL_SECOND + "'\">\n"
             + "<input id='myInput' type='text'>\n"
             + "</form>\n"
             + "</body></html>";
-        final String secondHtml
-            = "<html><head><title>Second</title></head><body></body></html>";
+        final String secondHtml = DOCTYPE_HTML
+            + "<html><head><title>Second</title></head><body></body></html>";
 
         getMockWebConnection().setDefaultResponse(secondHtml);
         final WebDriver driver = loadPage2(firstHtml);
@@ -569,8 +550,7 @@ public class HtmlCheckBoxInput2Test extends WebDriverTestCase {
      */
     @Test
     public void preventDefault() throws Exception {
-        final String html =
-            HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><script>\n"
             + "  function handler(e) {\n"
             + "    if (e)\n"
@@ -599,8 +579,7 @@ public class HtmlCheckBoxInput2Test extends WebDriverTestCase {
      */
     @Test
     public void defaultState() throws Exception {
-        final String html =
-            HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head><title>foo</title></head><body>\n"
             + "<form id='form1'>\n"
             + "  <input type='checkbox' name='checkbox' id='checkbox'>Check me</input>\n"
@@ -616,8 +595,7 @@ public class HtmlCheckBoxInput2Test extends WebDriverTestCase {
     @Test
     @Alerts({"on-", "on-", "on-", "on-"})
     public void defaultValues() throws Exception {
-        final String html =
-            HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -654,8 +632,7 @@ public class HtmlCheckBoxInput2Test extends WebDriverTestCase {
     @Test
     @Alerts({"on-", "on-", "on-", "on-"})
     public void defaultValuesAfterClone() throws Exception {
-        final String html =
-            HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -697,8 +674,7 @@ public class HtmlCheckBoxInput2Test extends WebDriverTestCase {
     @Alerts({"initial-initial", "initial-initial", "newValue-newValue", "newValue-newValue",
                 "newDefault-newDefault", "newDefault-newDefault"})
     public void resetByClick() throws Exception {
-        final String html =
-            HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -739,8 +715,7 @@ public class HtmlCheckBoxInput2Test extends WebDriverTestCase {
     @Alerts({"initial-initial", "initial-initial", "newValue-newValue", "newValue-newValue",
                 "newDefault-newDefault", "newDefault-newDefault"})
     public void resetByJS() throws Exception {
-        final String html =
-            HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -779,8 +754,7 @@ public class HtmlCheckBoxInput2Test extends WebDriverTestCase {
     @Test
     @Alerts({"initial-initial", "default-default", "newValue-newValue", "newDefault-newDefault"})
     public void defaultValue() throws Exception {
-        final String html =
-            HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -814,8 +788,7 @@ public class HtmlCheckBoxInput2Test extends WebDriverTestCase {
     @Test
     @Alerts("changed")
     public void clickShouldTriggerOnchange() throws Exception {
-        final String html =
-                HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
                 + "<html><head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -841,8 +814,7 @@ public class HtmlCheckBoxInput2Test extends WebDriverTestCase {
     @Test
     @Alerts({"true", "null", "false", "", "false", "yes"})
     public void checkedAttribute() throws Exception {
-        final String html =
-            HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -885,8 +857,7 @@ public class HtmlCheckBoxInput2Test extends WebDriverTestCase {
     @Alerts({"false", "null", "true", "null", "false", "null", "true", "", "false", "", "true", "",
                 "true", "yes", "false", "yes", "true", "yes"})
     public void checkedAttributeJS() throws Exception {
-        final String html =
-            HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -946,8 +917,7 @@ public class HtmlCheckBoxInput2Test extends WebDriverTestCase {
     @Alerts({"false", "null", "false", "null", "true", "", "true", "",
                 "true", "yes", "true", "yes"})
     public void defaultCheckedAttribute() throws Exception {
-        final String html =
-            HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
             + "<html><head>\n"
             + "<script>\n"
             + "  function test() {\n"
@@ -994,7 +964,8 @@ public class HtmlCheckBoxInput2Test extends WebDriverTestCase {
     @Test
     @Alerts("--")
     public void minMaxStep() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -1018,12 +989,10 @@ public class HtmlCheckBoxInput2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"true", "false", "true", "false", "true"},
-            IE = {"true", "false", "true", "true", "true"})
-    @HtmlUnitNYI(IE = {"true", "false", "true", "false", "true"})
+    @Alerts({"true", "false", "true", "false", "true"})
     public void willValidate() throws Exception {
-        final String html =
-                "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "  <script>\n"
                 + LOG_TITLE_FUNCTION
                 + "    function test() {\n"
@@ -1052,12 +1021,9 @@ public class HtmlCheckBoxInput2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"true",
-                       "false-false-false-false-false-false-false-false-false-true-false",
-                       "true"},
-            IE = {"true",
-                  "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                  "true"})
+    @Alerts({"true",
+             "false-false-false-false-false-false-false-false-false-true-false",
+             "true"})
     public void validationEmpty() throws Exception {
         validation("<input type='checkbox' id='e1'>\n", "");
     }
@@ -1066,12 +1032,9 @@ public class HtmlCheckBoxInput2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"false",
-                       "false-true-false-false-false-false-false-false-false-false-false",
-                       "true"},
-            IE = {"false",
-                  "undefined-true-false-false-false-false-false-undefined-false-false-false",
-                  "true"})
+    @Alerts({"false",
+             "false-true-false-false-false-false-false-false-false-false-false",
+             "true"})
     public void validationCustomValidity() throws Exception {
         validation("<input type='checkbox' id='e1'>\n", "elem.setCustomValidity('Invalid');");
     }
@@ -1080,12 +1043,9 @@ public class HtmlCheckBoxInput2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"false",
-                       "false-true-false-false-false-false-false-false-false-false-false",
-                       "true"},
-            IE = {"false",
-                  "undefined-true-false-false-false-false-false-undefined-false-false-false",
-                  "true"})
+    @Alerts({"false",
+             "false-true-false-false-false-false-false-false-false-false-false",
+             "true"})
     public void validationBlankCustomValidity() throws Exception {
         validation("<input type='checkbox' id='e1'>\n", "elem.setCustomValidity(' ');\n");
     }
@@ -1094,12 +1054,9 @@ public class HtmlCheckBoxInput2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"true",
-                       "false-false-false-false-false-false-false-false-false-true-false",
-                       "true"},
-            IE = {"true",
-                  "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                  "true"})
+    @Alerts({"true",
+             "false-false-false-false-false-false-false-false-false-true-false",
+             "true"})
     public void validationResetCustomValidity() throws Exception {
         validation("<input type='checkbox' id='e1'>\n",
                 "elem.setCustomValidity('Invalid');elem.setCustomValidity('');");
@@ -1109,12 +1066,9 @@ public class HtmlCheckBoxInput2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"false",
-                       "false-false-false-false-false-false-false-false-false-false-true",
-                       "true"},
-            IE = {"false",
-                  "undefined-false-false-false-false-false-false-undefined-false-false-true",
-                  "true"})
+    @Alerts({"false",
+             "false-false-false-false-false-false-false-false-false-false-true",
+             "true"})
     public void validationRequired() throws Exception {
         validation("<input type='checkbox' id='e1' required>\n", "");
     }
@@ -1123,12 +1077,9 @@ public class HtmlCheckBoxInput2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"true",
-                       "false-false-false-false-false-false-false-false-false-true-false",
-                       "true"},
-            IE = {"true",
-                  "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                  "true"})
+    @Alerts({"true",
+             "false-false-false-false-false-false-false-false-false-true-false",
+             "true"})
     public void validationRequiredChecked() throws Exception {
         validation("<input type='checkbox' id='e1' required checked>\n", "");
     }
@@ -1137,12 +1088,9 @@ public class HtmlCheckBoxInput2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"true",
-                       "false-false-false-false-false-false-false-false-false-true-false",
-                       "true"},
-            IE = {"true",
-                  "undefined-false-false-false-false-false-false-undefined-false-true-false",
-                  "true"})
+    @Alerts({"true",
+             "false-false-false-false-false-false-false-false-false-true-false",
+             "true"})
     public void validationRequiredClicked() throws Exception {
         validation("<input type='checkbox' id='e1' required>\n", "elem.click();");
     }
@@ -1151,19 +1099,16 @@ public class HtmlCheckBoxInput2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"false",
-                       "false-false-false-false-false-false-false-false-false-false-true",
-                       "true"},
-            IE = {"false",
-                  "undefined-false-false-false-false-false-false-undefined-false-false-true",
-                  "true"})
+    @Alerts({"false",
+             "false-false-false-false-false-false-false-false-false-false-true",
+             "true"})
     public void validationRequiredClickUncheck() throws Exception {
         validation("<input type='checkbox' id='e1' required checked>\n", "elem.click();");
     }
 
     private void validation(final String htmlPart, final String jsPart) throws Exception {
-        final String html =
-                "<html><head>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head>\n"
                 + "  <script>\n"
                 + LOG_TITLE_FUNCTION
                 + "    function logValidityState(s) {\n"

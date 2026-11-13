@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
  */
 package org.htmlunit.html;
 
-import static org.htmlunit.BrowserVersionFeatures.HTMLINPUT_TYPE_DATETIME_SUPPORTED;
-
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
@@ -25,9 +23,9 @@ import java.time.temporal.TemporalAccessor;
 import java.util.Locale;
 import java.util.Map;
 
-import org.apache.commons.lang3.StringUtils;
-
+import org.htmlunit.BrowserVersion;
 import org.htmlunit.SgmlPage;
+import org.htmlunit.util.StringUtils;
 
 /**
  * Wrapper for the HTML element "input" where type is "time".
@@ -73,24 +71,20 @@ public class HtmlTimeInput extends HtmlSelectableTextInput implements LabelableE
      */
     @Override
     public String getValue() {
-        if (hasFeature(HTMLINPUT_TYPE_DATETIME_SUPPORTED)) {
-            String raw = getRawValue();
-            if (StringUtils.isBlank(raw)) {
-                return "";
-            }
-
-            raw = raw.trim();
-            try {
-                final TemporalAccessor time = INPUT_FORMATTER_.parse(raw);
-                return OUTPUT_FORMATTER_.format(time);
-            }
-            catch (final DateTimeParseException e) {
-                // ignore
-            }
+        String raw = getRawValue();
+        if (StringUtils.isBlank(raw)) {
             return "";
         }
 
-        return getRawValue();
+        raw = raw.trim();
+        try {
+            final TemporalAccessor time = INPUT_FORMATTER_.parse(raw);
+            return OUTPUT_FORMATTER_.format(time);
+        }
+        catch (final DateTimeParseException ignored) {
+            // ignore
+        }
+        return "";
     }
 
     /**
@@ -109,14 +103,13 @@ public class HtmlTimeInput extends HtmlSelectableTextInput implements LabelableE
      * @return if the input element has a valid min value
      */
     private boolean isMinValid() {
-        if (hasFeature(HTMLINPUT_TYPE_DATETIME_SUPPORTED)
-                && !getMin().isEmpty()) {
+        if (!getMin().isEmpty()) {
             try {
                 final LocalTime timeValue = LocalTime.parse(getRawValue(), INPUT_FORMATTER_);
                 final LocalTime minTime = LocalTime.parse(getMin(), INPUT_FORMATTER_);
                 return minTime.equals(timeValue) || minTime.isBefore(timeValue);
             }
-            catch (final DateTimeParseException e) {
+            catch (final DateTimeParseException ignored) {
                 // ignore
             }
         }
@@ -131,17 +124,21 @@ public class HtmlTimeInput extends HtmlSelectableTextInput implements LabelableE
      * @return if the input element has a valid max value
      */
     private boolean isMaxValid() {
-        if (hasFeature(HTMLINPUT_TYPE_DATETIME_SUPPORTED)
-                && !getMax().isEmpty()) {
+        if (!getMax().isEmpty()) {
             try {
                 final LocalTime timeValue = LocalTime.parse(getRawValue(), INPUT_FORMATTER_);
                 final LocalTime maxTime = LocalTime.parse(getMax(), INPUT_FORMATTER_);
                 return maxTime.equals(timeValue) || maxTime.isAfter(timeValue);
             }
-            catch (final DateTimeParseException e) {
+            catch (final DateTimeParseException ignored) {
                 // ignore
             }
         }
         return true;
+    }
+
+    @Override
+    protected void adjustValueAfterTypeChange(final HtmlInput oldInput, final BrowserVersion browserVersion) {
+        setRawValue("");
     }
 }

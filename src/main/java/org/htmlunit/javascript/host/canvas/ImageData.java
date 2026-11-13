@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,29 +14,29 @@
  */
 package org.htmlunit.javascript.host.canvas;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
-import org.htmlunit.javascript.HtmlUnitScriptable;
-import org.htmlunit.javascript.configuration.JsxClass;
-import org.htmlunit.javascript.configuration.JsxConstructor;
-import org.htmlunit.javascript.configuration.JsxGetter;
-import org.htmlunit.platform.canvas.rendering.RenderingBackend;
+import java.nio.ByteBuffer;
 
 import org.htmlunit.corejs.javascript.Context;
 import org.htmlunit.corejs.javascript.Function;
-import org.htmlunit.corejs.javascript.ScriptRuntime;
 import org.htmlunit.corejs.javascript.ScriptableObject;
+import org.htmlunit.corejs.javascript.VarScope;
 import org.htmlunit.corejs.javascript.typedarrays.NativeArrayBuffer;
 import org.htmlunit.corejs.javascript.typedarrays.NativeUint8ClampedArray;
+import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
+import org.htmlunit.javascript.configuration.JsxClass;
+import org.htmlunit.javascript.configuration.JsxConstructor;
+import org.htmlunit.javascript.configuration.JsxGetter;
+import org.htmlunit.javascript.host.dom.DOMException;
+import org.htmlunit.platform.canvas.rendering.RenderingBackend;
 
 /**
  * A JavaScript object for {@code ImageData}.
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/ImageData">MDN Documentation</a>
  */
 @JsxClass
 public class ImageData extends HtmlUnitScriptable {
@@ -56,66 +56,82 @@ public class ImageData extends HtmlUnitScriptable {
     /**
      * JavaScript constructor.
      * @param cx the current context
-     * @param args the arguments to the WebSocket constructor
+     * @param scope the scope
+     * @param args the arguments to the ImageData constructor
      * @param ctorObj the function object
-     * @param inNewExpr Is new or not
-     * @return the java object to allow JavaScript to access
+     * @param inNewExpr {@code true} if invoked with the {@code new} operator
+     * @return the Java object that JavaScript can access
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public static ImageData jsConstructor(
-            final Context cx, final Object[] args, final Function ctorObj,
-            final boolean inNewExpr) {
-
+    @JsxConstructor
+    public static ImageData jsConstructor(final Context cx, final VarScope scope,
+            final Object[] args, final Function ctorObj, final boolean inNewExpr) {
         if (args.length < 2) {
-            throw Context.reportRuntimeError("ImageData ctor - too less arguments");
+            throw JavaScriptEngine.typeError("ImageData ctor - too less arguments");
         }
 
         NativeUint8ClampedArray data = null;
         final int width;
         final int height;
-        if (args[0] instanceof NativeUint8ClampedArray) {
-            data = (NativeUint8ClampedArray) args[0];
+        if (args[0] instanceof NativeUint8ClampedArray array) {
+            data = array;
             if (data.getArrayLength() % 4 != 0) {
-                throw Context.reportRuntimeError("ImageData ctor - data length mod 4 not zero");
+                throw JavaScriptEngine.asJavaScriptException(
+                        (HtmlUnitScriptable) getTopLevelScope(scope).getGlobalThis(),
+                        "ImageData ctor - data length mod 4 not zero",
+                        DOMException.INVALID_STATE_ERR);
             }
 
-            width = (int) ScriptRuntime.toInteger(args[1]);
+            width = (int) JavaScriptEngine.toInteger(args[1]);
             if (args.length < 3) {
                 height = data.getArrayLength() / 4 / width;
 
                 if (data.getArrayLength() != 4 * width * height) {
-                    throw Context.reportRuntimeError("ImageData ctor - width not correct");
+                    throw JavaScriptEngine.asJavaScriptException(
+                            (HtmlUnitScriptable) getTopLevelScope(scope).getGlobalThis(),
+                            "ImageData ctor - width not correct",
+                            DOMException.INDEX_SIZE_ERR);
                 }
             }
             else {
-                height = (int) ScriptRuntime.toInteger(args[2]);
+                height = (int) JavaScriptEngine.toInteger(args[2]);
             }
 
             if (data.getArrayLength() != 4 * width * height) {
-                throw Context.reportRuntimeError("ImageData ctor - width/height not correct");
+                throw JavaScriptEngine.asJavaScriptException(
+                        (HtmlUnitScriptable) getTopLevelScope(scope).getGlobalThis(),
+                        "ImageData ctor - width/height not correct",
+                        DOMException.INDEX_SIZE_ERR);
             }
         }
         else {
-            width = (int) ScriptRuntime.toInteger(args[0]);
-            height = (int) ScriptRuntime.toInteger(args[1]);
+            width = (int) JavaScriptEngine.toInteger(args[0]);
+            height = (int) JavaScriptEngine.toInteger(args[1]);
         }
 
         if (width < 0) {
-            throw Context.reportRuntimeError("ImageData ctor - width negative");
+            throw JavaScriptEngine.asJavaScriptException(
+                    (HtmlUnitScriptable) getTopLevelScope(scope).getGlobalThis(),
+                    "ImageData ctor - width negative",
+                    DOMException.INDEX_SIZE_ERR);
         }
         if (height < 0) {
-            throw Context.reportRuntimeError("ImageData ctor - height negative");
+            throw JavaScriptEngine.asJavaScriptException(
+                    (HtmlUnitScriptable) getTopLevelScope(scope).getGlobalThis(),
+                    "ImageData ctor - height negative",
+                    DOMException.INDEX_SIZE_ERR);
         }
 
         final ImageData result = new ImageData(null, 0, 0, width, height);
         if (data != null) {
-            final byte[] bytes = data.getBuffer().getBuffer();
-            System.arraycopy(bytes, 0, result.bytes_, 0, Math.min(bytes.length, result.bytes_.length));
+            final ByteBuffer buffer = data.getBuffer().getByteBuffer();
+            final int bytesToCopy = Math.min(buffer.remaining(), result.bytes_.length);
+            buffer.get(result.bytes_, 0, bytesToCopy);
         }
         return result;
     }
 
     ImageData(final RenderingBackend context, final int x, final int y, final int width, final int height) {
+        super();
         if (context == null) {
             bytes_ = new byte[width * height * 4];
         }
@@ -154,11 +170,11 @@ public class ImageData extends HtmlUnitScriptable {
     public NativeUint8ClampedArray getData() {
         if (data_ == null) {
             final NativeArrayBuffer arrayBuffer = new NativeArrayBuffer(bytes_.length);
-            System.arraycopy(bytes_, 0, arrayBuffer.getBuffer(), 0, bytes_.length);
+            arrayBuffer.getByteBuffer().put(bytes_);
 
             data_ = new NativeUint8ClampedArray(arrayBuffer, 0, bytes_.length);
             data_.setParentScope(getParentScope());
-            data_.setPrototype(ScriptableObject.getClassPrototype(getWindow(this), data_.getClassName()));
+            data_.setPrototype(ScriptableObject.getClassPrototype(getParentScope(), data_.getClassName()));
         }
 
         return data_;

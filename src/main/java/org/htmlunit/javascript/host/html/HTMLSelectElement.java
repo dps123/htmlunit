@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,36 +15,37 @@
 package org.htmlunit.javascript.host.html;
 
 import static org.htmlunit.BrowserVersionFeatures.JS_SELECT_REMOVE_IGNORE_IF_INDEX_OUTSIDE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
 
 import java.util.List;
 
+import org.htmlunit.corejs.javascript.Context;
+import org.htmlunit.corejs.javascript.Function;
+import org.htmlunit.corejs.javascript.Scriptable;
+import org.htmlunit.corejs.javascript.VarScope;
 import org.htmlunit.html.HtmlOption;
 import org.htmlunit.html.HtmlSelect;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.configuration.JsxSetter;
+import org.htmlunit.javascript.configuration.JsxSymbol;
+import org.htmlunit.javascript.host.dom.Node;
 import org.htmlunit.javascript.host.dom.NodeList;
-
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.Scriptable;
-import org.htmlunit.corejs.javascript.Undefined;
 
 /**
  * The JavaScript object for {@link HtmlSelect}.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author David K. Taylor
  * @author Marc Guillemot
  * @author Chris Erskine
  * @author Ahmed Ashour
  * @author Ronald Brill
  * @author Carsten Steul
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLSelectElement">MDN Documentation</a>
  */
 @JsxClass(domClass = HtmlSelect.class)
 public class HTMLSelectElement extends HTMLElement {
@@ -55,21 +56,22 @@ public class HTMLSelectElement extends HTMLElement {
     private NodeList labels_;
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public HTMLSelectElement() {
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
      * Initialize the object.
-     *
      */
     public void initialize() {
         final HtmlSelect htmlSelect = getDomNodeOrDie();
         htmlSelect.setScriptableObject(this);
         if (optionsArray_ == null) {
-            optionsArray_ = new HTMLOptionsCollection(this);
+            optionsArray_ = new HTMLOptionsCollection(getParentScope());
             optionsArray_.initialize(htmlSelect);
         }
     }
@@ -84,26 +86,44 @@ public class HTMLSelectElement extends HTMLElement {
 
     /**
      * Removes option at the specified index.
-     * @param index the index of the item to remove
+     * @param context the context
+     * @param scope the scope
+     * @param thisObj this object
+     * @param args the arguments
+     * @param function the function
      */
     @JsxFunction
-    public void remove(final int index) {
-        if (index < 0 && getBrowserVersion().hasFeature(JS_SELECT_REMOVE_IGNORE_IF_INDEX_OUTSIDE)) {
-            return;
+    public static void remove(final Context context, final VarScope scope,
+            final Scriptable thisObj, final Object[] args, final Function function) {
+        if (!(thisObj instanceof HTMLSelectElement htmlSelect)) {
+            throw JavaScriptEngine.reportRuntimeError(
+                    "HTMLSelectElement.replace() failed - this is not a HTMLSelectElement");
         }
-        final HTMLOptionsCollection options = getOptions();
-        if (index >= options.getLength() && getBrowserVersion().hasFeature(JS_SELECT_REMOVE_IGNORE_IF_INDEX_OUTSIDE)) {
+
+        if (args.length == 0) {
+            htmlSelect.remove();
             return;
         }
 
-        getOptions().remove(index);
+        final int index = JavaScriptEngine.toInt32(args[0]);
+        if (index < 0
+                && htmlSelect.getBrowserVersion().hasFeature(JS_SELECT_REMOVE_IGNORE_IF_INDEX_OUTSIDE)) {
+            return;
+        }
+
+        final HTMLOptionsCollection options = htmlSelect.getOptions();
+        if (index >= options.getLength()
+                && htmlSelect.getBrowserVersion().hasFeature(JS_SELECT_REMOVE_IGNORE_IF_INDEX_OUTSIDE)) {
+            return;
+        }
+
+        htmlSelect.getOptions().remove(index);
     }
 
     /**
      * Adds a new item to the list (optionally) before the specified item.
      * @param newOptionObject the DomNode to insert
-     * @param beforeOptionObject for Firefox: the DomNode to insert the previous element before (null if at end),
-     * for Internet Explorer: the index where the element should be placed (optional).
+     * @param beforeOptionObject the DomNode to insert the previous element before (null if at end).
      */
     @JsxFunction
     public void add(final HTMLOptionElement newOptionObject, final Object beforeOptionObject) {
@@ -114,20 +134,20 @@ public class HTMLSelectElement extends HTMLElement {
      * {@inheritDoc}
      */
     @Override
-    public Object appendChild(final Object childObject) {
-        final Object object = super.appendChild(childObject);
+    public Node appendChild(final Object childObject) {
+        final Node node = super.appendChild(childObject);
         getDomNodeOrDie().ensureSelectedIndex();
-        return object;
+        return node;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public Object insertBeforeImpl(final Object[] args) {
-        final Object object = super.insertBeforeImpl(args);
+    public Node insertBeforeImpl(final Object[] args) {
+        final Node node = super.insertBeforeImpl(args);
         getDomNodeOrDie().ensureSelectedIndex();
-        return object;
+        return node;
     }
 
     /**
@@ -138,7 +158,7 @@ public class HTMLSelectElement extends HTMLElement {
     @JsxFunction
     public Object item(final int index) {
         final Object option = getOptions().item(index);
-        if (Undefined.isUndefined(option)) {
+        if (JavaScriptEngine.isUndefined(option)) {
             return null;
         }
         return option;
@@ -254,7 +274,7 @@ public class HTMLSelectElement extends HTMLElement {
     @Override
     @JsxSetter
     public void setValue(final Object newValue) {
-        final String val = Context.toString(newValue);
+        final String val = JavaScriptEngine.toString(newValue);
         getDomNodeOrDie().setSelectedAttribute(val, true, false);
     }
 
@@ -269,7 +289,7 @@ public class HTMLSelectElement extends HTMLElement {
 
     /**
      * Sets the {@code size} attribute.
-     * @param size the {@code size} attribute
+     * @param size the {@code size} attribute value
      */
     @JsxSetter
     public void setSize(final String size) {
@@ -303,7 +323,7 @@ public class HTMLSelectElement extends HTMLElement {
      * Returns the labels associated with the element.
      * @return the labels associated with the element
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public NodeList getLabels() {
         if (labels_ == null) {
             labels_ = new LabelsNodeList(getDomNodeOrDie());
@@ -351,7 +371,7 @@ public class HTMLSelectElement extends HTMLElement {
      * {@inheritDoc} Overridden to modify browser configurations.
      */
     @Override
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public boolean isDisabled() {
         return super.isDisabled();
     }
@@ -360,7 +380,7 @@ public class HTMLSelectElement extends HTMLElement {
      * {@inheritDoc} Overridden to modify browser configurations.
      */
     @Override
-    @JsxSetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxSetter
     public void setDisabled(final boolean disabled) {
         super.setDisabled(disabled);
     }
@@ -376,15 +396,35 @@ public class HTMLSelectElement extends HTMLElement {
 
     /**
      * Checks whether the element has any constraints and whether it satisfies them.
-     * @return if the element is valid
+     * @return {@code true} if the element is valid
      */
     @JsxFunction
     public boolean checkValidity() {
-        return getDomNodeOrDie().isValid();
+        return ValidatableHTMLElement.doCheckValidity(getDomNodeOrDie());
     }
 
     /**
-     * @return a ValidityState with the validity states that this element is in.
+     * Performs the same validity checking steps as the checkValidity() method.
+     * @return {@code true} if the element is valid
+     */
+    @JsxFunction
+    public boolean reportValidity() {
+        return ValidatableHTMLElement.doReportValidity(getDomNodeOrDie());
+    }
+
+    /**
+     * Returns the message describing why the element's value fails constraint
+     * validation, or "" if it's valid or barred from validation.
+     * @return the validation message
+     */
+    @JsxGetter
+    public String getValidationMessage() {
+        return ValidatableHTMLElement.getValidationMessage(getDomNodeOrDie());
+    }
+
+    /**
+     * Returns a {@link ValidityState} object representing the validity states of this element.
+     * @return a {@link ValidityState} object representing the validity states of this element
      */
     @JsxGetter
     public ValidityState getValidity() {
@@ -396,10 +436,11 @@ public class HTMLSelectElement extends HTMLElement {
     }
 
     /**
+     * Returns whether the element is a candidate for constraint validation.
      * @return whether the element is a candidate for constraint validation
      */
     @JsxGetter
-    public boolean getWillValidate() {
+    public boolean isWillValidate() {
         return getDomNodeOrDie().willValidate();
     }
 
@@ -410,5 +451,14 @@ public class HTMLSelectElement extends HTMLElement {
     @JsxFunction
     public void setCustomValidity(final String message) {
         getDomNodeOrDie().setCustomValidity(message);
+    }
+
+    /**
+     * Returns the {@code Symbol.iterator} function that allows iterating over this element's options.
+     * @return the Iterator symbol
+     */
+    @JsxSymbol
+    public Scriptable iterator() {
+        return getOptions().iterator();
     }
 }

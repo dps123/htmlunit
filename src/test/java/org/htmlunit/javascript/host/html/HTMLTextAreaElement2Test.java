@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,23 +14,20 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.SimpleWebTestCase;
 import org.htmlunit.html.HtmlPage;
 import org.htmlunit.html.HtmlTextArea;
-import org.htmlunit.junit.BrowserRunner;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link HTMLTextAreaElement}.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author Marc Guillemot
  * @author Ahmed Ashour
  * @author Daniel Gredler
+ * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class HTMLTextAreaElement2Test extends SimpleWebTestCase {
 
     /**
@@ -39,8 +36,8 @@ public class HTMLTextAreaElement2Test extends SimpleWebTestCase {
      */
     @Test
     public void type_onchange() throws Exception {
-        final String content
-            = "<html><head><title>foo</title>\n"
+        final String content = DOCTYPE_HTML
+            + "<html><head><title>foo</title>\n"
             + "<script>\n"
             + "  function changed(e) {\n"
             + "    log('changed: ' + e.value);\n"
@@ -69,8 +66,8 @@ public class HTMLTextAreaElement2Test extends SimpleWebTestCase {
             + "keypressed: he; "
             + "keypressed: hel; "
             + "keypressed: hell; "
-            + "changed: hello;";
-        assertEquals(expectation, log.asNormalizedText());
+            + "changed: hello; ";
+        assertEquals(expectation, log.getText());
     }
 
 }

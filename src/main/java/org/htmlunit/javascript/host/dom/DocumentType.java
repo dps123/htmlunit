@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,27 +14,16 @@
  */
 package org.htmlunit.javascript.host.dom;
 
-import static org.htmlunit.BrowserVersionFeatures.JS_DOCTYPE_ENTITIES_NULL;
-import static org.htmlunit.BrowserVersionFeatures.JS_DOCTYPE_NOTATIONS_NULL;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
-
-import org.apache.commons.lang3.StringUtils;
-import org.w3c.dom.NamedNodeMap;
-
+import org.htmlunit.corejs.javascript.Context;
+import org.htmlunit.corejs.javascript.Function;
+import org.htmlunit.corejs.javascript.Scriptable;
+import org.htmlunit.corejs.javascript.VarScope;
 import org.htmlunit.html.DomDocumentType;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
-
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.Function;
-import org.htmlunit.corejs.javascript.Scriptable;
-import org.htmlunit.corejs.javascript.Undefined;
 
 /**
  * A JavaScript object for {@code DocumentType}.
@@ -42,8 +31,7 @@ import org.htmlunit.corejs.javascript.Undefined;
  * @author Ahmed Ashour
  * @author Frank Danek
  * @author Ronald Brill
- * @see <a href="http://msdn.microsoft.com/en-us/library/ms762752.aspx">MSDN documentation</a>
- * @see <a href="http://www.xulplanet.com/references/objref/DocumentType.html">XUL Planet</a>
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/DocumentType">MDN Documentation</a>
  */
 @JsxClass(domClass = DomDocumentType.class)
 public class DocumentType extends Node {
@@ -51,20 +39,15 @@ public class DocumentType extends Node {
     /**
      * Creates an instance.
      */
-    public DocumentType() {
-    }
-
-    /**
-     * Creates an instance.
-     */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
+    @Override
+    @JsxConstructor
     public void jsConstructor() {
-        throw Context.reportRuntimeError("Illegal constructor.");
+        throw JavaScriptEngine.typeErrorIllegalConstructor();
     }
 
     /**
-     * Returns the name.
-     * @return the name
+     * Returns the {@code name} property.
+     * @return the {@code name} property
      */
     @JsxGetter
     public String getName() {
@@ -80,8 +63,8 @@ public class DocumentType extends Node {
     }
 
     /**
-     * Returns the publicId.
-     * @return the publicId
+     * Returns the {@code publicId} property.
+     * @return the {@code publicId} property
      */
     @JsxGetter
     public String getPublicId() {
@@ -89,8 +72,8 @@ public class DocumentType extends Node {
     }
 
     /**
-     * Returns the systemId.
-     * @return the systemId
+     * Returns the {@code systemId} property.
+     * @return the {@code systemId} property
      */
     @JsxGetter
     public String getSystemId() {
@@ -98,58 +81,10 @@ public class DocumentType extends Node {
     }
 
     /**
-     * Returns the internal subset.
-     * @return the internal subset
-     */
-    @JsxGetter(IE)
-    public String getInternalSubset() {
-        final String subset = ((DomDocumentType) getDomNodeOrDie()).getInternalSubset();
-        if (StringUtils.isNotEmpty(subset)) {
-            return subset;
-        }
-
-        return null;
-    }
-
-    /**
-     * Returns entities.
-     * @return entities
-     */
-    @JsxGetter(IE)
-    public Object getEntities() {
-        final NamedNodeMap entities = ((DomDocumentType) getDomNodeOrDie()).getEntities();
-        if (null != entities) {
-            return entities;
-        }
-
-        if (getBrowserVersion().hasFeature(JS_DOCTYPE_ENTITIES_NULL)) {
-            return null;
-        }
-        return Undefined.instance;
-    }
-
-    /**
-     * Returns notations.
-     * @return notations
-     */
-    @JsxGetter(IE)
-    public Object getNotations() {
-        final NamedNodeMap notations = ((DomDocumentType) getDomNodeOrDie()).getNotations();
-        if (null != notations) {
-            return notations;
-        }
-
-        if (getBrowserVersion().hasFeature(JS_DOCTYPE_NOTATIONS_NULL)) {
-            return null;
-        }
-        return Undefined.instance;
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
-    @JsxFunction({CHROME, EDGE, FF, FF_ESR})
+    @JsxFunction
     public void remove() {
         super.remove();
     }
@@ -158,13 +93,14 @@ public class DocumentType extends Node {
      * Inserts a set of Node or DOMString objects in the children list of this ChildNode's parent,
      * just before this ChildNode.
      * @param context the context
+     * @param scope the scope
      * @param thisObj this object
      * @param args the arguments
      * @param function the function
      */
-    @JsxFunction({CHROME, EDGE, FF, FF_ESR})
-    public static void before(final Context context, final Scriptable thisObj, final Object[] args,
-            final Function function) {
+    @JsxFunction
+    public static void before(final Context context, final VarScope scope,
+            final Scriptable thisObj, final Object[] args, final Function function) {
         Node.before(context, thisObj, args, function);
     }
 
@@ -172,26 +108,28 @@ public class DocumentType extends Node {
      * Inserts a set of Node or DOMString objects in the children list of this ChildNode's parent,
      * just after this ChildNode.
      * @param context the context
+     * @param scope the scope
      * @param thisObj this object
      * @param args the arguments
      * @param function the function
      */
-    @JsxFunction({CHROME, EDGE, FF, FF_ESR})
-    public static void after(final Context context, final Scriptable thisObj, final Object[] args,
-            final Function function) {
+    @JsxFunction
+    public static void after(final Context context, final VarScope scope,
+            final Scriptable thisObj, final Object[] args, final Function function) {
         Node.after(context, thisObj, args, function);
     }
 
     /**
-     * Replaces the node wit a set of Node or DOMString objects.
+     * Replaces the node with a set of Node or DOMString objects.
      * @param context the context
+     * @param scope the scope
      * @param thisObj this object
      * @param args the arguments
      * @param function the function
      */
-    @JsxFunction({CHROME, EDGE, FF, FF_ESR})
-    public static void replaceWith(final Context context, final Scriptable thisObj, final Object[] args,
-            final Function function) {
+    @JsxFunction
+    public static void replaceWith(final Context context, final VarScope scope,
+            final Scriptable thisObj, final Object[] args, final Function function) {
         Node.replaceWith(context, thisObj, args, function);
     }
 }

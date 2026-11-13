@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,22 @@
  */
 package org.htmlunit.xml;
 
-import static org.htmlunit.BrowserVersionFeatures.JS_XML;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.htmlunit.SgmlPage;
+import org.htmlunit.WebResponse;
+import org.htmlunit.WebWindow;
+import org.htmlunit.html.DomElement;
+import org.htmlunit.html.DomProcessingInstruction;
+import org.htmlunit.util.MimeType;
+import org.htmlunit.util.XmlUtils;
 import org.w3c.dom.Attr;
 import org.w3c.dom.DOMConfiguration;
 import org.w3c.dom.DOMImplementation;
@@ -37,13 +40,6 @@ import org.w3c.dom.EntityReference;
 import org.w3c.dom.Node;
 import org.xml.sax.SAXException;
 
-import org.htmlunit.SgmlPage;
-import org.htmlunit.WebResponse;
-import org.htmlunit.WebWindow;
-import org.htmlunit.html.DomElement;
-import org.htmlunit.html.DomProcessingInstruction;
-import org.htmlunit.util.XmlUtils;
-
 /**
  * A page that will be returned for response with content type "text/xml".
  *
@@ -51,6 +47,7 @@ import org.htmlunit.util.XmlUtils;
  * @author David K. Taylor
  * @author Ahmed Ashour
  * @author Frank Danek
+ * @author Ronald Brill
  */
 public class XmlPage extends SgmlPage {
 
@@ -119,41 +116,31 @@ public class XmlPage extends SgmlPage {
         super(webResponse, enclosingWindow);
 
         try {
-            try {
-                final Document document = XmlUtils.buildDocument(webResponse);
-                node_ = document.getFirstChild();
+            final Document document = XmlUtils.buildDocument(webResponse);
+            node_ = document.getFirstChild();
+        }
+        catch (final SAXException e) {
+            if (LOG.isWarnEnabled()) {
+                LOG.warn("Failed parsing XML document '" + webResponse.getWebRequest().getUrl() + "'", e);
             }
-            catch (final SAXException e) {
-                if (LOG.isWarnEnabled()) {
-                    LOG.warn("Failed parsing XML document " + webResponse.getWebRequest().getUrl()
-                            + ": " + e.getMessage());
-                }
-                if (!ignoreSAXException) {
-                    throw new IOException(e.getMessage());
-                }
+            if (!ignoreSAXException) {
+                throw new IOException(
+                        "Failed parsing XML document '" + webResponse.getWebRequest().getUrl() + "'", e);
             }
         }
         catch (final ParserConfigurationException e) {
             if (LOG.isWarnEnabled()) {
-                if (null == webResponse) {
-                    LOG.warn("Failed parsing XML empty document: " + e.getMessage());
+                if (webResponse == null) {
+                    LOG.warn("Failed parsing XML empty document: " + e.getMessage(), e);
                 }
                 else {
-                    LOG.warn("Failed parsing XML empty document " + webResponse.getWebRequest().getUrl()
-                        + ": " + e.getMessage());
+                    LOG.warn("Failed parsing XML empty document '" + webResponse.getWebRequest().getUrl() + "'", e);
                 }
             }
         }
 
-        final Map<Integer, List<String>> attributesOrderMap;
-        if (node_ != null && getWebClient().getBrowserVersion().hasFeature(JS_XML)) {
-            attributesOrderMap = XmlUtils.getAttributesOrderMap(node_.getOwnerDocument());
-        }
-        else {
-            attributesOrderMap = null;
-        }
         for (Node node = node_; node != null; node = node.getNextSibling()) {
-            XmlUtils.appendChild(this, this, node, handleXHTMLAsHTML, attributesOrderMap);
+            XmlUtils.appendChild(this, this, node, handleXHTMLAsHTML);
         }
     }
 
@@ -215,7 +202,7 @@ public class XmlPage extends SgmlPage {
      */
     @Override
     public DomElement createElementNS(final String namespaceURI, final String qualifiedName) {
-        return new DomElement(namespaceURI, qualifiedName, this, new HashMap<>());
+        return new DomElement(namespaceURI, qualifiedName, this, null);
     }
 
     /**
@@ -380,7 +367,7 @@ public class XmlPage extends SgmlPage {
      */
     @Override
     public String getContentType() {
-        return "application/xml";
+        return MimeType.APPLICATION_XML;
     }
 
     /**

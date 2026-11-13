@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,14 @@
  */
 package org.htmlunit.html;
 
-import org.w3c.dom.CharacterData;
-
 import org.htmlunit.SgmlPage;
+import org.w3c.dom.CharacterData;
 
 /**
  * Wrapper for the DOM node CharacterData.
  *
  * @author David K. Taylor
- * @author <a href="mailto:cse@dynabean.de">Christian Sell</a>
+ * @author Christian Sell
  * @author Ahmed Ashour
  * @author Philip Graf
  * @author Ronald Brill
@@ -61,7 +60,11 @@ public abstract class DomCharacterData extends DomNode implements CharacterData 
     public void setData(final String data) {
         final String oldData = data_;
         data_ = data;
-        fireCharacterDataChanged(new CharacterDataChangeEvent(this, oldData));
+
+        final SgmlPage page = getPage();
+        if (page == null || page.isCharacterDataChangeListenerInUse()) {
+            fireCharacterDataChanged(this, oldData);
+        }
     }
 
     /**
@@ -87,7 +90,7 @@ public abstract class DomCharacterData extends DomNode implements CharacterData 
      */
     @Override
     public int getLength() {
-        return data_.length();
+        return data_ == null ? 0 : data_.length();
     }
 
     /**
@@ -96,23 +99,28 @@ public abstract class DomCharacterData extends DomNode implements CharacterData 
      */
     @Override
     public void appendData(final String newData) {
-        data_ += newData;
+        if (newData != null) {
+            setData(data_ == null ? newData : data_ + newData);
+        }
     }
 
     /**
      * Deletes characters from character data.
      * @param offset the position of the first character to be deleted (can't be
-     * less than zero)
+     *        less than zero)
      * @param count the number of characters to be deleted, if less than zero
-     * leaves the first offset chars
+     *        leaves the first offset chars
      */
     @Override
     public void deleteData(final int offset, final int count) {
         if (offset < 0) {
             throw new IllegalArgumentException("Provided offset: " + offset + " is less than zero.");
         }
+        if (data_ == null) {
+            return;
+        }
 
-        final String data = data_.substring(0, offset);
+        final String data = data_.substring(0, Math.min(offset, data_.length()));
         if (count >= 0) {
             final int fromLeft = offset + count;
             if (fromLeft < data_.length()) {
@@ -130,6 +138,11 @@ public abstract class DomCharacterData extends DomNode implements CharacterData 
      */
     @Override
     public void insertData(final int offset, final String arg) {
+        if (data_ == null) {
+            setData(arg);
+            return;
+        }
+
         setData(new StringBuilder(data_).insert(offset, arg).toString());
     }
 
@@ -141,8 +154,18 @@ public abstract class DomCharacterData extends DomNode implements CharacterData 
      */
     @Override
     public void replaceData(final int offset, final int count, final String arg) {
-        deleteData(offset, count);
-        insertData(offset, arg);
+        if (offset < 0 || count < 0) {
+            throw new IllegalArgumentException("offset: " + offset + " count: " + count);
+        }
+        if (data_ == null) {
+            setData(arg);
+            return;
+        }
+
+        final int end = Math.min(offset + count, data_.length());
+        final StringBuilder sb = new StringBuilder(data_);
+        sb.replace(offset, end, arg != null ? arg : "");
+        setData(sb.toString());
     }
 
     /**
@@ -154,6 +177,9 @@ public abstract class DomCharacterData extends DomNode implements CharacterData 
      */
     @Override
     public String substringData(final int offset, final int count) {
+        if (data_ == null) {
+            throw new IllegalArgumentException("offset: " + offset + " count: " + count);
+        }
         final int length = data_.length();
         if (count < 0 || offset < 0 || offset > length - 1) {
             throw new IllegalArgumentException("offset: " + offset + " count: " + count);
@@ -177,7 +203,11 @@ public abstract class DomCharacterData extends DomNode implements CharacterData 
      */
     @Override
     public String getCanonicalXPath() {
-        return getParentNode().getCanonicalXPath() + '/' + getXPathToken();
+        final DomNode parent = getParentNode();
+        if (parent == null) {
+            return "/" + getXPathToken();
+        }
+        return parent.getCanonicalXPath() + '/' + getXPathToken();
     }
 
     /**
@@ -185,6 +215,9 @@ public abstract class DomCharacterData extends DomNode implements CharacterData 
      */
     private String getXPathToken() {
         final DomNode parent = getParentNode();
+        if (parent == null) {
+            return getNodeName().substring(1) + "()";
+        }
 
         // If there are other siblings of the same node type, we have to provide
         // the node's index.

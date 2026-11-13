@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,12 @@
  */
 package org.htmlunit.html;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.htmlunit.WebDriverTestCase;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.htmlunit.HtmlUnitDriver;
-
-import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
 
 /**
  * Tests for {@link HtmlLabel}.
@@ -33,7 +29,6 @@ import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
  * @author Frank Danek
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class HtmlLabelTest extends WebDriverTestCase {
 
     /**
@@ -42,7 +37,8 @@ public class HtmlLabelTest extends WebDriverTestCase {
     @Test
     @Alerts("[object HTMLLabelElement]")
     public void simpleScriptable() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
@@ -56,7 +52,7 @@ public class HtmlLabelTest extends WebDriverTestCase {
         final WebDriver driver = loadPageVerifyTitle2(html);
         if (driver instanceof HtmlUnitDriver) {
             final HtmlPage page = (HtmlPage) getEnclosedPage();
-            assertTrue(HtmlLabel.class.isInstance(page.getHtmlElementById("myId")));
+            assertTrue(page.getHtmlElementById("myId") instanceof HtmlLabel);
         }
     }
 
@@ -65,7 +61,8 @@ public class HtmlLabelTest extends WebDriverTestCase {
      */
     @Test
     public void getLabeledElementNone() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <label id='label1'>Item</label>\n"
             + "  <input type='text' id='text1'>\n"
@@ -84,7 +81,8 @@ public class HtmlLabelTest extends WebDriverTestCase {
      */
     @Test
     public void getLabeledElementForEmpty() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <label id='label1' for=''>Item</label>\n"
             + "  <input type='text' id='text1'>\n"
@@ -103,7 +101,8 @@ public class HtmlLabelTest extends WebDriverTestCase {
      */
     @Test
     public void getLabeledElementForUnknown() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <label id='label1' for='unknown'>Item</label>\n"
             + "  <input type='text' id='text1'>\n"
@@ -122,7 +121,8 @@ public class HtmlLabelTest extends WebDriverTestCase {
      */
     @Test
     public void getLabeledElementForNotLabelable() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <label id='label1' for='div1'>Item</label>\n"
             + "  <div id='div1'></div>\n"
@@ -141,7 +141,8 @@ public class HtmlLabelTest extends WebDriverTestCase {
      */
     @Test
     public void getLabeledElementForButton() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <label id='label1' for='button1'>Item</label>\n"
             + "  <button id='button1'></button>\n"
@@ -160,7 +161,8 @@ public class HtmlLabelTest extends WebDriverTestCase {
      */
     @Test
     public void getLabeledElementForInput() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <label id='label1' for='text1'>Item</label>\n"
             + "  <input type='text' id='text1'>\n"
@@ -179,7 +181,8 @@ public class HtmlLabelTest extends WebDriverTestCase {
      */
     @Test
     public void getLabeledElementForInputHidden() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <label id='label1' for='hidden1'>Item</label>\n"
             + "  <input type='hidden' id='hidden1'>\n"
@@ -197,8 +200,10 @@ public class HtmlLabelTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
+    @Alerts("meter1")
     public void getLabeledElementForMeter() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <label id='label1' for='meter1'>Item</label>\n"
             + "  <meter id='meter1'></meter>\n"
@@ -208,12 +213,15 @@ public class HtmlLabelTest extends WebDriverTestCase {
         if (driver instanceof HtmlUnitDriver) {
             final HtmlPage page = (HtmlPage) getEnclosedPage();
             final HtmlLabel label = page.getHtmlElementById("label1");
-            if (getBrowserVersion().isIE()) {
-                assertNull(label.getLabeledElement());
+
+            final String txt;
+            if (null == label.getLabeledElement()) {
+                txt = "null";
             }
             else {
-                assertEquals("meter1", label.getLabeledElement().getId());
+                txt = label.getLabeledElement().getId();
             }
+            assertEquals(getExpectedAlerts()[0], txt);
         }
     }
 
@@ -221,8 +229,10 @@ public class HtmlLabelTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
+    @Alerts("output1")
     public void getLabeledElementForOutput() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <label id='label1' for='output1'>Item</label>\n"
             + "  <output id='output1'></output>\n"
@@ -232,12 +242,15 @@ public class HtmlLabelTest extends WebDriverTestCase {
         if (driver instanceof HtmlUnitDriver) {
             final HtmlPage page = (HtmlPage) getEnclosedPage();
             final HtmlLabel label = page.getHtmlElementById("label1");
-            if (getBrowserVersion().isIE()) {
-                assertNull(label.getLabeledElement());
+
+            final String txt;
+            if (null == label.getLabeledElement()) {
+                txt = "null";
             }
             else {
-                assertEquals("output1", label.getLabeledElement().getId());
+                txt = label.getLabeledElement().getId();
             }
+            assertEquals(getExpectedAlerts()[0], txt);
         }
     }
 
@@ -246,7 +259,8 @@ public class HtmlLabelTest extends WebDriverTestCase {
      */
     @Test
     public void getLabeledElementForProgress() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <label id='label1' for='progress1'>Item</label>\n"
             + "  <progress id='progress1'></progress>\n"
@@ -265,7 +279,8 @@ public class HtmlLabelTest extends WebDriverTestCase {
      */
     @Test
     public void getLabeledElementForSelect() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <label id='label1' for='select1'>Item</label>\n"
             + "  <select id='select1'><option>Option</option></select>\n"
@@ -284,7 +299,8 @@ public class HtmlLabelTest extends WebDriverTestCase {
      */
     @Test
     public void getLabeledElementForTextArea() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <label id='label1' for='text1'>Item</label>\n"
             + "  <textarea id='text1'></textarea>\n"
@@ -303,7 +319,8 @@ public class HtmlLabelTest extends WebDriverTestCase {
      */
     @Test
     public void getLabeledElementNestedNotLabelable() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <label id='label1'>Item\n"
             + "    <div id='div1'></div>\n"
@@ -323,7 +340,8 @@ public class HtmlLabelTest extends WebDriverTestCase {
      */
     @Test
     public void getLabeledElementNestedButton() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <label id='label1'>Item\n"
             + "    <button id='button1'></button>\n"
@@ -344,7 +362,8 @@ public class HtmlLabelTest extends WebDriverTestCase {
      */
     @Test
     public void getLabeledElementNestedInput() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <label id='label1'>Item\n"
             + "    <input type='text' id='text1'>\n"
@@ -365,7 +384,8 @@ public class HtmlLabelTest extends WebDriverTestCase {
      */
     @Test
     public void getLabeledElementNestedInputHidden() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <label id='label1'>Item\n"
             + "    <input type='hidden' id='hidden1'>\n"
@@ -385,8 +405,10 @@ public class HtmlLabelTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
+    @Alerts("meter1")
     public void getLabeledElementNestedMeter() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <label id='label1'>Item\n"
             + "    <meter id='meter1'></meter>\n"
@@ -398,12 +420,15 @@ public class HtmlLabelTest extends WebDriverTestCase {
         if (driver instanceof HtmlUnitDriver) {
             final HtmlPage page = (HtmlPage) getEnclosedPage();
             final HtmlLabel label = page.getHtmlElementById("label1");
-            if (getBrowserVersion().isIE()) {
-                assertNull(label.getLabeledElement());
+
+            final String txt;
+            if (null == label.getLabeledElement()) {
+                txt = "null";
             }
             else {
-                assertEquals("meter1", label.getLabeledElement().getId());
+                txt = label.getLabeledElement().getId();
             }
+            assertEquals(getExpectedAlerts()[0], txt);
         }
     }
 
@@ -411,8 +436,10 @@ public class HtmlLabelTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
+    @Alerts("output1")
     public void getLabeledElementNestedOutput() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <label id='label1'>Item\n"
             + "    <output id='output1'></output>\n"
@@ -424,12 +451,15 @@ public class HtmlLabelTest extends WebDriverTestCase {
         if (driver instanceof HtmlUnitDriver) {
             final HtmlPage page = (HtmlPage) getEnclosedPage();
             final HtmlLabel label = page.getHtmlElementById("label1");
-            if (getBrowserVersion().isIE()) {
-                assertNull(label.getLabeledElement());
+
+            final String txt;
+            if (null == label.getLabeledElement()) {
+                txt = "null";
             }
             else {
-                assertEquals("output1", label.getLabeledElement().getId());
+                txt = label.getLabeledElement().getId();
             }
+            assertEquals(getExpectedAlerts()[0], txt);
         }
     }
 
@@ -438,7 +468,8 @@ public class HtmlLabelTest extends WebDriverTestCase {
      */
     @Test
     public void getLabeledElementNestedProgress() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <label id='label1'>Item\n"
             + "    <progress id='progress1'></progress>\n"
@@ -459,7 +490,8 @@ public class HtmlLabelTest extends WebDriverTestCase {
      */
     @Test
     public void getLabeledElementNestedSelect() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <label id='label1'>Item\n"
             + "    <select id='select1'><option>Option</option></select>\n"
@@ -480,7 +512,8 @@ public class HtmlLabelTest extends WebDriverTestCase {
      */
     @Test
     public void getLabeledElementNestedTextArea() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <label id='label1'>Item\n"
             + "    <textarea id='text1'></textarea>\n"
@@ -501,7 +534,8 @@ public class HtmlLabelTest extends WebDriverTestCase {
      */
     @Test
     public void getLabeledElementForVersusNested() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <label id='label1' for='text2'>Item\n"
             + "    <input type='text' id='text1'>\n"
@@ -522,7 +556,8 @@ public class HtmlLabelTest extends WebDriverTestCase {
      */
     @Test
     public void getLabeledElementForUnknownVersusNested() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <label id='label1' for='unknown'>Item\n"
             + "    <input type='text' id='text1'>\n"
@@ -543,7 +578,8 @@ public class HtmlLabelTest extends WebDriverTestCase {
      */
     @Test
     public void getLabeledElementForNotLabelableVersusNested() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <label id='label1' for='div1'>Item\n"
             + "    <input type='text' id='text1'>\n"
@@ -631,9 +667,7 @@ public class HtmlLabelTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "labelclick",
-            IE = "labelclick;divclick")
-    @HtmlUnitNYI(IE = "labelclick")
+    @Alerts("labelclick")
     public void clickForNotLabelable() throws Exception {
         final String html =
               "  <label id='label1' for='div1' onclick='log(\"labelclick\")' "
@@ -650,9 +684,7 @@ public class HtmlLabelTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"labelclick", "textfocus", "textclick"},
-            IE = {"labelclick", "textclick", "textfocus"})
-    @HtmlUnitNYI(IE = {"labelclick", "textfocus", "textclick"})
+    @Alerts({"labelclick", "textfocus", "textclick"})
     public void clickForInput() throws Exception {
         final String html =
               "  <label id='label1' for='text1' onclick='log(\"labelclick\")' "
@@ -669,9 +701,7 @@ public class HtmlLabelTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"labelclick", "selectfocus", "selectclick"},
-            IE = {"labelclick", "selectclick", "selectfocus"})
-    @HtmlUnitNYI(IE = {"labelclick", "selectfocus", "selectclick"})
+    @Alerts({"labelclick", "selectfocus", "selectclick"})
     public void clickForSelect() throws Exception {
         final String html =
               "  <label id='label1' for='select1' onclick='log(\"labelclick\")' "
@@ -688,9 +718,7 @@ public class HtmlLabelTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"labelclick", "textfocus", "textclick"},
-            IE = {"labelclick", "textclick", "textfocus"})
-    @HtmlUnitNYI(IE = {"labelclick", "textfocus", "textclick"})
+    @Alerts({"labelclick", "textfocus", "textclick"})
     public void clickForTextArea() throws Exception {
         final String html =
               "  <label id='label1' for='text1' onclick='log(\"labelclick\")' "
@@ -775,12 +803,8 @@ public class HtmlLabelTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"labelclick:label1", "parentclick:label1", "textfocus:text1",
-                       "textclick:text1", "parentclick:text1"},
-            IE = {"labelclick:label1", "parentclick:label1", "textclick:text1",
-                  "parentclick:text1", "textfocus:text1"})
-    @HtmlUnitNYI(IE = {"labelclick:label1", "parentclick:label1", "textfocus:text1",
-                       "textclick:text1", "parentclick:text1"})
+    @Alerts({"labelclick:label1", "parentclick:label1", "textfocus:text1",
+             "textclick:text1", "parentclick:text1"})
     public void clickForEventBubbling() throws Exception {
         final String html =
               "  <div onclick='log(\"parentclick:\" + event.target.id)' "
@@ -818,9 +842,7 @@ public class HtmlLabelTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"labelclick", "text1focus", "text1click", "labelclick"},
-            IE = {"labelclick", "text1click", "labelclick", "text1focus"})
-    @HtmlUnitNYI(IE = {"labelclick", "text1focus", "text1click", "labelclick"})
+    @Alerts({"labelclick", "text1focus", "text1click", "labelclick"})
     public void clickNestedInput() throws Exception {
         final String html =
               "  <label id='label1' onclick='log(\"labelclick\")' onfocus='log(\"labelfocus\")'>Click me"
@@ -839,9 +861,7 @@ public class HtmlLabelTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"labelclick", "select1focus", "select1click", "labelclick"},
-            IE = {"labelclick", "select1click", "labelclick", "select1focus"})
-    @HtmlUnitNYI(IE = {"labelclick", "select1focus", "select1click", "labelclick"})
+    @Alerts({"labelclick", "select1focus", "select1click", "labelclick"})
     public void clickNestedSelect() throws Exception {
         final String html =
               "  <label id='label1' onclick='log(\"labelclick\")' onfocus='log(\"labelfocus\")'>Click me"
@@ -862,9 +882,7 @@ public class HtmlLabelTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"labelclick", "text1focus", "text1click", "labelclick"},
-            IE = {"labelclick", "text1click", "labelclick", "text1focus"})
-    @HtmlUnitNYI(IE = {"labelclick", "text1focus", "text1click", "labelclick"})
+    @Alerts({"labelclick", "text1focus", "text1click", "labelclick"})
     public void clickNestedTextArea() throws Exception {
         final String html =
               "  <label id='label1' onclick='log(\"labelclick\")' onfocus='log(\"labelfocus\")'>Click me"
@@ -883,9 +901,7 @@ public class HtmlLabelTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "labelclick",
-            IE = {"labelclick", "labelclick"})
-    @HtmlUnitNYI(IE = "labelclick")
+    @Alerts("labelclick")
     public void clickNestedDisabled() throws Exception {
         final String html =
               "  <label id='label1' onclick='log(\"labelclick\")' onfocus='log(\"labelfocus\")'>Click me"
@@ -966,12 +982,8 @@ public class HtmlLabelTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"labelclick:label1", "parentclick:label1", "text1focus:text1",
-                       "text1click:text1", "labelclick:text1", "parentclick:text1"},
-            IE = {"labelclick:label1", "parentclick:label1", "text1click:text1",
-                  "labelclick:text1", "parentclick:text1", "text1focus:text1"})
-    @HtmlUnitNYI(IE = {"labelclick:label1", "parentclick:label1", "text1focus:text1",
-                       "text1click:text1", "labelclick:text1", "parentclick:text1"})
+    @Alerts({"labelclick:label1", "parentclick:label1", "text1focus:text1",
+             "text1click:text1", "labelclick:text1", "parentclick:text1"})
     public void clickNestedEventBubbling() throws Exception {
         final String html =
               "  <div onclick='log(\"parentclick:\" + event.target.id)' "
@@ -996,12 +1008,8 @@ public class HtmlLabelTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"labelclick:label1", "parentclick:label1", "text1focus:text1",
-                       "text1click:text1", "labelclick:text1", "parentclick:text1"},
-            IE = {"labelclick:label1", "parentclick:label1", "text1click:text1",
-                  "labelclick:text1", "parentclick:text1", "text1focus:text1"})
-    @HtmlUnitNYI(IE = {"labelclick:label1", "parentclick:label1", "text1focus:text1",
-                       "text1click:text1", "labelclick:text1", "parentclick:text1"})
+    @Alerts({"labelclick:label1", "parentclick:label1", "text1focus:text1",
+             "text1click:text1", "labelclick:text1", "parentclick:text1"})
     public void clickForAndNestedEventBubbling() throws Exception {
         final String html =
               "  <div onclick='log(\"parentclick:\" + event.target.id)' "
@@ -1026,9 +1034,7 @@ public class HtmlLabelTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"labelclick", "text2focus", "text2click"},
-            IE = {"labelclick", "text2click", "text2focus"})
-    @HtmlUnitNYI(IE = {"labelclick", "text2focus", "text2click"})
+    @Alerts({"labelclick", "text2focus", "text2click"})
     public void clickForVersusNested() throws Exception {
         final String html =
               "  <label id='label1' for='text2' onclick='log(\"labelclick\")' onfocus='log(\"labelfocus\")'>Click me"
@@ -1066,9 +1072,7 @@ public class HtmlLabelTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "labelclick",
-            IE = "labelclick;div1click")
-    @HtmlUnitNYI(IE = "labelclick")
+    @Alerts("labelclick")
     public void clickForNotLabelableVersusNested() throws Exception {
         final String html =
               "  <label id='label1' for='div1' onclick='log(\"labelclick\")' onfocus='log(\"labelfocus\")'>Click me"
@@ -1889,7 +1893,8 @@ public class HtmlLabelTest extends WebDriverTestCase {
     }
 
     private static String generatePage(final String snippet) {
-        return "<html>\n"
+        return DOCTYPE_HTML
+            + "<html>\n"
             + "  <head>\n"
             + "    <script>\n"
             + LOG_TITLE_FUNCTION

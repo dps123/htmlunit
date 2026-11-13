@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,7 @@
 package org.htmlunit.util;
 
 import java.io.Serializable;
-
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.builder.HashCodeBuilder;
+import java.util.Objects;
 
 /**
  * A name/value pair.
@@ -66,11 +64,10 @@ public class NameValuePair implements Serializable {
      */
     @Override
     public boolean equals(final Object object) {
-        if (!(object instanceof NameValuePair)) {
+        if (!(object instanceof NameValuePair other)) {
             return false;
         }
-        final NameValuePair other = (NameValuePair) object;
-        return StringUtils.equals(name_, other.name_) && StringUtils.equals(value_, other.value_);
+        return Objects.equals(name_, other.name_) && Objects.equals(value_, other.value_);
     }
 
     /**
@@ -78,10 +75,7 @@ public class NameValuePair implements Serializable {
      */
     @Override
     public int hashCode() {
-        return new HashCodeBuilder().
-                append(name_).
-                append(value_).
-                toHashCode();
+        return Objects.hash(name_, value_);
     }
 
     /**

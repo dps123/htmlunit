@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
  */
 package org.htmlunit;
 
-import static java.nio.charset.StandardCharsets.ISO_8859_1;
-
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -24,20 +22,22 @@ import java.net.IDN;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Pattern;
+import java.util.function.Predicate;
+import java.util.function.UnaryOperator;
 
 import org.apache.http.auth.Credentials;
-import org.apache.http.auth.UsernamePasswordCredentials;
-
-import org.htmlunit.httpclient.HttpClientConverter;
+import org.htmlunit.http.HttpUtils;
+import org.htmlunit.httpclient.HtmlUnitUsernamePasswordCredentials;
 import org.htmlunit.util.NameValuePair;
+import org.htmlunit.util.StringUtils;
 import org.htmlunit.util.UrlUtils;
 
 /**
@@ -53,22 +53,136 @@ import org.htmlunit.util.UrlUtils;
  * @author Joerg Werner
  * @author Michael Lueck
  * @author Lai Quang Duong
+ * @author Kristof Neirynck
  */
+@SuppressWarnings("PMD.TooManyFields")
 public class WebRequest implements Serializable {
 
+    /**
+     * Enum to configure request creation.
+     */
     public enum HttpHint {
         /** Force to include the charset. */
         IncludeCharsetInContentTypeHeader,
 
         /** Disable sending of stored cookies and receiving of new cookies. */
-        BlockCookies
+        BlockCookies,
+
+        /** Do not follow redirects; the response of the redirect is returned as it is. */
+        DoNotFollowRedirects
     }
 
-    private static final Pattern DOT_PATTERN = Pattern.compile("/\\./");
-    private static final Pattern DOT_DOT_PATTERN = Pattern.compile("/(?!\\.\\.)[^/]*/\\.\\./");
-    private static final Pattern REMOVE_DOTS_PATTERN = Pattern.compile("^/(\\.\\.?/)*");
+    /**
+     * The destination of a request, as defined by the Fetch spec
+     * (<a href="https://fetch.spec.whatwg.org/#concept-request-destination">
+     * https://fetch.spec.whatwg.org/#concept-request-destination</a>).
+     * <p>
+     * This is used to compute the value of the {@code Sec-Fetch-Dest} request
+     * header (see <a href="https://www.w3.org/TR/fetch-metadata/">
+     * https://www.w3.org/TR/fetch-metadata/</a>) and also determines the default
+     * {@link FetchMode} to be used, unless explicitly overridden via
+     * {@link #setFetchModeOverride(FetchMode)}.
+     * </p>
+     */
+    public enum FetchDestination {
+        /** A top-level document, e.g. loaded by the address bar, a link, or a form submission. */
+        DOCUMENT("document"),
+        /** A nested browsing context of type {@code <iframe>}. */
+        IFRAME("iframe"),
+        /** A nested browsing context of type {@code <frame>}. */
+        FRAME("frame"),
+        /** An {@code <object>} element. */
+        OBJECT("object"),
+        /** An {@code <embed>} element. */
+        EMBED("embed"),
+        /** An image, e.g. {@code <img>}, a CSS background-image, or a favicon. */
+        IMAGE("image"),
+        /** A classic or module script, e.g. {@code <script src>}. */
+        SCRIPT("script"),
+        /** A stylesheet, e.g. {@code <link rel=stylesheet>} or a CSS {@code @import}. */
+        STYLE("style"),
+        /** A font resource, e.g. loaded via {@code @font-face}. */
+        FONT("font"),
+        /** An {@code <audio>} resource. */
+        AUDIO("audio"),
+        /** A {@code <video>} resource. */
+        VIDEO("video"),
+        /** A {@code <track>} resource. */
+        TRACK("track"),
+        /** A dedicated worker script. */
+        WORKER("worker"),
+        /** A shared worker script. */
+        SHARED_WORKER("sharedworker"),
+        /** A service worker script. */
+        SERVICE_WORKER("serviceworker"),
+        /** A web app manifest, e.g. {@code <link rel=manifest>}. */
+        MANIFEST("manifest"),
+        /** A reporting endpoint request. */
+        REPORT("report"),
+        /** A WebSocket handshake request. */
+        WEBSOCKET("websocket"),
+        /** No specific destination, e.g. {@code XMLHttpRequest} or {@code fetch()}. */
+        EMPTY("empty");
 
-    private String url_; // String instead of java.net.URL because "about:blank" URLs don't serialize correctly
+        private final String value_;
+
+        FetchDestination(final String value) {
+            value_ = value;
+        }
+
+        /**
+         * Returns the value to be used for the {@code Sec-Fetch-Dest} header.
+         *
+         * @return the value to be used for the {@code Sec-Fetch-Dest} header
+         */
+        public String getValue() {
+            return value_;
+        }
+    }
+
+    /**
+     * The mode of a request, as defined by the Fetch spec
+     * (<a href="https://fetch.spec.whatwg.org/#concept-request-mode">
+     * https://fetch.spec.whatwg.org/#concept-request-mode</a>).
+     * <p>
+     * This is used to compute the value of the {@code Sec-Fetch-Mode} request
+     * header. Most {@link FetchDestination}s imply a fixed mode; this only needs
+     * to be set explicitly to override that default - e.g. for a {@code fetch()}
+     * call using an explicit {@code mode} option, or a subresource request using
+     * the {@code crossorigin} attribute.
+     * </p>
+     */
+    public enum FetchMode {
+        /** Same-origin requests, e.g. worker scripts, or {@code fetch()} with {@code mode: 'same-origin'}. */
+        SAME_ORIGIN("same-origin"),
+        /** Subresource requests without CORS, e.g. {@code <img>} without {@code crossorigin}. */
+        NO_CORS("no-cors"),
+        /** CORS-enabled requests, e.g. {@code XMLHttpRequest}, {@code fetch()} default, or module scripts. */
+        CORS("cors"),
+        /** Navigations, e.g. top-level document loads, {@code <iframe>}/{@code <frame>} loads. */
+        NAVIGATE("navigate"),
+        /** WebSocket handshake requests. */
+        WEBSOCKET("websocket");
+
+        private final String value_;
+
+        FetchMode(final String value) {
+            value_ = value;
+        }
+
+        /**
+         * Returns the value to be used for the {@code Sec-Fetch-Mode} header.
+         *
+         * @return the value to be used for the {@code Sec-Fetch-Mode} header
+         */
+        public String getValue() {
+            return value_;
+        }
+    }
+
+    // String instead of java.net.URL because "about:blank" URLs don't serialize correctly
+    private String url_;
+
     private String proxyHost_;
     private int proxyPort_;
     private String proxyScheme_;
@@ -79,17 +193,40 @@ public class WebRequest implements Serializable {
     private Credentials urlCredentials_;
     private Credentials credentials_;
     private int timeout_;
-    private transient Charset charset_ = ISO_8859_1;
     private transient Set<HttpHint> httpHints_;
 
-    /* These two are mutually exclusive; additionally, requestBody_ should only be set for POST requests. */
+    private transient Charset charset_ = StandardCharsets.ISO_8859_1;
+    // https://datatracker.ietf.org/doc/html/rfc6838#section-4.2.1
+    // private transient Charset defaultResponseContentCharset_ = StandardCharsets.UTF_8;
+    private transient Charset defaultResponseContentCharset_ = StandardCharsets.ISO_8859_1;
+
+    /*
+     * These two are mutually exclusive; additionally, requestBody_ should only be
+     * set for POST requests.
+     */
     private List<NameValuePair> requestParameters_ = Collections.emptyList();
     private String requestBody_;
 
+    // Sec-Fetch-* support; see https://www.w3.org/TR/fetch-metadata/
+    private FetchDestination fetchDestination_ = FetchDestination.EMPTY;
+    private FetchMode fetchModeOverride_;
+    private boolean userActivation_;
+
+    // String instead of java.net.URL for the same serialization reason as url_ above;
+    // null means "no initiator" (e.g. a browser-chrome-initiated navigation), which
+    // maps to Sec-Fetch-Site: none.
+    private String requestingUrl_;
+
+    // e.g. the CSP form-action check
+    private transient Predicate<URL> redirectFilter_;
+    private transient UnaryOperator<URL> redirectUrlMapper_;
+
     /**
-     * Instantiates a {@link WebRequest} for the specified URL.
-     * @param url the target URL
-     * @param acceptHeader the accept header to use
+     * Instantiates a {@link WebRequest} for the specified URL,
+     * setting the Accept and Accept-Encoding headers if provided.
+     *
+     * @param url                  the target URL
+     * @param acceptHeader         the accept header to use
      * @param acceptEncodingHeader the accept encoding header to use
      */
     public WebRequest(final URL url, final String acceptHeader, final String acceptEncodingHeader) {
@@ -101,21 +238,30 @@ public class WebRequest implements Serializable {
             setAdditionalHeader(HttpHeader.ACCEPT_ENCODING, acceptEncodingHeader);
         }
         timeout_ = -1;
+
+        // for backward compatibility
+        setFetchDestination(FetchDestination.DOCUMENT);
+        setFetchModeOverride(FetchMode.NAVIGATE);
+        setUserActivation(true);
     }
 
     /**
-     * Instantiates a {@link WebRequest} for the specified URL.
-     * @param url the target URL
-     * @param charset the charset to use
+     * Instantiates a {@link WebRequest} for the specified URL,
+     * using the given charset and referer.
+     *
+     * @param url        the target URL
+     * @param charset    the charset to use
      * @param refererUrl the url be used by the referer header
      */
     public WebRequest(final URL url, final Charset charset, final URL refererUrl) {
         setUrl(url);
         setCharset(charset);
-        setRefererlHeader(refererUrl);
+        setRefererHeader(refererUrl);
     }
 
     /**
+     * Returns a new request for about:blank.
+     *
      * @return a new request for about:blank
      */
     public static WebRequest newAboutBlankRequest() {
@@ -124,6 +270,7 @@ public class WebRequest implements Serializable {
 
     /**
      * Instantiates a {@link WebRequest} for the specified URL.
+     *
      * @param url the target URL
      */
     public WebRequest(final URL url) {
@@ -131,8 +278,10 @@ public class WebRequest implements Serializable {
     }
 
     /**
-     * Instantiates a {@link WebRequest} for the specified URL using the specified HTTP submit method.
-     * @param url the target URL
+     * Instantiates a {@link WebRequest} for the specified URL
+     * using the given HTTP submit method.
+     *
+     * @param url          the target URL
      * @param submitMethod the HTTP submit method to use
      */
     public WebRequest(final URL url, final HttpMethod submitMethod) {
@@ -142,6 +291,7 @@ public class WebRequest implements Serializable {
 
     /**
      * Returns the target URL.
+     *
      * @return the target URL
      */
     public URL getUrl() {
@@ -149,100 +299,73 @@ public class WebRequest implements Serializable {
     }
 
     /**
-     * Sets the target URL. The URL may be simplified if needed (for instance eliminating
-     * irrelevant path portions like "/./").
+     * Sets the target URL. The URL may be simplified if needed (for instance
+     * eliminating irrelevant path portions like "/./").
+     *
      * @param url the target URL
      */
-    public void setUrl(URL url) {
+    public void setUrl(final URL url) {
         if (url == null) {
             url_ = null;
             return;
         }
 
-        final String path = url.getPath();
+        URL normalizedUrl = url;
+        final String path = normalizedUrl.getPath();
         if (path.isEmpty()) {
-            if (!url.getFile().isEmpty() || url.getProtocol().startsWith("http")) {
-                url = buildUrlWithNewPath(url, "/");
+            if (!normalizedUrl.getFile().isEmpty() || normalizedUrl.getProtocol().startsWith("http")) {
+                normalizedUrl = buildUrlWithNewPath(normalizedUrl, "/");
             }
         }
         else if (path.contains("/.")) {
-            url = buildUrlWithNewPath(url, removeDots(path));
-        }
-        final String idn = IDN.toASCII(url.getHost());
-        if (!idn.equals(url.getHost())) {
-            try {
-                url = UrlUtils.getUrlWithNewHost(url, idn);
-            }
-            catch (final Exception e) {
-                throw new RuntimeException("Cannot change hostname of URL: " + url.toExternalForm(), e);
-            }
+            normalizedUrl = buildUrlWithNewPath(normalizedUrl, StringUtils.removeDots(path));
         }
 
         try {
-            url_ = UrlUtils.removeRedundantPort(url).toExternalForm();
+            final String idn = IDN.toASCII(normalizedUrl.getHost());
+            if (!idn.equals(normalizedUrl.getHost())) {
+                normalizedUrl = UrlUtils.getUrlWithNewHost(normalizedUrl, idn);
+            }
+        }
+        catch (final Exception e) {
+            throw new IllegalArgumentException(
+                    "Cannot convert the hostname of URL: '" + normalizedUrl.toExternalForm() + "' to ASCII.", e);
+        }
+
+        try {
+            url_ = UrlUtils.removeRedundantPort(normalizedUrl).toExternalForm();
         }
         catch (final MalformedURLException e) {
-            throw new RuntimeException("Cannot strip default port of URL: " + url.toExternalForm(), e);
+            throw new RuntimeException("Cannot strip default port of URL: " + normalizedUrl.toExternalForm(), e);
         }
 
         // http://john.smith:secret@localhost
-        final String userInfo = url.getUserInfo();
+        final String userInfo = normalizedUrl.getUserInfo();
         if (userInfo != null) {
             final int splitPos = userInfo.indexOf(':');
             if (splitPos == -1) {
-                urlCredentials_ = new UsernamePasswordCredentials(userInfo, "");
+                urlCredentials_ = new HtmlUnitUsernamePasswordCredentials(userInfo, new char[0]);
             }
             else {
                 final String username = userInfo.substring(0, splitPos);
                 final String password = userInfo.substring(splitPos + 1);
-                urlCredentials_ = new UsernamePasswordCredentials(username, password);
+                urlCredentials_ = new HtmlUnitUsernamePasswordCredentials(username, password.toCharArray());
             }
         }
     }
 
-    /*
-     * Strip a URL string of "/./" and "/../" occurrences.
-     * <p>
-     * One trick here is to repeatedly create new matchers on a given
-     * pattern, so that we can see whether it needs to be re-applied;
-     * unfortunately .replaceAll() doesn't re-process its own output,
-     * so if we create a new match with a replacement, it is missed.
-     */
-    private static String removeDots(final String path) {
-        String newPath = path;
-
-        // remove occurrences at the beginning
-        newPath = REMOVE_DOTS_PATTERN.matcher(newPath).replaceAll("/");
-        if ("/..".equals(newPath)) {
-            newPath = "/";
-        }
-
-        // single dots have no effect, so just remove them
-        while (DOT_PATTERN.matcher(newPath).find()) {
-            newPath = DOT_PATTERN.matcher(newPath).replaceAll("/");
-        }
-
-        // mid-path double dots should be removed WITH the previous subdirectory and replaced
-        //  with "/" BUT ONLY IF that subdirectory's not also ".." (a regex lookahead helps with this)
-        while (DOT_DOT_PATTERN.matcher(newPath).find()) {
-            newPath = DOT_DOT_PATTERN.matcher(newPath).replaceAll("/");
-        }
-
-        return newPath;
-    }
-
-    private static URL buildUrlWithNewPath(URL url, final String newPath) {
+    private static URL buildUrlWithNewPath(final URL url, final String newPath) {
         try {
-            url = UrlUtils.getUrlWithNewPath(url, newPath);
+            return UrlUtils.getUrlWithNewPath(url, newPath);
         }
         catch (final Exception e) {
             throw new RuntimeException("Cannot change path of URL: " + url.toExternalForm(), e);
         }
-        return url;
     }
 
     /**
      * Returns the proxy host to use.
+     *
      * @return the proxy host to use
      */
     public String getProxyHost() {
@@ -251,6 +374,7 @@ public class WebRequest implements Serializable {
 
     /**
      * Sets the proxy host to use.
+     *
      * @param proxyHost the proxy host to use
      */
     public void setProxyHost(final String proxyHost) {
@@ -259,6 +383,7 @@ public class WebRequest implements Serializable {
 
     /**
      * Returns the proxy port to use.
+     *
      * @return the proxy port to use
      */
     public int getProxyPort() {
@@ -267,6 +392,7 @@ public class WebRequest implements Serializable {
 
     /**
      * Sets the proxy port to use.
+     *
      * @param proxyPort the proxy port to use
      */
     public void setProxyPort(final int proxyPort) {
@@ -275,6 +401,7 @@ public class WebRequest implements Serializable {
 
     /**
      * Returns the proxy scheme to use.
+     *
      * @return the proxy scheme to use
      */
     public String getProxyScheme() {
@@ -283,7 +410,9 @@ public class WebRequest implements Serializable {
 
     /**
      * Sets the proxy scheme to use.
+     *
      * @param proxyScheme the proxy scheme to use
+     *
      */
     public void setProxyScheme(final String proxyScheme) {
         proxyScheme_ = proxyScheme;
@@ -291,7 +420,11 @@ public class WebRequest implements Serializable {
 
     /**
      * Returns whether SOCKS proxy or not.
+     *
+     * Returns whether SOCKS proxy or not.
+     *
      * @return whether SOCKS proxy or not
+     *
      */
     public boolean isSocksProxy() {
         return isSocksProxy_;
@@ -299,14 +432,19 @@ public class WebRequest implements Serializable {
 
     /**
      * Sets whether SOCKS proxy or not.
+     *
      * @param isSocksProxy whether SOCKS proxy or not
+     *
      */
     public void setSocksProxy(final boolean isSocksProxy) {
         isSocksProxy_ = isSocksProxy;
     }
 
     /**
+     * Returns the timeout to use.
+     *
      * @return the timeout to use
+     *
      */
     public int getTimeout() {
         return timeout_;
@@ -314,7 +452,9 @@ public class WebRequest implements Serializable {
 
     /**
      * Sets the timeout to use.
+     *
      * @param timeout the timeout to use
+     *
      */
     public void setTimeout(final int timeout) {
         timeout_ = timeout;
@@ -322,7 +462,11 @@ public class WebRequest implements Serializable {
 
     /**
      * Returns the form encoding type to use.
+     *
+     * Returns the form encoding type to use.
+     *
      * @return the form encoding type to use
+     *
      */
     public FormEncodingType getEncodingType() {
         return encodingType_;
@@ -330,56 +474,69 @@ public class WebRequest implements Serializable {
 
     /**
      * Sets the form encoding type to use.
+     *
      * @param encodingType the form encoding type to use
+     *
      */
     public void setEncodingType(final FormEncodingType encodingType) {
         encodingType_ = encodingType;
     }
 
     /**
-     * Retrieves the request parameters in use. Similar to the servlet api this will
-     * work depending on the request type and check the url parameters and
-     * the body. The value is also normalized - null is converted to an empty string.
+     * Retrieves the request parameters used. Similar to the servlet api function
+     * getParameterMap() this works depending on the request type and collects the
+     * url parameters and the body stuff.<br>
+     * The value is also normalized - null is converted to an empty string.
+     * <p>In contrast to the servlet api this creates a separate KeyValuePair for every
+     * parameter. This means that pairs with the same name can be part of the list. The
+     * servlet api will return a string[] as value for the key in this case.<br>
+     * Additionally this method includes also the uploaded files for multipart post
+     * requests.</p>
+     *
      * @return the request parameters to use
      */
     public List<NameValuePair> getParameters() {
         // developer note:
-        // this has to be in sync with
-        // org.htmlunit.HttpWebConnection.makeHttpMethod(WebRequest, HttpClientBuilder)
+        // this has to be in sync with org.htmlunit.HttpWebConnection.makeHttpMethod(WebRequest, HttpClientBuilder)
 
-        if (HttpMethod.POST != getHttpMethod() && HttpMethod.PUT != getHttpMethod()
-                && HttpMethod.PATCH != getHttpMethod()) {
+        // developer note:
+        // the spring org.springframework.test.web.servlet.htmlunitHtmlUnitRequestBuilder uses
+        // this method and is sensitive to all the details of the current implementation.
 
-            if (!getRequestParameters().isEmpty()) {
-                return normalize(getRequestParameters());
+        final List<NameValuePair> allParameters = new ArrayList<>(
+                HttpUtils.parseUrlQuery(getUrl().getQuery(), getCharset()));
+
+        // the servlet api ignores these parameters but to make spring happy we include them
+        final HttpMethod httpMethod = getHttpMethod();
+        if (httpMethod == HttpMethod.POST
+            || httpMethod == HttpMethod.PUT
+            || httpMethod == HttpMethod.PATCH
+            || httpMethod == HttpMethod.DELETE
+            || httpMethod == HttpMethod.OPTIONS) {
+            if (FormEncodingType.URL_ENCODED == getEncodingType()
+                && httpMethod != HttpMethod.OPTIONS) {
+                // spring ignores URL_ENCODED parameters for OPTIONS requests
+                // getRequestParameters and getRequestBody are mutually exclusive
+                if (getRequestBody() == null) {
+                    allParameters.addAll(getRequestParameters());
+                }
+                else {
+                    allParameters.addAll(HttpUtils.parseUrlQuery(getRequestBody(), getCharset()));
+                }
             }
-
-            return normalize(HttpClientConverter.parseUrlQuery(getUrl().getQuery(), getCharset()));
-
-        }
-
-        if (getEncodingType() == FormEncodingType.URL_ENCODED && HttpMethod.POST == getHttpMethod()) {
-            if (getRequestBody() == null) {
-                return normalize(getRequestParameters());
+            else if (FormEncodingType.MULTIPART == getEncodingType()) {
+                if (httpMethod == HttpMethod.POST) {
+                    allParameters.addAll(getRequestParameters());
+                }
+                else {
+                    // for PUT, PATCH, DELETE and OPTIONS spring moves the parameters up to the query
+                    // it doesn't replace the query
+                    allParameters.addAll(0, getRequestParameters());
+                }
             }
-
-            return normalize(HttpClientConverter.parseUrlQuery(getRequestBody(), getCharset()));
         }
 
-        if (getEncodingType() == FormEncodingType.TEXT_PLAIN  && HttpMethod.POST == getHttpMethod()) {
-            if (getRequestBody() == null) {
-                return normalize(getRequestParameters());
-            }
-
-            return Collections.emptyList();
-        }
-
-        if (FormEncodingType.MULTIPART == getEncodingType()) {
-            return normalize(getRequestParameters());
-        }
-
-        // for instance a PUT or PATCH request
-        return Collections.emptyList();
+        return normalize(allParameters);
     }
 
     private static List<NameValuePair> normalize(final List<NameValuePair> pairs) {
@@ -396,11 +553,14 @@ public class WebRequest implements Serializable {
     }
 
     /**
-     * <span style="color:red">INTERNAL API - SUBJECT TO CHANGE AT ANY TIME - USE AT YOUR OWN RISK.</span><br>
+     * <span style="color:red">INTERNAL API - SUBJECT TO CHANGE AT ANY TIME - USE AT
+     * YOUR OWN RISK.</span><br>
      *
-     * Retrieves the request parameters to use. If set, these request parameters will overwrite any
-     * request parameters which may be present in the {@link #getUrl() URL}. Should not be used in
-     * combination with the {@link #setRequestBody(String) request body}.
+     * Returns the request parameters to use. If set, these request parameters
+     * will overwrite any request parameters which may be present in the
+     * {@link #getUrl() URL}. Should not be used in combination with the
+     * {@link #setRequestBody(String) request body}.
+     *
      * @return the request parameters to use
      */
     public List<NameValuePair> getRequestParameters() {
@@ -408,56 +568,70 @@ public class WebRequest implements Serializable {
     }
 
     /**
-     * <span style="color:red">INTERNAL API - SUBJECT TO CHANGE AT ANY TIME - USE AT YOUR OWN RISK.</span><br>
+     * <span style="color:red">INTERNAL API - SUBJECT TO CHANGE AT ANY TIME - USE AT
+     * YOUR OWN RISK.</span><br>
      *
-     * Sets the request parameters to use. If set, these request parameters will overwrite any request
-     * parameters which may be present in the {@link #getUrl() URL}. Should not be used in combination
-     * with the {@link #setRequestBody(String) request body}.
+     * Sets the request parameters to use. If set, these request parameters will
+     * overwrite any request parameters which may be present in the {@link #getUrl()
+     * URL}. Should not be used in combination with the
+     * {@link #setRequestBody(String) request body}.
+     *
      * @param requestParameters the request parameters to use
      * @throws RuntimeException if the request body has already been set
      */
     public void setRequestParameters(final List<NameValuePair> requestParameters) throws RuntimeException {
         if (requestBody_ != null) {
             final String msg = "Trying to set the request parameters, but the request body has already been specified;"
-                             + "the two are mutually exclusive!";
+                    + "the two are mutually exclusive!";
             throw new RuntimeException(msg);
         }
         requestParameters_ = requestParameters;
     }
 
     /**
-     * Returns the body content to be submitted if this is a <code>POST</code> request. Ignored for all other request
-     * types. Should not be used in combination with {@link #setRequestParameters(List) request parameters}.
-     * @return the body content to be submitted if this is a <code>POST</code> request
+     * Returns the body content to be submitted if this is a {@code POST}
+     * request. Ignored for all other request types. Should not be used in
+     * combination with {@link #setRequestParameters(List) request parameters}.
+     *
+     * @return the body content, or {@code null} if not set
      */
     public String getRequestBody() {
         return requestBody_;
     }
 
     /**
-     * Sets the body content to be submitted if this is a {@code POST}, {@code PUT} or {@code PATCH} request.
-     * Ignored for all other request types.
-     * Should not be used in combination with {@link #setRequestParameters(List) request parameters}.
-     * @param requestBody the body content to be submitted if this is a {@code POST}, {@code PUT}
-     * or {@code PATCH} request
-     * @throws RuntimeException if the request parameters have already been set
-     *                          or this is not a {@code POST}, {@code PUT} or {@code PATCH} request.
+     * Sets the body content to be submitted if this is a {@code POST}, {@code PUT}
+     * or {@code PATCH} request. Other request types result in
+     * {@link IllegalStateException}. Should not be used in combination with
+     * {@link #setRequestParameters(List) request parameters}.
+     *
+     * @param requestBody the body content to be submitted if this is a
+     *                    {@code POST}, {@code PUT} or {@code PATCH} request
+     * @throws IllegalStateException if the request parameters have already been set or
+     *                          this is not a {@code POST}, {@code PUT} or
+     *                          {@code PATCH} request.
+     *
      */
-    public void setRequestBody(final String requestBody) throws RuntimeException {
+    public void setRequestBody(final String requestBody) throws IllegalStateException {
         if (requestParameters_ != null && !requestParameters_.isEmpty()) {
             final String msg = "Trying to set the request body, but the request parameters have already been specified;"
                        + "the two are mutually exclusive!";
-            throw new RuntimeException(msg);
+            throw new IllegalStateException(msg);
         }
-        if (httpMethod_ != HttpMethod.POST && httpMethod_ != HttpMethod.PUT && httpMethod_ != HttpMethod.PATCH) {
-            final String msg = "The request body may only be set for POST, PUT or PATCH requests!";
-            throw new RuntimeException(msg);
+        if (httpMethod_ != HttpMethod.POST
+                && httpMethod_ != HttpMethod.PUT
+                && httpMethod_ != HttpMethod.PATCH
+                && httpMethod_ != HttpMethod.DELETE
+                && httpMethod_ != HttpMethod.OPTIONS) {
+            final String msg = "The request body may only be set for POST, PUT, PATCH, DELETE or OPTIONS requests!";
+            throw new IllegalStateException(msg);
         }
         requestBody_ = requestBody;
     }
 
     /**
      * Returns the HTTP submit method to use.
+     *
      * @return the HTTP submit method to use
      */
     public HttpMethod getHttpMethod() {
@@ -466,6 +640,7 @@ public class WebRequest implements Serializable {
 
     /**
      * Sets the HTTP submit method to use.
+     *
      * @param submitMethod the HTTP submit method to use
      */
     public void setHttpMethod(final HttpMethod submitMethod) {
@@ -474,6 +649,7 @@ public class WebRequest implements Serializable {
 
     /**
      * Returns the additional HTTP headers to use.
+     *
      * @return the additional HTTP headers to use
      */
     public Map<String, String> getAdditionalHeaders() {
@@ -482,6 +658,7 @@ public class WebRequest implements Serializable {
 
     /**
      * Sets the additional HTTP headers to use.
+     *
      * @param additionalHeaders the additional HTTP headers to use
      */
     public void setAdditionalHeaders(final Map<String, String> additionalHeaders) {
@@ -489,9 +666,11 @@ public class WebRequest implements Serializable {
     }
 
     /**
-     * Returns whether the specified header name is already included in the additional HTTP headers.
-     * @param name the name of the additional HTTP header
-     * @return true if the specified header name is included in the additional HTTP headers
+     * Returns whether the specified header name is already included in the
+     * additional HTTP headers. The comparison is case-insensitive.
+     *
+     * @param name the header name to look up
+     * @return {@code true} if the header is present; {@code false} otherwise
      */
     public boolean isAdditionalHeader(final String name) {
         for (final String key : additionalHeaders_.keySet()) {
@@ -503,26 +682,36 @@ public class WebRequest implements Serializable {
     }
 
     /**
-     * Returns the header value associated with this name.
-     * @param name the name of the additional HTTP header
-     * @return the value or null
+     * Returns the value of the specified additional HTTP header,
+     * or {@code null} if the header is not set. The name comparison
+     * is case-insensitive.
+     *
+     * @param name the header name to look up
+     * @return the header value, or {@code null} if not present
      */
     public String getAdditionalHeader(final String name) {
-        String newKey = name;
-        for (final String key : additionalHeaders_.keySet()) {
-            if (name.equalsIgnoreCase(key)) {
-                newKey = key;
-                break;
+        final String val = additionalHeaders_.get(name);
+        if (val != null) {
+            return val;
+        }
+
+        // fall back to case-insensitive scan
+        for (final Map.Entry<String, String> entry : additionalHeaders_.entrySet()) {
+            if (name.equalsIgnoreCase(entry.getKey())) {
+                return entry.getValue();
             }
         }
-        return additionalHeaders_.get(newKey);
+        return null;
     }
 
     /**
-     * Sets the referer HTTP header - only if the provided url is valid.
-     * @param url the url for the referer HTTP header
+     * Sets the {@code Referer} HTTP header to the external form of the given
+     * URL. Does nothing if the URL is {@code null} or does not use the
+     * {@code http} or {@code https} scheme.
+     *
+     * @param url the URL to use as the referer, or {@code null}
      */
-    public void setRefererlHeader(final URL url) {
+    public void setRefererHeader(final URL url) {
         if (url == null || !url.getProtocol().startsWith("http")) {
             return;
         }
@@ -530,52 +719,273 @@ public class WebRequest implements Serializable {
         try {
             setAdditionalHeader(HttpHeader.REFERER, UrlUtils.getUrlWithoutRef(url).toExternalForm());
         }
-        catch (final MalformedURLException e) {
-            // bad luck us the whole url from the pager
+        catch (final MalformedURLException ignored) {
+            // bad luck use the whole url from the pager
         }
     }
 
     /**
-     * Sets the specified name/value pair in the additional HTTP headers.
-     * @param name the name of the additional HTTP header
-     * @param value the value of the additional HTTP header
+     * Returns the destination of this request, used to compute the
+     * {@code Sec-Fetch-Dest} header (and, unless overridden, the default
+     * {@code Sec-Fetch-Mode}). Defaults to {@link FetchDestination#EMPTY},
+     * which is correct for plain {@code XMLHttpRequest}/{@code fetch()} calls.
+     *
+     * @return the destination of this request
+     */
+    public FetchDestination getFetchDestination() {
+        return fetchDestination_;
+    }
+
+    /**
+     * Sets the destination of this request.
+     *
+     * @param fetchDestination the destination of this request, or {@code null}
+     *                         to reset to {@link FetchDestination#EMPTY}
+     */
+    public void setFetchDestination(final FetchDestination fetchDestination) {
+        fetchDestination_ = fetchDestination == null ? FetchDestination.EMPTY : fetchDestination;
+    }
+
+    /**
+     * Returns the explicit mode override for this request, if any. When
+     * {@code null} (the default), the mode is derived from the
+     * {@link #getFetchDestination() destination}.
+     *
+     * @return the mode override, or {@code null} if none was set
+     */
+    public FetchMode getFetchModeOverride() {
+        return fetchModeOverride_;
+    }
+
+    /**
+     * Sets an explicit mode override for this request, e.g. for a {@code fetch()}
+     * call using an explicit {@code mode} option, or a subresource request using
+     * the {@code crossorigin} attribute (which forces CORS mode).
+     *
+     * @param fetchMode the mode to use, or {@code null} to derive it from the
+     *                  {@link #getFetchDestination() destination}
+     */
+    public void setFetchModeOverride(final FetchMode fetchMode) {
+        fetchModeOverride_ = fetchMode;
+    }
+
+    /**
+     * <span style="color:red">INTERNAL API - SUBJECT TO CHANGE AT ANY TIME - USE AT YOUR OWN RISK.</span><br>
+     *
+     * Returns the filter called before a redirect is followed.
+     *
+     * @return the filter or {@code null}
+     * @see #setRedirectFilter(Predicate)
+     */
+    public Predicate<URL> getRedirectFilter() {
+        return redirectFilter_;
+    }
+
+    /**
+     * <span style="color:red">INTERNAL API - SUBJECT TO CHANGE AT ANY TIME - USE AT YOUR OWN RISK.</span><br>
+     *
+     * Sets a filter that is called with the target url before a redirect is followed
+     * (e.g. to check the redirect against the form-action directive of the
+     * Content-Security-Policy). The filter is passed on to the requests of all following
+     * redirects. If the filter returns {@code false}, the redirect is blocked and
+     * {@link WebClient#loadWebResponse(WebRequest)} returns {@code null}.
+     * The filter is not serialized.
+     *
+     * @param redirectFilter the filter or {@code null}
+     */
+    public void setRedirectFilter(final Predicate<URL> redirectFilter) {
+        redirectFilter_ = redirectFilter;
+    }
+
+    /**
+     * <span style="color:red">INTERNAL API - SUBJECT TO CHANGE AT ANY TIME - USE AT YOUR OWN RISK.</span><br>
+     *
+     * Returns the mapper applied to the target url of a redirect.
+     *
+     * @return the mapper or {@code null}
+     * @see #setRedirectUrlMapper(UnaryOperator)
+     */
+    public UnaryOperator<URL> getRedirectUrlMapper() {
+        return redirectUrlMapper_;
+    }
+
+    /**
+     * <span style="color:red">INTERNAL API - SUBJECT TO CHANGE AT ANY TIME - USE AT YOUR OWN RISK.</span><br>
+     *
+     * Sets a mapper that is applied to the target url of a redirect before the redirect filter
+     * is called and the redirect is followed (e.g. to upgrade the url because of the
+     * upgrade-insecure-requests directive of the Content-Security-Policy). The mapper is passed
+     * on to the requests of all following redirects. The mapper is not serialized.
+     *
+     * @param redirectUrlMapper the mapper or {@code null}
+     */
+    public void setRedirectUrlMapper(final UnaryOperator<URL> redirectUrlMapper) {
+        redirectUrlMapper_ = redirectUrlMapper;
+    }
+
+    /**
+     * Returns whether this request is the result of a navigation backed by
+     * genuine user activation (e.g. a click on a link, a typed URL, or a form
+     * submitted via a click on its submit button) as opposed to one triggered
+     * purely by script (e.g. {@code location.href = ...}, a {@code <meta
+     * http-equiv="refresh">}, or an automatically-loaded {@code <iframe>}).
+     * <p>
+     * Only relevant for requests whose {@code Sec-Fetch-Mode} is {@code
+     * navigate}; used to compute the presence of the {@code Sec-Fetch-User}
+     * header, which real browsers omit entirely (never send as {@code ?0})
+     * whenever this is {@code false}.
+     * </p>
+     *
+     * @return whether this request was triggered by a real user gesture
+     */
+    public boolean isUserActivation() {
+        return userActivation_;
+    }
+
+    /**
+     * Sets whether this request is the result of a navigation backed by genuine
+     * user activation.
+     *
+     * @param userActivation whether this request was triggered by a real user
+     *                       gesture
+     */
+    public void setUserActivation(final boolean userActivation) {
+        userActivation_ = userActivation;
+    }
+
+    /**
+     * Returns the URL of the document or script that initiated this request, used
+     * to compute the {@code Sec-Fetch-Site} header. {@code null} means there is
+     * no initiator (e.g. a browser-chrome-initiated navigation such as a typed
+     * URL or bookmark), which maps to {@code Sec-Fetch-Site: none}.
+     * <p>
+     * Note this is tracked separately from the {@code Referer} header: unlike
+     * the referrer, it must not be affected by referrer-policy stripping, since
+     * {@code Sec-Fetch-Site} always reflects the true relationship between the
+     * initiator and the target, even when no {@code Referer} header is sent.
+     * </p>
+     *
+     * @return the URL of the initiator, or {@code null} if there is none
+     */
+    public URL getRequestingUrl() {
+        return requestingUrl_ == null ? null : UrlUtils.toUrlSafe(requestingUrl_);
+    }
+
+    /**
+     * Sets the URL of the document or script that initiated this request.
+     *
+     * @param requestingUrl the URL of the initiator, or {@code null} if there is
+     *                      none
+     */
+    public void setRequestingUrl(final URL requestingUrl) {
+        requestingUrl_ = requestingUrl == null ? null : requestingUrl.toExternalForm();
+    }
+
+    /**
+     * Convenience method for the common case of a top-level navigation (an
+     * anchor/area click, a form submission, a script-driven location change, ...):
+     * sets {@link FetchDestination#DOCUMENT}, the initiator URL, and whether the
+     * navigation was backed by genuine user activation, all in one call.
+     * <p>
+     * Every navigation-triggering call site needs all three of these set
+     * together for correct {@code Sec-Fetch-*} headers; bundling them here
+     * makes it harder for a call site to set some of them and forget the rest.
+     * </p>
+     * <p>
+     * For navigations whose destination is not {@link FetchDestination#DOCUMENT}
+     * (e.g. an {@code <iframe>}/{@code <frame>} load), use
+     * {@link #markAsNavigation(FetchDestination, URL, boolean)} instead.
+     * </p>
+     *
+     * @param requestingUrl the URL of the page initiating this navigation, or
+     *                      {@code null} if there is none (e.g. a typed URL)
+     * @param userActivation whether this navigation was triggered by a real
+     *                       user gesture as opposed to script
+     */
+    public void markAsNavigation(final URL requestingUrl, final boolean userActivation) {
+        markAsNavigation(FetchDestination.DOCUMENT, requestingUrl, userActivation);
+    }
+
+    /**
+     * Same as {@link #markAsNavigation(URL, boolean)}, but for navigations whose
+     * destination isn't a top-level {@link FetchDestination#DOCUMENT} - currently
+     * only {@code <iframe>}/{@code <frame>} loads ({@link FetchDestination#IFRAME}/
+     * {@link FetchDestination#FRAME}).
+     *
+     * @param destination the navigation's destination
+     * @param requestingUrl the URL of the page initiating this navigation, or
+     *                      {@code null} if there is none
+     * @param userActivation whether this navigation was triggered by a real
+     *                       user gesture as opposed to script
+     */
+    public void markAsNavigation(final FetchDestination destination, final URL requestingUrl,
+            final boolean userActivation) {
+        setFetchDestination(destination);
+        setRequestingUrl(requestingUrl);
+        setUserActivation(userActivation);
+    }
+
+    /**
+     * Sets the specified name/value pair in the additional HTTP headers,
+     * replacing any existing header with the same name (case-insensitive).
+     *
+     * @param name  the header name
+     * @param value the header value
      */
     public void setAdditionalHeader(final String name, final String value) {
-        String newKey = name;
+        if (additionalHeaders_.containsKey(name)) {
+            additionalHeaders_.put(name, value);
+            return;
+        }
+
+        // fall back to case-insensitive scan
         for (final String key : additionalHeaders_.keySet()) {
             if (name.equalsIgnoreCase(key)) {
-                newKey = key;
-                break;
+                additionalHeaders_.put(key, value);
+                return;
             }
         }
-        additionalHeaders_.put(newKey, value);
+
+        // no existing header found, insert with the given name
+        additionalHeaders_.put(name, value);
     }
 
     /**
-     * Removed the specified name/value pair from the additional HTTP headers.
-     * @param name the name of the additional HTTP header
+     * Removes the specified header from the additional HTTP headers.
+     * The name comparison is case-insensitive. Does nothing if the
+     * header is not present.
+     *
+     * @param name the header name to remove
      */
-    public void removeAdditionalHeader(String name) {
+    public void removeAdditionalHeader(final String name) {
+        if (additionalHeaders_.remove(name) != null) {
+            return;
+        }
+
+        // fall back to case-insensitive scan
         for (final String key : additionalHeaders_.keySet()) {
             if (name.equalsIgnoreCase(key)) {
-                name = key;
-                break;
+                additionalHeaders_.remove(key);
+                return;
             }
         }
-        additionalHeaders_.remove(name);
     }
 
     /**
-     * Returns the credentials to use.
-     * @return the credentials if set as part of the url
+     * Returns the credentials extracted from the URL's userinfo component
+     * (e.g. {@code http://user:secret@host/}), or {@code null} if none were present.
+     *
+     * @return the URL-embedded credentials, or {@code null}
      */
     public Credentials getUrlCredentials() {
         return urlCredentials_;
     }
 
     /**
-     * Returns the credentials to use.
-     * @return the credentials if set from the external builder
+     * Returns the credentials explicitly set via {@link #setCredentials(Credentials)},
+     * or {@code null} if none were set.
+     *
+     * @return the explicitly configured credentials, or {@code null}
      */
     public Credentials getCredentials() {
         return credentials_;
@@ -583,6 +993,7 @@ public class WebRequest implements Serializable {
 
     /**
      * Sets the credentials to use.
+     *
      * @param credentials the credentials to use
      */
     public void setCredentials(final Credentials credentials) {
@@ -591,6 +1002,7 @@ public class WebRequest implements Serializable {
 
     /**
      * Returns the character set to use to perform the request.
+     *
      * @return the character set to use to perform the request
      */
     public Charset getCharset() {
@@ -598,14 +1010,47 @@ public class WebRequest implements Serializable {
     }
 
     /**
-     * Sets the character set to use to perform the request. The default value
-     * is {@link java.nio.charset.StandardCharsets#ISO_8859_1}.
+     * Sets the character set to use to perform the request. The default value is
+     * {@link java.nio.charset.StandardCharsets#ISO_8859_1}.
+     *
      * @param charset the character set to use to perform the request
      */
     public void setCharset(final Charset charset) {
         charset_ = charset;
     }
 
+    /**
+     * Returns the default character set to use for the response when it does not
+     * specify one.
+     *
+     * @return the default character set to use for the response when it does not
+     *         specify one.
+     */
+    public Charset getDefaultResponseContentCharset() {
+        return defaultResponseContentCharset_;
+    }
+
+    /**
+     * Sets the default character set to use when the response does not declare
+     * one explicitly.
+     * <p>
+     * Unless overridden, the default is
+     * {@link java.nio.charset.StandardCharsets#ISO_8859_1} (per HTTP/1.1).
+     * </p>
+     *
+     * @param defaultResponseContentCharset the fallback charset; must not be {@code null}
+     */
+    public void setDefaultResponseContentCharset(final Charset defaultResponseContentCharset) {
+        WebAssert.notNull("defaultResponseContentCharset", defaultResponseContentCharset);
+        defaultResponseContentCharset_ = defaultResponseContentCharset;
+    }
+
+    /**
+     * Returns whether the given {@link HttpHint} is currently enabled for this request.
+     *
+     * @param hint the hint to check
+     * @return {@code true} if the hint is enabled; {@code false} otherwise
+     */
     public boolean hasHint(final HttpHint hint) {
         if (httpHints_ == null) {
             return false;
@@ -613,23 +1058,28 @@ public class WebRequest implements Serializable {
         return httpHints_.contains(hint);
     }
 
+    /**
+     * Enables the given {@link HttpHint} for this request.
+     *
+     * @param hint the hint to enable
+     */
     public void addHint(final HttpHint hint) {
         if (httpHints_ == null) {
-            httpHints_ = new HashSet<>();
+            httpHints_ = EnumSet.noneOf(HttpHint.class);
         }
         httpHints_.add(hint);
     }
 
     /**
-     * Returns a string representation of this object.
-     * @return a string representation of this object
+     * {@inheritDoc}
      */
     @Override
     public String toString() {
         final StringBuilder builder = new StringBuilder(100)
                 .append(getClass().getSimpleName())
-                .append("[<url=\"").append(url_).append('"')
-                .append(", ").append(httpMethod_)
+                .append("[<url=\"")
+                .append(url_)
+                .append("\", ").append(httpMethod_)
                 .append(", ").append(encodingType_)
                 .append(", ").append(requestParameters_)
                 .append(", ").append(additionalHeaders_)
@@ -641,6 +1091,7 @@ public class WebRequest implements Serializable {
     private void writeObject(final ObjectOutputStream oos) throws IOException {
         oos.defaultWriteObject();
         oos.writeObject(charset_ == null ? null : charset_.name());
+        oos.writeObject(defaultResponseContentCharset_ == null ? null : defaultResponseContentCharset_.name());
     }
 
     private void readObject(final ObjectInputStream ois) throws ClassNotFoundException, IOException {
@@ -648,6 +1099,10 @@ public class WebRequest implements Serializable {
         final String charsetName = (String) ois.readObject();
         if (charsetName != null) {
             charset_ = Charset.forName(charsetName);
+        }
+        final String defaultResponseContentCharset = (String) ois.readObject();
+        if (defaultResponseContentCharset != null) {
+            defaultResponseContentCharset_ = Charset.forName(defaultResponseContentCharset);
         }
     }
 }

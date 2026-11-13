@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,40 +14,33 @@
  */
 package org.htmlunit.javascript.host;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 
-import org.apache.commons.lang3.StringUtils;
-
 import org.htmlunit.WebWindow;
 import org.htmlunit.html.HtmlPage;
 import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.configuration.JsxSetter;
-
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.ScriptRuntime;
-import org.htmlunit.corejs.javascript.Undefined;
+import org.htmlunit.util.StringUtils;
 
 /**
- * A JavaScript object for the client's browsing history.
+ * JavaScript host object for the client's browsing history.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author Chris Erskine
  * @author Daniel Gredler
  * @author Ahmed Ashour
  * @author Ronald Brill
  * @author Adam Afeltowicz
  * @author Lai Quang Duong
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/History">MDN Documentation</a>
  */
 @JsxClass
 public class History extends HtmlUnitScriptable {
@@ -57,15 +50,17 @@ public class History extends HtmlUnitScriptable {
     private String scrollRestoration_ = SCROLL_RESTAURATION_AUTO;
 
     /**
-     * Creates an instance.
+     * Creates an instance of this object.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public History() {
+    @JsxConstructor
+    public void jsConstructor() {
+        // nothing to do
     }
 
     /**
      * Returns the {@code length} property.
-     * @return the {@code length} property
+     *
+     * @return the number of entries in the session history
      */
     @JsxGetter
     public int getLength() {
@@ -75,7 +70,8 @@ public class History extends HtmlUnitScriptable {
 
     /**
      * Returns the {@code state} property.
-     * @return the {@code state} property
+     *
+     * @return the current history state object
      */
     @JsxGetter
     public Object getState() {
@@ -84,7 +80,7 @@ public class History extends HtmlUnitScriptable {
     }
 
     /**
-     * JavaScript function "back".
+     * Navigates one step back in the session history.
      */
     @JsxFunction
     public void back() {
@@ -92,12 +88,12 @@ public class History extends HtmlUnitScriptable {
             getWindow().getWebWindow().getHistory().back();
         }
         catch (final IOException e) {
-            Context.throwAsScriptRuntimeEx(e);
+            throw JavaScriptEngine.throwAsScriptRuntimeEx(e);
         }
     }
 
     /**
-     * JavaScript function "forward".
+     * Navigates one step forward in the session history.
      */
     @JsxFunction
     public void forward() {
@@ -105,13 +101,14 @@ public class History extends HtmlUnitScriptable {
             getWindow().getWebWindow().getHistory().forward();
         }
         catch (final IOException e) {
-            Context.throwAsScriptRuntimeEx(e);
+            throw JavaScriptEngine.throwAsScriptRuntimeEx(e);
         }
     }
 
     /**
-     * JavaScript function "go".
-     * @param relativeIndex the relative index
+     * Navigates by the given number of steps relative to the current position in the session history.
+     *
+     * @param relativeIndex the relative number of steps to navigate (positive or negative)
      */
     @JsxFunction
     public void go(final int relativeIndex) {
@@ -119,15 +116,16 @@ public class History extends HtmlUnitScriptable {
             getWindow().getWebWindow().getHistory().go(relativeIndex);
         }
         catch (final IOException e) {
-            Context.throwAsScriptRuntimeEx(e);
+            throw JavaScriptEngine.throwAsScriptRuntimeEx(e);
         }
     }
 
     /**
-     * Replaces a state.
-     * @param object the state object
-     * @param title the title
-     * @param url an optional URL
+     * Replaces the current history entry with the given state.
+     *
+     * @param object the new state object
+     * @param title the title (currently ignored by most browsers)
+     * @param url an optional new URL for the history entry
      */
     @JsxFunction
     public void replaceState(final Object object, final String title, final Object url) {
@@ -136,15 +134,16 @@ public class History extends HtmlUnitScriptable {
             w.getHistory().replaceState(object, buildNewStateUrl(w, url));
         }
         catch (final MalformedURLException e) {
-            Context.throwAsScriptRuntimeEx(e);
+            throw JavaScriptEngine.throwAsScriptRuntimeEx(e);
         }
     }
 
     /**
-     * Pushes a state.
-     * @param object the state object
-     * @param title the title
-     * @param url an optional URL
+     * Pushes a new state onto the session history stack.
+     *
+     * @param object the new state object
+     * @param title the title (currently ignored by most browsers)
+     * @param url an optional new URL for the new history entry
      */
     @JsxFunction
     public void pushState(final Object object, final String title, final Object url) {
@@ -153,14 +152,14 @@ public class History extends HtmlUnitScriptable {
             w.getHistory().pushState(object, buildNewStateUrl(w, url));
         }
         catch (final IOException e) {
-            Context.throwAsScriptRuntimeEx(e);
+            throw JavaScriptEngine.throwAsScriptRuntimeEx(e);
         }
     }
 
     private static URL buildNewStateUrl(final WebWindow webWindow, final Object url) throws MalformedURLException {
         URL newStateUrl = null;
-        if (url != null && !Undefined.isUndefined(url)) {
-            final String urlString = ScriptRuntime.toString(url);
+        if (url != null && !JavaScriptEngine.isUndefined(url)) {
+            final String urlString = JavaScriptEngine.toString(url);
             if (StringUtils.isNotBlank(urlString)) {
                 final HtmlPage page = (HtmlPage) webWindow.getEnclosedPage();
                 newStateUrl = page.getFullyQualifiedUrl(urlString);
@@ -171,17 +170,20 @@ public class History extends HtmlUnitScriptable {
 
     /**
      * Returns the {@code scrollRestoration} property.
+     *
      * @return the {@code scrollRestoration} property
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public String getScrollRestoration() {
         return scrollRestoration_;
     }
 
     /**
-     * @param scrollRestoration the new value
+     * Sets the {@code scrollRestoration} property.
+     *
+     * @param scrollRestoration the new value; either {@code "auto"} or {@code "manual"}
      */
-    @JsxSetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxSetter
     public void setScrollRestoration(final String scrollRestoration) {
         if (SCROLL_RESTAURATION_AUTO.equals(scrollRestoration)) {
             scrollRestoration_ = SCROLL_RESTAURATION_AUTO;

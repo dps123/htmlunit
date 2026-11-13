@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,22 +16,16 @@ package org.htmlunit.javascript.host.html;
 
 import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
 import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
 
+import org.htmlunit.corejs.javascript.Function;
 import org.htmlunit.html.HtmlBody;
 import org.htmlunit.html.HtmlElement;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
-import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.configuration.JsxSetter;
-import org.htmlunit.javascript.host.dom.TextRange;
 import org.htmlunit.javascript.host.event.Event;
 import org.htmlunit.util.StringUtils;
-
-import org.htmlunit.corejs.javascript.Function;
 
 /**
  * The JavaScript object {@code HTMLBodyElement}.
@@ -40,15 +34,19 @@ import org.htmlunit.corejs.javascript.Function;
  * @author Marc Guillemot
  * @author Daniel Gredler
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLBodyElement">MDN Documentation</a>
  */
 @JsxClass(domClass = HtmlBody.class)
 public class HTMLBodyElement extends HTMLElement {
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public HTMLBodyElement() {
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
@@ -60,7 +58,7 @@ public class HTMLBodyElement extends HTMLElement {
     public void createEventHandlerFromAttribute(final String attributeName, final String value) {
         // when many body tags are found while parsing, attributes of
         // different tags are added and should create an event handler when needed
-        if (StringUtils.toRootLowerCaseWithCache(attributeName).startsWith("on")) {
+        if (StringUtils.toRootLowerCase(attributeName).startsWith("on")) {
             createEventHandler(attributeName.substring(2), value);
         }
     }
@@ -84,7 +82,7 @@ public class HTMLBodyElement extends HTMLElement {
     /**
      * Returns the value of the {@code aLink} attribute.
      * @return the value of the {@code aLink} attribute
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms533070.aspx">MSDN Documentation</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLBodyElement">MDN Documentation</a>
      */
     @JsxGetter
     public String getALink() {
@@ -94,7 +92,7 @@ public class HTMLBodyElement extends HTMLElement {
     /**
      * Sets the value of the {@code aLink} attribute.
      * @param aLink the value of the {@code aLink} attribute
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms533070.aspx">MSDN Documentation</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLBodyElement">MDN Documentation</a>
      */
     @JsxSetter
     public void setALink(final String aLink) {
@@ -104,7 +102,7 @@ public class HTMLBodyElement extends HTMLElement {
     /**
      * Returns the value of the {@code background} attribute.
      * @return the value of the {@code background} attribute
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms533498.aspx">MSDN Documentation</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLBodyElement">MDN Documentation</a>
      */
     @JsxGetter
     public String getBackground() {
@@ -115,7 +113,7 @@ public class HTMLBodyElement extends HTMLElement {
     /**
      * Sets the value of the {@code background} attribute.
      * @param background the value of the {@code background} attribute
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms533498.aspx">MSDN Documentation</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLBodyElement">MDN Documentation</a>
      */
     @JsxSetter
     public void setBackground(final String background) {
@@ -125,7 +123,7 @@ public class HTMLBodyElement extends HTMLElement {
     /**
      * Returns the value of the {@code bgColor} attribute.
      * @return the value of the {@code bgColor} attribute
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms533505.aspx">MSDN Documentation</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLBodyElement">MDN Documentation</a>
      */
     @JsxGetter
     public String getBgColor() {
@@ -135,7 +133,7 @@ public class HTMLBodyElement extends HTMLElement {
     /**
      * Sets the value of the {@code bgColor} attribute.
      * @param bgColor the value of the {@code bgColor} attribute
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms533505.aspx">MSDN Documentation</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLBodyElement">MDN Documentation</a>
      */
     @JsxSetter
     public void setBgColor(final String bgColor) {
@@ -145,7 +143,7 @@ public class HTMLBodyElement extends HTMLElement {
     /**
      * Returns the value of the {@code link} attribute.
      * @return the value of the {@code link} attribute
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms534119.aspx">MSDN Documentation</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLBodyElement">MDN Documentation</a>
      */
     @JsxGetter
     public String getLink() {
@@ -155,7 +153,7 @@ public class HTMLBodyElement extends HTMLElement {
     /**
      * Sets the value of the {@code link} attribute.
      * @param link the value of the {@code link} attribute
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms534119.aspx">MSDN Documentation</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLBodyElement">MDN Documentation</a>
      */
     @JsxSetter
     public void setLink(final String link) {
@@ -165,7 +163,7 @@ public class HTMLBodyElement extends HTMLElement {
     /**
      * Returns the value of the {@code text} attribute.
      * @return the value of the {@code text} attribute
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms534677.aspx">MSDN Documentation</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLBodyElement">MDN Documentation</a>
      */
     @JsxGetter
     public String getText() {
@@ -175,7 +173,7 @@ public class HTMLBodyElement extends HTMLElement {
     /**
      * Sets the value of the {@code text} attribute.
      * @param text the value of the {@code text} attribute
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms534677.aspx">MSDN Documentation</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLBodyElement">MDN Documentation</a>
      */
     @JsxSetter
     public void setText(final String text) {
@@ -185,7 +183,7 @@ public class HTMLBodyElement extends HTMLElement {
     /**
      * Returns the value of the {@code vLink} attribute.
      * @return the value of the {@code vLink} attribute
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms534677.aspx">MSDN Documentation</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLBodyElement">MDN Documentation</a>
      */
     @JsxGetter
     public String getVLink() {
@@ -195,7 +193,7 @@ public class HTMLBodyElement extends HTMLElement {
     /**
      * Sets the value of the {@code vLink} attribute.
      * @param vLink the value of the {@code vLink} attribute
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms534677.aspx">MSDN Documentation</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLBodyElement">MDN Documentation</a>
      */
     @JsxSetter
     public void setVLink(final String vLink) {
@@ -214,17 +212,8 @@ public class HTMLBodyElement extends HTMLElement {
      * {@inheritDoc}
      */
     @Override
-    @JsxFunction(IE)
-    public TextRange createTextRange() {
-        return super.createTextRange();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     @JsxGetter({CHROME, EDGE})
-    public Object getOnload() {
+    public Function getOnload() {
         return super.getOnload();
     }
 
@@ -251,7 +240,7 @@ public class HTMLBodyElement extends HTMLElement {
      */
     @Override
     @JsxGetter({CHROME, EDGE})
-    public Object getOnblur() {
+    public Function getOnblur() {
         return super.getOnblur();
     }
 
@@ -269,7 +258,7 @@ public class HTMLBodyElement extends HTMLElement {
      */
     @Override
     @JsxGetter({CHROME, EDGE})
-    public Object getOnfocus() {
+    public Function getOnfocus() {
         return super.getOnfocus();
     }
 
@@ -287,7 +276,7 @@ public class HTMLBodyElement extends HTMLElement {
      */
     @Override
     @JsxGetter({CHROME, EDGE})
-    public Object getOnerror() {
+    public Function getOnerror() {
         return super.getOnerror();
     }
 
@@ -310,37 +299,37 @@ public class HTMLBodyElement extends HTMLElement {
     }
 
     /**
-     * Returns the {@code ongamepadconnected} event handler.
-     * @return the {@code ongamepadconnected} event handler
+     * Returns the {@code ongamepadconnected} event handler for this element.
+     * @return the {@code ongamepadconnected} event handler for this element
      */
-    @JsxGetter({FF, FF_ESR})
+    @JsxGetter
     public Function getOngamepadconnected() {
         return getEventHandler(Event.TYPE_GAMEPAD_CONNECTED);
     }
 
     /**
-     * Sets the {@code ongamepadconnected} event handler.
-     * @param gamepadconnected the {@code ongamepadconnected} event handler
+     * Sets the {@code ongamepadconnected} event handler for this element.
+     * @param gamepadconnected the {@code ongamepadconnected} event handler for this element
      */
-    @JsxSetter({FF, FF_ESR})
+    @JsxSetter
     public void setOngamepadconnected(final Object gamepadconnected) {
         setEventHandler(Event.TYPE_GAMEPAD_CONNECTED, gamepadconnected);
     }
 
     /**
-     * Returns the {@code ongamepaddisconnected} event handler.
-     * @return the {@code ongamepaddisconnected} event handler
+     * Returns the {@code ongamepaddisconnected} event handler for this element.
+     * @return the {@code ongamepaddisconnected} event handler for this element
      */
-    @JsxGetter({FF, FF_ESR})
+    @JsxGetter
     public Function getOngamepaddisconnected() {
         return getEventHandler(Event.TYPE_GAMEPAD_DISCONNECTED);
     }
 
     /**
-     * Sets the {@code ongamepaddisconnected} event handler.
-     * @param gamepaddisconnected the {@code ongamepaddisconnected} event handler
+     * Sets the {@code ongamepaddisconnected} event handler for this element.
+     * @param gamepaddisconnected the {@code ongamepaddisconnected} event handler for this element
      */
-    @JsxSetter({FF, FF_ESR})
+    @JsxSetter
     public void setOngamepaddisconnected(final Object gamepaddisconnected) {
         setEventHandler(Event.TYPE_GAMEPAD_DISCONNECTED, gamepaddisconnected);
     }
@@ -367,7 +356,7 @@ public class HTMLBodyElement extends HTMLElement {
      * Returns the {@code onlanguagechange} event handler for this element.
      * @return the {@code onlanguagechange} event handler for this element
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public Function getOnlanguagechange() {
         return getEventHandler(Event.TYPE_LANGUAGECHANGE);
     }
@@ -376,7 +365,7 @@ public class HTMLBodyElement extends HTMLElement {
      * Sets the {@code onlanguagechange} event handler for this element.
      * @param onlanguagechange the {@code onlanguagechange} event handler for this element
      */
-    @JsxSetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxSetter
     public void setOnlanguagechange(final Object onlanguagechange) {
         setEventHandler(Event.TYPE_LANGUAGECHANGE, onlanguagechange);
     }
@@ -493,7 +482,7 @@ public class HTMLBodyElement extends HTMLElement {
      * Returns the {@code onrejectionhandled} event handler for this element.
      * @return the {@code onrejectionhandled} event handler for this element
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public Function getOnrejectionhandled() {
         return getEventHandler(Event.TYPE_REJECTIONHANDLED);
     }
@@ -502,7 +491,7 @@ public class HTMLBodyElement extends HTMLElement {
      * Sets the {@code onrejectionhandled} event handler for this element.
      * @param onrejectionhandled the {@code onrejectionhandled} event handler for this element
      */
-    @JsxSetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxSetter
     public void setOnrejectionhandled(final Object onrejectionhandled) {
         setEventHandler(Event.TYPE_REJECTIONHANDLED, onrejectionhandled);
     }
@@ -529,7 +518,7 @@ public class HTMLBodyElement extends HTMLElement {
      * Returns the {@code onunhandledrejection} event handler for this element.
      * @return the {@code onunhandledrejection} event handler for this element
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public Function getOnunhandledrejection() {
         return getEventHandler(Event.TYPE_UNHANDLEDREJECTION);
     }
@@ -538,7 +527,7 @@ public class HTMLBodyElement extends HTMLElement {
      * Sets the {@code onunhandledrejection} event handler for this element.
      * @param onunhandledrejection the {@code onunhandledrejection} event handler for this element
      */
-    @JsxSetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxSetter
     public void setOnunhandledrejection(final Object onunhandledrejection) {
         setEventHandler(Event.TYPE_UNHANDLEDREJECTION, onunhandledrejection);
     }
@@ -601,7 +590,7 @@ public class HTMLBodyElement extends HTMLElement {
      * Returns the {@code onmessageerror} event handler for this element.
      * @return the {@code onmessageerror} event handler for this element
      */
-    @JsxGetter({CHROME, EDGE, FF, FF_ESR})
+    @JsxGetter
     public Function getOnmessageerror() {
         return getEventHandler(Event.TYPE_ONMESSAGEERROR);
     }
@@ -610,7 +599,7 @@ public class HTMLBodyElement extends HTMLElement {
      * Sets the {@code onmessageerror} event handler for this element.
      * @param onmessageerror the {@code onmessageerror} event handler for this element
      */
-    @JsxSetter({CHROME, EDGE})
+    @JsxSetter
     public void setOnmessageerror(final Object onmessageerror) {
         setEventHandler(Event.TYPE_ONMESSAGEERROR, onmessageerror);
     }
@@ -619,7 +608,7 @@ public class HTMLBodyElement extends HTMLElement {
      * {@inheritDoc}
      */
     @Override
-    @JsxGetter({CHROME, EDGE, IE})
+    @JsxGetter({CHROME, EDGE})
     public Function getOnresize() {
         return super.getOnresize();
     }
@@ -628,7 +617,7 @@ public class HTMLBodyElement extends HTMLElement {
      * {@inheritDoc}
      */
     @Override
-    @JsxSetter({CHROME, EDGE, IE})
+    @JsxSetter({CHROME, EDGE})
     public void setOnresize(final Object onresize) {
         super.setOnresize(onresize);
     }

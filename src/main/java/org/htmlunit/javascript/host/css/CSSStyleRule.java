@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,19 +15,13 @@
 package org.htmlunit.javascript.host.css;
 
 import static org.htmlunit.BrowserVersionFeatures.JS_SELECTOR_TEXT_LOWERCASE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
 
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.htmlunit.cssparser.dom.CSSStyleRuleImpl;
-
 import org.htmlunit.css.WrappedCssStyleDeclaration;
+import org.htmlunit.cssparser.dom.CSSStyleRuleImpl;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxGetter;
@@ -40,6 +34,8 @@ import org.htmlunit.util.StringUtils;
  * @author Ahmed Ashour
  * @author Marc Guillemot
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleRule">MDN Documentation</a>
  */
 @JsxClass
 public class CSSStyleRule extends CSSRule {
@@ -50,12 +46,13 @@ public class CSSStyleRule extends CSSRule {
      * Creates a new instance.
      */
     public CSSStyleRule() {
+        super();
     }
 
     /**
      * Creates an instance.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
+    @JsxConstructor
     @Override
     public void jsConstructor() {
         super.jsConstructor();
@@ -78,7 +75,7 @@ public class CSSStyleRule extends CSSRule {
     public String getSelectorText() {
         String selectorText = ((CSSStyleRuleImpl) getRule()).getSelectorText();
         final Matcher m = SELECTOR_PARTS_PATTERN.matcher(selectorText);
-        final StringBuffer sb = new StringBuffer();
+        final StringBuilder sb = new StringBuilder();
         while (m.find()) {
             String fixedName = m.group();
             // this should be handled with the right regex but...
@@ -112,16 +109,7 @@ public class CSSStyleRule extends CSSRule {
     @JsxGetter
     public CSSStyleDeclaration getStyle() {
         final WrappedCssStyleDeclaration styleDeclaration
-                = new WrappedCssStyleDeclaration(((CSSStyleRuleImpl) getRule()).getStyle());
+                = new WrappedCssStyleDeclaration(((CSSStyleRuleImpl) getRule()).getStyle(), getBrowserVersion());
         return new CSSStyleDeclaration(getParentStyleSheet(), styleDeclaration);
-    }
-
-    /**
-     * Returns the readonly property.
-     * @return the readonly value.
-     */
-    @JsxGetter(IE)
-    public boolean isReadOnly() {
-        return false;
     }
 }

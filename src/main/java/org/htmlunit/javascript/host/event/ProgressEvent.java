@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +14,11 @@
  */
 package org.htmlunit.javascript.host.event;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
+import org.htmlunit.corejs.javascript.ScriptableObject;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxGetter;
-
-import org.htmlunit.corejs.javascript.ScriptableObject;
-import org.htmlunit.corejs.javascript.Undefined;
 
 /**
  * A JavaScript object for {@code ProgressEvent}.
@@ -32,68 +26,39 @@ import org.htmlunit.corejs.javascript.Undefined;
  * @author Ahmed Ashour
  * @author Ronald Brill
  * @author Thorsten Wendelmuth
+ * @author Lai Quang Duong
  */
 @JsxClass
 public class ProgressEvent extends Event {
 
     private boolean lengthComputable_;
-    private Object loaded_ = Long.valueOf(0L);
-    private long total_;
+    private double loaded_;
+    private double total_;
 
     /**
      * Default constructor.
      */
     public ProgressEvent() {
+        super();
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
+    @JsxConstructor
     public void jsConstructor(final String type, final ScriptableObject details) {
         super.jsConstructor(type, details);
 
-        if (details != null && !Undefined.isUndefined(details)) {
+        if (details != null && !JavaScriptEngine.isUndefined(details)) {
             final Object lengthComputable = details.get("lengthComputable");
-            if (lengthComputable instanceof Boolean) {
-                lengthComputable_ = (Boolean) lengthComputable;
-            }
-            else {
-                lengthComputable_ = Boolean.parseBoolean(lengthComputable.toString());
-            }
+            lengthComputable_ = JavaScriptEngine.toBoolean(lengthComputable);
 
             final Object loaded = details.get("loaded");
-            if (loaded instanceof Long) {
-                loaded_ = loaded;
-            }
-            else if (loaded instanceof Double) {
-                loaded_ = ((Double) loaded).longValue();
-            }
-            else {
-                try {
-                    loaded_ = Long.parseLong(loaded.toString());
-                }
-                catch (final NumberFormatException e) {
-                    // ignore
-                }
-            }
+            loaded_ = JavaScriptEngine.toNumber(loaded);
 
             final Object total = details.get("total");
-            if (total instanceof Long) {
-                total_ = (Long) total;
-            }
-            else if (total instanceof Double) {
-                total_ = ((Double) total).longValue();
-            }
-            else {
-                try {
-                    total_ = Long.parseLong(details.get("total").toString());
-                }
-                catch (final NumberFormatException e) {
-                    // ignore
-                }
-            }
+            total_ = JavaScriptEngine.toNumber(total);
         }
     }
 
@@ -103,7 +68,23 @@ public class ProgressEvent extends Event {
      * @param type the event type
      */
     public ProgressEvent(final EventTarget target, final String type) {
+        this(target, type, false, 0d, 0d);
+    }
+
+    /**
+     * Creates a new event instance.
+     * @param target the event target
+     * @param type the event type
+     * @param lengthComputable whether the total size is known
+     * @param loaded the number of bytes loaded
+     * @param total the total number of bytes
+     */
+    public ProgressEvent(final EventTarget target, final String type,
+            final boolean lengthComputable, final double loaded, final double total) {
         super(target, type);
+        lengthComputable_ = lengthComputable;
+        loaded_ = loaded;
+        total_ = total;
     }
 
     /**
@@ -129,7 +110,7 @@ public class ProgressEvent extends Event {
      * @return the loaded property from the event.
      */
     @JsxGetter
-    public Object getLoaded() {
+    public double getLoaded() {
         return loaded_;
     }
 
@@ -138,7 +119,7 @@ public class ProgressEvent extends Event {
      *
      * @param loaded the loaded information for this event
      */
-    public void setLoaded(final Object loaded) {
+    public void setLoaded(final double loaded) {
         loaded_ = loaded;
     }
 
@@ -147,7 +128,7 @@ public class ProgressEvent extends Event {
      * @return the total property from the event.
      */
     @JsxGetter
-    public long getTotal() {
+    public double getTotal() {
         return total_;
     }
 
@@ -156,7 +137,7 @@ public class ProgressEvent extends Event {
      *
      * @param total the total information for this event
      */
-    public void setTotal(final long total) {
+    public void setTotal(final double total) {
         total_ = total;
     }
 }

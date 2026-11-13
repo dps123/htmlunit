@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,46 +14,40 @@
  */
 package org.htmlunit.javascript.host;
 
-import static org.htmlunit.BrowserVersionFeatures.JS_IS_SEARCH_PROVIDER_INSTALLED_ZERO;
 import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
 import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
+import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
+import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
 
 import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 
-import org.htmlunit.corejs.javascript.Undefined;
-
 /**
- * A JavaScript object for {@code External}.
+ * JavaScript host object for {@code External}.
  *
  * @author Peter Faller
  * @author Ronald Brill
  * @author Ahmed Ashour
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/External">MDN Documentation</a>
  */
 @JsxClass({CHROME, EDGE})
-@JsxClass(isJSObject = false)
+@JsxClass(isJSObject = false, value = {FF, FF_ESR})
 public class External extends HtmlUnitScriptable {
 
     /**
-     * The constructor.
+     * Creates an instance of this object.
      */
     @JsxConstructor
-    public External() {
+    public void jsConstructor() {
+        // nothing to do
     }
 
     /**
-     * Empty implementation.
-     */
-    @JsxFunction(value = IE, functionName = "AutoCompleteSaveForm")
-    public void autoCompleteSaveForm() {
-        // dummy
-    }
-
-    /**
-     * Empty implementation.
+     * Empty implementation of {@code AddSearchProvider}.
      */
     @JsxFunction(functionName = "AddSearchProvider")
     public void addSearchProvider() {
@@ -61,14 +55,12 @@ public class External extends HtmlUnitScriptable {
     }
 
     /**
-     * Empty implementation.
-     * @return 0
+     * Empty implementation of {@code IsSearchProviderInstalled}.
+     *
+     * @return {@code undefined}
      */
     @JsxFunction(functionName = "IsSearchProviderInstalled")
     public Object isSearchProviderInstalled() {
-        if (getBrowserVersion().hasFeature(JS_IS_SEARCH_PROVIDER_INSTALLED_ZERO)) {
-            return 0;
-        }
-        return Undefined.instance;
+        return JavaScriptEngine.UNDEFINED;
     }
 }

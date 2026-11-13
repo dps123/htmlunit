@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,11 @@
  */
 package org.htmlunit.html;
 
-import java.util.Locale;
-
 import org.htmlunit.SgmlPage;
 import org.htmlunit.WebAssert;
 import org.htmlunit.html.xpath.XPathHelper;
 import org.htmlunit.javascript.host.dom.Document;
+import org.htmlunit.util.StringUtils;
 
 /**
  * Intermediate base class for DOM Nodes that have namespaces. That includes HtmlElement and HtmlAttr.
@@ -48,20 +47,19 @@ public abstract class DomNamespaceNode extends DomNode {
         super(page);
         WebAssert.notNull("qualifiedName", qualifiedName);
         qualifiedName_ = qualifiedName;
+        namespaceURI_ = namespaceURI;
 
-        if (qualifiedName.indexOf(':') == -1) {
-            namespaceURI_ = namespaceURI;
+        final int colonPosition = qualifiedName_.indexOf(':');
+        if (colonPosition == -1) {
             localName_ = qualifiedName_;
             prefix_ = null;
         }
         else {
-            namespaceURI_ = namespaceURI;
-            final int colonPosition = qualifiedName_.indexOf(':');
             localName_ = qualifiedName_.substring(colonPosition + 1);
             prefix_ = qualifiedName_.substring(0, colonPosition);
         }
 
-        localNameLC_ = localName_.toLowerCase(Locale.ROOT);
+        localNameLC_ = StringUtils.toRootLowerCase(localName_);
     }
 
     /**
@@ -69,10 +67,12 @@ public abstract class DomNamespaceNode extends DomNode {
      */
     @Override
     public String getNamespaceURI() {
-        if (getPage().isHtmlPage() && !(getPage() instanceof XHtmlPage)
+        final SgmlPage page = getPage();
+        if (page.isHtmlPage()
+            && !(page instanceof XHtmlPage)
             && Html.XHTML_NAMESPACE.equals(namespaceURI_)
             && XPathHelper.isProcessingXPath()) {
-            // for Xalan processing we have to strip the 'default' XHTML namespace for HTML pages to be able to find
+            // for xpath processing we have to strip the 'default' XHTML namespace for HTML pages to be able to find
             // the elements by XPath without needing to add the namespace to it
             return null;
         }
@@ -85,7 +85,8 @@ public abstract class DomNamespaceNode extends DomNode {
     @Override
     public String getLocalName() {
         final boolean caseSensitive = getPage().hasCaseSensitiveTagNames();
-        if (!caseSensitive && XPathHelper.isProcessingXPath()) { // and this method was called from Xalan
+        if (!caseSensitive
+                && XPathHelper.isProcessingXPath()) { // and this method was called from xpath processor
             return localNameLC_;
         }
         return localName_;
@@ -113,8 +114,13 @@ public abstract class DomNamespaceNode extends DomNode {
     @Override
     public void setPrefix(final String prefix) {
         prefix_ = prefix;
-        if (prefix_ != null && localName_ != null) {
-            qualifiedName_ = prefix_ + ":" + localName_;
+        if (localName_ != null) {
+            if (prefix != null && !prefix.isEmpty()) {
+                qualifiedName_ = prefix + ":" + localName_;
+            }
+            else {
+                qualifiedName_ = localName_;
+            }
         }
     }
 
@@ -136,9 +142,10 @@ public abstract class DomNamespaceNode extends DomNode {
         // if we are importing from a namespace-aware source
         // we have to drop the XHtmlNamespace because we did this already
         // for the HTML document itself
-        final SgmlPage page = (SgmlPage) doc.getDomNodeOrDie();
-        if (page.isHtmlPage() && !(page instanceof XHtmlPage) && Html.XHTML_NAMESPACE.equals(namespaceURI_)) {
-            namespaceURI_ = null;
+        if (doc.getDomNodeOrDie() instanceof SgmlPage page) {
+            if (page.isHtmlPage() && !(page instanceof XHtmlPage) && Html.XHTML_NAMESPACE.equals(namespaceURI_)) {
+                namespaceURI_ = null;
+            }
         }
     }
 }

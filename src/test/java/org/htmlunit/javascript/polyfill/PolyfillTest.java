@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,26 +16,25 @@ package org.htmlunit.javascript.polyfill;
 
 import java.net.URL;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.SimpleWebTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for polyfill support.
  *
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class PolyfillTest extends SimpleWebTestCase {
 
+    /**
+     * @throws Exception if the test fails
+     */
     @Test
-    @Alerts(DEFAULT = "Content fetched",
-            IE = {})
+    @Alerts("Content fetched")
     public void fetch() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + "function test() {\n"
             + "  if (typeof fetch == 'function') {\n"
@@ -52,13 +51,17 @@ public class PolyfillTest extends SimpleWebTestCase {
         getMockWebConnection().setResponse(fetchUrl, "Content fetched");
 
         getWebClientWithMockWebConnection().getOptions().setFetchPolyfillEnabled(true);
-        loadPageWithAlerts(html, URL_FIRST, (int) DEFAULT_WAIT_TIME);
+        loadPageWithAlerts(html, URL_FIRST, DEFAULT_WAIT_TIME);
     }
 
+    /**
+     * @throws Exception if the test fails
+     */
     @Test
     @Alerts("false")
     public void fetchPolyfillDisabled() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + "  function test() {\n"
             + "    alert(typeof fetch == 'function');\n"
@@ -69,44 +72,6 @@ public class PolyfillTest extends SimpleWebTestCase {
 
         final URL fetchUrl = new URL(URL_FIRST, "fetch.txt");
         getMockWebConnection().setResponse(fetchUrl, "Content fetched");
-
-        loadPageWithAlerts(html);
-    }
-
-    @Test
-    @Alerts(DEFAULT = {"hello", "everyone"},
-            IE = {})
-    public void proxy() throws Exception {
-        final String html = "<html><head>\n"
-            + "<script>\n"
-            + "function test() {\n"
-            + "  if (typeof Proxy == 'function') {\n"
-            + "    var target = { message1: 'hello', message2: 'everyone' };\n"
-            + "    var handler1 = {};\n"
-            + "    var proxy1 = new Proxy(target, handler1);\n"
-            + "    alert(proxy1.message1);\n"
-            + "    alert(proxy1.message2);\n"
-            + "  }\n"
-            + "}\n"
-            + "</script>\n"
-            + "</head>\n"
-            + "<body onload='test()'></body></html>";
-
-        getWebClientWithMockWebConnection().getOptions().setProxyPolyfillEnabled(true);
-        loadPageWithAlerts(html, URL_FIRST, (int) DEFAULT_WAIT_TIME);
-    }
-
-    @Test
-    @Alerts("undefined")
-    public void proxyPolyfillDisabled() throws Exception {
-        final String html = "<html><head>\n"
-            + "<script>\n"
-            + "  function test() {\n"
-            + "    alert(typeof Proxy);\n"
-            + "  }\n"
-            + "</script>\n"
-            + "</head>\n"
-            + "<body onload='test()'></body></html>";
 
         loadPageWithAlerts(html);
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,23 +16,19 @@ package org.htmlunit.html;
 
 import java.util.List;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.SimpleWebTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link HtmlOption}.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author Marc Guillemot
  * @author Ahmed Ashour
  * @author Daniel Gredler
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class HtmlOptionTest extends SimpleWebTestCase {
 
     /**
@@ -40,8 +36,8 @@ public class HtmlOptionTest extends SimpleWebTestCase {
      */
     @Test
     public void select() throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head><title>foo</title></head>\n"
             + "<body>\n"
             + "  <form id='form1'>\n"
@@ -80,8 +76,8 @@ public class HtmlOptionTest extends SimpleWebTestCase {
      */
     @Test
     public void getValue() throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head><title>foo</title></head>\n"
             + "<body>\n"
             + "  <form id='form1'>\n"
@@ -106,8 +102,8 @@ public class HtmlOptionTest extends SimpleWebTestCase {
      */
     @Test
     public void getValue_ContentsIsValue() throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head><title>foo</title></head>\n"
             + "<body>\n"
             + "  <form id='form1'>\n"
@@ -136,8 +132,8 @@ public class HtmlOptionTest extends SimpleWebTestCase {
      */
     @Test
     public void click() throws Exception {
-        final String htmlContent
-            = "<html><body>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html><body>\n"
             + "  <form id='form1'>\n"
             + "    <select name='select1' id='select1'>\n"
             + "      <option id='option1'>Option1</option>\n"
@@ -159,8 +155,8 @@ public class HtmlOptionTest extends SimpleWebTestCase {
      */
     @Test
     public void asNormalizedText() throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head><title>foo</title></head>\n"
             + "<body>\n"
             + "  <form>\n"
@@ -192,7 +188,8 @@ public class HtmlOptionTest extends SimpleWebTestCase {
     @Test
     @Alerts({"false", "false", "true", "true", "false"})
     public void disabled() throws Exception {
-        final String html = "<html><body onload='test()'><form name='f'>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body onload='test()'><form name='f'>\n"
             + "  <select name='s' id='s'>\n"
             + "    <option value='o1' id='o1'>One</option>\n"
             + "    <option value='o2' id='o2' disabled='disabled'>Two</option>\n"
@@ -214,8 +211,7 @@ public class HtmlOptionTest extends SimpleWebTestCase {
             + "</form></body></html>";
 
         final HtmlPage page = loadPageWithAlerts(html);
-        final boolean disabled = !getBrowserVersion().isIE();
-        assertEquals(disabled, ((HtmlOption) page.getElementById("o1")).isDisabled());
+        assertTrue(((HtmlOption) page.getElementById("o1")).isDisabled());
         assertFalse(((HtmlOption) page.getElementById("o2")).isDisabled());
     }
 
@@ -226,7 +222,8 @@ public class HtmlOptionTest extends SimpleWebTestCase {
      */
     @Test
     public void isSelected() throws Exception {
-        final String html = "<html><body>"
+        final String html = DOCTYPE_HTML
+                + "<html><body>"
                 + "  <select multiple><option value='a'>a</option><option value='b'>b</option></select>\n"
                 + "</body></html>";
 

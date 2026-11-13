@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,9 @@
  */
 package org.htmlunit.javascript.host.dom;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link CharacterData}.
@@ -27,7 +24,6 @@ import org.htmlunit.junit.BrowserRunner.Alerts;
  * @author David K. Taylor
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class CharacterDataTest extends WebDriverTestCase {
 
     /**
@@ -37,8 +33,8 @@ public class CharacterDataTest extends WebDriverTestCase {
     @Test
     @Alerts({"Some Text", "9", "3", "Some Text", "#text"})
     public void textNode() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
             + "  var div1=document.getElementById('div1');\n"
@@ -62,8 +58,8 @@ public class CharacterDataTest extends WebDriverTestCase {
     @Test
     @Alerts({"Some New Text", "Some New Text"})
     public void setData() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
@@ -86,8 +82,8 @@ public class CharacterDataTest extends WebDriverTestCase {
     @Test
     @Alerts({"Some New Text", "Some New Text"})
     public void setNodeValue() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
@@ -110,8 +106,8 @@ public class CharacterDataTest extends WebDriverTestCase {
     @Test
     @Alerts("Some Text Appended")
     public void appendData() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
@@ -133,8 +129,8 @@ public class CharacterDataTest extends WebDriverTestCase {
     @Test
     @Alerts({"Some Text", "Some", "Some", "me", ""})
     public void deleteData() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
@@ -144,27 +140,27 @@ public class CharacterDataTest extends WebDriverTestCase {
             + "  try {\n"
             + "    text1.deleteData(5, 11);\n"
             + "    log(text1.data);\n"
-            + "  } catch (e) { log('exception') }\n"
+            + "  } catch(e) { logEx(e) }\n"
 
             + "  try {\n"
             + "    text1.deleteData(4, 5);\n"
             + "    log(text1.data);\n"
-            + "  } catch (e) { log('exception') }\n"
+            + "  } catch(e) { logEx(e) }\n"
 
             + "  try {\n"
             + "    text1.deleteData(1, 0);\n"
             + "    log(text1.data);\n"
-            + "  } catch (e) { log('exception') }\n"
+            + "  } catch(e) { logEx(e) }\n"
 
             + "  try {\n"
             + "    text1.deleteData(0, 2);\n"
             + "    log(text1.data);\n"
-            + "  } catch (e) { log('exception') }\n"
+            + "  } catch(e) { logEx(e) }\n"
 
             + "  try {\n"
             + "    text1.deleteData(0, 2);\n"
             + "    log(text1.data);\n"
-            + "  } catch (e) { log('exception') }\n"
+            + "  } catch(e) { logEx(e) }\n"
             + "}\n"
             + "</script></head><body onload='doTest()'>\n"
             + "<div id='div1'>Some Not So New Text</div></body></html>";
@@ -177,11 +173,10 @@ public class CharacterDataTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"", "", "", ""},
-            IE = {"", "", "", "exception"})
+    @Alerts({"", "", "", ""})
     public void deleteDataEmptyImput() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
@@ -191,22 +186,22 @@ public class CharacterDataTest extends WebDriverTestCase {
             + "  try {\n"
             + "    text1.deleteData(0, 1);\n"
             + "    log(text1.data);\n"
-            + "  } catch (e) { log('exception') }\n"
+            + "  } catch(e) { logEx(e) }\n"
 
             + "  try {\n"
             + "    text1.deleteData(0, 0);\n"
             + "    log(text1.data);\n"
-            + "  } catch (e) { log('exception') }\n"
+            + "  } catch(e) { logEx(e) }\n"
 
             + "  try {\n"
             + "    text1.deleteData(0, 1);\n"
             + "    log(text1.data);\n"
-            + "  } catch (e) { log('exception') }\n"
+            + "  } catch(e) { logEx(e) }\n"
 
             + "  try {\n"
             + "    text1.deleteData(0, -1);\n"
             + "    log(text1.data);\n"
-            + "  } catch (e) { log('exception') }\n"
+            + "  } catch(e) { logEx(e) }\n"
             + "}\n"
             + "</script></head><body onload='doTest()'>\n"
             + "<div id='div1'>-</div></body></html>";
@@ -218,11 +213,11 @@ public class CharacterDataTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"exception", "exception", "exception", "exception"},
-            IE = {"exception", "exception", "abcde", "exception"})
+    @Alerts({"IndexSizeError/DOMException", "IndexSizeError/DOMException",
+             "IndexSizeError/DOMException", "IndexSizeError/DOMException"})
     public void deleteDataInvalidStart() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
@@ -231,22 +226,22 @@ public class CharacterDataTest extends WebDriverTestCase {
             + "  try {\n"
             + "    text1.deleteData(-1, 4);\n"
             + "    log(text1.data);\n"
-            + "  } catch (e) { log('exception') }\n"
+            + "  } catch(e) { logEx(e) }\n"
 
             + "  try {\n"
             + "    text1.deleteData(20, 4);\n"
             + "    log(text1.data);\n"
-            + "  } catch (e) { log('exception') }\n"
+            + "  } catch(e) { logEx(e) }\n"
 
             + "  try {\n"
             + "    text1.deleteData(20, 0);\n"
             + "    log(text1.data);\n"
-            + "  } catch (e) { log('exception') }\n"
+            + "  } catch(e) { logEx(e) }\n"
 
             + "  try {\n"
             + "    text1.deleteData(20, -18);\n"
             + "    log(text1.data);\n"
-            + "  } catch (e) { log('exception') }\n"
+            + "  } catch(e) { logEx(e) }\n"
             + "}\n"
             + "</script></head><body onload='doTest()'>\n"
             + "<div id='div1'>abcde</div></body></html>";
@@ -258,11 +253,10 @@ public class CharacterDataTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"Some Not So New Te", "Some ", "So"},
-            IE = {"exception", "exception", "exception"})
+    @Alerts({"Some Not So New Te", "Some ", "So"})
     public void deleteDataNegativeCount() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
@@ -271,17 +265,17 @@ public class CharacterDataTest extends WebDriverTestCase {
             + "  try {\n"
             + "    text1.deleteData(18, -15);\n"
             + "    log(text1.data);\n"
-            + "  } catch (e) { log('exception') }\n"
+            + "  } catch(e) { logEx(e) }\n"
 
             + "  try {\n"
             + "    text1.deleteData(5, -4);\n"
             + "    log(text1.data);\n"
-            + "  } catch (e) { log('exception') }\n"
+            + "  } catch(e) { logEx(e) }\n"
 
             + "  try {\n"
             + "    text1.deleteData(2, -4);\n"
             + "    log(text1.data);\n"
-            + "  } catch (e) { log('exception') }\n"
+            + "  } catch(e) { logEx(e) }\n"
             + "}\n"
             + "</script></head><body onload='doTest()'>\n"
             + "<div id='div1'>Some Not So New Text</div></body></html>";
@@ -296,8 +290,8 @@ public class CharacterDataTest extends WebDriverTestCase {
     @Test
     @Alerts("Some New Text")
     public void insertData() throws Exception {
-        final String html
-            = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
             + "  var div1=document.getElementById('div1');\n"
@@ -318,8 +312,8 @@ public class CharacterDataTest extends WebDriverTestCase {
     @Test
     @Alerts("Some New Text")
     public void replaceData() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
@@ -341,8 +335,8 @@ public class CharacterDataTest extends WebDriverTestCase {
     @Test
     @Alerts({"New", "Some New Text"})
     public void substringData() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"
@@ -364,8 +358,8 @@ public class CharacterDataTest extends WebDriverTestCase {
     @Test
     @Alerts({"Some ", "Text", "true"})
     public void textImpl_splitText() throws Exception {
-        final String html
-            = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "function doTest() {\n"

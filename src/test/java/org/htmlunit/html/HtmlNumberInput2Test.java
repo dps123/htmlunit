@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,10 @@
  */
 package org.htmlunit.html;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.SimpleWebTestCase;
 import org.htmlunit.javascript.host.event.KeyboardEvent;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link HtmlNumberInput}.
@@ -29,7 +26,6 @@ import org.htmlunit.junit.BrowserRunner.Alerts;
  * @author Anton Demydenko
  * @author Michael Lueck
  */
-@RunWith(BrowserRunner.class)
 public class HtmlNumberInput2Test extends SimpleWebTestCase {
 
     /**
@@ -39,8 +35,8 @@ public class HtmlNumberInput2Test extends SimpleWebTestCase {
     @Test
     @Alerts("123")
     public void asNormalizedText() throws Exception {
-        final String html
-            = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1'>\n"
@@ -57,8 +53,8 @@ public class HtmlNumberInput2Test extends SimpleWebTestCase {
      */
     @Test
     public void typingAndClone() throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1'>\n"
@@ -73,6 +69,7 @@ public class HtmlNumberInput2Test extends SimpleWebTestCase {
         input.type("4711");
         assertEquals("", input.getValueAttribute());
         assertEquals("4711", input.getValue());
+        assertEquals("4711", input.getRawValue());
     }
 
     /**
@@ -80,8 +77,8 @@ public class HtmlNumberInput2Test extends SimpleWebTestCase {
      */
     @Test
     public void typingAndReset() throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1'>\n"
@@ -99,6 +96,7 @@ public class HtmlNumberInput2Test extends SimpleWebTestCase {
 
         assertEquals("", input.getValueAttribute());
         assertEquals("0815", input.getValue());
+        assertEquals("0815", input.getRawValue());
     }
 
     /**
@@ -106,8 +104,8 @@ public class HtmlNumberInput2Test extends SimpleWebTestCase {
      */
     @Test
     public void typingAndSetValueAttribute() throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1'>\n"
@@ -125,6 +123,7 @@ public class HtmlNumberInput2Test extends SimpleWebTestCase {
 
         assertEquals("", input.getValueAttribute());
         assertEquals("47110815", input.getValue());
+        assertEquals("47110815", input.getRawValue());
     }
 
     /**
@@ -132,8 +131,8 @@ public class HtmlNumberInput2Test extends SimpleWebTestCase {
      */
     @Test
     public void typingAndSetValue() throws Exception {
-        final String htmlContent
-            = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1'>\n"
@@ -151,6 +150,7 @@ public class HtmlNumberInput2Test extends SimpleWebTestCase {
 
         assertEquals("", input.getValueAttribute());
         assertEquals("0815", input.getValue());
+        assertEquals("0815", input.getRawValue());
     }
 
     /**
@@ -158,7 +158,8 @@ public class HtmlNumberInput2Test extends SimpleWebTestCase {
      */
     @Test
     public void minValidation() throws Exception {
-        final String htmlContent = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head></head>\n"
                 + "<body>\n"
                 + "<form id='form1'>\n"
@@ -197,7 +198,8 @@ public class HtmlNumberInput2Test extends SimpleWebTestCase {
      */
     @Test
     public void minValidationWithDecimalStepping() throws Exception {
-        final String htmlContent = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head></head>\n"
                 + "<body>\n"
                 + "<form id='form1'>\n"
@@ -259,7 +261,9 @@ public class HtmlNumberInput2Test extends SimpleWebTestCase {
      */
     @Test
     public void maxValidation() throws Exception {
-        final String htmlContent = "<html>\n" + "<head></head>\n"
+        final String htmlContent = DOCTYPE_HTML
+                + "<html>\n"
+                + "<head></head>\n"
                 + "<body>\n"
                 + "<form id='form1'>\n"
                 + "  <input type='number' id='first' max='10'>\n"
@@ -298,8 +302,8 @@ public class HtmlNumberInput2Test extends SimpleWebTestCase {
      */
     @Test
     public void typeWhileSelected() throws Exception {
-        final String html =
-              "<html><head></head><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head></head><body>\n"
             + "<input type='number' id='myInput' value='123456789012345'><br>\n"
             + "</body></html>";
         final HtmlPage page = loadPage(html);
@@ -308,6 +312,7 @@ public class HtmlNumberInput2Test extends SimpleWebTestCase {
         input.type("9876543333210");
         assertEquals("123456789012345", input.getValueAttribute());
         assertEquals("9876543333210", input.getValue());
+        assertEquals("9876543333210", input.getRawValue());
     }
 
     /**
@@ -315,7 +320,7 @@ public class HtmlNumberInput2Test extends SimpleWebTestCase {
      */
     @Test
     public void typeLeftArrow() throws Exception {
-        final String html = "<html><head></head><body><input type='number' id='t'/></body></html>";
+        final String html = DOCTYPE_HTML + "<html><head></head><body><input type='number' id='t'/></body></html>";
         final HtmlPage page = loadPage(html);
         final HtmlNumberInput t = page.getHtmlElementById("t");
         t.type('2');
@@ -323,15 +328,22 @@ public class HtmlNumberInput2Test extends SimpleWebTestCase {
         t.type('6');
         assertEquals("", t.getValueAttribute());
         assertEquals("246", t.getValue());
+        assertEquals("246", t.getRawValue());
+
         t.type(KeyboardEvent.DOM_VK_LEFT);
         assertEquals("", t.getValueAttribute());
         assertEquals("246", t.getValue());
+        assertEquals("246", t.getRawValue());
+
         t.type('0');
         assertEquals("", t.getValueAttribute());
         assertEquals("2406", t.getValue());
+        assertEquals("2406", t.getRawValue());
+
         t.type(KeyboardEvent.DOM_VK_SPACE);
         assertEquals("", t.getValueAttribute());
-        assertEquals("240 6", t.getValue());
+        assertEquals("", t.getValue());
+        assertEquals("240 6", t.getRawValue());
     }
 
     /**
@@ -339,7 +351,7 @@ public class HtmlNumberInput2Test extends SimpleWebTestCase {
      */
     @Test
     public void typeDelKey() throws Exception {
-        final String html = "<html><head></head><body><input type='number' id='t'/></body></html>";
+        final String html = DOCTYPE_HTML + "<html><head></head><body><input type='number' id='t'/></body></html>";
         final HtmlPage page = loadPage(html);
         final HtmlNumberInput t = page.getHtmlElementById("t");
         t.type('2');
@@ -347,13 +359,18 @@ public class HtmlNumberInput2Test extends SimpleWebTestCase {
         t.type('7');
         assertEquals("", t.getValueAttribute());
         assertEquals("247", t.getValue());
+        assertEquals("247", t.getRawValue());
+
         t.type(KeyboardEvent.DOM_VK_LEFT);
         t.type(KeyboardEvent.DOM_VK_LEFT);
         assertEquals("", t.getValueAttribute());
         assertEquals("247", t.getValue());
+        assertEquals("247", t.getRawValue());
+
         t.type(KeyboardEvent.DOM_VK_DELETE);
         assertEquals("", t.getValueAttribute());
         assertEquals("27", t.getValue());
+        assertEquals("27", t.getRawValue());
     }
 
     /**
@@ -363,7 +380,8 @@ public class HtmlNumberInput2Test extends SimpleWebTestCase {
     @Test
     @Alerts({"true", "true", "true", "", "1234567"})
     public void maxLengthValidation() throws Exception {
-        final String htmlContent = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1'>\n"
@@ -382,6 +400,7 @@ public class HtmlNumberInput2Test extends SimpleWebTestCase {
         assertEquals(getExpectedAlerts()[2], Boolean.toString(input.isValid()));
         assertEquals(getExpectedAlerts()[3], input.getValueAttribute());
         assertEquals(getExpectedAlerts()[4], input.getValue());
+        assertEquals(getExpectedAlerts()[4], input.getRawValue());
     }
 
     /**
@@ -391,7 +410,8 @@ public class HtmlNumberInput2Test extends SimpleWebTestCase {
     @Test
     @Alerts({"true", "true", "true", "", "12345"})
     public void minLengthValidation() throws Exception {
-        final String htmlContent = "<html>\n"
+        final String htmlContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head></head>\n"
             + "<body>\n"
             + "<form id='form1'>\n"
@@ -410,5 +430,6 @@ public class HtmlNumberInput2Test extends SimpleWebTestCase {
         assertEquals(getExpectedAlerts()[2], Boolean.toString(input.isValid()));
         assertEquals(getExpectedAlerts()[3], input.getValueAttribute());
         assertEquals(getExpectedAlerts()[4], input.getValue());
+        assertEquals(getExpectedAlerts()[4], input.getRawValue());
     }
 }

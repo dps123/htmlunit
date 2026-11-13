@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,22 +14,14 @@
  */
 package org.htmlunit.javascript.host.event;
 
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.CHROME;
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.EDGE;
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.IE;
-
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.htmlunit.WebDriverTestCase;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.BuggyWebDriver;
+import org.htmlunit.junit.annotation.HtmlUnitNYI;
+import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
-
-import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.html.HtmlPageTest;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.BuggyWebDriver;
-import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
 
 /**
  * Tests that the events triggered in the right order.
@@ -37,7 +29,6 @@ import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
  * @author Ronald Brill
  * @author Frank Danek
  */
-@RunWith(BrowserRunner.class)
 public class Event2Test extends WebDriverTestCase {
 
     /**
@@ -45,21 +36,24 @@ public class Event2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "[object Event] change b:true c:false [select] [-]"
-                + " [object MouseEvent] click b:true c:true [clickMe] [1]",
-            CHROME = "[object Event] change b:true c:false [select] [-]"
-                + " [object MouseEvent] click b:true c:true [select] [1]",
-            EDGE = "[object Event] change b:true c:false [select] [-]"
-                + " [object MouseEvent] click b:true c:true [select] [1]",
-            IE = "[object Event] change b:true c:false [select] [-]"
-                + " [object PointerEvent] click b:true c:true [select] [1]")
-    @BuggyWebDriver(FF = "[object Event] change b:true c:true [select] [-]"
-                + " [object Event] click b:true c:true [select] [-]",
-            FF_ESR = "[object Event] change b:true c:true [select] [-]"
-                + " [object Event] click b:true c:true [select] [-]",
-            IE = "[object Event] change b:true c:false [select] [-]"
-                + " [object MouseEvent] click b:true c:true [select] [1]")
-    @NotYetImplemented({CHROME, EDGE})
+    @Alerts(DEFAULT = {"[object Event] change b:true c:false [select] [-]",
+                       "[object PointerEvent] click b:true c:true [select] [1]"},
+            FF = {"[object Event] change b:true c:false [select] [-]",
+                  "[object PointerEvent] click b:true c:true [clickMe] [1]"},
+            FF_ESR = {"[object Event] change b:true c:false [select] [-]",
+                      "[object PointerEvent] click b:true c:true [clickMe] [1]"})
+    @BuggyWebDriver(
+            DEFAULT = {"[object Event] change b:true c:false [select] [-]",
+                       "[object MouseEvent] click b:true c:true [select] [1]"},
+            FF = {"[object Event] change b:true c:true [select] [-]",
+                  "[object Event] click b:true c:true [select] [-]"},
+            FF_ESR = {"[object Event] change b:true c:true [select] [-]",
+                      "[object Event] click b:true c:true [select] [-]"})
+    @HtmlUnitNYI(
+            CHROME = {"[object Event] change b:true c:false [select] [-]",
+                      "[object PointerEvent] click b:true c:true [clickMe] [1]"},
+            EDGE = {"[object Event] change b:true c:false [select] [-]",
+                    "[object PointerEvent] click b:true c:true [clickMe] [1]"})
     public void optionClick() throws Exception {
         final String firstSnippet = "       <select name='select' id='select' size='2'\n";
         final String secondSnippet = ">\n"
@@ -76,14 +70,11 @@ public class Event2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "[object MouseEvent] click b:true c:true [clickMe] [1]",
-            CHROME = "[object PointerEvent] click b:true c:true [clickMe] [1]",
-            EDGE = "[object PointerEvent] click b:true c:true [clickMe] [1]",
-            IE = "")
-    @BuggyWebDriver(CHROME = "",
-                    EDGE = "",
-                    FF = "",
-                    FF_ESR = "")
+    @Alerts("[object PointerEvent] click b:true c:true [clickMe] [1]")
+    @BuggyWebDriver(CHROME = {},
+                    EDGE = {},
+                    FF = {},
+                    FF_ESR = {})
     // ChromeDriver does not generate a "[object MouseEvent] click b:true c:true [clickMe] [1]" but it occurs manually
     public void optionClick2() throws Exception {
         final String firstSnippet = "       <select name='select' id='select' size='2'>\n"
@@ -101,14 +92,8 @@ public class Event2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "[object MouseEvent] click b:true c:true [radio] [1]"
-                + " [object Event] change b:true c:false [radio] [-]",
-            CHROME = "[object PointerEvent] click b:true c:true [radio] [1]"
-                + " [object Event] change b:true c:false [radio] [-]",
-            EDGE = "[object PointerEvent] click b:true c:true [radio] [1]"
-                + " [object Event] change b:true c:false [radio] [-]",
-            IE = "[object Event] change b:true c:false [radio] [-]"
-                + " [object PointerEvent] click b:true c:true [radio] [1]")
+    @Alerts({"[object PointerEvent] click b:true c:true [radio] [1]",
+             "[object Event] change b:true c:false [radio] [-]"})
     public void radioClick() throws Exception {
         final String firstSnippet = "       <input type='radio' name='radio' id='clickMe' value='2'\n";
         final String secondSnippet = ">Radio\n";
@@ -121,14 +106,8 @@ public class Event2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "[object MouseEvent] click b:true c:true [checkbox] [1]"
-                + " [object Event] change b:true c:false [checkbox] [-]",
-            CHROME = "[object PointerEvent] click b:true c:true [checkbox] [1]"
-                + " [object Event] change b:true c:false [checkbox] [-]",
-            EDGE = "[object PointerEvent] click b:true c:true [checkbox] [1]"
-                + " [object Event] change b:true c:false [checkbox] [-]",
-            IE = "[object Event] change b:true c:false [checkbox] [-]"
-                + " [object PointerEvent] click b:true c:true [checkbox] [1]")
+    @Alerts({"[object PointerEvent] click b:true c:true [checkbox] [1]",
+             "[object Event] change b:true c:false [checkbox] [-]"})
     public void checkboxClick() throws Exception {
         final String firstSnippet = "       <input type='checkbox' name='checkbox' id='clickMe' value='2'\n";
         final String secondSnippet = ">Checkbox\n";
@@ -141,10 +120,7 @@ public class Event2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "[object MouseEvent] click b:true c:true [clickMe] [1]",
-            CHROME = "[object PointerEvent] click b:true c:true [clickMe] [1]",
-            EDGE = "[object PointerEvent] click b:true c:true [clickMe] [1]",
-            IE = "[object PointerEvent] click b:true c:true [clickMe] [1]")
+    @Alerts("[object PointerEvent] click b:true c:true [clickMe] [1]")
     public void inputTextClick() throws Exception {
         final String firstSnippet = "       <input type='text' name='clickMe' id='clickMe' size='2'\n";
         final String secondSnippet = ">\n";
@@ -157,10 +133,7 @@ public class Event2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "[object MouseEvent] click b:true c:true [clickMe] [1]",
-            CHROME = "[object PointerEvent] click b:true c:true [clickMe] [1]",
-            EDGE = "[object PointerEvent] click b:true c:true [clickMe] [1]",
-            IE = "[object PointerEvent] click b:true c:true [clickMe] [1]")
+    @Alerts("[object PointerEvent] click b:true c:true [clickMe] [1]")
     public void inputPasswordClick() throws Exception {
         final String firstSnippet = "       <input type='password' name='clickMe' id='clickMe' size='2'\n";
         final String secondSnippet = ">\n";
@@ -173,10 +146,7 @@ public class Event2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "[object MouseEvent] click b:true c:true [clickMe] [1]",
-            CHROME = "[object PointerEvent] click b:true c:true [clickMe] [1]",
-            EDGE = "[object PointerEvent] click b:true c:true [clickMe] [1]",
-            IE = "[object PointerEvent] click b:true c:true [clickMe] [1]")
+    @Alerts("[object PointerEvent] click b:true c:true [clickMe] [1]")
     public void textareaClick() throws Exception {
         final String firstSnippet = "       <textarea name='clickMe' id='clickMe' size='2'\n";
         final String secondSnippet = "></textarea>\n";
@@ -189,7 +159,7 @@ public class Event2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("")
+    @Alerts({})
     public void submitClick() throws Exception {
         final String firstSnippet = "       <input type='submit' name='clickMe' id='clickMe'\n";
         final String secondSnippet = ">\n";
@@ -202,10 +172,7 @@ public class Event2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "[object MouseEvent] click b:true c:true [clickMe] [1]",
-            CHROME = "[object PointerEvent] click b:true c:true [clickMe] [1]",
-            EDGE = "[object PointerEvent] click b:true c:true [clickMe] [1]",
-            IE = "[object PointerEvent] click b:true c:true [clickMe] [1]")
+    @Alerts("[object PointerEvent] click b:true c:true [clickMe] [1]")
     public void resetClick() throws Exception {
         final String firstSnippet = "       <input type='reset' name='clickMe' id='clickMe'\n";
         final String secondSnippet = ">\n";
@@ -218,10 +185,7 @@ public class Event2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "[object MouseEvent] click b:true c:true [clickMe] [1]",
-            CHROME = "[object PointerEvent] click b:true c:true [clickMe] [1]",
-            EDGE = "[object PointerEvent] click b:true c:true [clickMe] [1]",
-            IE = "[object PointerEvent] click b:true c:true [clickMe] [1]")
+    @Alerts("[object PointerEvent] click b:true c:true [clickMe] [1]")
     public void buttonClick() throws Exception {
         final String firstSnippet = "       <input type='button' name='clickMe' id='clickMe'\n";
         final String secondSnippet = ">\n";
@@ -234,10 +198,7 @@ public class Event2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "[object MouseEvent] click b:true c:true [clickMe] [1]",
-            CHROME = "[object PointerEvent] click b:true c:true [clickMe] [1]",
-            EDGE = "[object PointerEvent] click b:true c:true [clickMe] [1]",
-            IE = "[object PointerEvent] click b:true c:true [clickMe] [1]")
+    @Alerts("[object PointerEvent] click b:true c:true [clickMe] [1]")
     public void anchorClick() throws Exception {
         final String firstSnippet = "       <a href='#' name='clickMe' id='clickMe'\n";
         final String secondSnippet = ">anchor</a>\n";
@@ -246,12 +207,11 @@ public class Event2Test extends WebDriverTestCase {
     }
 
     private void testClickEvents(final String firstSnippet, final String secondSnippet) throws Exception {
-        final String html =
-                "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
-                + "  <title></title>\n"
-                + "  <script type='text/javascript'>\n"
-                + "  <!--\n"
+                + "  <script>\n"
+                + LOG_TITLE_FUNCTION
                 + "    function dumpEvent(event) {\n"
                 + "      var msg = event;\n"
                 + "      msg = msg + ' ' + event.type;\n"
@@ -292,9 +252,8 @@ public class Event2Test extends WebDriverTestCase {
                 + "        msg = msg + ' [-]';\n"
                 + "      }\n"
                 + "\n"
-                + "      document.title += ' ' + msg;\n"
+                + "      log(msg);\n"
                 + "    }\n"
-                + "  //-->\n"
                 + "  </script>\n"
                 + "</head>\n"
                 + "  <form id='form' name='form' action='#'>\n"
@@ -321,7 +280,7 @@ public class Event2Test extends WebDriverTestCase {
         final WebDriver driver = loadPage2(html);
         driver.findElement(By.id("clickMe")).click();
 
-        assertTitle(driver, getExpectedAlerts()[0]);
+        verifyTitle2(driver, getExpectedAlerts());
     }
 
     /**
@@ -329,9 +288,9 @@ public class Event2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("[object KeyboardEvent] keydown b:true c:true [typeHere] [65] "
-            + "[object KeyboardEvent] keypress b:true c:true [typeHere] [97] "
-            + "[object KeyboardEvent] keyup b:true c:true [typeHere] [65]")
+    @Alerts({"[object KeyboardEvent] keydown b:true c:true [typeHere] [65]",
+             "[object KeyboardEvent] keypress b:true c:true [typeHere] [97]",
+             "[object KeyboardEvent] keyup b:true c:true [typeHere] [65]"})
     public void inputTextType() throws Exception {
         final String firstSnippet = "       <input type='text' id='typeHere'\n";
         final String secondSnippet = "/>\n";
@@ -344,9 +303,9 @@ public class Event2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("[object KeyboardEvent] keydown b:true c:true [typeHere] [65] "
-            + "[object KeyboardEvent] keypress b:true c:true [typeHere] [97] "
-            + "[object KeyboardEvent] keyup b:true c:true [typeHere] [65]")
+    @Alerts({"[object KeyboardEvent] keydown b:true c:true [typeHere] [65]",
+             "[object KeyboardEvent] keypress b:true c:true [typeHere] [97]",
+             "[object KeyboardEvent] keyup b:true c:true [typeHere] [65]"})
     public void inputPasswordType() throws Exception {
         final String firstSnippet = "       <input type='password' id='typeHere'\n";
         final String secondSnippet = "/>\n";
@@ -359,9 +318,9 @@ public class Event2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("[object KeyboardEvent] keydown b:true c:true [typeHere] [65] "
-            + "[object KeyboardEvent] keypress b:true c:true [typeHere] [97] "
-            + "[object KeyboardEvent] keyup b:true c:true [typeHere] [65]")
+    @Alerts({"[object KeyboardEvent] keydown b:true c:true [typeHere] [65]",
+             "[object KeyboardEvent] keypress b:true c:true [typeHere] [97]",
+             "[object KeyboardEvent] keyup b:true c:true [typeHere] [65]"})
     public void textAreaType() throws Exception {
         final String firstSnippet = "       <textarea id='typeHere' rows='4' cols='2'\n";
         final String secondSnippet = "></textarea >\n";
@@ -370,11 +329,11 @@ public class Event2Test extends WebDriverTestCase {
     }
 
     private void testTypeEvents(final String firstSnippet, final String secondSnippet) throws Exception {
-        final String html =
-                "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
-                + "  <script type='text/javascript'>\n"
-                + "  <!--\n"
+                + "  <script>\n"
+                +LOG_TITLE_FUNCTION
                 + "    function dumpEvent(event) {\n"
                 + "      var msg = event;\n"
                 + "      msg = msg + ' ' + event.type;\n"
@@ -415,9 +374,8 @@ public class Event2Test extends WebDriverTestCase {
                 + "        msg = msg + ' [-]';\n"
                 + "      }\n"
                 + "\n"
-                + "      document.title += ' ' + msg;\n"
+                + "      log(msg);\n"
                 + "    }\n"
-                + "  //-->\n"
                 + "  </script>\n"
                 + "</head>\n"
                 + "  <form id='form' name='form' action='#'>\n"
@@ -444,7 +402,7 @@ public class Event2Test extends WebDriverTestCase {
         final WebDriver driver = loadPage2(html);
         driver.findElement(By.id("typeHere")).sendKeys("a");
 
-        assertTitle(driver, getExpectedAlerts()[0]);
+        verifyTitle2(driver, getExpectedAlerts());
     }
 
     /**
@@ -454,8 +412,8 @@ public class Event2Test extends WebDriverTestCase {
     @Test
     @Alerts({"pass", "fail:66", "fail:undefined"})
     public void eventOnKeyDown() throws Exception {
-        final String html
-            = "<html><head>"
+        final String html = DOCTYPE_HTML
+            + "<html><head>"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "</script>"
@@ -499,8 +457,8 @@ public class Event2Test extends WebDriverTestCase {
     @Alerts({"object", "undefined", "undefined", "undefined", "undefined",
              "object", "false", "false", "false", "false"})
     public void keys() throws Exception {
-        final String html =
-              "<html><body onload='test(event)'><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body onload='test(event)'><script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test(e) {\n"
             + "    log(typeof e);\n"
@@ -529,8 +487,8 @@ public class Event2Test extends WebDriverTestCase {
      */
     @Test
     public void preventDefault() throws Exception {
-        final String html =
-            "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + "function block(e) {\n"
             + "  if (e && e.preventDefault)\n"
@@ -561,7 +519,8 @@ public class Event2Test extends WebDriverTestCase {
     @Test
     @Alerts({"DOMContentLoaded type=DOMContentLoaded", "onLoad"})
     public void dOMContentLoaded() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -583,7 +542,8 @@ public class Event2Test extends WebDriverTestCase {
     @Test
     @Alerts({"false", "not canceled", "true", "canceled", "true"})
     public void testPreventDefault() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -634,8 +594,8 @@ public class Event2Test extends WebDriverTestCase {
     @Test
     @Alerts({"false", "false", "SPAN"})
     public void eventTransmission() throws Exception {
-        final String html =
-            "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "  <span id='clickMe'>foo</span>\n"
             + "  <script>\n"
@@ -663,8 +623,8 @@ public class Event2Test extends WebDriverTestCase {
     @Test
     @Alerts({"capturing", "at target", "bubbling"})
     public void eventPhase() throws Exception {
-        final String html =
-              "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head><script>\n"
             + LOG_TITLE_FUNCTION
             + "  function init() {\n"
@@ -702,7 +662,8 @@ public class Event2Test extends WebDriverTestCase {
     @Alerts({"window capturing", "div capturing", "span capturing",
                 "span bubbling", "div", "div bubbling", "window bubbling"})
     public void eventCapturingAndBubbling() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -750,17 +711,14 @@ public class Event2Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"window capturing", "div capturing", "span capturing", "div", "window capturing", "false",
-                       "true"},
-            IE = {"window capturing", "div capturing", "span capturing", "div", "window capturing", "false", "false",
-                  "div capturing", "false", "false", "span capturing", "false", "true"})
-    @NotYetImplemented(IE)
+    @Alerts({"window capturing", "div capturing", "span capturing", "div", "window capturing", "false", "true"})
     public void stopPropagationCancelBubble() throws Exception {
         stopPropagation("cancelBubble=true");
     }
 
     private void stopPropagation(final String cancelMethod) throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -807,7 +765,8 @@ public class Event2Test extends WebDriverTestCase {
     @Test
     @Alerts({"w", "w 2", "d", "d 2", "s", "s 2", "w", "w 2"})
     public void stopPropagation_WithMultipleEventHandlers() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -860,7 +819,8 @@ public class Event2Test extends WebDriverTestCase {
     @Test
     @Alerts({"w", "w 2", "d", "d 2", "s", "w"})
     public void stopImmediatePropagation_WithMultipleEventHandlers() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
@@ -903,7 +863,8 @@ public class Event2Test extends WebDriverTestCase {
     @Test
     @Alerts("[object Event]")
     public void windowEvent() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -925,12 +886,10 @@ public class Event2Test extends WebDriverTestCase {
                 "document onclick prevented=false",
                 "window onclick prevented=true"})
     public void returnPriority() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
                 + "<html><head>\n"
                 + "<script>\n"
-                + "  function log(msg) {\n"
-                + "    window.document.title += msg + ';';\n"
-                + "  }\n"
+                + LOG_TITLE_FUNCTION
                 + "</script>\n"
                 + "</head>\n"
                 + "<body>\n"
@@ -947,9 +906,7 @@ public class Event2Test extends WebDriverTestCase {
 
         final WebDriver driver = loadPage2(html);
         driver.findElement(By.id("tester")).click();
-
-        final String text = driver.getTitle().trim().replaceAll(";", "\n").trim();
-        assertEquals(String.join("\n", getExpectedAlerts()), text);
+        verifyTitle2(driver, getExpectedAlerts());
     }
 
     /**
@@ -957,22 +914,14 @@ public class Event2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"nullwindow at beforeunload rv=",
-                       "window onbeforeunload rv=1",
-                       "window at beforeunload rv=1"},
-            IE = {"nullwindow at beforeunload rv=undefined",
-                  "window onbeforeunload rv=1",
-                  "window at beforeunload rv=2"})
+    @Alerts({"window at beforeunload rv=",
+             "window onbeforeunload rv=1",
+             "window at beforeunload rv=1"})
     public void returnPriority2() throws Exception {
-        final String html = HtmlPageTest.STANDARDS_MODE_PREFIX_
+        final String html = DOCTYPE_HTML
                 + "<html><head>\n"
                 + "<script>\n"
-                + "  output = '';\n"
-                + "  function log(msg) {\n"
-                + "    var output = localStorage.getItem('output');\n"
-                + "    output += msg + ';';\n"
-                + "    localStorage.setItem('output', output);\n"
-                + "  }\n"
+                + LOG_SESSION_STORAGE_FUNCTION
                 + "  function unload1(event) {\n"
                 + "    log('window at beforeunload rv=' + event.returnValue);\n"
                 + "    event.returnValue='1';\n"
@@ -989,12 +938,6 @@ public class Event2Test extends WebDriverTestCase {
                 + "</head>\n"
                 + "<body>\n"
                 + "<button id='tester' onclick='window.location.reload()'>test: onbeforeunload return value</button>\n"
-
-                + "<button id='getResult' "
-                            + "onclick='window.removeEventListener(\"beforeunload\", unload1);"
-                             + "window.onbeforeunload = undefined;"
-                            + "window.removeEventListener(\"beforeunload\", unload3);"
-                            + "window.document.title=localStorage.getItem(\"output\")'>get result</button>\n"
                 + "<script>\n"
                 + "  window.addEventListener('beforeunload', unload1);\n"
                 + "  window.onbeforeunload = unload2\n"
@@ -1004,11 +947,10 @@ public class Event2Test extends WebDriverTestCase {
 
         final WebDriver driver = loadPage2(html);
         driver.findElement(By.id("tester")).click();
-        driver.switchTo().alert().accept();
-        Thread.sleep(200); // avoid stale element exception in FF60
 
-        driver.findElement(By.id("getResult")).click();
-        final String text = driver.getTitle().trim().replaceAll(";", "\n").trim();
-        assertEquals(String.join("\n", getExpectedAlerts()), text);
+        driver.switchTo().alert().accept();
+        Thread.sleep(200);
+
+        verifySessionStorage2(driver, getExpectedAlerts());
     }
 }

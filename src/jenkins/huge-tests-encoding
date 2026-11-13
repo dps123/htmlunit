@@ -1,0 +1,33 @@
+pipeline {
+  agent any
+
+  tools {
+    maven 'apache-maven-3.9.16'
+  }
+
+  options {
+    lock resource: 'htmlunit-test-ports'
+    disableConcurrentBuilds()
+    timestamps()
+    timeout(time: 35, unit: 'MINUTES')
+  }
+
+  stages {
+    stage('Build') {
+      steps {
+        sh 'java -version'
+        sh 'mvn clean test -P only-encoding-tests --show-version -Dgpg.skip -Djava.awt.headless=true'
+      }
+
+      post {
+        always {
+          junit allowEmptyResults: true, testResults: 'target/surefire-reports/**/*.xml'
+          recordIssues enabledForFailure: true, sourceCodeEncoding: 'UTF-8', tools: [java()]
+          step([$class: 'Mailer',
+            notifyEveryUnstableBuild: true,
+            recipients: "rbri@rbri.de"])
+        }
+      }
+    }
+  }
+}

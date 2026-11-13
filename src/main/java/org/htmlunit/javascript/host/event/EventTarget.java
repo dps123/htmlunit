@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,60 +14,56 @@
  */
 package org.htmlunit.javascript.host.event;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
-
+import org.htmlunit.Page;
 import org.htmlunit.ScriptResult;
+import org.htmlunit.corejs.javascript.Function;
+import org.htmlunit.corejs.javascript.Scriptable;
 import org.htmlunit.html.DomElement;
 import org.htmlunit.html.DomNode;
 import org.htmlunit.html.HtmlElement;
 import org.htmlunit.html.HtmlLabel;
 import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.host.Window;
 import org.htmlunit.javascript.host.dom.Document;
 
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.Function;
-import org.htmlunit.corejs.javascript.Scriptable;
-
 /**
- * A JavaScript object for {@code EventTarget}.
+ * JavaScript host object for {@code EventTarget}.
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
  * @author Atsushi Nakagawa
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/EventTarget">MDN Documentation</a>
  */
-@JsxClass({CHROME, EDGE, FF, FF_ESR})
-@JsxClass(isJSObject = false, value = IE)
+@JsxClass
 public class EventTarget extends HtmlUnitScriptable {
 
     private EventListenersContainer eventListenersContainer_;
 
     /**
-     * Default constructor.
+     * Creates an instance of this object.
      */
     @JsxConstructor
-    public EventTarget() {
+    public void jsConstructor() {
+        // nothing to do
     }
 
     /**
-     * Allows the registration of event listeners on the event target.
-     * @param type the event type to listen for (like "click")
+     * Registers an event listener on this event target.
+     *
+     * @param type the event type to listen for (e.g. {@code "click"})
      * @param listener the event listener
-     * @param useCapture If {@code true}, indicates that the user wishes to initiate capture
-     * @see <a href="https://developer.mozilla.org/en-US/docs/DOM/element.addEventListener">Mozilla documentation</a>
+     * @param useCapture if {@code true}, indicates that the listener should be added for the capture phase
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener">MDN Documentation</a>
      */
     @JsxFunction
     public void addEventListener(final String type, final Scriptable listener, final boolean useCapture) {
@@ -75,8 +71,9 @@ public class EventTarget extends HtmlUnitScriptable {
     }
 
     /**
-     * Gets the container for event listeners.
-     * @return the container (newly created if needed)
+     * Returns the container for event listeners, creating it if necessary.
+     *
+     * @return the event listeners container
      */
     public final EventListenersContainer getEventListenersContainer() {
         if (eventListenersContainer_ == null) {
@@ -86,8 +83,18 @@ public class EventTarget extends HtmlUnitScriptable {
     }
 
     /**
-     * Executes the event on this object only (needed for instance for onload on (i)frame tags).
-     * @param event the event
+     * <span style="color:red">INTERNAL API - SUBJECT TO CHANGE AT ANY TIME - USE AT YOUR OWN RISK.</span><br>
+     * Removes all event listeners and event handlers of this event target
+     * (e.g. done by document.open()).
+     */
+    public void removeAllEventListeners() {
+        eventListenersContainer_ = null;
+    }
+
+    /**
+     * Executes the event on this object only (needed for instance for {@code onload} on {@code (i)frame} tags).
+     *
+     * @param event the event to execute
      * @see #fireEvent(Event)
      */
     public void executeEventLocally(final Event event) {
@@ -107,9 +114,10 @@ public class EventTarget extends HtmlUnitScriptable {
     }
 
     /**
-     * Fires the event on the node with capturing and bubbling phase.
-     * @param event the event
-     * @return the result
+     * Fires the event on this node with capturing and bubbling phases.
+     *
+     * @param event the event to fire
+     * @return the script result
      */
     public ScriptResult fireEvent(final Event event) {
         final Window window = getWindow();
@@ -133,15 +141,20 @@ public class EventTarget extends HtmlUnitScriptable {
             // Then add all our parents if we have any (pure JS object such as XMLHttpRequest
             // and MessagePort, etc. will not have any parents)
             for (DomNode parent = ourParentNode; parent != null; parent = parent.getParentNode()) {
+                // scroll does not bubble into the document/window
+                if (Event.TYPE_SCROLL.equals(event.getType()) && parent instanceof Page) {
+                    break;
+                }
+
                 propagationPath.add(parent.getScriptableObject());
             }
 
             // The load event has some unnatural behavior that we need to handle specially
-            // The load event for other elements target that element and but path only
+            // The load event for other elements target that element but path only
             // up to Document and not Window, so do nothing here
             // (see Note in https://www.w3.org/TR/DOM-Level-3-Events/#event-type-load)
             if (!Event.TYPE_LOAD.equals(event.getType())) {
-                // Add Window if the the propagation path reached Document
+                // Add Window if the propagation path reached Document
                 if (propagationPath.get(propagationPath.size() - 1) instanceof Document) {
                     propagationPath.add(window);
                 }
@@ -199,8 +212,8 @@ public class EventTarget extends HtmlUnitScriptable {
             HtmlLabel label = null;
             if (event.processLabelAfterBubbling()) {
                 for (DomNode parent = ourParentNode; parent != null; parent = parent.getParentNode()) {
-                    if (parent instanceof HtmlLabel) {
-                        label = (HtmlLabel) parent;
+                    if (parent instanceof HtmlLabel htmlLabel) {
+                        label = htmlLabel;
                         break;
                     }
                 }
@@ -212,7 +225,7 @@ public class EventTarget extends HtmlUnitScriptable {
                     try {
                         element.click(event.isShiftKey(), event.isCtrlKey(), event.isAltKey(), false, true, true, true);
                     }
-                    catch (final IOException e) {
+                    catch (final IOException ignored) {
                         // ignore for now
                     }
                 }
@@ -228,9 +241,10 @@ public class EventTarget extends HtmlUnitScriptable {
     }
 
     /**
-     * Returns {@code true} if there are any event handlers for the specified event.
-     * @param eventName the event name (e.g. "onclick")
-     * @return {@code true} if there are any event handlers for the specified event, {@code false} otherwise
+     * Returns whether there are any event handlers for the specified event name.
+     *
+     * @param eventName the event name (e.g. {@code "onclick"})
+     * @return {@code true} if there are any event handlers, {@code false} otherwise
      */
     public boolean hasEventHandlers(final String eventName) {
         if (eventListenersContainer_ == null) {
@@ -240,9 +254,10 @@ public class EventTarget extends HtmlUnitScriptable {
     }
 
     /**
-     * Returns the specified event handler.
-     * @param eventType the event type (e.g. "click")
-     * @return the handler function, or {@code null} if the property is null or not a function
+     * Returns the specified event handler function.
+     *
+     * @param eventType the event type (e.g. {@code "click"})
+     * @return the handler function, or {@code null} if not set
      */
     public Function getEventHandler(final String eventType) {
         if (eventListenersContainer_ == null) {
@@ -252,13 +267,12 @@ public class EventTarget extends HtmlUnitScriptable {
     }
 
     /**
-     * Dispatches an event into the event system (standards-conformant browsers only). See
-     * <a href="https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/dispatchEvent">the Gecko
-     * DOM reference</a> for more information.
+     * Dispatches an event into the event system.
      *
      * @param event the event to be dispatched
-     * @return {@code false} if at least one of the event handlers which handled the event
-     *         called <code>preventDefault</code>; {@code true} otherwise
+     * @return {@code false} if at least one of the event handlers called {@code preventDefault()};
+     *         {@code true} otherwise
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/dispatchEvent">MDN Documentation</a>
      */
     @JsxFunction
     public boolean dispatchEvent(final Event event) {
@@ -266,12 +280,12 @@ public class EventTarget extends HtmlUnitScriptable {
 
         ScriptResult result = null;
         final DomNode domNode = getDomNodeOrNull();
-        if (event.getType().equals(MouseEvent.TYPE_CLICK) && (domNode instanceof DomElement)) {
+        if (MouseEvent.TYPE_CLICK.equals(event.getType()) && (domNode instanceof DomElement element)) {
             try {
-                ((DomElement) domNode).click(event, event.isShiftKey(), event.isCtrlKey(), event.isAltKey(), true);
+                element.click(event, event.isShiftKey(), event.isCtrlKey(), event.isAltKey(), true);
             }
             catch (final IOException e) {
-                throw Context.reportRuntimeError("Error calling click(): " + e.getMessage());
+                throw JavaScriptEngine.reportRuntimeError("Error calling click(): " + e.getMessage());
             }
         }
         else {
@@ -281,12 +295,12 @@ public class EventTarget extends HtmlUnitScriptable {
     }
 
     /**
-     * Allows the removal of event listeners on the event target.
-     * @param type the event type to listen for (like "click")
-     * @param listener the event listener
-     * @param useCapture If {@code true}, indicates that the user wishes to initiate capture (not yet implemented)
-     * @see <a href="https://developer.mozilla.org/en-US/docs/DOM/element.removeEventListener">Mozilla
-     * documentation</a>
+     * Removes a previously registered event listener from this event target.
+     *
+     * @param type the event type (e.g. {@code "click"})
+     * @param listener the listener to remove
+     * @param useCapture if {@code true}, the listener is removed from the capture phase
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/removeEventListener">MDN Documentation</a>
      */
     @JsxFunction
     public void removeEventListener(final String type, final Scriptable listener, final boolean useCapture) {
@@ -297,9 +311,10 @@ public class EventTarget extends HtmlUnitScriptable {
     }
 
     /**
-     * Defines an event handler (or maybe any other object).
-     * @param eventName the event name (e.g. "click")
-     * @param value the property ({@code null} to reset it)
+     * Defines an event handler (or any other object) for the given event name.
+     *
+     * @param eventName the event name (e.g. {@code "click"})
+     * @param value the handler ({@code null} to reset it)
      */
     public void setEventHandler(final String eventName, final Object value) {
         if (isEventHandlerOnWindow()) {
@@ -310,8 +325,9 @@ public class EventTarget extends HtmlUnitScriptable {
     }
 
     /**
-     * Is setting event handler property, at window-level.
-     * @return whether the event handler to be set at window-level
+     * Returns whether the event handler property should be set at the window level.
+     *
+     * @return {@code true} if the event handler should be set at window level
      */
     protected boolean isEventHandlerOnWindow() {
         return false;

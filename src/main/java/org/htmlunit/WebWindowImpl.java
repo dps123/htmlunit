@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,9 @@
 package org.htmlunit;
 
 import static org.htmlunit.BrowserVersionFeatures.JS_WINDOW_COMPUTED_STYLE_PSEUDO_ACCEPT_WITHOUT_COLON;
-import static org.htmlunit.BrowserVersionFeatures.JS_WINDOW_OUTER_INNER_HEIGHT_DIFF_131;
-import static org.htmlunit.BrowserVersionFeatures.JS_WINDOW_OUTER_INNER_HEIGHT_DIFF_133;
-import static org.htmlunit.BrowserVersionFeatures.JS_WINDOW_OUTER_INNER_HEIGHT_DIFF_86;
-import static org.htmlunit.BrowserVersionFeatures.JS_WINDOW_OUTER_INNER_HEIGHT_DIFF_91;
+import static org.htmlunit.BrowserVersionFeatures.JS_WINDOW_OUTER_INNER_HEIGHT_DIFF_138;
+import static org.htmlunit.BrowserVersionFeatures.JS_WINDOW_OUTER_INNER_HEIGHT_DIFF_147;
+import static org.htmlunit.BrowserVersionFeatures.JS_WINDOW_OUTER_INNER_HEIGHT_DIFF_94;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -28,21 +27,17 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.htmlunit.css.ComputedCssStyleDeclaration;
+import org.htmlunit.css.CssStyleSheet;
 import org.htmlunit.css.ElementCssStyleDeclaration;
 import org.htmlunit.html.DomElement;
-import org.htmlunit.html.FrameWindow;
 import org.htmlunit.html.HtmlPage;
+import org.htmlunit.javascript.AbstractJavaScriptEngine;
+import org.htmlunit.javascript.HtmlUnitScriptable;
 import org.htmlunit.javascript.background.BackgroundJavaScriptFactory;
 import org.htmlunit.javascript.background.JavaScriptJobManager;
-import org.htmlunit.javascript.host.Element;
 import org.htmlunit.javascript.host.Window;
-import org.htmlunit.javascript.host.css.CSSStyleSheet;
-import org.htmlunit.javascript.host.css.StyleSheetList;
-import org.htmlunit.javascript.host.html.HTMLDocument;
-
-import org.htmlunit.corejs.javascript.Scriptable;
+import org.w3c.dom.Document;
 
 /**
  * <span style="color:red">INTERNAL API - SUBJECT TO CHANGE AT ANY TIME - USE AT YOUR OWN RISK.</span><br>
@@ -55,25 +50,33 @@ import org.htmlunit.corejs.javascript.Scriptable;
  * @author David K. Taylor
  * @author Ahmed Ashour
  * @author Ronald Brill
+ * @author Sven Strickroth
  */
 public abstract class WebWindowImpl implements WebWindow {
 
     private static final Log LOG = LogFactory.getLog(WebWindowImpl.class);
 
+    /**
+     * The maximum time to wait for a running job of the current page
+     * before the page gets replaced.
+     */
+    private static final long MAX_WAIT_FOR_RUNNING_JOB_MILLIS = 10_000;
+
     private final WebClient webClient_;
     private final Screen screen_;
     private Page enclosedPage_;
-    private transient Object scriptObject_;
+    private transient HtmlUnitScriptable scriptObject_;
     private JavaScriptJobManager jobManager_;
     private final List<WebWindowImpl> childWindows_ = new ArrayList<>();
     private String name_ = "";
     private final History history_ = new History(this);
-    private boolean closed_;
+    // volatile: e.g. the window is closed by the main thread while the JavaScript thread checks this
+    private volatile boolean closed_;
 
-    private int innerHeight_;
-    private int outerHeight_;
-    private int innerWidth_;
-    private int outerWidth_;
+    private volatile int innerHeight_;
+    private volatile int outerHeight_;
+    private volatile int innerWidth_;
+    private volatile int outerWidth_;
 
     /**
      * Creates a window and associates it with the client.
@@ -89,20 +92,16 @@ public abstract class WebWindowImpl implements WebWindow {
 
         innerHeight_ = 605;
         innerWidth_ = 1256;
-        if (webClient.getBrowserVersion().hasFeature(JS_WINDOW_OUTER_INNER_HEIGHT_DIFF_86)) {
-            outerHeight_ = innerHeight_ + 86;
+        if (webClient.getBrowserVersion().hasFeature(JS_WINDOW_OUTER_INNER_HEIGHT_DIFF_94)) {
+            outerHeight_ = innerHeight_ + 94;
             outerWidth_ = innerWidth_ + 16;
         }
-        else if (webClient.getBrowserVersion().hasFeature(JS_WINDOW_OUTER_INNER_HEIGHT_DIFF_91)) {
-            outerHeight_ = innerHeight_ + 91;
-            outerWidth_ = innerWidth_ + 12;
+        else if (webClient.getBrowserVersion().hasFeature(JS_WINDOW_OUTER_INNER_HEIGHT_DIFF_138)) {
+            outerHeight_ = innerHeight_ + 138;
+            outerWidth_ = innerWidth_ + 24;
         }
-        else if (webClient.getBrowserVersion().hasFeature(JS_WINDOW_OUTER_INNER_HEIGHT_DIFF_131)) {
-            outerHeight_ = innerHeight_ + 131;
-            outerWidth_ = innerWidth_ + 63;
-        }
-        else if (webClient.getBrowserVersion().hasFeature(JS_WINDOW_OUTER_INNER_HEIGHT_DIFF_133)) {
-            outerHeight_ = innerHeight_ + 133;
+        else if (webClient.getBrowserVersion().hasFeature(JS_WINDOW_OUTER_INNER_HEIGHT_DIFF_147)) {
+            outerHeight_ = innerHeight_ + 147;
             outerWidth_ = innerWidth_ + 16;
         }
         else {
@@ -153,6 +152,7 @@ public abstract class WebWindowImpl implements WebWindow {
         if (page == enclosedPage_) {
             return;
         }
+        waitForRunningJob();
         destroyChildren();
 
         if (isJavaScriptInitializationNeeded(page)) {
@@ -170,6 +170,32 @@ public abstract class WebWindowImpl implements WebWindow {
     }
 
     /**
+     * Browsers do not interrupt a running script when navigating to a new page;
+     * the new page replaces the current one after the script has finished.
+     * Therefore we wait (with a limit) for the job currently running for this window.
+     * If the job is still running afterwards, it will be stopped
+     * by the JavaScript engine as soon as the page is replaced.
+     * There is no wait if this is called from a JavaScript thread, because the running
+     * job might be the caller itself.
+     */
+    private void waitForRunningJob() {
+        final JavaScriptJobManager jobManager = getJobManager();
+        if (enclosedPage_ == null || jobManager == null) {
+            return;
+        }
+
+        final AbstractJavaScriptEngine<?> engine = webClient_.getJavaScriptEngine();
+        if (engine == null || engine.isScriptRunning()) {
+            return;
+        }
+
+        // no new jobs from the queue, only the running one;
+        // jobs scheduled by the running job are removed by destroyChildren()
+        jobManager.removeAllJobs();
+        jobManager.waitForJobsStartingBefore(0, MAX_WAIT_FOR_RUNNING_JOB_MILLIS);
+    }
+
+    /**
      * Returns {@code true} if this window needs JavaScript initialization to occur when the enclosed page is set.
      * @param page the page that will become the enclosing page
      * @return {@code true} if this window needs JavaScript initialization to occur when the enclosed page is set
@@ -180,7 +206,7 @@ public abstract class WebWindowImpl implements WebWindow {
      * {@inheritDoc}
      */
     @Override
-    public <T> void setScriptableObject(final T scriptObject) {
+    public <T extends HtmlUnitScriptable> void setScriptableObject(final T scriptObject) {
         scriptObject_ = scriptObject;
     }
 
@@ -219,7 +245,7 @@ public abstract class WebWindowImpl implements WebWindow {
      *
      * @param child the child window to associate with this window
      */
-    public void addChildWindow(final FrameWindow child) {
+    public void addChildWindow(final WebWindowImpl child) {
         synchronized (childWindows_) {
             childWindows_.add(child);
         }
@@ -229,9 +255,7 @@ public abstract class WebWindowImpl implements WebWindow {
      * Destroy our children.
      */
     protected void destroyChildren() {
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("destroyChildren");
-        }
+        LOG.debug("destroyChildren");
         getJobManager().removeAllJobs();
 
         // try to deal with js thread adding a new window in between
@@ -262,6 +286,7 @@ public abstract class WebWindowImpl implements WebWindow {
         synchronized (childWindows_) {
             childWindows_.remove(window);
         }
+        webClient_.deregisterWebWindow(window);
     }
 
     /**
@@ -370,12 +395,12 @@ public abstract class WebWindowImpl implements WebWindow {
 
     private void writeObject(final ObjectOutputStream oos) throws IOException {
         oos.defaultWriteObject();
-        oos.writeObject(scriptObject_ instanceof Scriptable ? scriptObject_ : null);
+        oos.writeObject(scriptObject_);
     }
 
     private void readObject(final ObjectInputStream ois) throws ClassNotFoundException, IOException {
         ois.defaultReadObject();
-        scriptObject_ = ois.readObject();
+        scriptObject_ = (HtmlUnitScriptable) ois.readObject();
     }
 
     /**
@@ -395,29 +420,35 @@ public abstract class WebWindowImpl implements WebWindow {
         }
 
         final SgmlPage sgmlPage = element.getPage();
-        if (sgmlPage instanceof HtmlPage) {
+        if (sgmlPage instanceof HtmlPage page) {
             final ComputedCssStyleDeclaration styleFromCache =
-                    ((HtmlPage) sgmlPage).getStyleFromCache(element, normalizedPseudo);
+                    page.getStyleFromCache(element, normalizedPseudo);
             if (styleFromCache != null) {
                 return styleFromCache;
             }
         }
 
-        final Element e = element.getScriptableObject();
         final ComputedCssStyleDeclaration computedsStyleDeclaration =
                 new ComputedCssStyleDeclaration(new ElementCssStyleDeclaration(element));
 
-        final Object ownerDocument = e.getOwnerDocument();
-        if (ownerDocument instanceof HTMLDocument) {
-            final StyleSheetList sheets = ((HTMLDocument) ownerDocument).getStyleSheets();
-            final boolean trace = LOG.isTraceEnabled();
-            for (int i = 0; i < sheets.getLength(); i++) {
-                final CSSStyleSheet sheet = (CSSStyleSheet) sheets.item(i);
-                if (sheet.getCssStyleSheet().isActive() && sheet.getCssStyleSheet().isEnabled()) {
-                    if (trace) {
-                        LOG.trace("modifyIfNecessary: " + sheet + ", " + computedsStyleDeclaration + ", " + e);
+        final Document ownerDocument = element.getOwnerDocument();
+        if (ownerDocument instanceof HtmlPage htmlPage) {
+
+            final WebClient webClient = getWebClient();
+
+            if (webClient.getOptions().isCssEnabled()) {
+                final boolean trace = LOG.isTraceEnabled();
+                for (final CssStyleSheet cssStyleSheet : htmlPage.getStyleSheets()) {
+                    if (cssStyleSheet != null
+                            && cssStyleSheet.isEnabled()
+                            && cssStyleSheet.isActive()) {
+                        if (trace) {
+                            LOG.trace("modifyIfNecessary: " + cssStyleSheet
+                                        + ", " + computedsStyleDeclaration + ", " + element);
+                        }
+                        cssStyleSheet.modifyIfNecessary(computedsStyleDeclaration,
+                                        element, normalizedPseudo, htmlPage.getDocumentElement());
                     }
-                    sheet.getCssStyleSheet().modifyIfNecessary(computedsStyleDeclaration, element, normalizedPseudo);
                 }
             }
 

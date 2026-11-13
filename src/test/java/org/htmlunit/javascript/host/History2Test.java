@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,21 +16,19 @@ package org.htmlunit.javascript.host;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.htmlunit.WebDriverTestCase;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.HtmlUnitNYI;
+import org.htmlunit.util.NameValuePair;
+import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
-
-import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
-import org.htmlunit.util.NameValuePair;
 
 /**
  * Tests for {@link History}.
@@ -43,7 +41,6 @@ import org.htmlunit.util.NameValuePair;
  * @author Anton Demydenko
  * @author Lai Quang Duong
  */
-@RunWith(BrowserRunner.class)
 public class History2Test extends WebDriverTestCase {
 
     /**
@@ -52,7 +49,8 @@ public class History2Test extends WebDriverTestCase {
     @Test
     @Alerts("here")
     public void goShouldIgnoreOutOfBoundIndex() throws Exception {
-        final String html = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><body>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
                 + "history.go(1);\n"
@@ -69,7 +67,8 @@ public class History2Test extends WebDriverTestCase {
     @Test
     @Alerts({"[object PopStateEvent]", "null"})
     public void pushStateSimple() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -114,7 +113,8 @@ public class History2Test extends WebDriverTestCase {
                 "[object PopStateEvent]", "{\"hi2\":\"there2\"}",
                 "[object PopStateEvent]", "{\"hi2\":\"there2\"}"})
     public void pushState() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -208,17 +208,17 @@ public class History2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"[object PopStateEvent]", "{\"hi\":\"there\"}", "true",
-                       "[object PopStateEvent]", "{\"hi\":\"there\"}", "true",
-                       "[object PopStateEvent]", "null", "true",
-                       "[object PopStateEvent]", "null", "true",
-                       "[object PopStateEvent]", "{\"hi\":\"there\"}", "true",
-                       "[object PopStateEvent]", "{\"hi\":\"there\"}", "true",
-                       "[object PopStateEvent]", "{\"hi2\":\"there2\"}", "true",
-                       "[object PopStateEvent]", "{\"hi2\":\"there2\"}", "true"},
-            IE = {})
+    @Alerts({"[object PopStateEvent]", "{\"hi\":\"there\"}", "true",
+             "[object PopStateEvent]", "{\"hi\":\"there\"}", "true",
+             "[object PopStateEvent]", "null", "true",
+             "[object PopStateEvent]", "null", "true",
+             "[object PopStateEvent]", "{\"hi\":\"there\"}", "true",
+             "[object PopStateEvent]", "{\"hi\":\"there\"}", "true",
+             "[object PopStateEvent]", "{\"hi2\":\"there2\"}", "true",
+             "[object PopStateEvent]", "{\"hi2\":\"there2\"}", "true"})
     public void pushStateClone() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -263,7 +263,7 @@ public class History2Test extends WebDriverTestCase {
 
         final long start = (Long) ((JavascriptExecutor) driver).executeScript("return window.history.length");
 
-        final long waitTime = 4 * DEFAULT_WAIT_TIME;
+        final long waitTime = 4 * DEFAULT_WAIT_TIME.toMillis();
         if (expectedAlerts.length != 0) {
             driver.findElement(By.id("myId")).click();
             verifyWindowName2(driver, "a");
@@ -277,28 +277,28 @@ public class History2Test extends WebDriverTestCase {
 
             driver.navigate().back();
             i = 6;
-            verifyTitle2(waitTime, driver, Arrays.copyOfRange(expectedAlerts, 0, i));
+            verifyTitle2(Duration.ofMillis(waitTime), driver, Arrays.copyOfRange(expectedAlerts, 0, i));
             verifyWindowName2(driver, "a");
             assertEquals(start + 2, ((JavascriptExecutor) driver).executeScript("return window.history.length"));
             assertEquals(URL_FIRST + "bar.html", driver.getCurrentUrl());
 
             driver.navigate().back();
             i = i + 6;
-            verifyTitle2(waitTime, driver, Arrays.copyOfRange(expectedAlerts, 0, i));
+            verifyTitle2(Duration.ofMillis(waitTime), driver, Arrays.copyOfRange(expectedAlerts, 0, i));
             verifyWindowName2(driver, "a");
             assertEquals(start + 2, ((JavascriptExecutor) driver).executeScript("return window.history.length"));
             assertEquals(URL_FIRST.toString(), driver.getCurrentUrl());
 
             driver.navigate().forward();
             i = i + 6;
-            verifyTitle2(waitTime, driver, Arrays.copyOfRange(expectedAlerts, 0, i));
+            verifyTitle2(Duration.ofMillis(waitTime), driver, Arrays.copyOfRange(expectedAlerts, 0, i));
             verifyWindowName2(driver, "a");
             assertEquals(start + 2, ((JavascriptExecutor) driver).executeScript("return window.history.length"));
             assertEquals(URL_FIRST + "bar.html", driver.getCurrentUrl());
 
             driver.navigate().forward();
             i = i + 6;
-            verifyTitle2(waitTime, driver, Arrays.copyOfRange(expectedAlerts, 0, i));
+            verifyTitle2(Duration.ofMillis(waitTime), driver, Arrays.copyOfRange(expectedAlerts, 0, i));
             verifyWindowName2(driver, "a");
             assertEquals(start + 2, ((JavascriptExecutor) driver).executeScript("return window.history.length"));
             assertEquals(URL_FIRST + "bar2.html", driver.getCurrentUrl());
@@ -317,7 +317,8 @@ public class History2Test extends WebDriverTestCase {
     @Test
     @Alerts({"true", "true"})
     public void pushStateLocationHref() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -327,7 +328,7 @@ public class History2Test extends WebDriverTestCase {
                 + "      var stateObj = { hi: 'there' };\n"
                 + "      window.history.pushState(stateObj, 'page 2', 'bar.html');\n"
                 + "      log(location.href.indexOf('bar.html') > -1);\n"
-                + "    } catch(e) { log('exception'); }\n"
+                + "    } catch(e) { logEx(e); }\n"
                 + "  }\n"
 
                 + "  function test2() {\n"
@@ -336,7 +337,7 @@ public class History2Test extends WebDriverTestCase {
                 + "      var stateObj = { hi2: 'there2' };\n"
                 + "      window.history.pushState(stateObj, 'page 3', 'bar2.html');\n"
                 + "      log(location.href.indexOf('bar2.html') > -1);\n"
-                + "    } catch(e) { log('exception'); }\n"
+                + "    } catch(e) { logEx(e); }\n"
                 + "  }\n"
 
                 + "</script>\n"
@@ -373,11 +374,12 @@ public class History2Test extends WebDriverTestCase {
      */
     @Test
     @Alerts({"[object PopStateEvent]", "null",
-                "[object PopStateEvent]", "null",
-                "[object PopStateEvent]", "{\"hi2\":\"there2\"}",
-                "[object PopStateEvent]", "{\"hi2\":\"there2\"}"})
+             "[object PopStateEvent]", "null",
+             "[object PopStateEvent]", "{\"hi2\":\"there2\"}",
+             "[object PopStateEvent]", "{\"hi2\":\"there2\"}"})
     public void replaceState() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -458,13 +460,13 @@ public class History2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"[object PopStateEvent]", "null", "true",
-                       "[object PopStateEvent]", "null", "true",
-                       "[object PopStateEvent]", "{\"hi2\":\"there2\"}", "true",
-                       "[object PopStateEvent]", "{\"hi2\":\"there2\"}", "true"},
-            IE = {})
+    @Alerts({"[object PopStateEvent]", "null", "true",
+             "[object PopStateEvent]", "null", "true",
+             "[object PopStateEvent]", "{\"hi2\":\"there2\"}", "true",
+             "[object PopStateEvent]", "{\"hi2\":\"there2\"}", "true"})
     public void replaceStateClone() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -548,12 +550,12 @@ public class History2Test extends WebDriverTestCase {
     @Test
     @Alerts(DEFAULT = {"href=§§URL§§", "href=§§URL§§?p=%C3%84"},
             FF = {"href=§§URL§§", "href=§§URL§§?p=%C4"},
-            FF_ESR = {"href=§§URL§§", "href=§§URL§§?p=%C4"},
-            IE = {"href=§§URL§§", "href=§§URL§§?p=\u00c4"})
+            FF_ESR = {"href=§§URL§§", "href=§§URL§§?p=%C4"})
     @HtmlUnitNYI(CHROME = {"href=§§URL§§", "href=§§URL§§?p=%C4"},
             EDGE = {"href=§§URL§§", "href=§§URL§§?p=%C4"})
     public void pushStateEncoding() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -577,7 +579,8 @@ public class History2Test extends WebDriverTestCase {
     @Test
     @Alerts({"href=§§URL§§", "hash=", "href=§§URL§§#foo", "hash=#foo", "onhashchange #proof"})
     public void pushStateChangeHash() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -604,10 +607,14 @@ public class History2Test extends WebDriverTestCase {
         loadPageVerifyTitle2(html);
     }
 
+    /**
+     * @throws Exception if the test fails
+     */
     @Test
     @Alerts({"href=§§URL§§", "href=§§URL§§"})
     public void replaceStateNull() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -625,12 +632,14 @@ public class History2Test extends WebDriverTestCase {
         loadPageVerifyTitle2(html);
     }
 
+    /**
+     * @throws Exception if the test fails
+     */
     @Test
-    @Alerts(DEFAULT = {"href=§§URL§§", "href=§§URL§§"},
-            IE = {"href=§§URL§§", "href=§§URL§§undefined"})
-    @HtmlUnitNYI(IE = {"href=§§URL§§", "href=§§URL§§"})
+    @Alerts({"href=§§URL§§", "href=§§URL§§"})
     public void replaceStateUndefined() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -648,10 +657,14 @@ public class History2Test extends WebDriverTestCase {
         loadPageVerifyTitle2(html);
     }
 
+    /**
+     * @throws Exception if the test fails
+     */
     @Test
     @Alerts({"href=§§URL§§", "href=§§URL§§undefined"})
     public void replaceStateUndefinedString() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -669,15 +682,18 @@ public class History2Test extends WebDriverTestCase {
         loadPageVerifyTitle2(html);
     }
 
+    /**
+     * @throws Exception if the test fails
+     */
     @Test
     @Alerts({"href=§§URL§§", "href=§§URL§§[object%20Object]"})
     @HtmlUnitNYI(CHROME = {"href=§§URL§§", "href=§§URL§§%5Bobject%20Object%5D"},
                  EDGE = {"href=§§URL§§", "href=§§URL§§%5Bobject%20Object%5D"},
                  FF = {"href=§§URL§§", "href=§§URL§§%5Bobject%20Object%5D"},
-                 FF_ESR = {"href=§§URL§§", "href=§§URL§§%5Bobject%20Object%5D"},
-                 IE = {"href=§§URL§§", "href=§§URL§§%5Bobject%20Object%5D"})
+                 FF_ESR = {"href=§§URL§§", "href=§§URL§§%5Bobject%20Object%5D"})
     public void replaceStateObj() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -696,10 +712,14 @@ public class History2Test extends WebDriverTestCase {
         loadPageVerifyTitle2(html);
     }
 
+    /**
+     * @throws Exception if the test fails
+     */
     @Test
     @Alerts({"href=§§URL§§", "href=§§URL§§"})
     public void pushStateNull() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -717,12 +737,14 @@ public class History2Test extends WebDriverTestCase {
         loadPageVerifyTitle2(html);
     }
 
+    /**
+     * @throws Exception if the test fails
+     */
     @Test
-    @Alerts(DEFAULT = {"href=§§URL§§", "href=§§URL§§"},
-            IE = {"href=§§URL§§", "href=§§URL§§undefined"})
-    @HtmlUnitNYI(IE = {"href=§§URL§§", "href=§§URL§§"})
+    @Alerts({"href=§§URL§§", "href=§§URL§§"})
     public void pushStateUndefined() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -740,10 +762,14 @@ public class History2Test extends WebDriverTestCase {
         loadPageVerifyTitle2(html);
     }
 
+    /**
+     * @throws Exception if the test fails
+     */
     @Test
     @Alerts({"href=§§URL§§", "href=§§URL§§undefined"})
     public void pushStateUndefinedString() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -761,15 +787,18 @@ public class History2Test extends WebDriverTestCase {
         loadPageVerifyTitle2(html);
     }
 
+    /**
+     * @throws Exception if the test fails
+     */
     @Test
     @Alerts({"href=§§URL§§", "href=§§URL§§[object%20Object]"})
     @HtmlUnitNYI(CHROME = {"href=§§URL§§", "href=§§URL§§%5Bobject%20Object%5D"},
             EDGE = {"href=§§URL§§", "href=§§URL§§%5Bobject%20Object%5D"},
             FF = {"href=§§URL§§", "href=§§URL§§%5Bobject%20Object%5D"},
-            FF_ESR = {"href=§§URL§§", "href=§§URL§§%5Bobject%20Object%5D"},
-            IE = {"href=§§URL§§", "href=§§URL§§%5Bobject%20Object%5D"})
+            FF_ESR = {"href=§§URL§§", "href=§§URL§§%5Bobject%20Object%5D"})
     public void pushStateObj() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -793,7 +822,8 @@ public class History2Test extends WebDriverTestCase {
     @Test
     @Alerts({"href=§§URL§§", "hash=", "href=§§URL§§#foo", "hash=#foo", "onhashchange #proof"})
     public void pushStateChangeHashNoStore() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -833,12 +863,12 @@ public class History2Test extends WebDriverTestCase {
     @Test
     @Alerts(DEFAULT = {"href=§§URL§§", "href=§§URL§§?p=%C3%84"},
             FF = {"href=§§URL§§", "href=§§URL§§?p=%C4"},
-            FF_ESR = {"href=§§URL§§", "href=§§URL§§?p=%C4"},
-            IE = {"href=§§URL§§", "href=§§URL§§?p=\u00c4"})
+            FF_ESR = {"href=§§URL§§", "href=§§URL§§?p=%C4"})
     @HtmlUnitNYI(CHROME = {"href=§§URL§§", "href=§§URL§§?p=%C4"},
             EDGE = {"href=§§URL§§", "href=§§URL§§?p=%C4"})
     public void replaceStateEncoding() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -862,7 +892,8 @@ public class History2Test extends WebDriverTestCase {
     @Test
     @Alerts({"href=§§URL§§", "hash=", "href=§§URL§§#foo", "hash=#foo", "onhashchange #proof"})
     public void replaceStateChangeHash() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -896,7 +927,8 @@ public class History2Test extends WebDriverTestCase {
     @Test
     @Alerts({"href=§§URL§§", "hash=", "href=§§URL§§#foo", "hash=#foo", "onhashchange #proof"})
     public void replaceStateChangeHashNoStore() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -936,7 +968,8 @@ public class History2Test extends WebDriverTestCase {
      */
     @Test
     public void length() throws Exception {
-        final String second = "<html>\n"
+        final String second = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head></head>\n"
                 + "<body>\n"
                 + "<a name='length' href='' onclick='alert(history.length);return false;'>length</a><br>\n"
@@ -945,7 +978,8 @@ public class History2Test extends WebDriverTestCase {
 
         getMockWebConnection().setResponse(URL_SECOND, second);
 
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head></head>\n"
                 + "<body>\n"
                 + "<a name='length' href='' onclick='alert(history.length);return false;'>length</a><br>\n"
@@ -975,7 +1009,8 @@ public class History2Test extends WebDriverTestCase {
     @Test
     @Alerts("undefined")
     public void previous() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -999,7 +1034,8 @@ public class History2Test extends WebDriverTestCase {
     @Test
     @Alerts("undefined")
     public void current() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -1023,7 +1059,8 @@ public class History2Test extends WebDriverTestCase {
     @Test
     @Alerts("undefined")
     public void next() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -1047,7 +1084,8 @@ public class History2Test extends WebDriverTestCase {
     @Test
     @Alerts("undefined")
     public void item() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -1069,7 +1107,8 @@ public class History2Test extends WebDriverTestCase {
     @Test
     @Alerts({"false", "false", "false", "false", "false", "false"})
     public void byIndex() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -1099,7 +1138,8 @@ public class History2Test extends WebDriverTestCase {
     @Test
     @Alerts("undefined")
     public void arrayAccess() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<script>\n"
                 + LOG_TITLE_FUNCTION
@@ -1121,7 +1161,8 @@ public class History2Test extends WebDriverTestCase {
     @Test
     @Alerts("null")
     public void state() throws Exception {
-        final String html = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head><script>\n"
                 + LOG_TITLE_FUNCTION
                 + "  function test() {\n"
                 + "    log(history.state);\n"
@@ -1137,11 +1178,11 @@ public class History2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"back", "forward", "go", "length", "pushState", "replaceState",
-                       "scrollRestoration", "state"},
-            IE = {"back", "forward", "go", "length", "pushState", "replaceState", "state"})
+    @Alerts({"back", "forward", "go", "length", "pushState", "replaceState",
+             "scrollRestoration", "state"})
     public void properties() throws Exception {
-        final String html = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head><script>\n"
                 + LOG_TITLE_FUNCTION
                 + "  function test() {\n"
                 + "    var props = [];\n"
@@ -1167,7 +1208,8 @@ public class History2Test extends WebDriverTestCase {
      */
     @Test
     public void loadPageAfterPushState() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<title>page1</title>\n"
                 + "<script>\n"
@@ -1178,7 +1220,8 @@ public class History2Test extends WebDriverTestCase {
                 + "</head>\n"
                 + "<body onload='pushState()'>\n"
                 + "</body></html>";
-        final String html2 = "<html>\n"
+        final String html2 = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "<title>page2</title>\n"
                 + "</head>\n"
@@ -1196,10 +1239,10 @@ public class History2Test extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"auto", "manual", "auto", "auto", "auto", "auto"},
-            IE = {"undefined", "manual", "auto", "MaNUaL", "unknown", "undefined"})
+    @Alerts({"auto", "manual", "auto", "auto", "auto", "auto"})
     public void scrollRestoration() throws Exception {
-        final String html = "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><head><script>\n"
                 + LOG_TITLE_FUNCTION
                 + "  function test() {\n"
                 + "    log(history.scrollRestoration);\n"
@@ -1232,16 +1275,18 @@ public class History2Test extends WebDriverTestCase {
      */
     @Test
     public void testHistoryBackAndForwarWithNoStoreCacheControlHeader() throws Exception {
-        final String html = "<html><body>"
+        final String html = DOCTYPE_HTML
+            + "<html><body>"
             + "<a id='startButton' href='" + URL_SECOND + "'>Start</a>\n"
             + "</body></html>";
-        final String secondContent = "<!DOCTYPE html>\n"
+        final String secondContent = DOCTYPE_HTML
             + "<html><head></head>\n"
             + "<body>\n"
             + "  <a id='nextButton' href='" + URL_THIRD + "'>Next</a>\n"
             + "  <a id='forwardButton' onclick='javascript:window.history.forward()'>Forward</a>\n"
             + "</body></html>";
-        final String thirdContent = "<html><body>"
+        final String thirdContent = DOCTYPE_HTML
+            + "<html><body>"
             + "<a id='backButton' onclick='javascript:window.history.back()'>Back</a>\n"
             + "</body></html>";
 

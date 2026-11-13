@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,7 @@
  */
 package org.htmlunit.html;
 
-import static org.htmlunit.BrowserVersionFeatures.HTMLIMAGE_NAME_VALUE_PARAMS;
-import static org.htmlunit.BrowserVersionFeatures.JS_IMAGE_COMPLETE_RETURNS_TRUE_FOR_NO_REQUEST;
+import static org.htmlunit.BrowserVersionFeatures.HTMLINPUT_TYPE_IMAGE_IGNORES_CUSTOM_VALIDITY;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,8 +25,6 @@ import java.nio.file.Files;
 import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
-
 import org.htmlunit.BrowserVersion;
 import org.htmlunit.ElementNotFoundException;
 import org.htmlunit.Page;
@@ -35,16 +32,18 @@ import org.htmlunit.SgmlPage;
 import org.htmlunit.WebClient;
 import org.htmlunit.WebRequest;
 import org.htmlunit.WebResponse;
+import org.htmlunit.html.csp.ContentSecurityPolicy;
 import org.htmlunit.javascript.host.event.Event;
 import org.htmlunit.util.NameValuePair;
+import org.htmlunit.util.StringUtils;
 
 /**
  * Wrapper for the HTML element "input".
  * HtmlUnit does not download the associated image for performance reasons.
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author David K. Taylor
- * @author <a href="mailto:cse@dynabean.de">Christian Sell</a>
+ * @author Christian Sell
  * @author Marc Guillemot
  * @author Daniel Gredler
  * @author Ahmed Ashour
@@ -79,7 +78,7 @@ public class HtmlImageInput extends HtmlInput implements LabelableElement {
         final String name = getNameAttribute();
         final String prefix;
         // a clicked image without name sends parameter x and y
-        if (StringUtils.isEmpty(name)) {
+        if (StringUtils.isEmptyOrNull(name)) {
             prefix = "";
         }
         else {
@@ -89,10 +88,6 @@ public class HtmlImageInput extends HtmlInput implements LabelableElement {
         if (wasPositionSpecified_) {
             final NameValuePair valueX = new NameValuePair(prefix + 'x', Integer.toString(xPosition_));
             final NameValuePair valueY = new NameValuePair(prefix + 'y', Integer.toString(yPosition_));
-            if (!prefix.isEmpty() && hasFeature(HTMLIMAGE_NAME_VALUE_PARAMS) && !getRawValue().isEmpty()) {
-                return new NameValuePair[] {valueX, valueY,
-                    new NameValuePair(getNameAttribute(), getRawValue()) };
-            }
             return new NameValuePair[] {valueX, valueY};
         }
         return new NameValuePair[]{new NameValuePair(getNameAttribute(), getRawValue())};
@@ -104,7 +99,7 @@ public class HtmlImageInput extends HtmlInput implements LabelableElement {
      * that wish to expose it will override and make it public.
      *
      * @return the Page that is the result of submitting this page to the server
-     * @exception IOException If an IO error occurs
+     * @throws IOException If an IO error occurs
      */
     @Override
     @SuppressWarnings("unchecked")
@@ -135,8 +130,8 @@ public class HtmlImageInput extends HtmlInput implements LabelableElement {
      * @param x the x coordinate of the pointing device at the time of clicking
      * @param y the y coordinate of the pointing device at the time of clicking
      * @return the page that is loaded after the click has taken place
-     * @exception IOException If an IO error occurs
-     * @exception ElementNotFoundException If a particular XML element could not be found in the DOM model
+     * @throws IOException If an IO error occurs
+     * @throws ElementNotFoundException If a particular XML element could not be found in the DOM model
      */
     public <P extends Page> P click(final int x, final int y) throws IOException, ElementNotFoundException {
         wasPositionSpecified_ = true;
@@ -157,7 +152,7 @@ public class HtmlImageInput extends HtmlInput implements LabelableElement {
      * @param <P> the page type
      * @return the page contained in the current window as returned by
      *         {@link org.htmlunit.WebClient#getCurrentWindow()}
-     * @exception IOException if an IO error occurs
+     * @throws IOException if an IO error occurs
      */
     @Override
     public <P extends Page> P click(final Event event,
@@ -172,7 +167,7 @@ public class HtmlImageInput extends HtmlInput implements LabelableElement {
      */
     @Override
     public void setValue(final String newValue) {
-        super.setValue(newValue);
+        unmarkValueDirty();
         setDefaultValue(newValue);
     }
 
@@ -185,13 +180,36 @@ public class HtmlImageInput extends HtmlInput implements LabelableElement {
     }
 
     /**
-     * {@inheritDoc} Also sets the value to the new default value, just like IE.
+     * {@inheritDoc} Also sets the value to the new default value.
      * @see SubmittableElement#setDefaultValue(String)
      */
     @Override
     public void setDefaultValue(final String defaultValue) {
         super.setDefaultValue(defaultValue);
         setRawValue(defaultValue);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean willValidate() {
+        if (hasFeature(HTMLINPUT_TYPE_IMAGE_IGNORES_CUSTOM_VALIDITY)) {
+            return false;
+        }
+        return super.willValidate();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected boolean isCustomValidityValid() {
+        if (hasFeature(HTMLINPUT_TYPE_IMAGE_IGNORES_CUSTOM_VALIDITY)) {
+            return true;
+        }
+
+        return super.isCustomValidityValid();
     }
 
     /**
@@ -222,20 +240,21 @@ public class HtmlImageInput extends HtmlInput implements LabelableElement {
     private void downloadImageIfNeeded() throws IOException {
         if (!downloaded_) {
             final String src = getSrc();
-            if (!"".equals(src)) {
+            if (!StringUtils.isEmptyString(src)) {
                 final HtmlPage page = (HtmlPage) getPage();
                 final WebClient webClient = page.getWebClient();
 
                 final BrowserVersion browser = webClient.getBrowserVersion();
-                final WebRequest request = new WebRequest(new URL(src), browser.getImgAcceptHeader(),
+                // upgrade-insecure-requests of the Content-Security-Policy
+                final URL url = ContentSecurityPolicy.upgradeInsecureRequest(page, new URL(src));
+                final WebRequest request = new WebRequest(url, browser.getImgAcceptHeader(),
                                                                 browser.getAcceptEncodingHeader());
                 request.setCharset(page.getCharset());
-                request.setRefererlHeader(page.getUrl());
+                request.setRefererHeader(page.getUrl());
                 imageWebResponse_ = webClient.loadWebResponse(request);
             }
 
-            downloaded_ = hasFeature(JS_IMAGE_COMPLETE_RETURNS_TRUE_FOR_NO_REQUEST)
-                    || (imageWebResponse_ != null && imageWebResponse_.getContentType().contains("image"));
+            downloaded_ = true;
         }
     }
 
@@ -252,13 +271,5 @@ public class HtmlImageInput extends HtmlInput implements LabelableElement {
                 IOUtils.copy(inputStream, fos);
             }
         }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected boolean propagateClickStateUpdateToParent() {
-        return true;
     }
 }

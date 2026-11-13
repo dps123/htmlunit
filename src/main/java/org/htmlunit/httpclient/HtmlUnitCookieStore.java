@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ import java.util.List;
 import org.apache.http.client.CookieStore;
 import org.apache.http.cookie.ClientCookie;
 import org.apache.http.cookie.Cookie;
-
 import org.htmlunit.CookieManager;
 
 /**
@@ -32,6 +31,7 @@ import org.htmlunit.CookieManager;
  * @author Ronald Brill
  */
 public final class HtmlUnitCookieStore implements CookieStore, Serializable {
+    // no synchronization required here, the CookieManager is thread-safe
     private final CookieManager manager_;
 
     /**
@@ -47,23 +47,23 @@ public final class HtmlUnitCookieStore implements CookieStore, Serializable {
      * {@inheritDoc}
      */
     @Override
-    public synchronized void addCookie(final Cookie cookie) {
-        manager_.addCookie(new org.htmlunit.util.Cookie((ClientCookie) cookie));
+    public void addCookie(final Cookie cookie) {
+        manager_.addCookie(new HttpClientCookie((ClientCookie) cookie));
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public synchronized List<Cookie> getCookies() {
-        return org.htmlunit.util.Cookie.toHttpClient(manager_.getCookies());
+    public List<Cookie> getCookies() {
+        return HttpClientConverter.toHttpClient(manager_.getCookies());
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public synchronized boolean clearExpired(final Date date) {
+    public boolean clearExpired(final Date date) {
         return manager_.clearExpired(date);
     }
 
@@ -71,7 +71,7 @@ public final class HtmlUnitCookieStore implements CookieStore, Serializable {
      * {@inheritDoc}
      */
     @Override
-    public synchronized void clear() {
+    public void clear() {
         manager_.clearCookies();
     }
 }

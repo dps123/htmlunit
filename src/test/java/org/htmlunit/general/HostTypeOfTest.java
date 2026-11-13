@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,13 @@
  */
 package org.htmlunit.general;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
+import org.htmlunit.HttpHeader;
 import org.htmlunit.WebDriverTestCase;
 import org.htmlunit.javascript.host.css.CSSStyleRule;
 import org.htmlunit.javascript.host.css.CSSStyleSheet;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.HtmlUnitNYI;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests that {@code typeof} host class is correct.
@@ -31,15 +29,16 @@ import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
  * @author Ronald Brill
  * @author cd alexndr
  */
-@RunWith(BrowserRunner.class)
 public class HostTypeOfTest extends WebDriverTestCase {
 
     private void test(final String className) throws Exception {
-        final String html =
-            "<html><head><script>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
             + LOG_TITLE_FUNCTION
             + "  function test() {\n"
-            + "    log(typeof " + className + ");\n"
+            + "    try {\n"
+            + "      log(typeof " + className + ");\n"
+            + "    } catch(e) { logEx(e) }\n"
             + "  }\n"
             + "</script></head><body onload='test()'>\n"
             + "</body></html>";
@@ -57,6 +56,24 @@ public class HostTypeOfTest extends WebDriverTestCase {
     }
 
     /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
+    public void abstractRange() throws Exception {
+        test("AbstractRange");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void abstractWorker() throws Exception {
+        test("AbstractWorker");
+    }
+
+    /**
      * Test {@link org.htmlunit.javascript.host.ActiveXObject}.
      *
      * @throws Exception if an error occurs
@@ -68,13 +85,30 @@ public class HostTypeOfTest extends WebDriverTestCase {
     }
 
     /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void ambientLightSensor() throws Exception {
+        test("AmbientLightSensor");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void ambientLightSensorReading() throws Exception {
+        test("AmbientLightSensorReading");
+    }
+
+    /**
      * Test {@link org.htmlunit.javascript.host.media.AnalyserNode}.
      *
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void analyserNode() throws Exception {
         test("AnalyserNode");
     }
@@ -83,8 +117,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void angle_instanced_arrays() throws Exception {
         test("ANGLE_instanced_arrays");
     }
@@ -93,8 +126,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void animation() throws Exception {
         test("Animation");
     }
@@ -103,10 +135,74 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("undefined")
+    public void animationEffectReadOnly() throws Exception {
+        test("AnimationEffectReadOnly");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void animationEffectTiming() throws Exception {
+        test("AnimationEffectTiming");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void animationEffectTimingProperties() throws Exception {
+        test("AnimationEffectTimingProperties");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void animationEffectTimingReadOnly() throws Exception {
+        test("AnimationEffectTimingReadOnly");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void animationEvent() throws Exception {
         test("AnimationEvent");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
+    @HtmlUnitNYI(CHROME = "undefined", EDGE = "undefined", FF = "undefined", FF_ESR = "undefined")
+    public void animationPlaybackEvent() throws Exception {
+        test("AnimationPlaybackEvent");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void animationPlayer() throws Exception {
+        test("AnimationPlayer");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
+    @HtmlUnitNYI(CHROME = "undefined", EDGE = "undefined", FF = "undefined", FF_ESR = "undefined")
+    public void animationTimeline() throws Exception {
+        test("AnimationTimeline");
     }
 
     /**
@@ -124,8 +220,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void applicationCache() throws Exception {
         test("ApplicationCache");
     }
@@ -140,6 +235,15 @@ public class HostTypeOfTest extends WebDriverTestCase {
     }
 
     /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("ReferenceError")
+    public void apps_mgmt() throws Exception {
+        test("Apps.mgmt");
+    }
+
+    /**
      * Test {@code org.htmlunit.corejs.javascript.Arguments}.
      *
      * @throws Exception if an error occurs
@@ -148,6 +252,15 @@ public class HostTypeOfTest extends WebDriverTestCase {
     @Alerts("object")
     public void arguments() throws Exception {
         test("arguments");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
+    public void array() throws Exception {
+        test("Array");
     }
 
     /**
@@ -187,8 +300,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "object",
-            IE = "undefined")
+    @Alerts("undefined")
+    public void asyncFunction() throws Exception {
+        test("AsyncFunction");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("object")
     public void atomics() throws Exception {
         test("Atomics");
     }
@@ -199,8 +320,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void attr() throws Exception {
         test("Attr");
     }
@@ -218,8 +338,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void audioBuffer() throws Exception {
         test("AudioBuffer");
     }
@@ -228,8 +347,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void audioBufferSourceNode() throws Exception {
         test("AudioBufferSourceNode");
     }
@@ -238,8 +356,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("undefined")
+    public void audioChannelManager() throws Exception {
+        test("AudioChannelManager");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void audioContext() throws Exception {
         test("AudioContext");
     }
@@ -248,8 +374,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void audioDestinationNode() throws Exception {
         test("AudioDestinationNode");
     }
@@ -258,8 +383,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void audioListener() throws Exception {
         test("AudioListener");
     }
@@ -268,8 +392,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void audioNode() throws Exception {
         test("AudioNode");
     }
@@ -280,8 +403,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void audioParam() throws Exception {
         test("AudioParam");
     }
@@ -290,8 +412,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void audioProcessingEvent() throws Exception {
         test("AudioProcessingEvent");
     }
@@ -300,8 +421,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void audioScheduledSourceNode() throws Exception {
         test("AudioScheduledSourceNode");
     }
@@ -319,8 +439,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void barProp() throws Exception {
         test("BarProp");
     }
@@ -329,8 +448,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void baseAudioContext() throws Exception {
         test("BaseAudioContext");
     }
@@ -341,10 +459,18 @@ public class HostTypeOfTest extends WebDriverTestCase {
     @Test
     @Alerts(DEFAULT = "function",
             FF = "undefined",
-            FF_ESR = "undefined",
-            IE = "undefined")
+            FF_ESR = "undefined")
     public void batteryManager() throws Exception {
         test("BatteryManager");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void beforeInstallPrompt() throws Exception {
+        test("BeforeInstallPrompt");
     }
 
     /**
@@ -364,8 +490,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void beforeUnloadEvent() throws Exception {
         test("BeforeUnloadEvent");
     }
@@ -374,8 +499,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
+    public void bigInt() throws Exception {
+        test("BigInt");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void biquadFilterNode() throws Exception {
         test("BiquadFilterNode");
     }
@@ -393,8 +526,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("undefined")
+    public void blobBuilder() throws Exception {
+        test("BlobBuilder");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void blobEvent() throws Exception {
         test("BlobEvent");
     }
@@ -410,6 +551,84 @@ public class HostTypeOfTest extends WebDriverTestCase {
             EDGE = "undefined")
     public void bluetooth() throws Exception {
         test("Bluetooth");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void bluetoothAdapter() throws Exception {
+        test("BluetoothAdapter");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void bluetoothAdvertisingData() throws Exception {
+        test("BluetoothAdvertisingData");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts(DEFAULT = "undefined",
+            CHROME = "function",
+            EDGE = "function")
+    @HtmlUnitNYI(CHROME = "undefined", EDGE = "undefined")
+    public void bluetoothCharacteristicProperties() throws Exception {
+        test("BluetoothCharacteristicProperties");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts(DEFAULT = "undefined",
+            CHROME = "function",
+            EDGE = "function")
+    @HtmlUnitNYI(CHROME = "undefined", EDGE = "undefined")
+    public void bluetoothDevice() throws Exception {
+        test("BluetoothDevice");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void bluetoothDeviceEvent() throws Exception {
+        test("BluetoothDeviceEvent");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void bluetoothGATTRemoteServer() throws Exception {
+        test("BluetoothGATTRemoteServer");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void bluetoothGATTService() throws Exception {
+        test("BluetoothGATTService");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void bluetoothManager() throws Exception {
+        test("BluetoothManager");
     }
 
     /**
@@ -439,6 +658,24 @@ public class HostTypeOfTest extends WebDriverTestCase {
     }
 
     /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void bluetoothStatusChangedEvent() throws Exception {
+        test("BluetoothStatusChangedEvent");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void body() throws Exception {
+        test("Body");
+    }
+
+    /**
      * @throws Exception if an error occurs
      */
     @Test
@@ -451,8 +688,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void broadcastChannel() throws Exception {
         test("BroadcastChannel");
     }
@@ -470,8 +706,34 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("undefined")
+    public void budgetState() throws Exception {
+        test("BudgetState");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void bufferSource() throws Exception {
+        test("BufferSource");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void byteString() throws Exception {
+        test("ByteString");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void cache() throws Exception {
         test("Cache");
     }
@@ -480,10 +742,45 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void cacheStorage() throws Exception {
         test("CacheStorage");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void callEvent() throws Exception {
+        test("CallEvent");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void cameraCapabilities() throws Exception {
+        test("CameraCapabilities");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void cameraControl() throws Exception {
+        test("CameraControl");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void cameraManager() throws Exception {
+        test("CameraManager");
     }
 
     /**
@@ -512,8 +809,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void canvasGradient() throws Exception {
         test("CanvasGradient");
     }
@@ -522,8 +818,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("undefined")
+    public void canvasImageSource() throws Exception {
+        test("CanvasImageSource");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void canvasPattern() throws Exception {
         test("CanvasPattern");
     }
@@ -534,8 +838,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void canvasRenderingContext2D() throws Exception {
         test("CanvasRenderingContext2D");
     }
@@ -544,9 +847,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            FF = "function",
-            FF_ESR = "function")
+    @Alerts("function")
     public void caretPosition() throws Exception {
         test("CaretPosition");
     }
@@ -557,8 +858,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void cdataSection() throws Exception {
         test("CDATASection");
     }
@@ -569,8 +869,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void channelMergerNode() throws Exception {
         test("ChannelMergerNode");
     }
@@ -579,8 +878,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void channelSplitterNode() throws Exception {
         test("ChannelSplitterNode");
     }
@@ -589,8 +887,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void characterData() throws Exception {
         test("CharacterData");
     }
@@ -607,25 +904,39 @@ public class HostTypeOfTest extends WebDriverTestCase {
     }
 
     /**
-     * Test {@link org.htmlunit.javascript.host.ClientRect}.
-     *
-     * @throws Exception if an error occurs
+     * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
-    public void clientRect() throws Exception {
-        test("ClientRect");
+    @Alerts("undefined")
+    public void childNode() throws Exception {
+        test("ChildNode");
     }
 
     /**
-     * @throws Exception if an error occurs
+     * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
-    public void clientRectList() throws Exception {
-        test("ClientRectList");
+    @Alerts("undefined")
+    public void chromeWorker() throws Exception {
+        test("ChromeWorker");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void client() throws Exception {
+        test("Client");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void clients() throws Exception {
+        test("Clients");
     }
 
     /**
@@ -641,8 +952,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void clipboardEvent() throws Exception {
         test("ClipboardEvent");
     }
@@ -651,8 +961,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void closeEvent() throws Exception {
         test("CloseEvent");
     }
@@ -663,8 +972,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void comment() throws Exception {
         test("Comment");
     }
@@ -673,8 +981,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void compositionEvent() throws Exception {
         test("CompositionEvent");
     }
@@ -691,13 +998,21 @@ public class HostTypeOfTest extends WebDriverTestCase {
     }
 
     /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void connection() throws Exception {
+        test(HttpHeader.CONNECTION);
+    }
+
+    /**
      * Test Console.
      *
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void console() throws Exception {
         test("Console");
     }
@@ -706,8 +1021,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void constantSourceNode() throws Exception {
         test("ConstantSourceNode");
     }
@@ -716,20 +1030,63 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("undefined")
+    public void constrainBoolean() throws Exception {
+        test("ConstrainBoolean");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void constrainDOMString() throws Exception {
+        test("ConstrainDOMString");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void constrainDouble() throws Exception {
+        test("ConstrainDouble");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void constrainLong() throws Exception {
+        test("ConstrainLong");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void contactManager() throws Exception {
+        test("ContactManager");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void convolverNode() throws Exception {
         test("ConvolverNode");
     }
 
     /**
-     * Test {@link org.htmlunit.javascript.host.geo.Coordinates}.
+     * Test {@link org.htmlunit.javascript.host.geo.GeolocationCoordinates}.
      *
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void coordinates() throws Exception {
         test("Coordinates");
     }
@@ -738,8 +1095,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void credential() throws Exception {
         test("Credential");
     }
@@ -748,8 +1104,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void credentialsContainer() throws Exception {
         test("CredentialsContainer");
     }
@@ -758,8 +1113,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void crypto() throws Exception {
         test("Crypto");
     }
@@ -768,8 +1122,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void cryptoKey() throws Exception {
         test("CryptoKey");
     }
@@ -778,10 +1131,20 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "object",
-            IE = "undefined")
+    @Alerts("object")
     public void css() throws Exception {
         test("CSS");
+    }
+
+    /**
+     * Test {@link org.htmlunit.javascript.host.css.CSSStyleDeclaration}.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts("undefined")
+    public void css2Properties() throws Exception {
+        test("CSS2Properties");
     }
 
     /**
@@ -793,8 +1156,23 @@ public class HostTypeOfTest extends WebDriverTestCase {
     @Alerts(DEFAULT = "undefined",
             FF = "function",
             FF_ESR = "function")
-    public void css2Properties() throws Exception {
-        test("CSS2Properties");
+    public void cssStyleProperties() throws Exception {
+        test("CSSStyleProperties");
+    }
+
+    /**
+     * Test {@link CSSPageDescriptors}.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts(DEFAULT = "undefined",
+            FF = "function",
+            FF_ESR = "function")
+    @HtmlUnitNYI(FF = "undefined",
+            FF_ESR = "undefined")
+    public void cssPageDescriptors() throws Exception {
+        test("CSSPageDescriptors");
     }
 
     /**
@@ -810,8 +1188,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void cssConditionRule() throws Exception {
         test("CSSConditionRule");
     }
@@ -820,8 +1197,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void cssCounterStyleRule() throws Exception {
         test("CSSCounterStyleRule");
     }
@@ -832,8 +1208,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void cssFontFaceRule() throws Exception {
         test("CSSFontFaceRule");
     }
@@ -842,8 +1217,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void cssGroupingRule() throws Exception {
         test("CSSGroupingRule");
     }
@@ -854,8 +1228,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void cssImportRule() throws Exception {
         test("CSSImportRule");
     }
@@ -864,8 +1237,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void cssKeyframeRule() throws Exception {
         test("CSSKeyframeRule");
     }
@@ -874,10 +1246,18 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void cssKeyframesRule() throws Exception {
         test("CSSKeyframesRule");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void cssMatrix() throws Exception {
+        test("CSSMatrix");
     }
 
     /**
@@ -886,8 +1266,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void cssMediaRule() throws Exception {
         test("CSSMediaRule");
     }
@@ -896,8 +1275,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void cssNamespaceRule() throws Exception {
         test("CSSNamespaceRule");
     }
@@ -906,8 +1284,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void cssPageRule() throws Exception {
         test("CSSPageRule");
     }
@@ -929,8 +1306,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void cssRule() throws Exception {
         test("CSSRule");
     }
@@ -941,8 +1317,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void cssRuleList() throws Exception {
         test("CSSRuleList");
     }
@@ -953,8 +1328,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void cssStyleDeclaration() throws Exception {
         test("CSSStyleDeclaration");
     }
@@ -965,8 +1339,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void cssStyleRule() throws Exception {
         test("CSSStyleRule");
     }
@@ -977,8 +1350,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void cssStyleSheet() throws Exception {
         test("CSSStyleSheet");
     }
@@ -987,10 +1359,18 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void cssSupportsRule() throws Exception {
         test("CSSSupportsRule");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void cssUnknownRule() throws Exception {
+        test("CSSUnknownRule");
     }
 
     /**
@@ -1026,8 +1406,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void customElementRegistry() throws Exception {
         test("CustomElementRegistry");
     }
@@ -1036,8 +1415,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void customEvent() throws Exception {
         test("CustomEvent");
     }
@@ -1046,8 +1424,43 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("undefined")
+    public void dataStore() throws Exception {
+        test("DataStore");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void dataStoreChangeEvent() throws Exception {
+        test("DataStoreChangeEvent");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void dataStoreCursor() throws Exception {
+        test("DataStoreCursor");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void dataStoreTask() throws Exception {
+        test("DataStoreTask");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void dataTransfer() throws Exception {
         test("DataTransfer");
     }
@@ -1056,8 +1469,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void dataTransferItem() throws Exception {
         test("DataTransferItem");
     }
@@ -1066,8 +1478,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void dataTransferItemList() throws Exception {
         test("DataTransferItemList");
     }
@@ -1087,8 +1498,43 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
+    public void date() throws Exception {
+        test("Date");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
+    public void decodeURI() throws Exception {
+        test("decodeURI");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
+    public void decodeURIComponent() throws Exception {
+        test("decodeURIComponent");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void dedicatedWorkerGlobalScope() throws Exception {
+        test("DedicatedWorkerGlobalScope");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void delayNode() throws Exception {
         test("DelayNode");
     }
@@ -1097,9 +1543,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
-    @HtmlUnitNYI(IE = "undefined")
+    @Alerts("undefined")
     public void deviceAcceleration() throws Exception {
         test("DeviceAcceleration");
     }
@@ -1117,8 +1561,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void deviceMotionEvent() throws Exception {
         test("DeviceMotionEvent");
     }
@@ -1127,8 +1570,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void deviceOrientationEvent() throws Exception {
         test("DeviceOrientationEvent");
     }
@@ -1146,9 +1588,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
-    @HtmlUnitNYI(IE = "undefined")
+    @Alerts("undefined")
     public void deviceRotationRate() throws Exception {
         test("DeviceRotationRate");
     }
@@ -1172,13 +1612,48 @@ public class HostTypeOfTest extends WebDriverTestCase {
     }
 
     /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void directoryEntry() throws Exception {
+        test("DirectoryEntry");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void directoryEntrySync() throws Exception {
+        test("DirectoryEntrySync");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void directoryReader() throws Exception {
+        test("DirectoryReader");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void directoryReaderSync() throws Exception {
+        test("DirectoryReaderSync");
+    }
+
+    /**
      * Test {@link org.htmlunit.javascript.host.dom.Document}.
      *
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void document() throws Exception {
         test("Document");
     }
@@ -1189,10 +1664,37 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void documentFragment() throws Exception {
         test("DocumentFragment");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void documentOrShadowRoot() throws Exception {
+        test("DocumentOrShadowRoot");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
+    @HtmlUnitNYI(CHROME = "undefined", EDGE = "undefined", FF = "undefined", FF_ESR = "undefined")
+    public void documentTimeline() throws Exception {
+        test("DocumentTimeline");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void documentTouch() throws Exception {
+        test("DocumentTouch");
     }
 
     /**
@@ -1201,10 +1703,45 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void documentType() throws Exception {
         test("DocumentType");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void domApplication() throws Exception {
+        test("DOMApplication");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void domApplicationsManager() throws Exception {
+        test("DOMApplicationsManager");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void domApplicationsRegistry() throws Exception {
+        test("DOMApplicationsRegistry");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void domConfiguration() throws Exception {
+        test("DOMConfiguration");
     }
 
     /**
@@ -1224,10 +1761,18 @@ public class HostTypeOfTest extends WebDriverTestCase {
     @Test
     @Alerts(DEFAULT = "function",
             FF = "undefined",
-            FF_ESR = "undefined",
-            IE = "object")
+            FF_ESR = "undefined")
     public void domError() throws Exception {
         test("DOMError");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void domErrorHandler() throws Exception {
+        test("DOMErrorHandler");
     }
 
     /**
@@ -1236,10 +1781,18 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void domException() throws Exception {
         test("DOMException");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void domHighResTimeStamp() throws Exception {
+        test("DOMHighResTimeStamp");
     }
 
     /**
@@ -1248,8 +1801,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void domImplementation() throws Exception {
         test("DOMImplementation");
     }
@@ -1258,8 +1810,43 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("undefined")
+    public void domImplementationList() throws Exception {
+        test("DOMImplementationList");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void domImplementationRegistry() throws Exception {
+        test("DOMImplementationRegistry");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void domImplementationSource() throws Exception {
+        test("DOMImplementationSource");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void domLocator() throws Exception {
+        test("DOMLocator");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void domMatrix() throws Exception {
         test("DOMMatrix");
     }
@@ -1268,10 +1855,18 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void domMatrixReadOnly() throws Exception {
         test("DOMMatrixReadOnly");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void domObject() throws Exception {
+        test("DOMObject");
     }
 
     /**
@@ -1289,8 +1884,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void domPoint() throws Exception {
         test("DOMPoint");
     }
@@ -1299,20 +1893,18 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void domPointReadOnly() throws Exception {
         test("DOMPointReadOnly");
     }
 
     /**
-     * Test {@link org.htmlunit.javascript.host.ClientRect}.
+     * Test {@link org.htmlunit.javascript.host.DOMRect}.
      *
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void domRect() throws Exception {
         test("DOMRect");
     }
@@ -1321,8 +1913,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void domRectList() throws Exception {
         test("DOMRectList");
     }
@@ -1331,8 +1922,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void domRectReadOnly() throws Exception {
         test("DOMRectReadOnly");
     }
@@ -1341,9 +1931,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            FF = "function",
-            FF_ESR = "function")
+    @Alerts("undefined")
     public void domRequest() throws Exception {
         test("DOMRequest");
     }
@@ -1352,8 +1940,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void domSettableTokenList() throws Exception {
         test("DOMSettableTokenList");
     }
@@ -1362,8 +1949,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("undefined")
+    public void domString() throws Exception {
+        test("DOMString");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void domStringList() throws Exception {
         test("DOMStringList");
     }
@@ -1374,10 +1969,18 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void domStringMap() throws Exception {
         test("DOMStringMap");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void domTimeStamp() throws Exception {
+        test("DOMTimeStamp");
     }
 
     /**
@@ -1386,8 +1989,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void domTokenList() throws Exception {
         test("DOMTokenList");
     }
@@ -1396,8 +1998,25 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("undefined")
+    public void domUserData() throws Exception {
+        test("DOMUserData");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void doubleRange() throws Exception {
+        test("DoubleRange");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void dragEvent() throws Exception {
         test("DragEvent");
     }
@@ -1406,8 +2025,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void dynamicsCompressorNode() throws Exception {
         test("DynamicsCompressorNode");
     }
@@ -1418,10 +2036,72 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void element() throws Exception {
         test("Element");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void elementTraversal() throws Exception {
+        test("ElementTraversal");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
+    public void encodeURI() throws Exception {
+        test("encodeURI");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
+    public void encodeURIComponent() throws Exception {
+        test("encodeURIComponent");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void entity() throws Exception {
+        test("Entity");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void entityReference() throws Exception {
+        test("EntityReference");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void entry() throws Exception {
+        test("Entry");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void entrySync() throws Exception {
+        test("EntrySync");
     }
 
     /**
@@ -1430,8 +2110,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "function")
+    @Alerts("undefined")
     public void enumerator() throws Exception {
         test("Enumerator");
     }
@@ -1449,10 +2128,36 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void errorEvent() throws Exception {
         test("ErrorEvent");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
+    public void escape() throws Exception {
+        test("escape");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
+    public void eval() throws Exception {
+        test("eval");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
+    public void evalError() throws Exception {
+        test("EvalError");
     }
 
     /**
@@ -1461,10 +2166,18 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void event() throws Exception {
         test("Event");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void eventListener() throws Exception {
+        test("EventListener");
     }
 
     /**
@@ -1480,8 +2193,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void eventSource() throws Exception {
         test("EventSource");
     }
@@ -1490,10 +2202,27 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void eventTarget() throws Exception {
         test("EventTarget");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void ext_blend_minmax() throws Exception {
+        test("EXT_blend_minmax");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void ext_color_buffer_float() throws Exception {
+        test("EXT_color_buffer_float");
     }
 
     /**
@@ -1509,10 +2238,54 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
+    public void ext_disjoint_timer_query() throws Exception {
+        test("EXT_disjoint_timer_query");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void ext_frag_depth() throws Exception {
+        test("EXT_frag_depth");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void ext_shader_texture_lod() throws Exception {
+        test("EXT_shader_texture_lod");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void ext_sRGB() throws Exception {
+        test("EXT_sRGB");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
     public void ext_texture_filter_anisotropic() throws Exception {
         test("EXT_texture_filter_anisotropic");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void extendableEvent() throws Exception {
+        test("ExtendableEvent");
     }
 
     /**
@@ -1552,10 +2325,36 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("undefined")
+    public void fetchEvent() throws Exception {
+        test("FetchEvent");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void file() throws Exception {
         test("File");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void fileEntry() throws Exception {
+        test("FileEntry");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void fileEntrySync() throws Exception {
+        test("FileEntrySync");
     }
 
     /**
@@ -1572,6 +2371,15 @@ public class HostTypeOfTest extends WebDriverTestCase {
      */
     @Test
     @Alerts("undefined")
+    public void fileException() throws Exception {
+        test("FileException");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
     public void fileHandle() throws Exception {
         test("FileHandle");
     }
@@ -1580,8 +2388,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void fileList() throws Exception {
         test("FileList");
     }
@@ -1593,6 +2400,15 @@ public class HostTypeOfTest extends WebDriverTestCase {
     @Alerts("function")
     public void fileReader() throws Exception {
         test("FileReader");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void fileReaderSync() throws Exception {
+        test("FileReaderSync");
     }
 
     /**
@@ -1660,6 +2476,24 @@ public class HostTypeOfTest extends WebDriverTestCase {
     }
 
     /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void fileSystemFlags() throws Exception {
+        test("FileSystemFlags");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void fileSystemSync() throws Exception {
+        test("FileSystemSync");
+    }
+
+    /**
      * Test Float32Array.
      *
      * @throws Exception if an error occurs
@@ -1685,8 +2519,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("undefined")
+    public void fMRadio() throws Exception {
+        test("FMRadio");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void focusEvent() throws Exception {
         test("FocusEvent");
     }
@@ -1695,8 +2537,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void fontFace() throws Exception {
         test("FontFace");
     }
@@ -1705,9 +2546,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            FF = "function",
-            FF_ESR = "function")
+    @Alerts("function")
     public void fontFaceSet() throws Exception {
         test("FontFaceSet");
     }
@@ -1745,8 +2584,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
+    public void function() throws Exception {
+        test("Function");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void gainNode() throws Exception {
         test("GainNode");
     }
@@ -1755,8 +2602,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void gamepad() throws Exception {
         test("Gamepad");
     }
@@ -1765,8 +2611,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void gamepadButton() throws Exception {
         test("GamepadButton");
     }
@@ -1775,10 +2620,27 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void gamepadEvent() throws Exception {
         test("GamepadEvent");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void generator() throws Exception {
+        test("Generator");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void generatorFunction() throws Exception {
+        test("GeneratorFunction");
     }
 
     /**
@@ -1787,10 +2649,42 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void geolocation() throws Exception {
         test("Geolocation");
+    }
+
+    /**
+     * Test {@link org.htmlunit.javascript.host.geo.GeolocationCoordinates}.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts("function")
+    public void geolocationCoordinates() throws Exception {
+        test("GeolocationCoordinates");
+    }
+
+    /**
+     * Test {@link org.htmlunit.javascript.host.geo.GeolocationPosition}.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts("function")
+    public void geolocationPosition() throws Exception {
+        test("GeolocationPosition");
+    }
+
+    /**
+     * Test {@link org.htmlunit.javascript.host.geo.GeolocationPositionError}.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts("function")
+    public void geolocationPositionError() throws Exception {
+        test("GeolocationPositionError");
     }
 
     /**
@@ -1803,13 +2697,30 @@ public class HostTypeOfTest extends WebDriverTestCase {
     }
 
     /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void globalEventHandlers() throws Exception {
+        test("GlobalEventHandlers");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void globalFetch() throws Exception {
+        test("GlobalFetch");
+    }
+
+    /**
      * Test {@link org.htmlunit.javascript.host.event.HashChangeEvent}.
      *
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void hashChangeEvent() throws Exception {
         test("HashChangeEvent");
     }
@@ -1818,8 +2729,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void headers() throws Exception {
         test("Headers");
     }
@@ -1830,10 +2740,18 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void history() throws Exception {
         test("History");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void hMDVRDevice() throws Exception {
+        test("HMDVRDevice");
     }
 
     /**
@@ -1842,8 +2760,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlAllCollection() throws Exception {
         test("HTMLAllCollection");
     }
@@ -1854,8 +2771,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlAnchorElement() throws Exception {
         test("HTMLAnchorElement");
     }
@@ -1866,8 +2782,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void htmlAppletElement() throws Exception {
         test("HTMLAppletElement");
     }
@@ -1878,8 +2793,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlAreaElement() throws Exception {
         test("HTMLAreaElement");
     }
@@ -1890,8 +2804,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlAudioElement() throws Exception {
         test("HTMLAudioElement");
     }
@@ -1902,8 +2815,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlBaseElement() throws Exception {
         test("HTMLBaseElement");
     }
@@ -1914,8 +2826,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void htmlBaseFontElement() throws Exception {
         test("HTMLBaseFontElement");
     }
@@ -1926,8 +2837,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void htmlBGSoundElement() throws Exception {
         test("HTMLBGSoundElement");
     }
@@ -1938,8 +2848,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void htmlBlockElement() throws Exception {
         test("HTMLBlockElement");
     }
@@ -1961,8 +2870,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlBodyElement() throws Exception {
         test("HTMLBodyElement");
     }
@@ -1973,8 +2881,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlBRElement() throws Exception {
         test("HTMLBRElement");
     }
@@ -1985,8 +2892,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlButtonElement() throws Exception {
         test("HTMLButtonElement");
     }
@@ -1997,8 +2903,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlCanvasElement() throws Exception {
         test("HTMLCanvasElement");
     }
@@ -2009,8 +2914,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlCollection() throws Exception {
         test("HTMLCollection");
     }
@@ -2039,8 +2943,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void htmlDataElement() throws Exception {
         test("HTMLDataElement");
     }
@@ -2051,8 +2954,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlDataListElement() throws Exception {
         test("HTMLDataListElement");
     }
@@ -2063,8 +2965,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void htmlDDElement() throws Exception {
         test("HTMLDDElement");
     }
@@ -2097,8 +2998,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void htmlDetailsElement() throws Exception {
         test("HTMLDetailsElement");
     }
@@ -2109,8 +3009,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void htmlDialogElement() throws Exception {
         test("HTMLDialogElement");
     }
@@ -2121,8 +3020,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlDirectoryElement() throws Exception {
         test("HTMLDirectoryElement");
     }
@@ -2133,8 +3031,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlDivElement() throws Exception {
         test("HTMLDivElement");
     }
@@ -2145,8 +3042,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlDListElement() throws Exception {
         test("HTMLDListElement");
     }
@@ -2157,8 +3053,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlDocument() throws Exception {
         test("HTMLDocument");
     }
@@ -2169,8 +3064,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void htmlDTElement() throws Exception {
         test("HTMLDTElement");
     }
@@ -2181,8 +3075,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlElement() throws Exception {
         test("HTMLElement");
     }
@@ -2193,8 +3086,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlEmbedElement() throws Exception {
         test("HTMLEmbedElement");
     }
@@ -2205,8 +3097,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlFieldSetElement() throws Exception {
         test("HTMLFieldSetElement");
     }
@@ -2217,8 +3108,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlFontElement() throws Exception {
         test("HTMLFontElement");
     }
@@ -2227,8 +3117,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void htmlFormControlsCollection() throws Exception {
         test("HTMLFormControlsCollection");
     }
@@ -2239,8 +3128,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlFormElement() throws Exception {
         test("HTMLFormElement");
     }
@@ -2251,8 +3139,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlFrameElement() throws Exception {
         test("HTMLFrameElement");
     }
@@ -2263,8 +3150,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlFrameSetElement() throws Exception {
         test("HTMLFrameSetElement");
     }
@@ -2286,8 +3172,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlHeadElement() throws Exception {
         test("HTMLHeadElement");
     }
@@ -2298,8 +3183,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlHeadingElement() throws Exception {
         test("HTMLHeadingElement");
     }
@@ -2310,8 +3194,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlHRElement() throws Exception {
         test("HTMLHRElement");
     }
@@ -2322,8 +3205,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlHtmlElement() throws Exception {
         test("HTMLHtmlElement");
     }
@@ -2343,8 +3225,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlIFrameElement() throws Exception {
         test("HTMLIFrameElement");
     }
@@ -2355,8 +3236,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlImageElement() throws Exception {
         test("HTMLImageElement");
     }
@@ -2378,8 +3258,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlInputElement() throws Exception {
         test("HTMLInputElement");
     }
@@ -2390,8 +3269,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void htmlIsIndexElement() throws Exception {
         test("HTMLIsIndexElement");
     }
@@ -2411,8 +3289,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlLabelElement() throws Exception {
         test("HTMLLabelElement");
     }
@@ -2423,8 +3300,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlLegendElement() throws Exception {
         test("HTMLLegendElement");
     }
@@ -2435,8 +3311,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlLIElement() throws Exception {
         test("HTMLLIElement");
     }
@@ -2447,8 +3322,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlLinkElement() throws Exception {
         test("HTMLLinkElement");
     }
@@ -2470,8 +3344,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlMapElement() throws Exception {
         test("HTMLMapElement");
     }
@@ -2482,8 +3355,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlMarqueeElement() throws Exception {
         test("HTMLMarqueeElement");
     }
@@ -2494,8 +3366,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlMediaElement() throws Exception {
         test("HTMLMediaElement");
     }
@@ -2506,8 +3377,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlMenuElement() throws Exception {
         test("HTMLMenuElement");
     }
@@ -2527,8 +3397,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlMetaElement() throws Exception {
         test("HTMLMetaElement");
     }
@@ -2539,8 +3408,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void htmlMeterElement() throws Exception {
         test("HTMLMeterElement");
     }
@@ -2551,8 +3419,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlModElement() throws Exception {
         test("HTMLModElement");
     }
@@ -2563,8 +3430,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void htmlNextIdElement() throws Exception {
         test("HTMLNextIdElement");
     }
@@ -2584,8 +3450,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlObjectElement() throws Exception {
         test("HTMLObjectElement");
     }
@@ -2596,8 +3461,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlOListElement() throws Exception {
         test("HTMLOListElement");
     }
@@ -2608,8 +3472,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlOptGroupElement() throws Exception {
         test("HTMLOptGroupElement");
     }
@@ -2620,8 +3483,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlOptionElement() throws Exception {
         test("HTMLOptionElement");
     }
@@ -2632,8 +3494,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void htmlOptionsCollection() throws Exception {
         test("HTMLOptionsCollection");
     }
@@ -2644,8 +3505,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void htmlOutputElement() throws Exception {
         test("HTMLOutputElement");
     }
@@ -2656,8 +3516,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlParagraphElement() throws Exception {
         test("HTMLParagraphElement");
     }
@@ -2668,8 +3527,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlParamElement() throws Exception {
         test("HTMLParamElement");
     }
@@ -2680,8 +3538,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void htmlPhraseElement() throws Exception {
         test("HTMLPhraseElement");
     }
@@ -2690,8 +3547,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void htmlPictureElement() throws Exception {
         test("HTMLPictureElement");
     }
@@ -2702,8 +3558,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlPreElement() throws Exception {
         test("HTMLPreElement");
     }
@@ -2714,8 +3569,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlProgressElement() throws Exception {
         test("HTMLProgressElement");
     }
@@ -2726,8 +3580,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlQuoteElement() throws Exception {
         test("HTMLQuoteElement");
     }
@@ -2738,8 +3591,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlScriptElement() throws Exception {
         test("HTMLScriptElement");
     }
@@ -2750,8 +3602,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlSelectElement() throws Exception {
         test("HTMLSelectElement");
     }
@@ -2771,8 +3622,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void htmlSlotElement() throws Exception {
         test("HTMLSlotElement");
     }
@@ -2783,8 +3633,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlSourceElement() throws Exception {
         test("HTMLSourceElement");
     }
@@ -2795,8 +3644,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlSpanElement() throws Exception {
         test("HTMLSpanElement");
     }
@@ -2807,8 +3655,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlStyleElement() throws Exception {
         test("HTMLStyleElement");
     }
@@ -2819,8 +3666,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlTableCaptionElement() throws Exception {
         test("HTMLTableCaptionElement");
     }
@@ -2831,8 +3677,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlTableCellElement() throws Exception {
         test("HTMLTableCellElement");
     }
@@ -2843,8 +3688,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlTableColElement() throws Exception {
         test("HTMLTableColElement");
     }
@@ -2866,8 +3710,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void htmlTableDataCellElement() throws Exception {
         test("HTMLTableDataCellElement");
     }
@@ -2878,8 +3721,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlTableElement() throws Exception {
         test("HTMLTableElement");
     }
@@ -2890,8 +3732,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void htmlTableHeaderCellElement() throws Exception {
         test("HTMLTableHeaderCellElement");
     }
@@ -2902,8 +3743,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlTableRowElement() throws Exception {
         test("HTMLTableRowElement");
     }
@@ -2914,8 +3754,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlTableSectionElement() throws Exception {
         test("HTMLTableSectionElement");
     }
@@ -2924,8 +3763,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void htmlTemplateElement() throws Exception {
         test("HTMLTemplateElement");
     }
@@ -2936,8 +3774,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlTextAreaElement() throws Exception {
         test("HTMLTextAreaElement");
     }
@@ -2957,8 +3794,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void htmlTimeElement() throws Exception {
         test("HTMLTimeElement");
     }
@@ -2969,8 +3805,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlTitleElement() throws Exception {
         test("HTMLTitleElement");
     }
@@ -2981,8 +3816,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlTrackElement() throws Exception {
         test("HTMLTrackElement");
     }
@@ -2993,8 +3827,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlUListElement() throws Exception {
         test("HTMLUListElement");
     }
@@ -3005,8 +3838,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlUnknownElement() throws Exception {
         test("HTMLUnknownElement");
     }
@@ -3017,8 +3849,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void htmlVideoElement() throws Exception {
         test("HTMLVideoElement");
     }
@@ -3036,8 +3867,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void idbCursor() throws Exception {
         test("IDBCursor");
     }
@@ -3046,8 +3876,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("undefined")
+    public void idbCursorSync() throws Exception {
+        test("IDBCursorSync");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void idbCursorWithValue() throws Exception {
         test("IDBCursorWithValue");
     }
@@ -3056,8 +3894,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void idbDatabase() throws Exception {
         test("IDBDatabase");
     }
@@ -3066,8 +3903,43 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("undefined")
+    public void idbDatabaseException() throws Exception {
+        test("IDBDatabaseException");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void idbDatabaseSync() throws Exception {
+        test("IDBDatabaseSync");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void idbEnvironment() throws Exception {
+        test("IDBEnvironment");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void idbEnvironmentSync() throws Exception {
+        test("IDBEnvironmentSync");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void idbFactory() throws Exception {
         test("IDBFactory");
     }
@@ -3076,8 +3948,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("undefined")
+    public void idbFactorySync() throws Exception {
+        test("IDBFactorySync");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void idbIndex() throws Exception {
         test("IDBIndex");
     }
@@ -3086,8 +3966,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("undefined")
+    public void idbIndexSync() throws Exception {
+        test("IDBIndexSync");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void idbKeyRange() throws Exception {
         test("IDBKeyRange");
     }
@@ -3096,8 +3984,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            FF_ESR = "function")
+    @Alerts("undefined")
+    public void idbLocaleAwareKeyRange() throws Exception {
+        test("IDBLocaleAwareKeyRange");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
     public void idbMutableFile() throws Exception {
         test("IDBMutableFile");
     }
@@ -3106,8 +4002,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void idbObjectStore() throws Exception {
         test("IDBObjectStore");
     }
@@ -3116,8 +4011,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("undefined")
+    public void idbObjectStoreSync() throws Exception {
+        test("IDBObjectStoreSync");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void idbOpenDBRequest() throws Exception {
         test("IDBOpenDBRequest");
     }
@@ -3126,8 +4029,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void idbRequest() throws Exception {
         test("IDBRequest");
     }
@@ -3136,8 +4038,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void idbTransaction() throws Exception {
         test("IDBTransaction");
     }
@@ -3146,8 +4047,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("undefined")
+    public void idbTransactionSync() throws Exception {
+        test("IDBTransactionSync");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void idbVersionChangeEvent() throws Exception {
         test("IDBVersionChangeEvent");
     }
@@ -3156,8 +4065,25 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("undefined")
+    public void idbVersionChangeRequest() throws Exception {
+        test("IDBVersionChangeRequest");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void identityManager() throws Exception {
+        test("IdentityManager");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void idleDeadline() throws Exception {
         test("IdleDeadline");
     }
@@ -3166,8 +4092,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void iirFilterNode() throws Exception {
         test("IIRFilterNode");
     }
@@ -3187,8 +4112,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void imageBitmap() throws Exception {
         test("ImageBitmap");
     }
@@ -3197,8 +4121,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("undefined")
+    public void imageBitmapFactories() throws Exception {
+        test("ImageBitmapFactories");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void imageBitmapRenderingContext() throws Exception {
         test("ImageBitmapRenderingContext");
     }
@@ -3207,10 +4139,36 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void imageData() throws Exception {
         test("ImageData");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void index() throws Exception {
+        test("Index");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void indexedDB() throws Exception {
+        test("IndexedDB");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("number")
+    public void infinity() throws Exception {
+        test("Infinity");
     }
 
     /**
@@ -3228,10 +4186,27 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void inputEvent() throws Exception {
         test("InputEvent");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void inputMethodContext() throws Exception {
+        test("InputMethodContext");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void installEvent() throws Exception {
+        test("InstallEvent");
     }
 
     /**
@@ -3291,8 +4266,20 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts(DEFAULT = "undefined",
+            FF = "function",
+            FF_ESR = "function")
+    @HtmlUnitNYI(CHROME = "function",
+            EDGE = "function")
+    public void internalError() throws Exception {
+        test("InternalError");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void intersectionObserver() throws Exception {
         test("IntersectionObserver");
     }
@@ -3301,8 +4288,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void intersectionObserverEntry() throws Exception {
         test("IntersectionObserverEntry");
     }
@@ -3322,6 +4308,60 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
+    @Alerts("function")
+    public void intl_Collator() throws Exception {
+        test("Intl.Collator");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
+    public void intl_DateTimeFormat() throws Exception {
+        test("Intl.DateTimeFormat");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
+    public void intl_NumberFormat() throws Exception {
+        test("Intl.NumberFormat");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
+    public void isFinite() throws Exception {
+        test("isFinite");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
+    public void isNaN() throws Exception {
+        test("isNaN");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
+    public void iterator() throws Exception {
+        test("Iterator");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
     @Alerts("object")
     public void json() throws Exception {
         test("JSON");
@@ -3333,8 +4373,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void keyboardEvent() throws Exception {
         test("KeyboardEvent");
     }
@@ -3343,10 +4382,126 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void keyframeEffect() throws Exception {
         test("KeyframeEffect");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void keyframeEffectReadOnly() throws Exception {
+        test("KeyframeEffectReadOnly");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void l10n() throws Exception {
+        test("L10n");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("ReferenceError")
+    public void l10n_formatValue() throws Exception {
+        test("L10n.formatValue");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("ReferenceError")
+    public void l10n_get() throws Exception {
+        test("L10n.get");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("ReferenceError")
+    public void l10n_language_code() throws Exception {
+        test("L10n.language.code");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("ReferenceError")
+    public void l10n_language_direction() throws Exception {
+        test("L10n.language.direction");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("ReferenceError")
+    public void l10n_once() throws Exception {
+        test("L10n.once");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("ReferenceError")
+    public void l10n_ready() throws Exception {
+        test("L10n.ready");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("ReferenceError")
+    public void l10n_readyState() throws Exception {
+        test("L10n.readyState");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("ReferenceError")
+    public void l10n_setAttributes() throws Exception {
+        test("L10n.setAttributes");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void linkStyle() throws Exception {
+        test("LinkStyle");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void localFileSystem() throws Exception {
+        test("LocalFileSystem");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void localFileSystemSync() throws Exception {
+        test("LocalFileSystemSync");
     }
 
     /**
@@ -3366,8 +4521,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void location() throws Exception {
         test("Location");
     }
@@ -3379,6 +4533,15 @@ public class HostTypeOfTest extends WebDriverTestCase {
     @Alerts("undefined")
     public void lockedFile() throws Exception {
         test("LockedFile");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void longRange() throws Exception {
+        test("LongRange");
     }
 
     /**
@@ -3403,8 +4566,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void mediaDeviceInfo() throws Exception {
         test("MediaDeviceInfo");
     }
@@ -3413,8 +4575,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void mediaDevices() throws Exception {
         test("MediaDevices");
     }
@@ -3423,8 +4584,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void mediaElementAudioSourceNode() throws Exception {
         test("MediaElementAudioSourceNode");
     }
@@ -3433,8 +4593,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void mediaEncryptedEvent() throws Exception {
         test("MediaEncryptedEvent");
     }
@@ -3443,8 +4602,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void mediaError() throws Exception {
         test("MediaError");
     }
@@ -3473,8 +4631,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void mediaKeyMessageEvent() throws Exception {
         test("MediaKeyMessageEvent");
     }
@@ -3483,8 +4640,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void mediaKeys() throws Exception {
         test("MediaKeys");
     }
@@ -3493,8 +4649,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void mediaKeySession() throws Exception {
         test("MediaKeySession");
     }
@@ -3503,8 +4658,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void mediaKeyStatusMap() throws Exception {
         test("MediaKeyStatusMap");
     }
@@ -3513,10 +4667,18 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void mediaKeySystemAccess() throws Exception {
         test("MediaKeySystemAccess");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void mediaKeySystemConfiguration() throws Exception {
+        test("MediaKeySystemConfiguration");
     }
 
     /**
@@ -3525,8 +4687,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void mediaList() throws Exception {
         test("MediaList");
     }
@@ -3535,8 +4696,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void mediaQueryList() throws Exception {
         test("MediaQueryList");
     }
@@ -3545,8 +4705,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void mediaQueryListEvent() throws Exception {
         test("MediaQueryListEvent");
     }
@@ -3555,8 +4714,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("undefined")
+    public void mediaQueryListListener() throws Exception {
+        test("MediaQueryListListener");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void mediaRecorder() throws Exception {
         test("MediaRecorder");
     }
@@ -3574,8 +4741,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void mediaStream() throws Exception {
         test("MediaStream");
     }
@@ -3584,8 +4750,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void mediaStreamAudioDestinationNode() throws Exception {
         test("MediaStreamAudioDestinationNode");
     }
@@ -3594,8 +4759,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void mediaStreamAudioSourceNode() throws Exception {
         test("MediaStreamAudioSourceNode");
     }
@@ -3604,8 +4768,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("undefined")
+    public void mediaStreamConstraints() throws Exception {
+        test("MediaStreamConstraints");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void mediaStreamEvent() throws Exception {
         test("MediaStreamEvent");
     }
@@ -3614,8 +4786,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void mediaStreamTrack() throws Exception {
         test("MediaStreamTrack");
     }
@@ -3624,10 +4795,36 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void mediaStreamTrackEvent() throws Exception {
         test("MediaStreamTrackEvent");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void mediaTrackConstraints() throws Exception {
+        test("MediaTrackConstraints");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void mediaTrackSettings() throws Exception {
+        test("MediaTrackSettings");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void mediaTrackSupportedConstraints() throws Exception {
+        test("MediaTrackSupportedConstraints");
     }
 
     /**
@@ -3647,8 +4844,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void messageEvent() throws Exception {
         test("MessageEvent");
     }
@@ -3659,8 +4855,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void messagePort() throws Exception {
         test("MessagePort");
     }
@@ -3669,10 +4864,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            CHROME = "function",
-            EDGE = "function",
-            FF = "function")
+    @Alerts("undefined")
+    public void metadata() throws Exception {
+        test("Metadata");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void midiAccess() throws Exception {
         test("MIDIAccess");
     }
@@ -3681,10 +4882,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            CHROME = "function",
-            EDGE = "function",
-            FF = "function")
+    @Alerts("function")
     public void midiConnectionEvent() throws Exception {
         test("MIDIConnectionEvent");
     }
@@ -3693,10 +4891,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            CHROME = "function",
-            EDGE = "function",
-            FF = "function")
+    @Alerts("function")
     public void midiInput() throws Exception {
         test("MIDIInput");
     }
@@ -3705,10 +4900,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            CHROME = "function",
-            EDGE = "function",
-            FF = "function")
+    @Alerts("function")
     public void midiInputMap() throws Exception {
         test("MIDIInputMap");
     }
@@ -3717,10 +4909,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            CHROME = "function",
-            EDGE = "function",
-            FF = "function")
+    @Alerts("function")
     public void midiMessageEvent() throws Exception {
         test("MIDIMessageEvent");
     }
@@ -3729,10 +4918,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            CHROME = "function",
-            EDGE = "function",
-            FF = "function")
+    @Alerts("function")
     public void midiOutput() throws Exception {
         test("MIDIOutput");
     }
@@ -3741,10 +4927,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            CHROME = "function",
-            EDGE = "function",
-            FF = "function")
+    @Alerts("function")
     public void midiOutputMap() throws Exception {
         test("MIDIOutputMap");
     }
@@ -3753,10 +4936,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            CHROME = "function",
-            EDGE = "function",
-            FF = "function")
+    @Alerts("function")
     public void midiPort() throws Exception {
         test("MIDIPort");
     }
@@ -3767,8 +4947,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void mimeType() throws Exception {
         test("MimeType");
     }
@@ -3779,8 +4958,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void mimeTypeArray() throws Exception {
         test("MimeTypeArray");
     }
@@ -3791,8 +4969,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void mouseEvent() throws Exception {
         test("MouseEvent");
     }
@@ -3812,10 +4989,54 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void mouseWheelEvent() throws Exception {
         test("MouseWheelEvent");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void mozActivity() throws Exception {
+        test("MozActivity");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void mozActivityOptions() throws Exception {
+        test("MozActivityOptions");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void mozActivityRequestHandler() throws Exception {
+        test("MozActivityRequestHandler");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void mozAlarmsManager() throws Exception {
+        test("MozAlarmsManager");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void mozContact() throws Exception {
+        test("MozContact");
     }
 
     /**
@@ -3841,6 +5062,15 @@ public class HostTypeOfTest extends WebDriverTestCase {
      */
     @Test
     @Alerts("undefined")
+    public void mozIccManager() throws Exception {
+        test("MozIccManager");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
     public void mozMmsEvent() throws Exception {
         test("MozMmsEvent");
     }
@@ -3852,6 +5082,51 @@ public class HostTypeOfTest extends WebDriverTestCase {
     @Alerts("undefined")
     public void mozMmsMessage() throws Exception {
         test("MozMmsMessage");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void mozMobileCellInfo() throws Exception {
+        test("MozMobileCellInfo");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void mozMobileCFInfo() throws Exception {
+        test("MozMobileCFInfo");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void mozMobileConnection() throws Exception {
+        test("MozMobileConnection");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void mozMobileConnectionInfo() throws Exception {
+        test("MozMobileConnectionInfo");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void mozMobileICCInfo() throws Exception {
+        test("MozMobileICCInfo");
     }
 
     /**
@@ -3877,6 +5152,78 @@ public class HostTypeOfTest extends WebDriverTestCase {
      */
     @Test
     @Alerts("undefined")
+    public void mozMobileNetworkInfo() throws Exception {
+        test("MozMobileNetworkInfo");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void mozNDEFRecord() throws Exception {
+        test("MozNDEFRecord");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void mozNetworkStats() throws Exception {
+        test("MozNetworkStats");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void mozNetworkStatsData() throws Exception {
+        test("MozNetworkStatsData");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void mozNetworkStatsManager() throws Exception {
+        test("MozNetworkStatsManager");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void mozNFC() throws Exception {
+        test("MozNFC");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void mozNFCPeer() throws Exception {
+        test("MozNFCPeer");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void mozNFCTag() throws Exception {
+        test("MozNFCTag");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
     public void mozPowerManager() throws Exception {
         test("MozPowerManager");
     }
@@ -3885,9 +5232,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            FF = "function",
-            FF_ESR = "function")
+    @Alerts("undefined")
     public void mozRTCIceCandidate() throws Exception {
         test("mozRTCIceCandidate");
     }
@@ -3896,9 +5241,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            FF = "function",
-            FF_ESR = "function")
+    @Alerts("undefined")
     public void mozRTCPeerConnection() throws Exception {
         test("mozRTCPeerConnection");
     }
@@ -3907,9 +5250,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            FF = "function",
-            FF_ESR = "function")
+    @Alerts("undefined")
     public void mozRTCSessionDescription() throws Exception {
         test("mozRTCSessionDescription");
     }
@@ -3946,6 +5287,15 @@ public class HostTypeOfTest extends WebDriverTestCase {
      */
     @Test
     @Alerts("undefined")
+    public void mozSmsManager() throws Exception {
+        test("MozSmsManager");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
     public void mozSmsMessage() throws Exception {
         test("MozSmsMessage");
     }
@@ -3960,14 +5310,93 @@ public class HostTypeOfTest extends WebDriverTestCase {
     }
 
     /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void mozSocial() throws Exception {
+        test("MozSocial");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void mozTimeManager() throws Exception {
+        test("MozTimeManager");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void mozVoicemail() throws Exception {
+        test("MozVoicemail");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void mozVoicemailEvent() throws Exception {
+        test("MozVoicemailEvent");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void mozVoicemailStatus() throws Exception {
+        test("MozVoicemailStatus");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void mozWifiConnectionInfoEvent() throws Exception {
+        test("MozWifiConnectionInfoEvent");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void mozWifiP2pGroupOwner() throws Exception {
+        test("MozWifiP2pGroupOwner");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void mozWifiP2pManager() throws Exception {
+        test("MozWifiP2pManager");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void mozWifiStatusChangeEvent() throws Exception {
+        test("MozWifiStatusChangeEvent");
+    }
+
+    /**
      * Test {@link org.htmlunit.javascript.host.css.ComputedCSSStyleDeclaration}.
      *
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
-    @HtmlUnitNYI(IE = "undefined")
+    @Alerts("undefined")
     public void msCurrentStyleCSSProperties() throws Exception {
         test("MSCurrentStyleCSSProperties");
     }
@@ -3976,9 +5405,8 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
-    public void mSGestureEvent() throws Exception {
+    @Alerts("undefined")
+    public void msGestureEvent() throws Exception {
         test("MSGestureEvent");
     }
 
@@ -3988,9 +5416,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
-    @HtmlUnitNYI(IE = "undefined")
+    @Alerts("undefined")
     public void msStyleCSSProperties() throws Exception {
         test("MSStyleCSSProperties");
     }
@@ -4001,8 +5427,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("undefined")
     public void mutationEvent() throws Exception {
         test("MutationEvent");
     }
@@ -4020,8 +5445,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void mutationRecord() throws Exception {
         test("MutationRecord");
     }
@@ -4032,10 +5456,18 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void namedNodeMap() throws Exception {
         test("NamedNodeMap");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void nameList() throws Exception {
+        test("NameList");
     }
 
     /**
@@ -4061,15 +5493,97 @@ public class HostTypeOfTest extends WebDriverTestCase {
     }
 
     /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("number")
+    public void naN() throws Exception {
+        test("NaN");
+    }
+
+    /**
+     * Test {@link org.htmlunit.javascript.host.dom.NativeXPathNSResolver}.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts("undefined")
+    public void nativeXPathNSResolver() throws Exception {
+        test("NativeXPathNSResolver");
+    }
+
+    /**
      * Test {@link org.htmlunit.javascript.host.Navigator}.
      *
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void navigator() throws Exception {
         test("Navigator");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void navigatorConcurrentHardware() throws Exception {
+        test("NavigatorConcurrentHardware");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void navigatorGeolocation() throws Exception {
+        test("NavigatorGeolocation");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void navigatorID() throws Exception {
+        test("NavigatorID");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void navigatorLanguage() throws Exception {
+        test("NavigatorLanguage");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void navigatorOnLine() throws Exception {
+        test("NavigatorOnLine");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void navigatorPlugins() throws Exception {
+        test("NavigatorPlugins");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void navigatorStorage() throws Exception {
+        test("NavigatorStorage");
     }
 
     /**
@@ -4091,8 +5605,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void node() throws Exception {
         test("Node");
     }
@@ -4103,8 +5616,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void nodeFilter() throws Exception {
         test("NodeFilter");
     }
@@ -4113,8 +5625,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void nodeIterator() throws Exception {
         test("NodeIterator");
     }
@@ -4125,10 +5636,27 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void nodeList() throws Exception {
         test("NodeList");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void nonDocumentTypeChildNode() throws Exception {
+        test("NonDocumentTypeChildNode");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void notation() throws Exception {
+        test("Notation");
     }
 
     /**
@@ -4137,10 +5665,36 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void notification() throws Exception {
         test("Notification");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void notificationEvent() throws Exception {
+        test("NotificationEvent");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void notifyAudioAvailableEvent() throws Exception {
+        test("NotifyAudioAvailableEvent");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
+    public void number() throws Exception {
+        test("Number");
     }
 
     /**
@@ -4156,8 +5710,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void oes_element_index_uint() throws Exception {
         test("OES_element_index_uint");
     }
@@ -4166,8 +5719,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void oes_standard_derivatives() throws Exception {
         test("OES_standard_derivatives");
     }
@@ -4176,8 +5728,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void oes_texture_float() throws Exception {
         test("OES_texture_float");
     }
@@ -4186,8 +5737,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void oes_texture_float_linear() throws Exception {
         test("OES_texture_float_linear");
     }
@@ -4214,8 +5764,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("undefined")
+    public void oes_vertex_array_object() throws Exception {
+        test("OES_vertex_array_object");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void offlineAudioCompletionEvent() throws Exception {
         test("OfflineAudioCompletionEvent");
     }
@@ -4224,8 +5782,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void offlineAudioContext() throws Exception {
         test("OfflineAudioContext");
     }
@@ -4236,9 +5793,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            FF = "function",
-            FF_ESR = "function")
+    @Alerts("undefined")
     public void offlineResourceList() throws Exception {
         test("OfflineResourceList");
     }
@@ -4247,13 +5802,11 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            CHROME = "function",
-            EDGE = "function",
-            FF = "function")
+    @Alerts("function")
     @HtmlUnitNYI(CHROME = "undefined",
             EDGE = "undefined",
-            FF = "undefined")
+            FF = "undefined",
+            FF_ESR = "undefined")
     public void offscreenCanvas() throws Exception {
         test("OffscreenCanvas");
     }
@@ -4273,8 +5826,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void oscillatorNode() throws Exception {
         test("OscillatorNode");
     }
@@ -4283,8 +5835,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("undefined")
+    public void overflowEvent() throws Exception {
+        test("OverflowEvent");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void pageTransitionEvent() throws Exception {
         test("PageTransitionEvent");
     }
@@ -4293,10 +5853,45 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void pannerNode() throws Exception {
         test("PannerNode");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void parallelArray() throws Exception {
+        test("ParallelArray");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void parentNode() throws Exception {
+        test("ParentNode");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
+    public void parseFloat() throws Exception {
+        test("parseFloat");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
+    public void parseInt() throws Exception {
+        test("parseInt");
     }
 
     /**
@@ -4316,8 +5911,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void path2D() throws Exception {
         test("Path2D");
     }
@@ -4359,8 +5953,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void performance() throws Exception {
         test("Performance");
     }
@@ -4369,8 +5962,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void performanceEntry() throws Exception {
         test("PerformanceEntry");
     }
@@ -4388,8 +5980,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void performanceMark() throws Exception {
         test("PerformanceMark");
     }
@@ -4398,8 +5989,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void performanceMeasure() throws Exception {
         test("PerformanceMeasure");
     }
@@ -4408,8 +5998,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void performanceNavigation() throws Exception {
         test("PerformanceNavigation");
     }
@@ -4418,8 +6007,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void performanceNavigationTiming() throws Exception {
         test("PerformanceNavigationTiming");
     }
@@ -4428,8 +6016,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void performanceObserver() throws Exception {
         test("PerformanceObserver");
     }
@@ -4438,8 +6025,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void performanceObserverEntryList() throws Exception {
         test("PerformanceObserverEntryList");
     }
@@ -4448,8 +6034,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void performanceResourceTiming() throws Exception {
         test("PerformanceResourceTiming");
     }
@@ -4458,10 +6043,18 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void performanceTiming() throws Exception {
         test("PerformanceTiming");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void periodicSyncEvent() throws Exception {
+        test("PeriodicSyncEvent");
     }
 
     /**
@@ -4479,8 +6072,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("undefined")
+    public void periodicSyncRegistration() throws Exception {
+        test("PeriodicSyncRegistration");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void periodicWave() throws Exception {
         test("PeriodicWave");
     }
@@ -4489,8 +6090,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void permissions() throws Exception {
         test("Permissions");
     }
@@ -4499,8 +6099,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("undefined")
+    public void permissionSettings() throws Exception {
+        test("PermissionSettings");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void permissionStatus() throws Exception {
         test("PermissionStatus");
     }
@@ -4511,8 +6119,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void plugin() throws Exception {
         test("Plugin");
     }
@@ -4523,10 +6130,18 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void pluginArray() throws Exception {
         test("PluginArray");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void point() throws Exception {
+        test("Point");
     }
 
     /**
@@ -4535,8 +6150,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void pointerEvent() throws Exception {
         test("PointerEvent");
     }
@@ -4545,8 +6159,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void popStateEvent() throws Exception {
         test("PopStateEvent");
     }
@@ -4561,13 +6174,21 @@ public class HostTypeOfTest extends WebDriverTestCase {
     }
 
     /**
-     * Test {@link org.htmlunit.javascript.host.geo.Position}.
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void portCollection() throws Exception {
+        test("PortCollection");
+    }
+
+    /**
+     * Test {@link org.htmlunit.javascript.host.geo.GeolocationPosition}.
      *
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void position() throws Exception {
         test("Position");
     }
@@ -4576,10 +6197,36 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void positionError() throws Exception {
         test("PositionError");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void positionOptions() throws Exception {
+        test("PositionOptions");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void positionSensorVRDevice() throws Exception {
+        test("PositionSensorVRDevice");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void powerManager() throws Exception {
+        test("PowerManager");
     }
 
     /**
@@ -4630,11 +6277,46 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
+    @Alerts("undefined")
+    public void presentationConnectionClosedEvent() throws Exception {
+        test("PresentationConnectionClosedEvent");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
     @Alerts(DEFAULT = "undefined",
             CHROME = "function",
             EDGE = "function")
     public void presentationConnectionCloseEvent() throws Exception {
         test("PresentationConnectionCloseEvent");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts(DEFAULT = "undefined",
+            CHROME = "function",
+            EDGE = "function")
+    @HtmlUnitNYI(CHROME = "undefined",
+            EDGE = "undefined")
+    public void presentationConnectionList() throws Exception {
+        test("PresentationConnectionList");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts(DEFAULT = "undefined",
+            CHROME = "function",
+            EDGE = "function")
+    @HtmlUnitNYI(CHROME = "undefined",
+            EDGE = "undefined")
+    public void presentationReceiver() throws Exception {
+        test("PresentationReceiver");
     }
 
     /**
@@ -4654,8 +6336,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void processingInstruction() throws Exception {
         test("ProcessingInstruction");
     }
@@ -4664,8 +6345,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void progressEvent() throws Exception {
         test("ProgressEvent");
     }
@@ -4674,8 +6354,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void promise() throws Exception {
         test("Promise");
     }
@@ -4684,8 +6363,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("undefined")
+    public void promiseRejection() throws Exception {
+        test("PromiseRejection");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void promiseRejectionEvent() throws Exception {
         test("PromiseRejectionEvent");
     }
@@ -4694,12 +6381,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
-    @HtmlUnitNYI(CHROME = "undefined",
-            EDGE = "undefined",
-            FF = "undefined",
-            FF_ESR = "undefined")
+    @Alerts("undefined")
+    public void promiseResolver() throws Exception {
+        test("PromiseResolver");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void proxy() throws Exception {
         test("Proxy");
     }
@@ -4708,8 +6399,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("undefined")
+    public void pushEvent() throws Exception {
+        test("PushEvent");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void pushManager() throws Exception {
         test("PushManager");
     }
@@ -4718,8 +6417,25 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("undefined")
+    public void pushMessageData() throws Exception {
+        test("PushMessageData");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void pushRegistrationManager() throws Exception {
+        test("PushRegistrationManager");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void pushSubscription() throws Exception {
         test("PushSubscription");
     }
@@ -4728,8 +6444,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void pushSubscriptionOptions() throws Exception {
         test("PushSubscriptionOptions");
     }
@@ -4738,10 +6453,18 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void radioNodeList() throws Exception {
         test("RadioNodeList");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void randomSource() throws Exception {
+        test("RandomSource");
     }
 
     /**
@@ -4750,10 +6473,18 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void range() throws Exception {
         test("Range");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
+    public void rangeError() throws Exception {
+        test("RangeError");
     }
 
     /**
@@ -4769,8 +6500,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void readableStream() throws Exception {
         test("ReadableStream");
     }
@@ -4779,10 +6509,27 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "object",
-            IE = "undefined")
+    @Alerts("function")
+    public void referenceError() throws Exception {
+        test("ReferenceError");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("object")
     public void reflect() throws Exception {
         test("Reflect");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
+    public void regExp() throws Exception {
+        test("RegExp");
     }
 
     /**
@@ -4800,8 +6547,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("undefined")
+    public void renderingContext() throws Exception {
+        test("RenderingContext");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void request() throws Exception {
         test("Request");
     }
@@ -4810,8 +6565,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void response() throws Exception {
         test("Response");
     }
@@ -4831,8 +6585,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void rtcCertificate() throws Exception {
         test("RTCCertificate");
     }
@@ -4841,8 +6594,29 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("undefined")
+    public void rtcConfiguration() throws Exception {
+        test("RTCConfiguration");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
+    @HtmlUnitNYI(CHROME = "undefined",
+            EDGE = "undefined",
+            FF = "undefined",
+            FF_ESR = "undefined")
+    public void rtcDataChannel() throws Exception {
+        test("RTCDataChannel");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void rtcDataChannelEvent() throws Exception {
         test("RTCDataChannelEvent");
     }
@@ -4851,10 +6625,18 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void rtcIceCandidate() throws Exception {
         test("RTCIceCandidate");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void rtcIceServer() throws Exception {
+        test("RTCIceServer");
     }
 
     /**
@@ -4870,8 +6652,25 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("undefined")
+    public void rtcIdentityErrorEvent() throws Exception {
+        test("RTCIdentityErrorEvent");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void rtcIdentityEvent() throws Exception {
+        test("RTCIdentityEvent");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void rtcPeerConnection() throws Exception {
         test("RTCPeerConnection");
     }
@@ -4880,8 +6679,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void rtcPeerConnectionIceEvent() throws Exception {
         test("RTCPeerConnectionIceEvent");
     }
@@ -4890,8 +6688,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
+    public void rtcSctpTransport() throws Exception {
+        test("RTCSctpTransport");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void rtcSessionDescription() throws Exception {
         test("RTCSessionDescription");
     }
@@ -4900,8 +6706,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("undefined")
+    public void rtcSessionDescriptionCallback() throws Exception {
+        test("RTCSessionDescriptionCallback");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void rtcStatsReport() throws Exception {
         test("RTCStatsReport");
     }
@@ -4912,8 +6726,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void screen() throws Exception {
         test("Screen");
     }
@@ -4922,8 +6735,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void screenOrientation() throws Exception {
         test("ScreenOrientation");
     }
@@ -4932,8 +6744,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void scriptProcessorNode() throws Exception {
         test("ScriptProcessorNode");
     }
@@ -4942,8 +6753,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void securityPolicyViolationEvent() throws Exception {
         test("SecurityPolicyViolationEvent");
     }
@@ -4954,8 +6764,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void selection() throws Exception {
         test("Selection");
     }
@@ -4964,8 +6773,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void serviceWorker() throws Exception {
         test("ServiceWorker");
     }
@@ -4974,10 +6782,18 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void serviceWorkerContainer() throws Exception {
         test("ServiceWorkerContainer");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void serviceWorkerGlobalScope() throws Exception {
+        test("ServiceWorkerGlobalScope");
     }
 
     /**
@@ -4993,8 +6809,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void serviceWorkerRegistration() throws Exception {
         test("ServiceWorkerRegistration");
     }
@@ -5018,13 +6833,30 @@ public class HostTypeOfTest extends WebDriverTestCase {
     }
 
     /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void settingsLock() throws Exception {
+        test("SettingsLock");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void settingsManager() throws Exception {
+        test("SettingsManager");
+    }
+
+    /**
      * Test {@link org.htmlunit.javascript.host.dom.ShadowRoot}.
      *
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void shadowRoot() throws Exception {
         test("ShadowRoot");
     }
@@ -5039,15 +6871,194 @@ public class HostTypeOfTest extends WebDriverTestCase {
     }
 
     /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void sharedKeyframeList() throws Exception {
+        test("SharedKeyframeList");
+    }
+
+    /**
      * Test {@link org.htmlunit.javascript.host.SharedWorker}.
      *
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void sharedWorker() throws Exception {
         test("SharedWorker");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void sharedWorkerGlobalScope() throws Exception {
+        test("SharedWorkerGlobalScope");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void simd() throws Exception {
+        test("SIMD");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("ReferenceError")
+    public void simd_Bool16x8() throws Exception {
+        test("SIMD.Bool16x8");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("ReferenceError")
+    public void simd_Bool32x4() throws Exception {
+        test("SIMD.Bool32x4");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("ReferenceError")
+    public void simd_Bool64x2() throws Exception {
+        test("SIMD.Bool64x2");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("ReferenceError")
+    public void simd_Bool8x16() throws Exception {
+        test("SIMD.Bool8x16");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("ReferenceError")
+    public void simd_float32x4() throws Exception {
+        test("SIMD.float32x4");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("ReferenceError")
+    public void simd_Float32x4() throws Exception {
+        test("SIMD.Float32x4");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("ReferenceError")
+    public void simd_float64x2() throws Exception {
+        test("SIMD.float64x2");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("ReferenceError")
+    public void simd_Float64x2() throws Exception {
+        test("SIMD.Float64x2");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("ReferenceError")
+    public void simd_int16x8() throws Exception {
+        test("SIMD.int16x8");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("ReferenceError")
+    public void simd_Int16x8() throws Exception {
+        test("SIMD.Int16x8");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("ReferenceError")
+    public void simd_int32x4() throws Exception {
+        test("SIMD.int32x4");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("ReferenceError")
+    public void simd_Int32x4() throws Exception {
+        test("SIMD.Int32x4");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("ReferenceError")
+    public void simd_int8x16() throws Exception {
+        test("SIMD.int8x16");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("ReferenceError")
+    public void simd_Int8x16() throws Exception {
+        test("SIMD.Int8x16");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("ReferenceError")
+    public void simd_Uint16x8() throws Exception {
+        test("SIMD.Uint16x8");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("ReferenceError")
+    public void simd_Uint32x4() throws Exception {
+        test("SIMD.Uint32x4");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("ReferenceError")
+    public void simd_Uint8x16() throws Exception {
+        test("SIMD.Uint8x16");
     }
 
     /**
@@ -5092,7 +7103,9 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("undefined")
+    @Alerts(DEFAULT = "undefined",
+            CHROME = "function",
+            EDGE = "function")
     public void speechGrammar() throws Exception {
         test("SpeechGrammar");
     }
@@ -5101,7 +7114,9 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("undefined")
+    @Alerts(DEFAULT = "undefined",
+            CHROME = "function",
+            EDGE = "function")
     public void speechGrammarList() throws Exception {
         test("SpeechGrammarList");
     }
@@ -5110,7 +7125,9 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("undefined")
+    @Alerts(DEFAULT = "undefined",
+            CHROME = "function",
+            EDGE = "function")
     public void speechRecognition() throws Exception {
         test("SpeechRecognition");
     }
@@ -5137,7 +7154,20 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts("undefined")
+    @Alerts(DEFAULT = "undefined",
+            CHROME = "function",
+            EDGE = "function")
+    public void speechRecognitionErrorEvent() throws Exception {
+        test("SpeechRecognitionErrorEvent");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts(DEFAULT = "undefined",
+            CHROME = "function",
+            EDGE = "function")
     public void speechRecognitionEvent() throws Exception {
         test("SpeechRecognitionEvent");
     }
@@ -5164,9 +7194,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            FF = "function",
-            FF_ESR = "function")
+    @Alerts("function")
     public void speechSynthesis() throws Exception {
         test("SpeechSynthesis");
     }
@@ -5175,8 +7203,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void speechSynthesisErrorEvent() throws Exception {
         test("SpeechSynthesisErrorEvent");
     }
@@ -5185,8 +7212,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void speechSynthesisEvent() throws Exception {
         test("SpeechSynthesisEvent");
     }
@@ -5195,8 +7221,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void speechSynthesisUtterance() throws Exception {
         test("SpeechSynthesisUtterance");
     }
@@ -5205,9 +7230,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            FF = "function",
-            FF_ESR = "function")
+    @Alerts("function")
     public void speechSynthesisVoice() throws Exception {
         test("SpeechSynthesisVoice");
     }
@@ -5225,8 +7248,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void stereoPannerNode() throws Exception {
         test("StereoPannerNode");
     }
@@ -5248,8 +7270,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void storage() throws Exception {
         test("Storage");
     }
@@ -5258,8 +7279,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("undefined")
+    public void storageEstimate() throws Exception {
+        test("StorageEstimate");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void storageEvent() throws Exception {
         test("StorageEvent");
     }
@@ -5268,8 +7297,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void storageManager() throws Exception {
         test("StorageManager");
     }
@@ -5278,8 +7306,25 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
+    public void storageQuota() throws Exception {
+        test("StorageQuota");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
+    public void string() throws Exception {
+        test("String");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
     public void styleMedia() throws Exception {
         test("StyleMedia");
     }
@@ -5288,8 +7333,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void styleSheet() throws Exception {
         test("StyleSheet");
     }
@@ -5300,8 +7344,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void styleSheetList() throws Exception {
         test("StyleSheetList");
     }
@@ -5310,8 +7353,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
+    public void submitEvent() throws Exception {
+        test("SubmitEvent");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void subtleCrypto() throws Exception {
         test("SubtleCrypto");
     }
@@ -5322,8 +7373,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgAElement() throws Exception {
         test("SVGAElement");
     }
@@ -5343,8 +7393,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgAngle() throws Exception {
         test("SVGAngle");
     }
@@ -5353,8 +7402,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("undefined")
+    public void svgAnimateColorElement() throws Exception {
+        test("SVGAnimateColorElement");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void svgAnimatedAngle() throws Exception {
         test("SVGAnimatedAngle");
     }
@@ -5363,8 +7420,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgAnimatedBoolean() throws Exception {
         test("SVGAnimatedBoolean");
     }
@@ -5373,8 +7429,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgAnimatedEnumeration() throws Exception {
         test("SVGAnimatedEnumeration");
     }
@@ -5383,8 +7438,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgAnimatedInteger() throws Exception {
         test("SVGAnimatedInteger");
     }
@@ -5393,8 +7447,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgAnimatedLength() throws Exception {
         test("SVGAnimatedLength");
     }
@@ -5403,8 +7456,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgAnimatedLengthList() throws Exception {
         test("SVGAnimatedLengthList");
     }
@@ -5413,8 +7465,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgAnimatedNumber() throws Exception {
         test("SVGAnimatedNumber");
     }
@@ -5423,8 +7474,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgAnimatedNumberList() throws Exception {
         test("SVGAnimatedNumberList");
     }
@@ -5433,8 +7483,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("undefined")
+    public void svgAnimatedPoints() throws Exception {
+        test("SVGAnimatedPoints");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void svgAnimatedPreserveAspectRatio() throws Exception {
         test("SVGAnimatedPreserveAspectRatio");
     }
@@ -5443,8 +7501,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgAnimatedRect() throws Exception {
         test("SVGAnimatedRect");
     }
@@ -5453,8 +7510,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgAnimatedString() throws Exception {
         test("SVGAnimatedString");
     }
@@ -5463,8 +7519,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgAnimatedTransformList() throws Exception {
         test("SVGAnimatedTransformList");
     }
@@ -5475,8 +7530,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void svgAnimateElement() throws Exception {
         test("SVGAnimateElement");
     }
@@ -5487,8 +7541,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void svgAnimateMotionElement() throws Exception {
         test("SVGAnimateMotionElement");
     }
@@ -5499,8 +7552,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void svgAnimateTransformElement() throws Exception {
         test("SVGAnimateTransformElement");
     }
@@ -5509,8 +7561,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void svgAnimationElement() throws Exception {
         test("SVGAnimationElement");
     }
@@ -5521,8 +7572,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgCircleElement() throws Exception {
         test("SVGCircleElement");
     }
@@ -5533,8 +7583,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgClipPathElement() throws Exception {
         test("SVGClipPathElement");
     }
@@ -5543,8 +7592,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgComponentTransferFunctionElement() throws Exception {
         test("SVGComponentTransferFunctionElement");
     }
@@ -5564,8 +7612,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgDefsElement() throws Exception {
         test("SVGDefsElement");
     }
@@ -5576,8 +7623,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgDescElement() throws Exception {
         test("SVGDescElement");
     }
@@ -5606,8 +7652,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgElement() throws Exception {
         test("SVGElement");
     }
@@ -5618,10 +7663,18 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgEllipseElement() throws Exception {
         test("SVGEllipseElement");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void svgEvent() throws Exception {
+        test("SVGEvent");
     }
 
     /**
@@ -5630,8 +7683,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgFEBlendElement() throws Exception {
         test("SVGFEBlendElement");
     }
@@ -5642,8 +7694,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgFEColorMatrixElement() throws Exception {
         test("SVGFEColorMatrixElement");
     }
@@ -5654,8 +7705,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgFEComponentTransferElement() throws Exception {
         test("SVGFEComponentTransferElement");
     }
@@ -5666,8 +7716,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgFECompositeElement() throws Exception {
         test("SVGFECompositeElement");
     }
@@ -5678,8 +7727,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgFEConvolveMatrixElement() throws Exception {
         test("SVGFEConvolveMatrixElement");
     }
@@ -5690,8 +7738,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgFEDiffuseLightingElement() throws Exception {
         test("SVGFEDiffuseLightingElement");
     }
@@ -5702,8 +7749,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgFEDisplacementMapElement() throws Exception {
         test("SVGFEDisplacementMapElement");
     }
@@ -5714,8 +7760,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgFEDistantLightElement() throws Exception {
         test("SVGFEDistantLightElement");
     }
@@ -5724,8 +7769,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void svgFEDropShadowElement() throws Exception {
         test("SVGFEDropShadowElement");
     }
@@ -5736,8 +7780,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgFEFloodElement() throws Exception {
         test("SVGFEFloodElement");
     }
@@ -5748,8 +7791,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgFEFuncAElement() throws Exception {
         test("SVGFEFuncAElement");
     }
@@ -5760,8 +7802,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgFEFuncBElement() throws Exception {
         test("SVGFEFuncBElement");
     }
@@ -5772,8 +7813,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgFEFuncGElement() throws Exception {
         test("SVGFEFuncGElement");
     }
@@ -5784,8 +7824,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgFEFuncRElement() throws Exception {
         test("SVGFEFuncRElement");
     }
@@ -5796,8 +7835,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgFEGaussianBlurElement() throws Exception {
         test("SVGFEGaussianBlurElement");
     }
@@ -5808,8 +7846,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgFEImageElement() throws Exception {
         test("SVGFEImageElement");
     }
@@ -5820,8 +7857,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgFEMergeElement() throws Exception {
         test("SVGFEMergeElement");
     }
@@ -5832,8 +7868,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgFEMergeNodeElement() throws Exception {
         test("SVGFEMergeNodeElement");
     }
@@ -5844,8 +7879,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgFEMorphologyElement() throws Exception {
         test("SVGFEMorphologyElement");
     }
@@ -5856,8 +7890,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgFEOffsetElement() throws Exception {
         test("SVGFEOffsetElement");
     }
@@ -5868,8 +7901,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgFEPointLightElement() throws Exception {
         test("SVGFEPointLightElement");
     }
@@ -5880,8 +7912,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgFESpecularLightingElement() throws Exception {
         test("SVGFESpecularLightingElement");
     }
@@ -5892,8 +7923,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgFESpotLightElement() throws Exception {
         test("SVGFESpotLightElement");
     }
@@ -5904,8 +7934,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgFETileElement() throws Exception {
         test("SVGFETileElement");
     }
@@ -5916,8 +7945,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgFETurbulenceElement() throws Exception {
         test("SVGFETurbulenceElement");
     }
@@ -5928,10 +7956,63 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgFilterElement() throws Exception {
         test("SVGFilterElement");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void svgFontElement() throws Exception {
+        test("SVGFontElement");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void svgFontFaceElement() throws Exception {
+        test("SVGFontFaceElement");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void svgFontFaceFormatElement() throws Exception {
+        test("SVGFontFaceFormatElement");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void svgFontFaceNameElement() throws Exception {
+        test("SVGFontFaceNameElement");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void svgFontFaceSrcElement() throws Exception {
+        test("SVGFontFaceSrcElement");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void svgFontFaceUriElement() throws Exception {
+        test("SVGFontFaceUriElement");
     }
 
     /**
@@ -5940,8 +8021,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void svgForeignObjectElement() throws Exception {
         test("SVGForeignObjectElement");
     }
@@ -5952,8 +8032,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgGElement() throws Exception {
         test("SVGGElement");
     }
@@ -5962,8 +8041,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void svgGeometryElement() throws Exception {
         test("SVGGeometryElement");
     }
@@ -5972,8 +8050,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("undefined")
+    public void svgGlyphElement() throws Exception {
+        test("SVGGlyphElement");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void svgGradientElement() throws Exception {
         test("SVGGradientElement");
     }
@@ -5982,10 +8068,18 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void svgGraphicsElement() throws Exception {
         test("SVGGraphicsElement");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void svgHKernElement() throws Exception {
+        test("SVGHKernElement");
     }
 
     /**
@@ -5994,8 +8088,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgImageElement() throws Exception {
         test("SVGImageElement");
     }
@@ -6004,8 +8097,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgLength() throws Exception {
         test("SVGLength");
     }
@@ -6014,8 +8106,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgLengthList() throws Exception {
         test("SVGLengthList");
     }
@@ -6026,8 +8117,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgLinearGradientElement() throws Exception {
         test("SVGLinearGradientElement");
     }
@@ -6038,8 +8128,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgLineElement() throws Exception {
         test("SVGLineElement");
     }
@@ -6050,8 +8139,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgMarkerElement() throws Exception {
         test("SVGMarkerElement");
     }
@@ -6062,8 +8150,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgMaskElement() throws Exception {
         test("SVGMaskElement");
     }
@@ -6074,8 +8161,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgMatrix() throws Exception {
         test("SVGMatrix");
     }
@@ -6086,10 +8172,18 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgMetadataElement() throws Exception {
         test("SVGMetadataElement");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void svgMissingGlyphElement() throws Exception {
+        test("SVGMissingGlyphElement");
     }
 
     /**
@@ -6098,8 +8192,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void svgMPathElement() throws Exception {
         test("SVGMPathElement");
     }
@@ -6108,8 +8201,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgNumber() throws Exception {
         test("SVGNumber");
     }
@@ -6118,8 +8210,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgNumberList() throws Exception {
         test("SVGNumberList");
     }
@@ -6130,8 +8221,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgPathElement() throws Exception {
         test("SVGPathElement");
     }
@@ -6140,8 +8230,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void svgPathSeg() throws Exception {
         test("SVGPathSeg");
     }
@@ -6150,8 +8239,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void svgPathSegArcAbs() throws Exception {
         test("SVGPathSegArcAbs");
     }
@@ -6160,8 +8248,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void svgPathSegArcRel() throws Exception {
         test("SVGPathSegArcRel");
     }
@@ -6170,8 +8257,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void svgPathSegClosePath() throws Exception {
         test("SVGPathSegClosePath");
     }
@@ -6180,8 +8266,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void svgPathSegCurvetoCubicAbs() throws Exception {
         test("SVGPathSegCurvetoCubicAbs");
     }
@@ -6190,8 +8275,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void svgPathSegCurvetoCubicRel() throws Exception {
         test("SVGPathSegCurvetoCubicRel");
     }
@@ -6200,8 +8284,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void svgPathSegCurvetoCubicSmoothAbs() throws Exception {
         test("SVGPathSegCurvetoCubicSmoothAbs");
     }
@@ -6210,8 +8293,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void svgPathSegCurvetoCubicSmoothRel() throws Exception {
         test("SVGPathSegCurvetoCubicSmoothRel");
     }
@@ -6220,8 +8302,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void svgPathSegCurvetoQuadraticAbs() throws Exception {
         test("SVGPathSegCurvetoQuadraticAbs");
     }
@@ -6230,8 +8311,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void svgPathSegCurvetoQuadraticRel() throws Exception {
         test("SVGPathSegCurvetoQuadraticRel");
     }
@@ -6240,8 +8320,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void svgPathSegCurvetoQuadraticSmoothAbs() throws Exception {
         test("SVGPathSegCurvetoQuadraticSmoothAbs");
     }
@@ -6250,8 +8329,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void svgPathSegCurvetoQuadraticSmoothRel() throws Exception {
         test("SVGPathSegCurvetoQuadraticSmoothRel");
     }
@@ -6260,8 +8338,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void svgPathSegLinetoAbs() throws Exception {
         test("SVGPathSegLinetoAbs");
     }
@@ -6270,8 +8347,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void svgPathSegLinetoHorizontalAbs() throws Exception {
         test("SVGPathSegLinetoHorizontalAbs");
     }
@@ -6280,8 +8356,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void svgPathSegLinetoHorizontalRel() throws Exception {
         test("SVGPathSegLinetoHorizontalRel");
     }
@@ -6290,8 +8365,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void svgPathSegLinetoRel() throws Exception {
         test("SVGPathSegLinetoRel");
     }
@@ -6300,8 +8374,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void svgPathSegLinetoVerticalAbs() throws Exception {
         test("SVGPathSegLinetoVerticalAbs");
     }
@@ -6310,8 +8383,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void svgPathSegLinetoVerticalRel() throws Exception {
         test("SVGPathSegLinetoVerticalRel");
     }
@@ -6320,8 +8392,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void svgPathSegList() throws Exception {
         test("SVGPathSegList");
     }
@@ -6330,8 +8401,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void svgPathSegMovetoAbs() throws Exception {
         test("SVGPathSegMovetoAbs");
     }
@@ -6340,8 +8410,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void svgPathSegMovetoRel() throws Exception {
         test("SVGPathSegMovetoRel");
     }
@@ -6352,8 +8421,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgPatternElement() throws Exception {
         test("SVGPatternElement");
     }
@@ -6362,8 +8430,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgPoint() throws Exception {
         test("SVGPoint");
     }
@@ -6372,8 +8439,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgPointList() throws Exception {
         test("SVGPointList");
     }
@@ -6384,8 +8450,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgPolygonElement() throws Exception {
         test("SVGPolygonElement");
     }
@@ -6396,8 +8461,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgPolylineElement() throws Exception {
         test("SVGPolylineElement");
     }
@@ -6406,8 +8470,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgPreserveAspectRatio() throws Exception {
         test("SVGPreserveAspectRatio");
     }
@@ -6418,8 +8481,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgRadialGradientElement() throws Exception {
         test("SVGRadialGradientElement");
     }
@@ -6430,8 +8492,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgRect() throws Exception {
         test("SVGRect");
     }
@@ -6442,10 +8503,18 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgRectElement() throws Exception {
         test("SVGRectElement");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void svgRenderingIntent() throws Exception {
+        test("SVGRenderingIntent");
     }
 
     /**
@@ -6454,8 +8523,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgScriptElement() throws Exception {
         test("SVGScriptElement");
     }
@@ -6466,8 +8534,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void svgSetElement() throws Exception {
         test("SVGSetElement");
     }
@@ -6478,8 +8545,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgStopElement() throws Exception {
         test("SVGStopElement");
     }
@@ -6488,10 +8554,18 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgStringList() throws Exception {
         test("SVGStringList");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void svgStylable() throws Exception {
+        test("SVGStylable");
     }
 
     /**
@@ -6500,8 +8574,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgStyleElement() throws Exception {
         test("SVGStyleElement");
     }
@@ -6512,8 +8585,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgSVGElement() throws Exception {
         test("SVGSVGElement");
     }
@@ -6524,8 +8596,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgSwitchElement() throws Exception {
         test("SVGSwitchElement");
     }
@@ -6536,8 +8607,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgSymbolElement() throws Exception {
         test("SVGSymbolElement");
     }
@@ -6546,8 +8616,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("undefined")
+    public void svgTests() throws Exception {
+        test("SVGTests");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void svgTextContentElement() throws Exception {
         test("SVGTextContentElement");
     }
@@ -6558,8 +8636,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgTextElement() throws Exception {
         test("SVGTextElement");
     }
@@ -6570,8 +8647,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgTextPathElement() throws Exception {
         test("SVGTextPathElement");
     }
@@ -6580,8 +8656,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgTextPositioningElement() throws Exception {
         test("SVGTextPositioningElement");
     }
@@ -6592,8 +8667,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgTitleElement() throws Exception {
         test("SVGTitleElement");
     }
@@ -6602,8 +8676,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgTransform() throws Exception {
         test("SVGTransform");
     }
@@ -6612,10 +8685,27 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("undefined")
+    public void svgTransformable() throws Exception {
+        test("SVGTransformable");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void svgTransformList() throws Exception {
         test("SVGTransformList");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void svgTRefElement() throws Exception {
+        test("SVGTRefElement");
     }
 
     /**
@@ -6624,8 +8714,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgTSpanElement() throws Exception {
         test("SVGTSpanElement");
     }
@@ -6634,8 +8723,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgUnitTypes() throws Exception {
         test("SVGUnitTypes");
     }
@@ -6646,8 +8734,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgUseElement() throws Exception {
         test("SVGUseElement");
     }
@@ -6658,8 +8745,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void svgViewElement() throws Exception {
         test("SVGViewElement");
     }
@@ -6677,8 +8763,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
+    public void svgVKernElement() throws Exception {
+        test("SVGVKernElement");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
     public void svgZoomEvent() throws Exception {
         test("SVGZoomEvent");
     }
@@ -6687,10 +8781,18 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void symbol() throws Exception {
         test("Symbol");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void syncEvent() throws Exception {
+        test("SyncEvent");
     }
 
     /**
@@ -6705,13 +8807,75 @@ public class HostTypeOfTest extends WebDriverTestCase {
     }
 
     /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void syncRegistration() throws Exception {
+        test("SyncRegistration");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
+    public void syntaxError() throws Exception {
+        test("SyntaxError");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void tcpServerSocket() throws Exception {
+        test("TCPServerSocket");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void tcpSocket() throws Exception {
+        test("TCPSocket");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void telephony() throws Exception {
+        test("Telephony");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void telephonyCall() throws Exception {
+        test("TelephonyCall");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void telephonyCallGroup() throws Exception {
+        test("TelephonyCallGroup");
+    }
+
+    /**
      * Test {@link org.htmlunit.javascript.host.dom.Text}.
      *
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void text() throws Exception {
         test("Text");
     }
@@ -6720,8 +8884,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void textDecoder() throws Exception {
         test("TextDecoder");
     }
@@ -6730,8 +8893,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void textEncoder() throws Exception {
         test("TextEncoder");
     }
@@ -6740,10 +8902,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            CHROME = "function",
-            EDGE = "function",
-            IE = "object")
+    @Alerts("function")
     public void textEvent() throws Exception {
         test("TextEvent");
     }
@@ -6752,8 +8911,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void textMetrics() throws Exception {
         test("TextMetrics");
     }
@@ -6764,8 +8922,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void textRange() throws Exception {
         test("TextRange");
     }
@@ -6774,8 +8931,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void textTrack() throws Exception {
         test("TextTrack");
     }
@@ -6793,8 +8949,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void textTrackCueList() throws Exception {
         test("TextTrackCueList");
     }
@@ -6803,8 +8958,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void textTrackList() throws Exception {
         test("TextTrackList");
     }
@@ -6824,8 +8978,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void timeRanges() throws Exception {
         test("TimeRanges");
     }
@@ -6885,8 +9038,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void trackEvent() throws Exception {
         test("TrackEvent");
     }
@@ -6895,8 +9047,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("undefined")
+    public void transferable() throws Exception {
+        test("Transferable");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void transitionEvent() throws Exception {
         test("TransitionEvent");
     }
@@ -6907,10 +9067,45 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void treeWalker() throws Exception {
         test("TreeWalker");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void typedArray() throws Exception {
+        test("TypedArray");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
+    public void typeError() throws Exception {
+        test("TypeError");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void typeInfo() throws Exception {
+        test("TypeInfo");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void uDPSocket() throws Exception {
+        test("UDPSocket");
     }
 
     /**
@@ -6919,9 +9114,8 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
-    public void uIEvent() throws Exception {
+    @Alerts("function")
+    public void uiEvent() throws Exception {
         test("UIEvent");
     }
 
@@ -6973,6 +9167,33 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
+    @Alerts("undefined")
+    public void undefined() throws Exception {
+        test("undefined");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
+    public void unescape() throws Exception {
+        test("unescape");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void uneval() throws Exception {
+        test("uneval");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
     @Alerts("function")
     public void uriError() throws Exception {
         test("URIError");
@@ -6982,8 +9203,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void url() throws Exception {
         test("URL");
     }
@@ -6994,10 +9214,36 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void urlSearchParams() throws Exception {
         test("URLSearchParams");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void urlUtils() throws Exception {
+        test("URLUtils");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void urlUtilsReadOnly() throws Exception {
+        test("URLUtilsReadOnly");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void userDataHandler() throws Exception {
+        test("UserDataHandler");
     }
 
     /**
@@ -7013,8 +9259,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("undefined")
+    public void uSVString() throws Exception {
+        test("USVString");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void validityState() throws Exception {
         test("ValidityState");
     }
@@ -7023,8 +9277,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void videoPlaybackQuality() throws Exception {
         test("VideoPlaybackQuality");
     }
@@ -7033,8 +9286,97 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("undefined")
+    public void vrDevice() throws Exception {
+        test("VRDevice");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void vrDisplay() throws Exception {
+        test("VRDisplay");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void vrDisplayCapabilities() throws Exception {
+        test("VRDisplayCapabilities");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void vrEyeParameters() throws Exception {
+        test("VREyeParameters");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void vrFieldOfView() throws Exception {
+        test("VRFieldOfView");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void vrFieldOfViewReadOnly() throws Exception {
+        test("VRFieldOfViewReadOnly");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void vrLayer() throws Exception {
+        test("VRLayer");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void vrPose() throws Exception {
+        test("VRPose");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void vrPositionState() throws Exception {
+        test("VRPositionState");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void vrStageParameters() throws Exception {
+        test("VRStageParameters");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void vTTCue() throws Exception {
         test("VTTCue");
     }
@@ -7043,8 +9385,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void waveShaperNode() throws Exception {
         test("WaveShaperNode");
     }
@@ -7062,10 +9403,18 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void weakSet() throws Exception {
         test("WeakSet");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void webGL() throws Exception {
+        test("WebGL");
     }
 
     /**
@@ -7100,6 +9449,15 @@ public class HostTypeOfTest extends WebDriverTestCase {
      */
     @Test
     @Alerts("undefined")
+    public void wEBGL_compressed_texture_etc() throws Exception {
+        test("WEBGL_compressed_texture_etc");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
     public void webGL_compressed_texture_etc1() throws Exception {
         test("WEBGL_compressed_texture_etc1");
     }
@@ -7117,8 +9475,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void webGL_compressed_texture_s3tc() throws Exception {
         test("WEBGL_compressed_texture_s3tc");
     }
@@ -7127,8 +9484,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "undefined",
-            IE = "object")
+    @Alerts("undefined")
     public void webGL_debug_renderer_info() throws Exception {
         test("WEBGL_debug_renderer_info");
     }
@@ -7155,8 +9511,25 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("undefined")
+    public void webGL_draw_buffers() throws Exception {
+        test("WEBGL_draw_buffers");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void webGL_lose_context() throws Exception {
+        test("WEBGL_lose_context");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void webGL2RenderingContext() throws Exception {
         test("WebGL2RenderingContext");
     }
@@ -7165,8 +9538,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void webGLActiveInfo() throws Exception {
         test("WebGLActiveInfo");
     }
@@ -7175,8 +9547,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void webGLBuffer() throws Exception {
         test("WebGLBuffer");
     }
@@ -7194,8 +9565,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void webGLFramebuffer() throws Exception {
         test("WebGLFramebuffer");
     }
@@ -7204,8 +9574,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void webGLProgram() throws Exception {
         test("WebGLProgram");
     }
@@ -7214,8 +9583,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void webGLQuery() throws Exception {
         test("WebGLQuery");
     }
@@ -7224,8 +9592,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void webGLRenderbuffer() throws Exception {
         test("WebGLRenderbuffer");
     }
@@ -7234,8 +9601,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void webGLRenderingContext() throws Exception {
         test("WebGLRenderingContext");
     }
@@ -7244,8 +9610,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void webGLSampler() throws Exception {
         test("WebGLSampler");
     }
@@ -7254,8 +9619,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void webGLShader() throws Exception {
         test("WebGLShader");
     }
@@ -7264,8 +9628,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void webGLShaderPrecisionFormat() throws Exception {
         test("WebGLShaderPrecisionFormat");
     }
@@ -7274,8 +9637,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void webGLSync() throws Exception {
         test("WebGLSync");
     }
@@ -7284,8 +9646,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void webGLTexture() throws Exception {
         test("WebGLTexture");
     }
@@ -7294,8 +9655,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("undefined")
+    public void webGLTimerQueryEXT() throws Exception {
+        test("WebGLTimerQueryEXT");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void webGLTransformFeedback() throws Exception {
         test("WebGLTransformFeedback");
     }
@@ -7304,8 +9673,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void webGLUniformLocation() throws Exception {
         test("WebGLUniformLocation");
     }
@@ -7314,10 +9682,18 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void webGLVertexArrayObject() throws Exception {
         test("WebGLVertexArrayObject");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void webGLVertexArrayObjectOES() throws Exception {
+        test("WebGLVertexArrayObjectOES");
     }
 
     /**
@@ -7342,8 +9718,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void webKitCSSMatrix() throws Exception {
         test("WebKitCSSMatrix");
     }
@@ -7466,6 +9841,15 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
+    @Alerts("undefined")
+    public void webkitRTCSessionDescription() throws Exception {
+        test("webkitRTCSessionDescription");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
     @Alerts(DEFAULT = "undefined",
             CHROME = "function",
             EDGE = "function")
@@ -7530,10 +9914,18 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void webkitURL() throws Exception {
         test("webkitURL");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void webSMS() throws Exception {
+        test("WebSMS");
     }
 
     /**
@@ -7551,10 +9943,36 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("undefined")
+    public void webSockets() throws Exception {
+        test("WebSockets");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void webVTT() throws Exception {
+        test("WebVTT");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void wheelEvent() throws Exception {
         test("WheelEvent");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void wifiManager() throws Exception {
+        test("WifiManager");
     }
 
     /**
@@ -7563,8 +9981,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void window() throws Exception {
         test("Window");
     }
@@ -7574,8 +9991,62 @@ public class HostTypeOfTest extends WebDriverTestCase {
      */
     @Test
     @Alerts("undefined")
+    public void windowBase64() throws Exception {
+        test("WindowBase64");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void windowClient() throws Exception {
+        test("WindowClient");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void windowEventHandlers() throws Exception {
+        test("WindowEventHandlers");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("ReferenceError")
+    public void windowEventHandlers_onbeforeprint() throws Exception {
+        test("WindowEventHandlers.onbeforeprint");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void windowOrWorkerGlobalScope() throws Exception {
+        test("WindowOrWorkerGlobalScope");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
     public void windowProperties() throws Exception {
         test("WindowProperties");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void windowTimers() throws Exception {
+        test("WindowTimers");
     }
 
     /**
@@ -7594,6 +10065,33 @@ public class HostTypeOfTest extends WebDriverTestCase {
      */
     @Test
     @Alerts("undefined")
+    public void workerGlobalScope() throws Exception {
+        test("WorkerGlobalScope");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void workerLocation() throws Exception {
+        test("WorkerLocation");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
+    public void workerNavigator() throws Exception {
+        test("WorkerNavigator");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("undefined")
     public void xDomainRequest() throws Exception {
         test("XDomainRequest");
     }
@@ -7604,8 +10102,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void xmlDocument() throws Exception {
         test("XMLDocument");
     }
@@ -7625,8 +10122,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "object")
+    @Alerts("function")
     public void xmlHttpRequestEventTarget() throws Exception {
         test("XMLHttpRequestEventTarget");
     }
@@ -7635,8 +10131,16 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("undefined")
+    public void xmlHttpRequestProgressEvent() throws Exception {
+        test("XMLHttpRequestProgressEvent");
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("function")
     public void xmlHttpRequestUpload() throws Exception {
         test("XMLHttpRequestUpload");
     }
@@ -7658,8 +10162,7 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void xPathEvaluator() throws Exception {
         test("XPathEvaluator");
     }
@@ -7668,14 +10171,13 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void xPathExpression() throws Exception {
         test("XPathExpression");
     }
 
     /**
-     * Test {@link org.htmlunit.javascript.host.dom.XPathNSResolver}.
+     * Test {@link org.htmlunit.javascript.host.dom.NativeXPathNSResolver}.
      *
      * @throws Exception if an error occurs
      */
@@ -7686,24 +10188,12 @@ public class HostTypeOfTest extends WebDriverTestCase {
     }
 
     /**
-     * Test {@link org.htmlunit.javascript.host.dom.XPathNSResolver}.
-     *
-     * @throws Exception if an error occurs
-     */
-    @Test
-    @Alerts("undefined")
-    public void nativeXPathNSResolver() throws Exception {
-        test("NativeXPathNSResolver");
-    }
-
-    /**
      * Test {@link org.htmlunit.javascript.host.dom.XPathResult}.
      *
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void xPathResult() throws Exception {
         test("XPathResult");
     }
@@ -7723,9 +10213,39 @@ public class HostTypeOfTest extends WebDriverTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = "function",
-            IE = "undefined")
+    @Alerts("function")
     public void xsltProcessor() throws Exception {
         test("XSLTProcessor");
+    }
+
+    /**
+     * Test {@link org.htmlunit.javascript.host.abort.AbortController}.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts("function")
+    public void abortController() throws Exception {
+        test("AbortController");
+    }
+
+    /**
+     * Test {@link org.htmlunit.javascript.host.abort.AbortSignal}.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts("function")
+    public void abortSignal() throws Exception {
+        test("AbortSignal");
+    }
+
+    /**
+     * @throws Exception if an error occurs
+     */
+    @Test
+    @Alerts("undefined")
+    public void global() throws Exception {
+        test("global");
     }
 }

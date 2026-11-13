@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,10 @@
 package org.htmlunit.util.geometry;
 
 /**
- * Simple 2D shape line.
+ * Simple 2D line segment shape.
  *
  * @author Ronald Brill
+ * @author Ashutosh Panda
  */
 public class Line2D implements Shape2D {
 
@@ -31,7 +32,8 @@ public class Line2D implements Shape2D {
     private final double yIntercept_;
 
     /**
-     * Ctor.
+     * Creates a new line segment between the two given points.
+     *
      * @param start the start point
      * @param end the end point
      */
@@ -40,11 +42,12 @@ public class Line2D implements Shape2D {
     }
 
     /**
-     * Ctor.
-     * @param x1 the x value of the start point
-     * @param y1 the y value of the start point
-     * @param x2 the x value of the end point
-     * @param y2 the y value of the end point
+     * Creates a new line segment between the two given coordinates.
+     *
+     * @param x1 the x coordinate of the start point
+     * @param y1 the y coordinate of the start point
+     * @param x2 the x coordinate of the end point
+     * @param y2 the y coordinate of the end point
      */
     public Line2D(final double x1, final double y1, final double x2, final double y2) {
         startX_ = x1;
@@ -52,7 +55,7 @@ public class Line2D implements Shape2D {
         endX_ = x2;
         endY_ = y2;
 
-        isVertical_ = Math.abs(startX_ - endX_) < epsilon;
+        isVertical_ = Math.abs(startX_ - endX_) < EPSILON;
         if (isVertical_) {
             slope_ = Double.NaN;
             yIntercept_ = Double.NaN;
@@ -65,8 +68,11 @@ public class Line2D implements Shape2D {
     }
 
     /**
-     * @param line the line to intersect this with
-     * @return the intersection point of the two lines or null if they are parallel
+     * Returns the intersection point of this line with the given line,
+     * or {@code null} if the lines are parallel.
+     *
+     * @param line the line to intersect with
+     * @return the intersection point, or {@code null} if the lines are parallel
      */
     public Point2D intersect(final Line2D line) {
         if (isVertical_ && line.isVertical_) {
@@ -84,7 +90,7 @@ public class Line2D implements Shape2D {
         }
 
         // parallel?
-        if (Math.abs(slope_ - line.slope_) < epsilon) {
+        if (Math.abs(slope_ - line.slope_) < EPSILON) {
             return null;
         }
 
@@ -101,13 +107,13 @@ public class Line2D implements Shape2D {
     @Override
     public boolean contains(final double x, final double y) {
         if (isVertical_) {
-            if (Math.abs(startX_ - x) > epsilon) {
+            if (Math.abs(startX_ - x) > EPSILON) {
                 return false;
             }
         }
         else {
             final double testY = slope_ * x + yIntercept_;
-            if (Math.abs(y - testY) > epsilon) {
+            if (Math.abs(y - testY) > EPSILON) {
                 return false;
             }
 
@@ -117,12 +123,8 @@ public class Line2D implements Shape2D {
             }
         }
 
-        if (y < startY_ && y < endY_
-                || (y > startY_ && y > endY_)) {
-            return false;
-        }
-
-        return true;
+        return !(y < startY_ && y < endY_
+                || (y > startY_ && y > endY_));
     }
 
     /**
@@ -130,7 +132,7 @@ public class Line2D implements Shape2D {
      */
     @Override
     public boolean isEmpty() {
-        return Math.abs(startX_ - endX_) < epsilon && Math.abs(startY_ - endY_) < epsilon;
+        return Math.abs(startX_ - endX_) < EPSILON && Math.abs(startY_ - endY_) < EPSILON;
     }
 
     @Override

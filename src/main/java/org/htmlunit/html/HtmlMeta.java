@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +17,16 @@ package org.htmlunit.html;
 import java.net.URL;
 import java.util.Map;
 
+import org.htmlunit.HttpHeader;
 import org.htmlunit.SgmlPage;
 import org.htmlunit.WebClient;
+import org.htmlunit.html.csp.ContentSecurityPolicy;
 
 /**
  * Wrapper for the HTML element "meta".
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
- * @author <a href="mailto:cse@dynabean.de">Christian Sell</a>
+ * @author Mike Bowler
+ * @author Christian Sell
  * @author Ahmed Ashour
  * @author Frank Danek
  * @author Ronald Brill
@@ -34,8 +36,10 @@ public class HtmlMeta extends HtmlElement {
     /** The HTML tag represented by this element. */
     public static final String TAG_NAME = "meta";
 
+    private boolean contentSecurityPolicyProcessed_;
+
     /**
-     * Creates an instance of HtmlMeta
+     * Creates an instance of HtmlMeta.
      *
      * @param qualifiedName the qualified name of the element type to instantiate
      * @param page the HtmlPage that contains this element
@@ -56,6 +60,24 @@ public class HtmlMeta extends HtmlElement {
 
     /**
      * {@inheritDoc}
+     * Applies a Content-Security-Policy defined by this element; like in browsers this
+     * is only done if the element is a child of the head element.
+     */
+    @Override
+    public void onAllChildrenAddedToPage(final boolean postponed) {
+        super.onAllChildrenAddedToPage(postponed);
+
+        if (!contentSecurityPolicyProcessed_
+                && HttpHeader.CONTENT_SECURIRY_POLICY.equalsIgnoreCase(getHttpEquivAttribute().trim())
+                && getParentNode() instanceof HtmlHead
+                && getPage() instanceof HtmlPage htmlPage) {
+            contentSecurityPolicyProcessed_ = true;
+            ContentSecurityPolicy.addMetaPolicy(htmlPage, getContentAttribute());
+        }
+    }
+
+    /**
+     * {@inheritDoc}
      */
     @Override
     public boolean mayBeDisplayed() {
@@ -68,7 +90,7 @@ public class HtmlMeta extends HtmlElement {
      * documentation for details on the use of this attribute.
      *
      * @return the value of the attribute {@code http-equiv}
-     * or an empty string if that attribute isn't defined.
+     *         or an empty string if that attribute isn't defined.
      */
     public final String getHttpEquivAttribute() {
         return getAttribute("http-equiv");
@@ -80,10 +102,10 @@ public class HtmlMeta extends HtmlElement {
      * documentation for details on the use of this attribute.
      *
      * @return the value of the attribute {@code name}
-     * or an empty string if that attribute isn't defined.
+     *         or an empty string if that attribute isn't defined.
      */
     public final String getNameAttribute() {
-        return getAttributeDirect("name");
+        return getAttributeDirect(NAME_ATTRIBUTE);
     }
 
     /**
@@ -92,7 +114,7 @@ public class HtmlMeta extends HtmlElement {
      * documentation for details on the use of this attribute.
      *
      * @return the value of the attribute {@code content}
-     * or an empty string if that attribute isn't defined.
+     *         or an empty string if that attribute isn't defined.
      */
     public final String getContentAttribute() {
         return getAttributeDirect("content");
@@ -104,7 +126,7 @@ public class HtmlMeta extends HtmlElement {
      * documentation for details on the use of this attribute.
      *
      * @return the value of the attribute {@code scheme}
-     * or an empty string if that attribute isn't defined.
+     *         or an empty string if that attribute isn't defined.
      */
     public final String getSchemeAttribute() {
         return getAttributeDirect("scheme");

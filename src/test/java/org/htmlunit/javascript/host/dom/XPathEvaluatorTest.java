@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,9 @@
  */
 package org.htmlunit.javascript.host.dom;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import org.htmlunit.WebDriverTestCase;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
+import org.htmlunit.junit.annotation.Alerts;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link XPathEvaluator}.
@@ -29,21 +25,16 @@ import org.htmlunit.junit.BrowserRunner.HtmlUnitNYI;
  * @author Chuck Dumont
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class XPathEvaluatorTest extends WebDriverTestCase {
 
     /**
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = {"function", "[object XPathEvaluator]", "[object NativeXPathNSResolver]", "first", "second", ""},
-            FF = {"function", "[object XPathEvaluator]", "[object HTMLHtmlElement]", "first", "second", ""},
-            FF_ESR = {"function", "[object XPathEvaluator]", "[object HTMLHtmlElement]", "first", "second", ""},
-            IE = {"undefined", "exception", ""})
-    @HtmlUnitNYI(FF = {"function", "[object XPathEvaluator]", "[object NativeXPathNSResolver]", "first", "second", ""},
-            FF_ESR = {"function", "[object XPathEvaluator]", "[object NativeXPathNSResolver]", "first", "second", ""})
-    public void simple() throws Exception {
-        final String html = "<html><body>\n"
+    @Alerts({"function", "[object XPathEvaluator]", "[object HTMLHtmlElement]", "first", "second", ""})
+    public void ctor() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<span id='first'>hello</span>\n"
             + "<div><span id='second'>world</span></div>\n"
             + "<script>\n"
@@ -72,10 +63,138 @@ public class XPathEvaluatorTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "exception",
-            IE = "window.XPathEvaluator undefined")
+    @Alerts({"function", "[object XPathEvaluator]", "[object HTMLHtmlElement]", "first", "second", ""})
+    public void evaluate() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
+            + "<span id='first'>hello</span>\n"
+            + "<div><span id='second'>world</span></div>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "var res = '';\n"
+            + "try {\n"
+            + "  res += typeof window.XPathEvaluator + '§';\n"
+            + "  var xpe = new XPathEvaluator();\n"
+            + "  res += xpe + '§';\n"
+            + "  var nsResolver = xpe.createNSResolver(document.documentElement);\n"
+            + "  res += nsResolver + '§';\n"
+            + "  var result = xpe.evaluate('//span', document.body, nsResolver, 0, null);\n"
+            + "  var found = [];\n"
+            + "  var next;\n"
+            + "  while (next = result.iterateNext()) {\n"
+            + "    res += next.id + '§';\n"
+            + "  }\n"
+            + "} catch(e) { res += 'exception' + '§'; }\n"
+            + "log(res);\n"
+            + "</script></body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"function", "[object XPathEvaluator]", "[object HTMLHtmlElement]", "first", "second", ""})
+    public void evaluateWithoutResult() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
+            + "<span id='first'>hello</span>\n"
+            + "<div><span id='second'>world</span></div>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "var res = '';\n"
+            + "try {\n"
+            + "  res += typeof window.XPathEvaluator + '§';\n"
+            + "  var xpe = new XPathEvaluator();\n"
+            + "  res += xpe + '§';\n"
+            + "  var nsResolver = xpe.createNSResolver(document.documentElement);\n"
+            + "  res += nsResolver + '§';\n"
+            + "  var result = xpe.evaluate('//span', document.body, nsResolver, 0);\n"
+            + "  var found = [];\n"
+            + "  var next;\n"
+            + "  while (next = result.iterateNext()) {\n"
+            + "    res += next.id + '§';\n"
+            + "  }\n"
+            + "} catch(e) { res += 'exception' + '§'; }\n"
+            + "log(res);\n"
+            + "</script></body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"function", "[object XPathEvaluator]", "[object HTMLHtmlElement]", "first", "second", ""})
+    public void evaluateWithoutTypeResult() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
+            + "<span id='first'>hello</span>\n"
+            + "<div><span id='second'>world</span></div>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "var res = '';\n"
+            + "try {\n"
+            + "  res += typeof window.XPathEvaluator + '§';\n"
+            + "  var xpe = new XPathEvaluator();\n"
+            + "  res += xpe + '§';\n"
+            + "  var nsResolver = xpe.createNSResolver(document.documentElement);\n"
+            + "  res += nsResolver + '§';\n"
+            + "  var result = xpe.evaluate('//span', document.body, nsResolver);\n"
+            + "  var found = [];\n"
+            + "  var next;\n"
+            + "  while (next = result.iterateNext()) {\n"
+            + "    res += next.id + '§';\n"
+            + "  }\n"
+            + "} catch(e) { res += 'exception' + '§'; }\n"
+            + "log(res);\n"
+            + "</script></body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"function", "[object XPathEvaluator]", "[object HTMLHtmlElement]", "first", "second", ""})
+    public void evaluateWithoutResolverTypeResult() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
+            + "<span id='first'>hello</span>\n"
+            + "<div><span id='second'>world</span></div>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "var res = '';\n"
+            + "try {\n"
+            + "  res += typeof window.XPathEvaluator + '§';\n"
+            + "  var xpe = new XPathEvaluator();\n"
+            + "  res += xpe + '§';\n"
+            + "  var nsResolver = xpe.createNSResolver(document.documentElement);\n"
+            + "  res += nsResolver + '§';\n"
+            + "  var result = xpe.evaluate('//span', document.body);\n"
+            + "  var found = [];\n"
+            + "  var next;\n"
+            + "  while (next = result.iterateNext()) {\n"
+            + "    res += next.id + '§';\n"
+            + "  }\n"
+            + "} catch(e) { res += 'exception' + '§'; }\n"
+            + "log(res);\n"
+            + "</script></body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("TypeError")
     public void namespacesWithNodeInArray() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  var xml = "
@@ -97,7 +216,7 @@ public class XPathEvaluatorTest extends WebDriverTestCase {
             + "        var result = xpe.evaluate('/soap:Envelope/soap:books/soap:book/title/text()', "
                                      + "[doc.documentElement], nsResolver, XPathResult.STRING_TYPE, null);\n"
             + "        log(result.stringValue);\n"
-            + "      } catch(e) { log('exception'); }\n"
+            + "      } catch(e) { logEx(e); }\n"
             + "    } else {\n"
             + "      log('window.XPathEvaluator undefined');\n"
             + "    }\n"
@@ -112,10 +231,10 @@ public class XPathEvaluatorTest extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "Immortality",
-            IE = "window.XPathEvaluator undefined")
+    @Alerts("Immortality")
     public void namespacesWithCustomNSResolver() throws Exception {
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>\n"
             + LOG_TITLE_FUNCTION
             + "  function nsResolver(prefix) {\n"
@@ -145,6 +264,133 @@ public class XPathEvaluatorTest extends WebDriverTestCase {
             + "  }\n"
             + "</script></head><body onload='test()'>\n"
             + "</body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("[object XPathExpression]")
+    public void createExpression() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "var res = '';\n"
+            + "try {\n"
+            + "  var expression = new XPathEvaluator().createExpression('//span');\n"
+            + "  res += expression;\n"
+            + "} catch(e) { res += e.name; }\n"
+            + "log(res);\n"
+            + "</script></body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("exception")
+    public void createExpressionNoXPath() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "var res = '';\n"
+            + "try {\n"
+            + "  var expression = new XPathEvaluator().createExpression();\n"
+            + "  res += expression;\n"
+            + "} catch(e) { res += 'exception'; }\n"
+            + "log(res);\n"
+            + "</script></body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"function", "[object XPathEvaluator]", "[object XPathExpression]§"})
+    public void createExpressionUndefinedXPath() throws Exception {
+        final String html = DOCTYPE_HTML
+                + "<html><body>\n"
+                + "<span id='first'>hello</span>\n"
+                + "<div><span id='second'>world</span></div>\n"
+                + "<script>\n"
+                + LOG_TITLE_FUNCTION
+                + "var res = '';\n"
+                + "try {\n"
+                + "  res += typeof window.XPathEvaluator + '§';\n"
+                + "  var xpe = new XPathEvaluator();\n"
+                + "  res += xpe + '§';\n"
+                + "  var expression = xpe.createExpression(undefined);\n"
+                + "  res += expression + '§';\n"
+                + "  var result = expression.evaluate(document.body);\n"
+                + "  var found = [];\n"
+                + "  var next;\n"
+                + "  while (next = result.iterateNext()) {\n"
+                + "    res += next.id + '§';\n"
+                + "  }\n"
+                + "} catch(e) { res += 'exception' + e + '§'; }\n"
+                + "log(res);\n"
+                + "</script></body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts({"function", "[object XPathEvaluator]", "[object XPathExpression]§"})
+    public void createExpressionNullXPath() throws Exception {
+        final String html = DOCTYPE_HTML
+                + "<html><body>\n"
+                + "<span id='first'>hello</span>\n"
+                + "<div><span id='second'>world</span></div>\n"
+                + "<script>\n"
+                + LOG_TITLE_FUNCTION
+                + "var res = '';\n"
+                + "try {\n"
+                + "  res += typeof window.XPathEvaluator + '§';\n"
+                + "  var xpe = new XPathEvaluator();\n"
+                + "  res += xpe + '§';\n"
+                + "  var expression = xpe.createExpression(null);\n"
+                + "  res += expression + '§';\n"
+                + "  var result = expression.evaluate(document.body);\n"
+                + "  var found = [];\n"
+                + "  var next;\n"
+                + "  while (next = result.iterateNext()) {\n"
+                + "    res += next.id + '§';\n"
+                + "  }\n"
+                + "} catch(e) { res += 'exception' + '§'; }\n"
+                + "log(res);\n"
+                + "</script></body></html>";
+
+        loadPageVerifyTitle2(html);
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts("SyntaxError")
+    public void createExpressionInvalid() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
+            + "<script>\n"
+            + LOG_TITLE_FUNCTION
+            + "var res = '';\n"
+            + "try {\n"
+            + "  var expression = new XPathEvaluator().createExpression('@@');\n"
+            + "  res += expression;\n"
+            + "} catch(e) { res += e.name; }\n"
+            + "log(res);\n"
+            + "</script></body></html>";
 
         loadPageVerifyTitle2(html);
     }

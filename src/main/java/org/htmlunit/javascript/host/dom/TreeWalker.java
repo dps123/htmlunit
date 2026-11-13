@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,31 +14,23 @@
  */
 package org.htmlunit.javascript.host.dom;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
-
-import org.w3c.dom.DOMException;
-
 import org.htmlunit.html.DomNode;
 import org.htmlunit.html.HtmlDomTreeWalker;
 import org.htmlunit.javascript.HtmlUnitScriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.configuration.JsxSetter;
-
-import org.htmlunit.corejs.javascript.Context;
+import org.w3c.dom.DOMException;
 
 /**
  * The JavaScript object that represents a {@code TreeWalker}.
  *
  * @see <a href="http://www.w3.org/TR/DOM-Level-2-Traversal-Range/traversal.html">
- * DOM-Level-2-Traversal-Range</a>
- * @author <a href="mailto:mike@10gen.com">Mike Dirolf</a>
+ *     DOM-Level-2-Traversal-Range</a>
+ * @author Mike Dirolf
  * @author Frank Danek
  * @author Ahmed Ashour
  * @author Ronald Brill
@@ -52,14 +44,15 @@ public class TreeWalker extends HtmlUnitScriptable {
      * Creates an instance.
      */
     public TreeWalker() {
+        super();
     }
 
     /**
      * Creates an instance.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
+    @JsxConstructor
     public void jsConstructor() {
-        throw Context.reportRuntimeError("Illegal constructor.");
+        throw JavaScriptEngine.typeErrorIllegalConstructor();
     }
 
     /**
@@ -74,16 +67,14 @@ public class TreeWalker extends HtmlUnitScriptable {
      *          or {@code null} to indicate no filter.
      * @param expandEntityReferences If false, the contents of
      *          EntityReference nodes are not present in the logical view.
-     * @throws DOMException on attempt to create a TreeWalker with a root that
-     *          is {@code null}.
      */
     public TreeWalker(final Node root,
                       final int whatToShow,
                       final org.w3c.dom.traversal.NodeFilter filter,
-                      final boolean expandEntityReferences) throws DOMException {
+                      final boolean expandEntityReferences) {
+        super();
         if (root == null) {
-            Context.throwAsScriptRuntimeEx(new DOMException(DOMException.NOT_SUPPORTED_ERR,
-                                   "root must not be null"));
+            throw JavaScriptEngine.typeError("root must not be null");
         }
         walker_ = new HtmlDomTreeWalker(root.getDomNodeOrDie(), whatToShow, filter, expandEntityReferences);
     }
@@ -126,16 +117,6 @@ public class TreeWalker extends HtmlUnitScriptable {
     }
 
     /**
-     * Gets the flag specifying whether or not to reject EntityReference nodes.
-     *
-     * @return the value of the expandEntityReferences flag
-     */
-    @JsxGetter(IE)
-    public boolean isExpandEntityReferences() {
-        return walker_.getExpandEntityReferences();
-    }
-
-    /**
      * Gets the node at which the TreeWalker is currently positioned.
      *
      * @return the currentNode
@@ -169,34 +150,21 @@ public class TreeWalker extends HtmlUnitScriptable {
      * @return the whatToShow constant for the type of specified node
      */
     static int getFlagForNode(final Node node) {
-        switch (node.getNodeType()) {
-            case Node.ELEMENT_NODE:
-                return NodeFilter.SHOW_ELEMENT;
-            case Node.ATTRIBUTE_NODE:
-                return NodeFilter.SHOW_ATTRIBUTE;
-            case Node.TEXT_NODE:
-                return NodeFilter.SHOW_TEXT;
-            case Node.CDATA_SECTION_NODE:
-                return NodeFilter.SHOW_CDATA_SECTION;
-            case Node.ENTITY_REFERENCE_NODE:
-                return NodeFilter.SHOW_ENTITY_REFERENCE;
-            case Node.ENTITY_NODE:
-                return NodeFilter.SHOW_ENTITY;
-            case Node.PROCESSING_INSTRUCTION_NODE:
-                return NodeFilter.SHOW_PROCESSING_INSTRUCTION;
-            case Node.COMMENT_NODE:
-                return NodeFilter.SHOW_COMMENT;
-            case Node.DOCUMENT_NODE:
-                return NodeFilter.SHOW_DOCUMENT;
-            case Node.DOCUMENT_TYPE_NODE:
-                return NodeFilter.SHOW_DOCUMENT_TYPE;
-            case Node.DOCUMENT_FRAGMENT_NODE:
-                return NodeFilter.SHOW_DOCUMENT_FRAGMENT;
-            case Node.NOTATION_NODE:
-                return NodeFilter.SHOW_NOTATION;
-            default:
-                return 0;
-        }
+        return switch (node.getNodeType()) {
+            case Node.ELEMENT_NODE -> NodeFilter.SHOW_ELEMENT;
+            case Node.ATTRIBUTE_NODE -> NodeFilter.SHOW_ATTRIBUTE;
+            case Node.TEXT_NODE -> NodeFilter.SHOW_TEXT;
+            case Node.CDATA_SECTION_NODE -> NodeFilter.SHOW_CDATA_SECTION;
+            case Node.ENTITY_REFERENCE_NODE -> NodeFilter.SHOW_ENTITY_REFERENCE;
+            case Node.ENTITY_NODE -> NodeFilter.SHOW_ENTITY;
+            case Node.PROCESSING_INSTRUCTION_NODE -> NodeFilter.SHOW_PROCESSING_INSTRUCTION;
+            case Node.COMMENT_NODE -> NodeFilter.SHOW_COMMENT;
+            case Node.DOCUMENT_NODE -> NodeFilter.SHOW_DOCUMENT;
+            case Node.DOCUMENT_TYPE_NODE -> NodeFilter.SHOW_DOCUMENT_TYPE;
+            case Node.DOCUMENT_FRAGMENT_NODE -> NodeFilter.SHOW_DOCUMENT_FRAGMENT;
+            case Node.NOTATION_NODE -> NodeFilter.SHOW_NOTATION;
+            default -> 0;
+        };
     }
 
     /**
@@ -247,13 +215,13 @@ public class TreeWalker extends HtmlUnitScriptable {
     }
 
     /**
-      * Moves the TreeWalker to the previous sibling of the current node, and
-      * returns the new node. If the current node has no visible previous
-      * sibling, returns {@code null}, and retains the current node.
-      *
-      * @return The new node, or {@code null} if the current node has no
-      *          previous sibling in the TreeWalker's logical view.
-      */
+     * Moves the TreeWalker to the previous sibling of the current node, and
+     * returns the new node. If the current node has no visible previous
+     * sibling, returns {@code null}, and retains the current node.
+     *
+     * @return The new node, or {@code null} if the current node has no
+     *          previous sibling in the TreeWalker's logical view.
+     */
     @JsxFunction
     public Node previousSibling() {
         return getNodeOrNull(walker_.previousSibling());

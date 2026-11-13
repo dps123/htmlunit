@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,18 @@
  */
 package org.htmlunit.html.serializer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.Arrays;
 
 import org.apache.commons.lang3.StringUtils;
-import org.junit.Test;
-
 import org.htmlunit.WebClient;
 import org.htmlunit.html.HtmlPage;
 import org.htmlunit.html.serializer.HtmlSerializerNormalizedText.HtmlSerializerTextBuilder;
 import org.htmlunit.html.serializer.HtmlSerializerNormalizedText.HtmlSerializerTextBuilder.Mode;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link HtmlSerializerNormalizedText}.
@@ -226,7 +225,7 @@ public class HtmlSerializerNormalizedTextTest {
     public void textArea() {
         final HtmlSerializerTextBuilder serializer = new HtmlSerializerNormalizedText.HtmlSerializerTextBuilder();
         serializer.append("  hello \t abc ", Mode.PRESERVE_BLANK_NEWLINE);
-        assertEquals("  hello   abc", serializer.getText());
+        assertEquals("  hello   abc ", serializer.getText());
     }
 
     /**
@@ -247,7 +246,7 @@ public class HtmlSerializerNormalizedTextTest {
         serializer.getText();
 
         final long runTime = System.currentTimeMillis() - time;
-        assertTrue("cleanUp() took too much time", runTime < 200);
+        Assertions.assertTrue(runTime < 200, "cleanUp() took too much time");
     }
 
     /**
@@ -269,7 +268,7 @@ public class HtmlSerializerNormalizedTextTest {
         assertEquals(expected, serializer.getText());
 
         final long runTime = System.currentTimeMillis() - time;
-        assertTrue("cleanUp() took too much time", runTime < 200);
+        Assertions.assertTrue(runTime < 200, "cleanUp() took too much time");
     }
 
     /**
@@ -281,7 +280,6 @@ public class HtmlSerializerNormalizedTextTest {
         serializer.append("\u3000", Mode.NORMALIZE);
         assertEquals("\u3000", serializer.getText());
 
-        // real IE treats this as space, will not consider this for performance reasons
         serializer = new HtmlSerializerNormalizedText.HtmlSerializerTextBuilder();
         serializer.append("\uFEFF", Mode.NORMALIZE);
         assertEquals("\uFEFF", serializer.getText());

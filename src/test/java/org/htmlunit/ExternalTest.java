@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,122 +14,144 @@
  */
 package org.htmlunit;
 
-import static java.nio.charset.StandardCharsets.ISO_8859_1;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
 import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.net.UnknownHostException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.junit.Assert;
-import org.junit.Test;
-
+import org.apache.maven.artifact.versioning.ComparableVersion;
+import org.apache.maven.model.Model;
+import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.htmlunit.html.DomNode;
 import org.htmlunit.html.DomNodeList;
 import org.htmlunit.html.HtmlAnchor;
 import org.htmlunit.html.HtmlPage;
 import org.htmlunit.xml.XmlPage;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
- * Tests against external web sites, this should be done once every while.
+ * Tests against external websites, this should be done once every while.
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
  */
 public class ExternalTest {
 
-    static String SONATYPE_SNAPSHOT_REPO_URL_ = "https://s01.oss.sonatype.org/content/repositories/snapshots/";
-    static String MAVEN_REPO_URL_ = "https://repo1.maven.org/maven2/";
+    static final String SONATYPE_SNAPSHOT_REPO_URL_ =
+                        "https://central.sonatype.com/repository/maven-snapshots/";
+    static final String MAVEN_REPO_URL_ = "https://repo1.maven.org/maven2/";
 
     /** Chrome driver. */
-    static String CHROME_DRIVER_ = "111.0.5563.64";
-    static String CHROME_DRIVER_URL_ = "https://chromedriver.chromium.org/downloads";
+    static final String CHROME_DRIVER_ = "157.0.8103";
+    static final String CHROME_DRIVER_URL_ =
+            "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json";
 
-    static String EDGE_DRIVER_ = "111.0.1661.51";
-    static String EDGE_DRIVER_URL_ = "https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/";
+    static final String EDGE_DRIVER_ = "157.0.4341";
+    static final String EDGE_DRIVER_URL_ = "https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/";
 
     /** Gecko driver. */
-    static String GECKO_DRIVER_ = "0.32.2";
-    static String GECKO_DRIVER_URL_ = "https://github.com/mozilla/geckodriver/releases/latest";
-
-    /** IE driver. */
-    static String IE_DRIVER_ = "3.150.1.0";
+    static final String GECKO_DRIVER_ = "0.37.1";
+    static final String GECKO_DRIVER_URL_ = "https://github.com/mozilla/geckodriver/releases/latest";
 
     /**
      * Tests the current environment matches the expected setup.
-     * @throws Exception if an error occurs
      */
     @Test
-    public void testEnvironment() throws Exception {
-        assertEquals("en_US", Locale.getDefault().toString());
+    public void testEnvironment() {
+        Assertions.assertEquals("en_US", Locale.getDefault().toString());
     }
 
     /**
      * Tests that POM dependencies are the latest.
      *
-     * Currently it is configured to check every week.
-     *
      * @throws Exception if an error occurs
      */
     @Test
     public void pom() throws Exception {
-        final Map<String, String> properties = new HashMap<>();
-        final List<String> lines = FileUtils.readLines(new File("pom.xml"), ISO_8859_1);
+        final File pomFile = new File("pom.xml");
+        if (!pomFile.exists()) {
+            throw new IOException("POM file not found: " + pomFile.getAbsolutePath());
+        }
 
-        final List<String> wrongVersions = new LinkedList<String>();
-        for (int i = 0; i < lines.size(); i++) {
-            final String line = lines.get(i);
-            if (line.trim().equals("<properties>")) {
-                processProperties(lines, i + 1, properties);
+        MavenXpp3Reader reader = new MavenXpp3Reader();
+        try (FileReader fileReader = new FileReader(pomFile)) {
+            final Model model = reader.read(fileReader);
+
+            final Pattern ignorePattern = Pattern.compile("" + model.getProperties().get("maven.version.ignore"));
+
+            final List<String> wrongVersions = new LinkedList<>();
+
+            // Dependencies
+            for (var dep : model.getDependencies()) {
+                checkVersion(dep.getGroupId(), dep.getArtifactId(), dep.getVersion(),
+                        model, ignorePattern, wrongVersions);
             }
-            if (line.contains("artifactId") && !line.contains(">htmlunit<")) {
-                final String artifactId = getValue(line);
-                final String groupId = getValue(lines.get(i - 1));
-                if (!lines.get(i + 1).contains("</exclusion>")) {
-                    String version = getValue(lines.get(i + 1));
-                    if (version.startsWith("${")) {
-                        version = properties.get(version.substring(2, version.length() - 1));
+
+            // Plugins declared directly under <build><plugins>
+            if (model.getBuild() != null) {
+                if (model.getBuild().getPlugins() != null) {
+                    for (var plugin : model.getBuild().getPlugins()) {
+                        checkVersion(plugin.getGroupId(), plugin.getArtifactId(), plugin.getVersion(),
+                                model, ignorePattern, wrongVersions);
+
+                        // NEW: check dependencies declared inside the plugin itself
+                        if (plugin.getDependencies() != null) {
+                            for (var dep : plugin.getDependencies()) {
+                                checkVersion(dep.getGroupId(), dep.getArtifactId(), dep.getVersion(),
+                                        model, ignorePattern, wrongVersions);
+                            }
+                        }
                     }
-                    try {
-                        assertVersion(groupId, artifactId, version);
-                    }
-                    catch (final AssertionError e) {
-                        wrongVersions.add(e.getMessage());
+                }
+
+                if (model.getBuild().getPluginManagement() != null
+                        && model.getBuild().getPluginManagement().getPlugins() != null) {
+                    for (var plugin : model.getBuild().getPluginManagement().getPlugins()) {
+                        checkVersion(plugin.getGroupId(), plugin.getArtifactId(), plugin.getVersion(),
+                                model, ignorePattern, wrongVersions);
+
+                        // NEW
+                        if (plugin.getDependencies() != null) {
+                            for (var dep : plugin.getDependencies()) {
+                                checkVersion(dep.getGroupId(), dep.getArtifactId(), dep.getVersion(),
+                                        model, ignorePattern, wrongVersions);
+                            }
+                        }
                     }
                 }
             }
-        }
 
-        if (wrongVersions.size() > 0) {
-            Assert.fail(String.join("\n ", wrongVersions));
+            if (!wrongVersions.isEmpty()) {
+                Assertions.fail(String.join("\n ", wrongVersions));
+            }
         }
-
-        assertVersion("org.sonatype.oss", "oss-parent", "9");
     }
 
-    private static void processProperties(final List<String> lines, int i, final Map<String, String> map) {
-        for ( ; i < lines.size(); i++) {
-            final String line = lines.get(i).trim();
-            if (StringUtils.isNotBlank(line) && !line.startsWith("<!--")) {
-                if ("</properties>".equals(line)) {
-                    break;
-                }
-                final String name = line.substring(line.indexOf('<') + 1, line.indexOf('>'));
-                map.put(name, getValue(line));
-            }
+    private static void checkVersion(String groupId, String artifactId, String rawVersion,
+                            Model model, Pattern ignorePattern, List<String> wrongVersions) throws Exception {
+        if (rawVersion == null) {
+            // e.g. version inherited from a parent/BOM - nothing to resolve locally
+            return;
+        }
+
+        String version = rawVersion;
+        if (version.startsWith("${")) {
+            version = "" + model.getProperties().get(version.substring(2, version.length() - 1));
+        }
+
+        try {
+            assertVersion(groupId, artifactId, version, ignorePattern);
+        } catch (final AssertionError e) {
+            wrongVersions.add(e.getMessage());
         }
     }
 
@@ -139,16 +161,13 @@ public class ExternalTest {
      */
     @Test
     public void assertChromeDriver() throws Exception {
-        try (WebClient webClient = buildWebClient()) {
-            final HtmlPage page = webClient.getPage(CHROME_DRIVER_URL_);
-            String content = page.asNormalizedText();
-            content = content.substring(content.indexOf("Current Releases"));
-            content = content.replace("\r\n", "");
+        try (WebClient webClient = new WebClient(BrowserVersion.FIREFOX, false, null, -1)) {
+            final Page page = webClient.getPage(CHROME_DRIVER_URL_);
+            final String content = page.getWebResponse().getContentAsString();
+
             String version = "0.0.0.0";
             final Pattern regex =
-                    Pattern.compile("If you are using Chrome version "
-                            + BrowserVersion.CHROME.getBrowserVersionNumeric()
-                            + ", please download ChromeDriver (\\d*\\.\\d*\\.\\d*\\.\\d*)");
+                    Pattern.compile("\"channels\":\\{\"Stable\":\\{.*?\"version\":\"(\\d*\\.\\d*\\.\\d*)\\.\\d*\"");
             final Matcher matcher = regex.matcher(content);
             while (matcher.find()) {
                 if (version.compareTo(matcher.group(1)) < 0) {
@@ -156,7 +175,7 @@ public class ExternalTest {
                     break;
                 }
             }
-            assertEquals("Chrome Driver", version, CHROME_DRIVER_);
+            Assertions.assertEquals(CHROME_DRIVER_, version);
         }
     }
 
@@ -165,18 +184,21 @@ public class ExternalTest {
      * @throws Exception if an error occurs
      */
     @Test
+    // @Disabled("javascript errors")
     public void assertEdgeDriver() throws Exception {
-        try (WebClient webClient = buildWebClient()) {
+        try (WebClient webClient = new WebClient(BrowserVersion.FIREFOX)) {
+            webClient.getOptions().setThrowExceptionOnScriptError(false);
+
             final HtmlPage page = webClient.getPage(EDGE_DRIVER_URL_);
             String content = page.asNormalizedText();
-            content = content.substring(content.indexOf("Recent versions"));
+            content = content.substring(content.indexOf("Current general public release channel."));
             content = content.replace("\r\n", "");
 
             String version = "0.0.0.0";
             final Pattern regex =
-                    Pattern.compile("Version: ("
+                    Pattern.compile("Version ("
                                 + BrowserVersion.EDGE.getBrowserVersionNumeric()
-                                + "\\.\\d*\\.\\d*\\.\\d*):\\sx86\\s\\|\\sx64");
+                                + "\\.\\d*\\.\\d*)\\.\\d*\\s");
             final Matcher matcher = regex.matcher(content);
             while (matcher.find()) {
                 if (version.compareTo(matcher.group(1)) < 0) {
@@ -184,7 +206,7 @@ public class ExternalTest {
                     break;
                 }
             }
-            assertEquals("Edge Driver", version, EDGE_DRIVER_);
+            Assertions.assertEquals(EDGE_DRIVER_, version);
         }
     }
 
@@ -194,11 +216,11 @@ public class ExternalTest {
      */
     @Test
     public void assertGeckoDriver() throws Exception {
-        try (WebClient webClient = buildWebClient()) {
+        try (WebClient webClient = new WebClient(BrowserVersion.FIREFOX, false, null, -1)) {
             try {
                 final HtmlPage page = webClient.getPage(GECKO_DRIVER_URL_);
                 final DomNodeList<DomNode> divs = page.querySelectorAll("li.breadcrumb-item-selected");
-                assertEquals("Gecko Driver", divs.get(0).asNormalizedText(), "v" + GECKO_DRIVER_);
+                Assertions.assertEquals("v" + GECKO_DRIVER_, divs.get(0).asNormalizedText());
             }
             catch (final FailingHttpStatusCodeException e) {
                 // ignore
@@ -209,55 +231,60 @@ public class ExternalTest {
     /**
      * Tests that the deployed snapshot is not more than two weeks old.
      *
-     * Currently it is configured to check every week.
-     *
      * @throws Exception if an error occurs
      */
     @Test
     public void snapshot() throws Exception {
-        final List<String> lines = FileUtils.readLines(new File("pom.xml"), ISO_8859_1);
-        String version = null;
-        for (int i = 0; i < lines.size(); i++) {
-            if ("<artifactId>htmlunit</artifactId>".equals(lines.get(i).trim())) {
-                version = getValue(lines.get(i + 1));
-                break;
-            }
+        final File pomFile = new File("pom.xml");
+        if (!pomFile.exists()) {
+            throw new IOException("POM file not found: " + pomFile.getAbsolutePath());
         }
-        assertNotNull(version);
-        if (version.contains("SNAPSHOT")) {
-            try (WebClient webClient = buildWebClient()) {
-                final XmlPage page = webClient.getPage(SONATYPE_SNAPSHOT_REPO_URL_
-                                        + "org/htmlunit/htmlunit/" + version + "/maven-metadata.xml");
-                final String timestamp = page.getElementsByTagName("timestamp").get(0).getTextContent();
-                final DateFormat format = new SimpleDateFormat("yyyyMMdd.HHmmss", Locale.ROOT);
-                final long snapshotMillis = format.parse(timestamp).getTime();
-                final long nowMillis = System.currentTimeMillis();
-                final long days = TimeUnit.MILLISECONDS.toDays(nowMillis - snapshotMillis);
-                assertTrue("Snapshot not deployed for " + days + " days", days < 14);
+
+        MavenXpp3Reader reader = new MavenXpp3Reader();
+        try (FileReader fileReader = new FileReader(pomFile)) {
+            final Model model = reader.read(fileReader);
+
+            final String version = model.getVersion();
+            Assertions.assertNotNull(version);
+            if (version.contains("SNAPSHOT")) {
+                try (WebClient webClient = new WebClient(BrowserVersion.FIREFOX, false, null, -1)) {
+                    final String url = SONATYPE_SNAPSHOT_REPO_URL_
+                            + "org/htmlunit/htmlunit/" + version + "/maven-metadata.xml";
+
+                    final XmlPage page = webClient.getPage(url);
+                    final String timestamp = page.getElementsByTagName("timestamp").get(0).getTextContent();
+                    final DateFormat format = new SimpleDateFormat("yyyyMMdd.HHmmss", Locale.ROOT);
+                    final long snapshotMillis = format.parse(timestamp).getTime();
+                    final long nowMillis = System.currentTimeMillis();
+                    final long days = TimeUnit.MILLISECONDS.toDays(nowMillis - snapshotMillis);
+
+                    Assertions.assertTrue(days < 14, "Snapshot not deployed for " + days + " days");
+                }
             }
         }
     }
 
-    private static void assertVersion(final String groupId, final String artifactId, final String version)
+    private static void assertVersion(final String groupId, final String artifactId,
+                            final String pomVersion, final Pattern ignorePattern)
             throws Exception {
-        String latestVersion = null;
+        String latestMavenCentralVersion = null;
         String url = MAVEN_REPO_URL_
                         + groupId.replace('.', '/') + '/'
                         + artifactId.replace('.', '/');
         if (!url.endsWith("/")) {
             url += "/";
         }
-        try (WebClient webClient = buildWebClient()) {
+        try (WebClient webClient = new WebClient(BrowserVersion.FIREFOX, false, null, -1)) {
             webClient.getOptions().setThrowExceptionOnFailingStatusCode(false);
 
             try {
                 final HtmlPage page = webClient.getPage(url);
                 for (final HtmlAnchor anchor : page.getAnchors()) {
-                    String itemVersion = anchor.getTextContent();
-                    itemVersion = itemVersion.substring(0, itemVersion.length() - 1);
-                    if (!isIgnored(groupId, artifactId, itemVersion)) {
-                        if (isVersionAfter(itemVersion, latestVersion)) {
-                            latestVersion = itemVersion;
+                    String mavenCentralVersion = anchor.getTextContent();
+                    mavenCentralVersion = mavenCentralVersion.substring(0, mavenCentralVersion.length() - 1);
+                    if (!isIgnored(groupId, artifactId, mavenCentralVersion, ignorePattern)) {
+                        if (isVersionAfter(mavenCentralVersion, latestMavenCentralVersion)) {
+                            latestMavenCentralVersion = mavenCentralVersion;
                         }
                     }
                 }
@@ -266,111 +293,45 @@ public class ExternalTest {
                 // ignore because our ci machine sometimes fails
             }
         }
-        if (!version.endsWith("-SNAPSHOT")
-                || !isVersionAfter(version.substring(0, version.length() - "-SNAPSHOT".length()), latestVersion)) {
-            assertEquals(groupId + ":" + artifactId, latestVersion, version);
+
+        if (!pomVersion.endsWith("-SNAPSHOT")
+                || !isVersionAfter(
+                        pomVersion.substring(0, pomVersion.length() - "-SNAPSHOT".length()),
+                        latestMavenCentralVersion)) {
+
+            // it is ok if the pom uses a more recent version
+            if (!isVersionAfter(pomVersion, latestMavenCentralVersion)) {
+                Assertions.assertEquals(latestMavenCentralVersion, pomVersion, groupId + ":" + artifactId);
+            }
         }
     }
 
-    private static boolean isVersionAfter(final String version1, final String version2) {
-        if (version2 == null) {
+    private static boolean isVersionAfter(final String pomVersion, final String centralVersion) {
+        if (centralVersion == null) {
             return true;
         }
-        final String[] values1 = version1.split("\\.");
-        final String[] values2 = version2.split("\\.");
-        for (int i = 0; i < values1.length; i++) {
-            if (values1[i].startsWith("v")) {
-                values1[i] = values1[i].substring(1);
-            }
-            try {
-                Integer.parseInt(values1[i]);
-            }
-            catch (final NumberFormatException e) {
-                return false;
-            }
-        }
-        for (int i = 0; i < values2.length; i++) {
-            if (values2[i].startsWith("v")) {
-                values2[i] = values2[i].substring(1);
-            }
-            try {
-                Integer.parseInt(values2[i]);
-            }
-            catch (final NumberFormatException e) {
-                return true;
-            }
-        }
-        for (int i = 0; i < values1.length; i++) {
-            if (i == values2.length) {
-                return true;
-            }
-            final int i1 = Integer.parseInt(values1[i]);
-            final int i2 = Integer.parseInt(values2[i]);
-            if (i1 < i2) {
-                return false;
-            }
-            if (i1 > i2) {
-                return true;
-            }
-        }
-        return false;
+
+        return new ComparableVersion(pomVersion).compareTo(new ComparableVersion(centralVersion)) > 0;
     }
 
-    private static boolean isIgnored(@SuppressWarnings("unused") final String groupId,
-            @SuppressWarnings("unused") final String artifactId, @SuppressWarnings("unused") final String version) {
-        if (groupId.startsWith("org.eclipse.jetty")
-                && (version.startsWith("11.") || version.startsWith("10."))) {
+    private static boolean isIgnored(final String groupId, final String artifactId,
+            final String version, final Pattern ignorePattern) {
+
+        // checkstyle >= 13 requires jdk 21
+        if ("checkstyle".equals(artifactId)
+                && (version.startsWith("13.") || version.startsWith("14."))) {
             return true;
         }
 
-        if ("commons-codec".equals(groupId)
-                && "commons-codec".equals(artifactId)
-                && "20041127.091804".equals(version)) {
-            return true;
-        }
-
-        // there is a serious bug
-        // https://issues.apache.org/jira/browse/IO-744
-        if ("commons-io".equals(artifactId) && (version.startsWith("2.11.0"))) {
-            return true;
-        }
-
-        // version 10 requires JDK 11
-        if ("checkstyle".equals(artifactId) && (version.startsWith("10."))) {
-            return true;
-        }
-        // version 3.11.x seem to requires JDK11
-        if ("maven-site-plugin".equals(artifactId)
-                && (version.startsWith("3.11.") || version.startsWith("3.12."))) {
-            return true;
-        }
-
-        // https://issues.apache.org/jira/browse/MJAVADOC-700
-        // https://stackoverflow.com/questions/69320220/maven-javadoc-listed-classes-twice -->
-        // <sourcepath>${basedir}/src/main/java</sourcepath>
-        if ("maven-javadoc-plugin".equals(artifactId)
-                && (version.startsWith("3.3.") || version.startsWith("3.4."))) {
-            return true;
-        }
-
-        // really old common versions
+        // ancient common versions
         if ("commons-io".equals(artifactId) && (version.startsWith("2003"))) {
             return true;
         }
-        if ("commons-net".equals(artifactId) && (version.startsWith("2003"))) {
+
+        if (ignorePattern.matcher(version).matches()) {
             return true;
         }
 
         return false;
-    }
-
-    private static String getValue(final String line) {
-        return line.substring(line.indexOf('>') + 1, line.lastIndexOf('<'));
-    }
-
-    private static WebClient buildWebClient() {
-        final WebClient webClient = new WebClient();
-        webClient.getOptions().setThrowExceptionOnScriptError(false);
-        return webClient;
     }
 }

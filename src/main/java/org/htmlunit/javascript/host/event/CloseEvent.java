@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,26 +14,19 @@
  */
 package org.htmlunit.javascript.host.event;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
-
+import org.htmlunit.corejs.javascript.ScriptableObject;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
-import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
 
-import org.htmlunit.corejs.javascript.ScriptRuntime;
-import org.htmlunit.corejs.javascript.ScriptableObject;
-import org.htmlunit.corejs.javascript.Undefined;
-
 /**
- * A JavaScript object for {@code CloseEvent}.
+ * JavaScript host object for {@code CloseEvent}.
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent">MDN Documentation</a>
  */
 @JsxClass
 public class CloseEvent extends Event {
@@ -46,6 +39,7 @@ public class CloseEvent extends Event {
      * Creates a new event instance.
      */
     public CloseEvent() {
+        super();
         setType(TYPE_CLOSE);
         reason_ = "";
     }
@@ -60,43 +54,31 @@ public class CloseEvent extends Event {
     }
 
     /**
-     * JavaScript constructor.
+     * Creates an instance of this event.
      *
      * @param type the event type
      * @param details the event details (optional)
      */
     @Override
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
+    @JsxConstructor
     public void jsConstructor(final String type, final ScriptableObject details) {
         super.jsConstructor(type, details);
 
-        if (details != null && !Undefined.isUndefined(details)) {
-            code_ = ScriptRuntime.toInt32(details.get("code"));
-            reason_ = ScriptRuntime.toString(details.get("reason"));
-            wasClean_ = ScriptRuntime.toBoolean(details.get("wasClean"));
+        if (details != null && !JavaScriptEngine.isUndefined(details)) {
+            code_ = JavaScriptEngine.toInt32(details.get("code"));
+            wasClean_ = JavaScriptEngine.toBoolean(details.get("wasClean"));
+
+            final Object reason = details.get("reason");
+            if (!isNullMissingOrUndefined(reason)) {
+                reason_ = JavaScriptEngine.toString(reason);
+            }
         }
     }
 
     /**
-     * Initializes this close event.
-     * @param type the event type
-     * @param bubbles whether or not the event should bubble
-     * @param cancelable whether or not the event the event should be cancelable
-     * @param wasClean the wasClean flag
-     * @param reasonCode the reason code
-     * @param reason the reason
-     */
-    @JsxFunction(IE)
-    public void initCloseEvent(final String type, final boolean bubbles, final boolean cancelable,
-            final boolean wasClean, final int reasonCode, final String reason) {
-        super.initEvent(type, bubbles, cancelable);
-        wasClean_ = wasClean;
-        code_ = reasonCode;
-        reason_ = reason;
-    }
-
-    /**
-     * @return the code
+     * Returns the close code.
+     *
+     * @return the close code
      */
     @JsxGetter
     public int getCode() {
@@ -104,13 +86,17 @@ public class CloseEvent extends Event {
     }
 
     /**
-     * @param code the code
+     * Sets the close code.
+     *
+     * @param code the close code
      */
     public void setCode(final int code) {
         code_ = code;
     }
 
     /**
+     * Returns the reason the connection was closed.
+     *
      * @return the reason
      */
     @JsxGetter
@@ -119,6 +105,8 @@ public class CloseEvent extends Event {
     }
 
     /**
+     * Sets the reason the connection was closed.
+     *
      * @param reason the reason
      */
     public void setReason(final String reason) {
@@ -126,7 +114,9 @@ public class CloseEvent extends Event {
     }
 
     /**
-     * @return the wasClean
+     * Returns whether the connection was closed cleanly.
+     *
+     * @return {@code true} if the connection was closed cleanly
      */
     @JsxGetter
     public boolean isWasClean() {
@@ -134,7 +124,9 @@ public class CloseEvent extends Event {
     }
 
     /**
-     * @param wasClean the wasClean
+     * Sets whether the connection was closed cleanly.
+     *
+     * @param wasClean {@code true} if the connection was closed cleanly
      */
     public void setWasClean(final boolean wasClean) {
         wasClean_ = wasClean;

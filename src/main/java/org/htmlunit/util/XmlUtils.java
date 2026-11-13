@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,12 @@ package org.htmlunit.util;
 import static org.htmlunit.html.DomElement.ATTRIBUTE_NOT_DEFINED;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringReader;
-import java.util.LinkedHashMap;
-import java.util.List;
+import java.nio.charset.Charset;
 import java.util.Locale;
-import java.util.Map;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -32,6 +31,19 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.apache.commons.io.input.BOMInputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.htmlunit.SgmlPage;
+import org.htmlunit.WebResponse;
+import org.htmlunit.html.DomAttr;
+import org.htmlunit.html.DomCDataSection;
+import org.htmlunit.html.DomComment;
+import org.htmlunit.html.DomDocumentType;
+import org.htmlunit.html.DomElement;
+import org.htmlunit.html.DomNode;
+import org.htmlunit.html.DomProcessingInstruction;
+import org.htmlunit.html.DomText;
+import org.htmlunit.html.ElementFactory;
+import org.htmlunit.html.Html;
+import org.htmlunit.xml.XmlPage;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.DocumentType;
@@ -45,25 +57,10 @@ import org.xml.sax.SAXException;
 import org.xml.sax.SAXParseException;
 import org.xml.sax.helpers.AttributesImpl;
 
-import org.htmlunit.SgmlPage;
-import org.htmlunit.WebResponse;
-import org.htmlunit.html.DomAttr;
-import org.htmlunit.html.DomCDataSection;
-import org.htmlunit.html.DomComment;
-import org.htmlunit.html.DomDocumentType;
-import org.htmlunit.html.DomElement;
-import org.htmlunit.html.DomNode;
-import org.htmlunit.html.DomProcessingInstruction;
-import org.htmlunit.html.DomText;
-import org.htmlunit.html.ElementFactory;
-import org.htmlunit.html.Html;
-import org.htmlunit.platform.Platform;
-import org.htmlunit.xml.XmlPage;
-
 /**
  * <span style="color:red">INTERNAL API - SUBJECT TO CHANGE AT ANY TIME - USE AT YOUR OWN RISK.</span><br>
  *
- * Provides facility method to work with XML responses.
+ * Provides utility methods for working with XML responses.
  *
  * @author Marc Guillemot
  * @author Ahmed Ashour
@@ -78,7 +75,7 @@ public final class XmlUtils {
 
     private static final ErrorHandler DISCARD_MESSAGES_HANDLER = new ErrorHandler() {
         /**
-         * Does nothing as we're not interested in this.
+         * Does nothing as we are not interested in this.
          */
         @Override
         public void error(final SAXParseException exception) {
@@ -86,7 +83,7 @@ public final class XmlUtils {
         }
 
         /**
-         * Does nothing as we're not interested in this.
+         * Does nothing as we are not interested in this.
          */
         @Override
         public void fatalError(final SAXParseException exception) {
@@ -94,7 +91,7 @@ public final class XmlUtils {
         }
 
         /**
-         * Does nothing as we're not interested in this.
+         * Does nothing as we are not interested in this.
          */
         @Override
         public void warning(final SAXParseException exception) {
@@ -112,13 +109,13 @@ public final class XmlUtils {
     /**
      * Builds a document from the content of the web response.
      * A warning is logged if an exception is thrown while parsing the XML content
-     * (for instance when the content is not a valid XML and can't be parsed).
+     * (for instance when the content is not valid XML and cannot be parsed).
      *
      * @param webResponse the response from the server
-     * @throws IOException if the page could not be created
      * @return the parse result
-     * @throws SAXException if the parsing fails
-     * @throws ParserConfigurationException if a DocumentBuilder cannot be created
+     * @throws IOException if the page could not be created
+     * @throws SAXException if parsing fails
+     * @throws ParserConfigurationException if a {@link DocumentBuilder} cannot be created
      */
     public static Document buildDocument(final WebResponse webResponse)
         throws IOException, SAXException, ParserConfigurationException {
@@ -130,37 +127,48 @@ public final class XmlUtils {
         }
 
         factory.setNamespaceAware(true);
-        final InputStreamReader reader = new InputStreamReader(
-                new BOMInputStream(webResponse.getContentAsStream()),
-                webResponse.getContentCharset());
 
-        // we have to do the blank input check and the parsing in one step
-        final TrackBlankContentReader tracker = new TrackBlankContentReader(reader);
-
-        final InputSource source = new InputSource(tracker);
-        final DocumentBuilder builder = factory.newDocumentBuilder();
-        builder.setErrorHandler(DISCARD_MESSAGES_HANDLER);
-        builder.setEntityResolver((publicId, systemId) -> new InputSource(new StringReader("")));
-        try {
-            // this closes the input source/stream
-            return builder.parse(source);
-        }
-        catch (final SAXException e) {
-            if (tracker.wasBlank()) {
-                return factory.newDocumentBuilder().newDocument();
+        Charset charset = webResponse.getContentCharset();
+        try (InputStream is = webResponse.getContentAsStreamWithBomIfApplicable()) {
+            if (is instanceof BOMInputStream stream) {
+                final String bomCharsetName = stream.getBOMCharsetName();
+                if (bomCharsetName != null) {
+                    charset = Charset.forName(bomCharsetName);
+                }
             }
-            throw e;
+
+            try (InputStreamReader reader = new InputStreamReader(is, charset)) {
+                // we have to do the blank input check and the parsing in one step
+                final TrackBlankContentAndSkipLeadingWhitespaceReader tracker
+                        = new TrackBlankContentAndSkipLeadingWhitespaceReader(reader);
+
+                final InputSource source = new InputSource(tracker);
+                final DocumentBuilder builder = factory.newDocumentBuilder();
+                builder.setErrorHandler(DISCARD_MESSAGES_HANDLER);
+                builder.setEntityResolver((publicId, systemId) -> new InputSource(new StringReader("")));
+                try {
+                    // this closes the input source/stream
+                    return builder.parse(source);
+                }
+                catch (final SAXException e) {
+                    if (tracker.wasBlank()) {
+                        return factory.newDocumentBuilder().newDocument();
+                    }
+                    throw e;
+                }
+            }
         }
     }
 
     /**
      * Helper for memory and performance optimization.
      */
-    private static final class TrackBlankContentReader extends Reader {
+    private static final class TrackBlankContentAndSkipLeadingWhitespaceReader extends Reader {
         private final Reader reader_;
         private boolean wasBlank_ = true;
 
-        TrackBlankContentReader(final Reader characterStream) {
+        TrackBlankContentAndSkipLeadingWhitespaceReader(final Reader characterStream) {
+            super();
             reader_ = characterStream;
         }
 
@@ -175,60 +183,49 @@ public final class XmlUtils {
 
         @Override
         public int read(final char[] cbuf, final int off, final int len) throws IOException {
-            final int result = reader_.read(cbuf, off, len);
+            int readLength = reader_.read(cbuf, off, len);
 
-            if (wasBlank_ && result > -1) {
-                for (int i = 0; i < result; i++) {
+            if (wasBlank_ && readLength > -1) {
+                for (int i = 0; i < readLength; i++) {
                     final char ch = cbuf[off + i];
                     if (!Character.isWhitespace(ch)) {
                         wasBlank_ = false;
+                        if (i > 0) {
+                            // skipt the leading whitespace
+                            readLength -= i;
+                            System.arraycopy(cbuf, off + i, cbuf, off, readLength);
+                        }
                         break;
                     }
                 }
             }
-            return result;
+            return readLength;
         }
     }
 
     /**
-     * Recursively appends a {@link Node} child to {@link DomNode} parent.
+     * Recursively appends a {@link Node} child to a {@link DomNode} parent.
      *
      * @param page the owner page of {@link DomElement}s to be created
-     * @param parent the parent DomNode
-     * @param child the child Node
-     * @param handleXHTMLAsHTML if true elements from the XHTML namespace are handled as HTML elements instead of
-     *     DOM elements
+     * @param parent the parent {@link DomNode}
+     * @param child the child {@link Node} to append
+     * @param handleXHTMLAsHTML if {@code true}, elements from the XHTML namespace are handled as HTML elements
+     *     instead of DOM elements
      */
     public static void appendChild(final SgmlPage page, final DomNode parent, final Node child,
         final boolean handleXHTMLAsHTML) {
-        appendChild(page, parent, child, handleXHTMLAsHTML, null);
-    }
-
-    /**
-     * Recursively appends a {@link Node} child to {@link DomNode} parent.
-     *
-     * @param page the owner page of {@link DomElement}s to be created
-     * @param parent the parent DomNode
-     * @param child the child Node
-     * @param handleXHTMLAsHTML if true elements from the XHTML namespace are handled as HTML elements instead of
-     *     DOM elements
-     * @param attributesOrderMap (optional) the one returned by {@link #getAttributesOrderMap(Document)}
-     */
-    public static void appendChild(final SgmlPage page, final DomNode parent, final Node child,
-        final boolean handleXHTMLAsHTML, final Map<Integer, List<String>> attributesOrderMap) {
         final DocumentType documentType = child.getOwnerDocument().getDoctype();
-        if (documentType != null && page instanceof XmlPage) {
+        if (documentType != null && page instanceof XmlPage xmlPage) {
             final DomDocumentType domDoctype = new DomDocumentType(
                     page, documentType.getName(), documentType.getPublicId(), documentType.getSystemId());
-            ((XmlPage) page).setDocumentType(domDoctype);
+            xmlPage.setDocumentType(domDoctype);
         }
-        final DomNode childXml = createFrom(page, child, handleXHTMLAsHTML, attributesOrderMap);
+        final DomNode childXml = createFrom(page, child, handleXHTMLAsHTML);
         parent.appendChild(childXml);
-        copy(page, child, childXml, handleXHTMLAsHTML, attributesOrderMap);
+        copy(page, child, childXml, handleXHTMLAsHTML);
     }
 
-    private static DomNode createFrom(final SgmlPage page, final Node source, final boolean handleXHTMLAsHTML,
-            final Map<Integer, List<String>> attributesOrderMap) {
+    private static DomNode createFrom(final SgmlPage page, final Node source, final boolean handleXHTMLAsHTML) {
         if (source.getNodeType() == Node.TEXT_NODE) {
             return new DomText(page, source.getNodeValue());
         }
@@ -248,7 +245,7 @@ public final class XmlUtils {
         if (handleXHTMLAsHTML && Html.XHTML_NAMESPACE.equals(ns)) {
             final ElementFactory factory = page.getWebClient().getPageCreator().getHtmlParser().getFactory(localName);
             return factory.createElementNS(page, ns, localName,
-                    namedNodeMapToSaxAttributes(source.getAttributes(), attributesOrderMap, source));
+                    namedNodeMapToSaxAttributes(source.getAttributes()));
         }
         final NamedNodeMap nodeAttributes = source.getAttributes();
         if (page != null && page.isHtmlPage()) {
@@ -266,13 +263,12 @@ public final class XmlUtils {
         if (Html.SVG_NAMESPACE.equals(namespaceURI)) {
             return page.getWebClient().getPageCreator().getHtmlParser().getSvgFactory()
                     .createElementNS(page, namespaceURI, qualifiedName,
-                            namedNodeMapToSaxAttributes(nodeAttributes, attributesOrderMap, source));
+                            namedNodeMapToSaxAttributes(nodeAttributes));
         }
 
-        final Map<String, DomAttr> attributes = new LinkedHashMap<>();
+        final OrderedFastHashMap<String, DomAttr> attributes = new OrderedFastHashMap<>();
         for (int i = 0; i < nodeAttributes.getLength(); i++) {
-            final int orderedIndex = Platform.getIndex(nodeAttributes, attributesOrderMap, source, i);
-            final Attr attribute = (Attr) nodeAttributes.item(orderedIndex);
+            final Attr attribute = (Attr) nodeAttributes.item(i);
             final String attributeNamespaceURI = attribute.getNamespaceURI();
             final String attributeQualifiedName;
             if (attribute.getPrefix() == null) {
@@ -290,13 +286,11 @@ public final class XmlUtils {
         return new DomElement(namespaceURI, qualifiedName, page, attributes);
     }
 
-    private static Attributes namedNodeMapToSaxAttributes(final NamedNodeMap attributesMap,
-            final Map<Integer, List<String>> attributesOrderMap, final Node element) {
+    private static Attributes namedNodeMapToSaxAttributes(final NamedNodeMap attributesMap) {
         final AttributesImpl attributes = new AttributesImpl();
         final int length = attributesMap.getLength();
         for (int i = 0; i < length; i++) {
-            final int orderedIndex = Platform.getIndex(attributesMap, attributesOrderMap, element, i);
-            final Node attr = attributesMap.item(orderedIndex);
+            final Node attr = attributesMap.item(i);
             attributes.addAttribute(attr.getNamespaceURI(), attr.getLocalName(),
                 attr.getNodeName(), null, attr.getNodeValue());
         }
@@ -305,23 +299,23 @@ public final class XmlUtils {
     }
 
     /**
-     * Copy all children from 'source' to 'dest', within the context of the specified page.
-     * @param page the page which the nodes belong to
+     * Copies all children from {@code source} to {@code dest} within the context of the specified page.
+     *
+     * @param page the page to which the nodes belong
      * @param source the node to copy from
      * @param dest the node to copy to
-     * @param handleXHTMLAsHTML if true elements from the XHTML namespace are handled as HTML elements instead of
-     *     DOM elements
+     * @param handleXHTMLAsHTML if {@code true}, elements from the XHTML namespace are handled as HTML elements
      */
     private static void copy(final SgmlPage page, final Node source, final DomNode dest,
-        final boolean handleXHTMLAsHTML, final Map<Integer, List<String>> attributesOrderMap) {
+        final boolean handleXHTMLAsHTML) {
         final NodeList nodeChildren = source.getChildNodes();
         for (int i = 0; i < nodeChildren.getLength(); i++) {
             final Node child = nodeChildren.item(i);
             switch (child.getNodeType()) {
                 case Node.ELEMENT_NODE:
-                    final DomNode childXml = createFrom(page, child, handleXHTMLAsHTML, attributesOrderMap);
+                    final DomNode childXml = createFrom(page, child, handleXHTMLAsHTML);
                     dest.appendChild(childXml);
-                    copy(page, child, childXml, handleXHTMLAsHTML, attributesOrderMap);
+                    copy(page, child, childXml, handleXHTMLAsHTML);
                     break;
 
                 case Node.TEXT_NODE:
@@ -350,63 +344,100 @@ public final class XmlUtils {
     }
 
     /**
-     * Search for the namespace URI of the given prefix, starting from the specified element.
-     * The default namespace can be searched for by specifying "" as the prefix.
+     * Searches for the namespace URI bound to the given prefix, starting from the specified element.
+     * The default namespace can be searched for by passing an empty string as the prefix.
+     *
      * @param element the element to start searching from
-     * @param prefix the namespace prefix
-     * @return the namespace URI bound to the prefix; or null if there is no such namespace
+     * @param prefix the namespace prefix to look up; use {@code ""} for the default namespace
+     * @return the namespace URI bound to the prefix, or {@code null} if none is found
      */
     public static String lookupNamespaceURI(final DomElement element, final String prefix) {
-        String uri;
-        if (prefix.isEmpty()) {
-            uri = element.getAttributeDirect("xmlns");
-        }
-        else {
-            uri = element.getAttribute("xmlns:" + prefix);
-        }
-        if (ATTRIBUTE_NOT_DEFINED == uri) {
-            final DomNode parentNode = element.getParentNode();
-            if (parentNode instanceof DomElement) {
-                uri = lookupNamespaceURI((DomElement) parentNode, prefix);
-            }
-        }
-        return uri;
-    }
+        final String uri = prefix.isEmpty()
+                ? element.getAttributeDirect("xmlns")
+                : element.getAttribute("xmlns:" + prefix);
 
-    /**
-     * Search for the prefix associated with specified namespace URI.
-     * @param element the element to start searching from
-     * @param namespace the namespace prefix
-     * @return the prefix bound to the namespace URI; or null if there is no such namespace
-     */
-    public static String lookupPrefix(final DomElement element, final String namespace) {
-        final Map<String, DomAttr> attributes = element.getAttributesMap();
-        for (final Map.Entry<String, DomAttr> entry : attributes.entrySet()) {
-            final String name = entry.getKey();
-            final DomAttr value = entry.getValue();
-            if (name.startsWith("xmlns:") && value.getValue().equals(namespace)) {
-                return name.substring(6);
-            }
+        if (ATTRIBUTE_NOT_DEFINED != uri) {
+            return uri;
         }
-        for (final DomNode child : element.getChildren()) {
-            if (child instanceof DomElement) {
-                final String prefix = lookupPrefix((DomElement) child, namespace);
-                if (prefix != null) {
-                    return prefix;
-                }
-            }
+
+        final DomNode parentNode = element.getParentNode();
+        if (parentNode instanceof DomElement domElement) {
+            return lookupNamespaceURI(domElement, prefix);
         }
+
         return null;
     }
 
     /**
-     * Returns internal Xerces details about all elements in the specified document.
-     * The id of the returned {@link Map} is the {@code nodeIndex} of an element, and the list
-     * is the array of ordered attributes names.
-     * @param document the document
-     * @return the map of an element index with its ordered attribute names
+     * Escapes an attribute value for the HTML serialization (e.g. innerHTML/outerHTML of an HTML document).
+     * Replaces {@code &amp;}, {@code "}, the no-break space (U+00A0), {@code <} and {@code >}
+     * with the corresponding character references; all other characters are kept.
+     *
+     * @param value the attribute value to escape
+     * @return the escaped value or {@code null} if the value is {@code null}
+     * @see <a href="https://html.spec.whatwg.org/multipage/parsing.html#escapingString">
+     *      HTML Standard - Escaping a string</a>
      */
-    public static Map<Integer, List<String>> getAttributesOrderMap(final Document document) {
-        return Platform.getAttributesOrderMap(document);
+    public static String escapeHtmlAttributeValue(final String value) {
+        return escapeAttributeValue(value, false);
+    }
+
+    /**
+     * Escapes an attribute value for the XML serialization (e.g. innerHTML/outerHTML of an XHTML or XML document).
+     * Replaces {@code &amp;}, {@code "}, {@code <}, {@code >}, tab, line feed and carriage return
+     * with the corresponding character references; all other characters (including the
+     * no-break space) are kept.
+     *
+     * @param value the attribute value to escape
+     * @return the escaped value or {@code null} if the value is {@code null}
+     * @see <a href="https://w3c.github.io/DOM-Parsing/#dfn-serializing-an-attribute-value">
+     *      DOM Parsing and Serialization - Serializing an attribute value</a>
+     */
+    public static String escapeXmlAttributeValue(final String value) {
+        return escapeAttributeValue(value, true);
+    }
+
+    /**
+     * Escapes an attribute value using the HTML or the XML rules.
+     *
+     * @param value the attribute value to escape
+     * @param xml whether to use the XML rules
+     * @return the escaped value or {@code null} if the value is {@code null}
+     */
+    private static String escapeAttributeValue(final String value, final boolean xml) {
+        if (value == null) {
+            return null;
+        }
+
+        final int length = value.length();
+        StringBuilder builder = null;
+        for (int i = 0; i < length; i++) {
+            final char c = value.charAt(i);
+            final String replacement = switch (c) {
+                case '&' -> "&amp;";
+                case '"' -> "&quot;";
+                case '<' -> "&lt;";
+                case '>' -> "&gt;";
+                case '\u00A0' -> xml ? null : "&nbsp;";
+                case '\t' -> xml ? "&#9;" : null;
+                case '\n' -> xml ? "&#10;" : null;
+                case '\r' -> xml ? "&#13;" : null;
+                default -> null;
+            };
+
+            if (replacement == null) {
+                if (builder != null) {
+                    builder.append(c);
+                }
+            }
+            else {
+                if (builder == null) {
+                    builder = new StringBuilder(length + 16);
+                    builder.append(value, 0, i);
+                }
+                builder.append(replacement);
+            }
+        }
+        return builder == null ? value : builder.toString();
     }
 }

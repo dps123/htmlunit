@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,8 @@
  */
 package org.htmlunit.javascript.host.dom;
 
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.CHROME;
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.EDGE;
-
 import java.util.ArrayList;
 import java.util.List;
-
-import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import org.htmlunit.AlertHandler;
 import org.htmlunit.CollectingAlertHandler;
@@ -32,9 +26,9 @@ import org.htmlunit.html.DomNode;
 import org.htmlunit.html.HtmlInput;
 import org.htmlunit.html.HtmlPage;
 import org.htmlunit.html.impl.SimpleRange;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.HtmlUnitNYI;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for {@link Selection}.
@@ -44,7 +38,6 @@ import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
  * @author Frank Danek
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class Selection2Test extends SimpleWebTestCase {
 
     /**
@@ -195,9 +188,9 @@ public class Selection2Test extends SimpleWebTestCase {
     @Test
     @Alerts(DEFAULT = {"0", "1"},
             CHROME = {"0", "3"},
-            EDGE = {"0", "3"},
-            IE = {"0", "exception", "1"})
-    @NotYetImplemented({CHROME, EDGE})
+            EDGE = {"0", "3"})
+    @HtmlUnitNYI(CHROME = {"0", "1"},
+            EDGE = {"0", "1"})
     public void extend() throws Exception {
         test("try{selection.extend(s2, 1)}catch(e){alert('exception')}", "selection.focusOffset", "x");
     }
@@ -234,11 +227,7 @@ public class Selection2Test extends SimpleWebTestCase {
      * @throws Exception if an error occurs
      */
     @Test
-    @Alerts(DEFAULT = {"undefined", "exception", "undefined"},
-            CHROME = {"None", "None"},
-            EDGE = {"None", "None"},
-            FF = {"None", "None"},
-            FF_ESR = {"None", "None"})
+    @Alerts({"None", "None"})
     public void empty() throws Exception {
         test("try{selection.empty()}catch(e){alert('exception')}", "selection.type", "x ? x : 'undefined'");
     }
@@ -255,7 +244,8 @@ public class Selection2Test extends SimpleWebTestCase {
     private void test(final String action, final String x, final String alert)
         throws Exception {
 
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body onload='test()'>\n"
             + "  <span id='s1'>abc</span><span id='s2'>xyz</span><span id='s3'>foo</span>\n"
             + "  <input type='button' id='b' onclick=\"" + action + ";test();\" value='click'></input>\n"
@@ -268,7 +258,7 @@ public class Selection2Test extends SimpleWebTestCase {
             + "    try {\n"
             + "      var x = " + x + ";\n"
             + "      alert(" + alert + ");\n"
-            + "    } catch (e) {\n"
+            + "    } catch(e) {\n"
             + "      alert('unsupported action');\n"
             + "    }\n"
             + "  }\n"
@@ -290,7 +280,7 @@ public class Selection2Test extends SimpleWebTestCase {
         final DomNode s2Text = page.getHtmlElementById("s2").getFirstChild();
         final HtmlInput input = page.getHtmlElementById("b");
 
-        final org.w3c.dom.ranges.Range range = new SimpleRange();
+        final SimpleRange range = new SimpleRange();
         range.setStart(s1Text, 2);
         range.setEnd(s2Text, 1);
         page.setSelectionRange(range);

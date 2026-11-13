@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,12 +18,9 @@ import static org.htmlunit.BrowserVersionFeatures.HTMLIMAGE_BLANK_SRC_AS_EMPTY;
 import static org.htmlunit.BrowserVersionFeatures.HTMLIMAGE_EMPTY_SRC_DISPLAY_FALSE;
 import static org.htmlunit.BrowserVersionFeatures.HTMLIMAGE_HTMLELEMENT;
 import static org.htmlunit.BrowserVersionFeatures.HTMLIMAGE_HTMLUNKNOWNELEMENT;
-import static org.htmlunit.BrowserVersionFeatures.HTMLIMAGE_INVISIBLE_NO_SRC;
-import static org.htmlunit.BrowserVersionFeatures.JS_IMAGE_COMPLETE_RETURNS_TRUE_FOR_NO_REQUEST;
-import static org.htmlunit.BrowserVersionFeatures.JS_IMAGE_WIDTH_HEIGHT_EMPTY_SOURCE_RETURNS_0x0;
+import static org.htmlunit.BrowserVersionFeatures.HTTP_HEADER_CH_UA;
 import static org.htmlunit.BrowserVersionFeatures.JS_IMAGE_WIDTH_HEIGHT_RETURNS_16x16_0x0;
 import static org.htmlunit.BrowserVersionFeatures.JS_IMAGE_WIDTH_HEIGHT_RETURNS_24x24_0x0;
-import static org.htmlunit.BrowserVersionFeatures.JS_IMAGE_WIDTH_HEIGHT_RETURNS_28x30_28x30;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,39 +31,38 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.util.Map;
 
-import javax.imageio.ImageReader;
-
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.htmlunit.BrowserVersion;
+import org.htmlunit.HttpHeader;
 import org.htmlunit.Page;
 import org.htmlunit.ScriptResult;
 import org.htmlunit.SgmlPage;
 import org.htmlunit.WebClient;
 import org.htmlunit.WebRequest;
 import org.htmlunit.WebResponse;
+import org.htmlunit.html.csp.ContentSecurityPolicy;
+import org.htmlunit.http.HttpStatus;
+import org.htmlunit.javascript.AbstractJavaScriptEngine;
 import org.htmlunit.javascript.PostponedAction;
 import org.htmlunit.javascript.host.dom.Document;
 import org.htmlunit.javascript.host.event.Event;
 import org.htmlunit.javascript.host.event.MouseEvent;
-import org.htmlunit.javascript.host.html.HTMLElement;
 import org.htmlunit.platform.Platform;
 import org.htmlunit.platform.geom.IntDimension2D;
 import org.htmlunit.platform.image.ImageData;
-import org.htmlunit.platform.image.ImageIOImageData;
+import org.htmlunit.util.StringUtils;
 import org.htmlunit.util.UrlUtils;
 
 /**
  * Wrapper for the HTML element "img".
  *
- * @author <a href="mailto:mbowler@GargoyleSoftware.com">Mike Bowler</a>
+ * @author Mike Bowler
  * @author David K. Taylor
- * @author <a href="mailto:cse@dynabean.de">Christian Sell</a>
+ * @author Christian Sell
  * @author Ahmed Ashour
- * @author <a href="mailto:knut.johannes.dahle@gmail.com">Knut Johannes Dahle</a>
+ * @author Knut Johannes Dahle
  * @author Ronald Brill
  * @author Frank Danek
  * @author Carsten Steul
@@ -90,6 +86,9 @@ public class HtmlImage extends HtmlElement {
     private int width_ = -1;
     private int height_ = -1;
     private boolean downloaded_;
+    // the url checked against the Content-Security-Policy (img-src) and the result
+    private String cspCheckedUrl_;
+    private boolean cspAllowed_ = true;
     private boolean isComplete_;
     private boolean onloadProcessed_;
     private boolean createdByJavascript_;
@@ -141,10 +140,11 @@ public class HtmlImage extends HtmlElement {
             final boolean notifyAttributeChangeListeners, final boolean notifyMutationObservers) {
 
         final HtmlPage htmlPage = getHtmlPageOrNull();
-        if (SRC_ATTRIBUTE.equals(qualifiedName) && value != ATTRIBUTE_NOT_DEFINED && htmlPage != null) {
-            final String oldValue = getAttributeNS(namespaceURI, qualifiedName);
+        final String qualifiedNameLC = StringUtils.toRootLowerCase(qualifiedName);
+        if (SRC_ATTRIBUTE.equals(qualifiedNameLC) && value != ATTRIBUTE_NOT_DEFINED && htmlPage != null) {
+            final String oldValue = getAttributeNS(namespaceURI, qualifiedNameLC);
             if (!oldValue.equals(value)) {
-                super.setAttributeNS(namespaceURI, qualifiedName, value, notifyAttributeChangeListeners,
+                super.setAttributeNS(namespaceURI, qualifiedNameLC, value, notifyAttributeChangeListeners,
                         notifyMutationObservers);
 
                 // onload handlers may need to be invoked again, and a new image may need to be downloaded
@@ -164,7 +164,7 @@ public class HtmlImage extends HtmlElement {
                 if (READY_STATE_LOADING.equals(readyState)) {
                     final PostponedAction action = new PostponedAction(getPage(), "HtmlImage.setAttributeNS") {
                         @Override
-                        public void execute() throws Exception {
+                        public void execute() {
                             doOnLoad();
                         }
                     };
@@ -176,7 +176,7 @@ public class HtmlImage extends HtmlElement {
             }
         }
 
-        super.setAttributeNS(namespaceURI, qualifiedName, value, notifyAttributeChangeListeners,
+        super.setAttributeNS(namespaceURI, qualifiedNameLC, value, notifyAttributeChangeListeners,
                 notifyMutationObservers);
     }
 
@@ -193,7 +193,7 @@ public class HtmlImage extends HtmlElement {
                 oldUrl = htmlPage.getFullyQualifiedUrl(src);
             }
         }
-        catch (final MalformedURLException e) {
+        catch (final MalformedURLException ignored) {
             // ignore
         }
 
@@ -206,7 +206,7 @@ public class HtmlImage extends HtmlElement {
                 url = htmlPage.getFullyQualifiedUrl(src);
             }
         }
-        catch (final MalformedURLException e) {
+        catch (final MalformedURLException ignored) {
             // ignore
         }
 
@@ -265,6 +265,10 @@ public class HtmlImage extends HtmlElement {
             return; // nothing to do if embedded in XML code
         }
 
+        // like the browsers, the image url is checked against the Content-Security-Policy
+        // also if HtmlUnit does not download the image
+        isAllowedByContentSecurityPolicy(htmlPage);
+
         final WebClient client = htmlPage.getWebClient();
 
         final boolean hasEventHandler = hasEventHandlers("onload") || hasEventHandlers("onerror");
@@ -283,13 +287,15 @@ public class HtmlImage extends HtmlElement {
                 try {
                     downloadImageIfNeeded();
                     // if the download was a success
-                    if (imageWebResponse_.isSuccess()) {
-                        loadSuccessful = true; // Trigger the onload handler
+                    if (imageWebResponse_ != null && imageWebResponse_.isSuccess()) {
+                        if (imageWebResponse_.getStatusCode() != HttpStatus.NO_CONTENT_204) {
+                            loadSuccessful = true; // Trigger the onload handler
+                        }
                     }
                 }
                 catch (final IOException e) {
                     if (LOG.isDebugEnabled()) {
-                        LOG.debug("IOException while downloading image for '" + this + "' : " + e.getMessage());
+                        LOG.debug("IOException while downloading image for '" + this + "'", e);
                     }
                 }
             }
@@ -312,14 +318,26 @@ public class HtmlImage extends HtmlElement {
             if (READY_STATE_LOADING.equals(htmlPage.getReadyState())) {
                 final PostponedAction action = new PostponedAction(getPage(), "HtmlImage.doOnLoad") {
                     @Override
-                    public void execute() throws Exception {
+                    public void execute() {
                         HtmlImage.this.fireEvent(event);
                     }
                 };
                 htmlPage.addAfterLoadAction(action);
             }
             else {
-                fireEvent(event);
+                final AbstractJavaScriptEngine<?> jsEngine = client.getJavaScriptEngine();
+                if (jsEngine.isScriptRunning()) {
+                    final PostponedAction action = new PostponedAction(getPage(), "HtmlImage.doOnLoad") {
+                        @Override
+                        public void execute() {
+                            HtmlImage.this.fireEvent(event);
+                        }
+                    };
+                    jsEngine.addPostponedAction(action);
+                }
+                else {
+                    fireEvent(event);
+                }
             }
         }
     }
@@ -341,7 +359,7 @@ public class HtmlImage extends HtmlElement {
      */
     public String getSrc() {
         final String src = getSrcAttribute();
-        if ("".equals(src)) {
+        if (StringUtils.isEmptyString(src)) {
             return src;
         }
         try {
@@ -373,7 +391,7 @@ public class HtmlImage extends HtmlElement {
      * @return the value of the attribute {@code name} or an empty string if that attribute isn't defined
      */
     public final String getNameAttribute() {
-        return getAttributeDirect("name");
+        return getAttributeDirect(NAME_ATTRIBUTE);
     }
 
     /**
@@ -501,7 +519,7 @@ public class HtmlImage extends HtmlElement {
             try {
                 return Integer.parseInt(height);
             }
-            catch (final NumberFormatException e) {
+            catch (final NumberFormatException ignored) {
                 // ignore
             }
         }
@@ -509,9 +527,6 @@ public class HtmlImage extends HtmlElement {
         final String src = getSrcAttribute();
         if (ATTRIBUTE_NOT_DEFINED == src) {
             final BrowserVersion browserVersion = getPage().getWebClient().getBrowserVersion();
-            if (browserVersion.hasFeature(JS_IMAGE_WIDTH_HEIGHT_RETURNS_28x30_28x30)) {
-                return 30;
-            }
             if (browserVersion.hasFeature(JS_IMAGE_WIDTH_HEIGHT_RETURNS_16x16_0x0)
                     || browserVersion.hasFeature(JS_IMAGE_WIDTH_HEIGHT_RETURNS_24x24_0x0)) {
                 return 0;
@@ -521,10 +536,11 @@ public class HtmlImage extends HtmlElement {
 
         final WebClient webClient = getPage().getWebClient();
         final BrowserVersion browserVersion = webClient.getBrowserVersion();
-        if (browserVersion.hasFeature(JS_IMAGE_WIDTH_HEIGHT_EMPTY_SOURCE_RETURNS_0x0) && StringUtils.isEmpty(src)) {
+        if (StringUtils.isEmptyOrNull(src)) {
             return 0;
         }
-        if (browserVersion.hasFeature(JS_IMAGE_WIDTH_HEIGHT_RETURNS_16x16_0x0) && StringUtils.isBlank(src)) {
+        if (browserVersion.hasFeature(JS_IMAGE_WIDTH_HEIGHT_RETURNS_16x16_0x0)
+                && StringUtils.isBlank(src)) {
             return 0;
         }
 
@@ -532,9 +548,6 @@ public class HtmlImage extends HtmlElement {
             return getHeight();
         }
         catch (final IOException e) {
-            if (browserVersion.hasFeature(JS_IMAGE_WIDTH_HEIGHT_RETURNS_28x30_28x30)) {
-                return 30;
-            }
             if (browserVersion.hasFeature(JS_IMAGE_WIDTH_HEIGHT_RETURNS_16x16_0x0)) {
                 return 16;
             }
@@ -568,7 +581,7 @@ public class HtmlImage extends HtmlElement {
             try {
                 return Integer.parseInt(widthAttrib);
             }
-            catch (final NumberFormatException e) {
+            catch (final NumberFormatException ignored) {
                 // ignore
             }
         }
@@ -576,10 +589,6 @@ public class HtmlImage extends HtmlElement {
         final String src = getSrcAttribute();
         if (ATTRIBUTE_NOT_DEFINED == src) {
             final BrowserVersion browserVersion = getPage().getWebClient().getBrowserVersion();
-
-            if (browserVersion.hasFeature(JS_IMAGE_WIDTH_HEIGHT_RETURNS_28x30_28x30)) {
-                return 28;
-            }
             if (browserVersion.hasFeature(JS_IMAGE_WIDTH_HEIGHT_RETURNS_16x16_0x0)
                     || browserVersion.hasFeature(JS_IMAGE_WIDTH_HEIGHT_RETURNS_24x24_0x0)) {
                 return 0;
@@ -589,10 +598,11 @@ public class HtmlImage extends HtmlElement {
 
         final WebClient webClient = getPage().getWebClient();
         final BrowserVersion browserVersion = webClient.getBrowserVersion();
-        if (browserVersion.hasFeature(JS_IMAGE_WIDTH_HEIGHT_EMPTY_SOURCE_RETURNS_0x0) && StringUtils.isEmpty(src)) {
+        if (StringUtils.isEmptyOrNull(src)) {
             return 0;
         }
-        if (browserVersion.hasFeature(JS_IMAGE_WIDTH_HEIGHT_RETURNS_16x16_0x0) && StringUtils.isBlank(src)) {
+        if (browserVersion.hasFeature(JS_IMAGE_WIDTH_HEIGHT_RETURNS_16x16_0x0)
+                && StringUtils.isBlank(src)) {
             return 0;
         }
 
@@ -600,9 +610,6 @@ public class HtmlImage extends HtmlElement {
             return getWidth();
         }
         catch (final IOException e) {
-            if (browserVersion.hasFeature(JS_IMAGE_WIDTH_HEIGHT_RETURNS_28x30_28x30)) {
-                return 28;
-            }
             if (browserVersion.hasFeature(JS_IMAGE_WIDTH_HEIGHT_RETURNS_16x16_0x0)) {
                 return 16;
             }
@@ -611,20 +618,11 @@ public class HtmlImage extends HtmlElement {
     }
 
     /**
-     * <p>Returns the <code>ImageReader</code> which can be used to read the image contained by this image element.</p>
-     * <p><span style="color:red">POTENTIAL PERFORMANCE KILLER - DOWNLOADS THE IMAGE - USE AT YOUR OWN RISK</span></p>
-     * <p>If the image has not already been downloaded, this method triggers a download and caches the image.</p>
+     * Returns the image data for this image.
      *
-     * @return the <code>ImageReader</code> which can be used to read the image contained by this image element
-     * @throws IOException if an error occurs while downloading or reading the image
-     *
-     * @deprecated as of version 2.70.0; use {@link #getImageData()} instead
+     * @return the {@link ImageData} for this image
+     * @throws IOException if an I/O error occurs while reading the image
      */
-    @Deprecated
-    public ImageReader getImageReader() throws IOException {
-        return ((ImageIOImageData) getImageData()).getImageReader();
-    }
-
     public ImageData getImageData() throws IOException {
         readImageIfNeeded();
         return imageData_;
@@ -647,10 +645,10 @@ public class HtmlImage extends HtmlElement {
             try {
                 imageData_.close();
             }
-            catch (final IOException e) {
-                throw e;
-            }
             catch (final Exception ex) {
+                if (ex instanceof IOException) {
+                    throw (IOException) ex;
+                }
                 throw new IOException("Exception during close()", ex);
             }
             imageData_ = null;
@@ -687,18 +685,49 @@ public class HtmlImage extends HtmlElement {
             // HTMLIMAGE_BLANK_SRC_AS_EMPTY
             final String src = getSrcAttribute();
 
-            if (!"".equals(src)) {
+            if (!StringUtils.isEmptyString(src)) {
                 final HtmlPage page = (HtmlPage) getPage();
                 final WebClient webClient = page.getWebClient();
                 final BrowserVersion browser = webClient.getBrowserVersion();
 
-                if (!(browser.hasFeature(HTMLIMAGE_BLANK_SRC_AS_EMPTY)
-                        && StringUtils.isBlank(src))) {
-                    final URL url = page.getFullyQualifiedUrl(src);
+                final boolean blank = browser.hasFeature(HTMLIMAGE_BLANK_SRC_AS_EMPTY) && StringUtils.isBlank(src);
+                if (!blank && !isAllowedByContentSecurityPolicy(page)) {
+                    // blocked by the Content-Security-Policy; forget the response of a previous src
+                    imageWebResponse_ = null;
+                }
+                else if (!blank) {
+                    // upgrade-insecure-requests of the Content-Security-Policy
+                    final URL url = ContentSecurityPolicy.upgradeInsecureRequest(page,
+                                            page.getFullyQualifiedUrl(src));
                     final WebRequest request = new WebRequest(url, browser.getImgAcceptHeader(),
                                                                     browser.getAcceptEncodingHeader());
                     request.setCharset(page.getCharset());
-                    request.setRefererlHeader(page.getUrl());
+                    request.setRefererHeader(page.getUrl());
+
+                    // Sec-Fetch-* support (https://www.w3.org/TR/fetch-metadata/):
+                    // an <img> load is never user-activated, and is initiated by the
+                    // containing page; the crossorigin attribute (any value) forces
+                    // CORS mode, otherwise images default to no-cors.
+                    request.setFetchDestination(WebRequest.FetchDestination.IMAGE);
+                    request.setFetchModeOverride(WebRequest.FetchMode.NO_CORS);
+                    request.setRequestingUrl(page.getUrl());
+
+                    if (hasAttribute("crossorigin")) {
+                        request.setFetchModeOverride(WebRequest.FetchMode.CORS);
+
+                        if (browser.hasFeature(HTTP_HEADER_CH_UA)) {
+                            request.setAdditionalHeader(HttpHeader.ORIGIN,
+                                    UrlUtils.getUrlWithProtocolAndAuthority(page.getUrl()).toExternalForm());
+                        }
+                    }
+
+                    if (page.getContentSecurityPolicy() != null) {
+                        // like the browsers, redirects are checked (and upgraded) also
+                        ContentSecurityPolicy.upgradeInsecureRedirects(page, request);
+                        request.setRedirectFilter(
+                            redirectUrl -> ContentSecurityPolicy.allowsImage(page, redirectUrl, url));
+                    }
+
                     imageWebResponse_ = webClient.loadWebResponse(request);
                 }
             }
@@ -706,18 +735,47 @@ public class HtmlImage extends HtmlElement {
             closeImageData();
 
             downloaded_ = true;
-            isComplete_ = hasFeature(JS_IMAGE_COMPLETE_RETURNS_TRUE_FOR_NO_REQUEST)
-                    || (imageWebResponse_ != null && imageWebResponse_.getContentType().contains("image"));
+            isComplete_ = true;
 
             width_ = -1;
             height_ = -1;
         }
     }
 
+    /**
+     * Checks the url of the image against the Content-Security-Policy (img-src);
+     * the check is done only once for every url.
+     *
+     * @param page the page
+     * @return {@code true} if the image is allowed (or the src is empty or invalid)
+     */
+    private boolean isAllowedByContentSecurityPolicy(final HtmlPage page) {
+        final String src = getSrcAttribute();
+        if (StringUtils.isBlank(src)) {
+            return true;
+        }
+
+        final URL url;
+        try {
+            // upgrade-insecure-requests of the Content-Security-Policy
+            url = ContentSecurityPolicy.upgradeInsecureRequest(page, page.getFullyQualifiedUrl(src));
+        }
+        catch (final MalformedURLException e) {
+            return true;
+        }
+
+        final String urlString = url.toExternalForm();
+        if (!urlString.equals(cspCheckedUrl_)) {
+            cspCheckedUrl_ = urlString;
+            cspAllowed_ = ContentSecurityPolicy.allowsImage(page, url);
+        }
+        return cspAllowed_;
+    }
+
     private void readImageIfNeeded() throws IOException {
         downloadImageIfNeeded();
         if (imageData_ == null) {
-            if (null == imageWebResponse_) {
+            if (imageWebResponse_ == null) {
                 throw new IOException("No image response available (src='" + getSrcAttribute() + "')");
             }
             imageData_ = Platform.buildImageData(imageWebResponse_.getContentAsStream());
@@ -733,7 +791,7 @@ public class HtmlImage extends HtmlElement {
      * @param x the x position of the click
      * @param y the y position of the click
      * @return the page contained by this image's window after the click
-     * @exception IOException if an IO error occurs
+     * @throws IOException if an IO error occurs
      */
     public Page click(final int x, final int y) throws IOException {
         lastClickX_ = x;
@@ -753,7 +811,7 @@ public class HtmlImage extends HtmlElement {
      * same as the original page, depending on JavaScript event handlers, etc.
      *
      * @return the page contained by this image's window after the click
-     * @exception IOException if an IO error occurs
+     * @throws IOException if an IO error occurs
      */
     @Override
     @SuppressWarnings("unchecked")
@@ -772,10 +830,9 @@ public class HtmlImage extends HtmlElement {
             // remove initial '#'
             final String mapName = getUseMapAttribute().substring(1);
             final HtmlElement doc = ((HtmlPage) getPage()).getDocumentElement();
-            final HtmlMap map = doc.getOneHtmlElementByAttribute("map", "name", mapName);
+            final HtmlMap map = doc.getOneHtmlElementByAttribute("map", NAME_ATTRIBUTE, mapName);
             for (final DomElement element : map.getChildElements()) {
-                if (element instanceof HtmlArea) {
-                    final HtmlArea area = (HtmlArea) element;
+                if (element instanceof HtmlArea area) {
                     if (area.containsPoint(Math.max(lastClickX_, 0), Math.max(lastClickY_, 0))) {
                         area.doClickStateUpdate(shiftKey, ctrlKey);
                         return false;
@@ -820,12 +877,13 @@ public class HtmlImage extends HtmlElement {
     }
 
     /**
-     * @return true if the image was successfully downloaded
+     * Returns whether this image has finished loading.
+     *
+     * @return {@code true} if the image has finished loading or has no
+     *         {@code src} attribute
      */
     public boolean isComplete() {
-        return isComplete_ || (hasFeature(JS_IMAGE_COMPLETE_RETURNS_TRUE_FOR_NO_REQUEST)
-                                ? ATTRIBUTE_NOT_DEFINED == getSrcAttribute()
-                                : imageData_ != null);
+        return isComplete_ || ATTRIBUTE_NOT_DEFINED == getSrcAttribute();
     }
 
     /**
@@ -834,16 +892,14 @@ public class HtmlImage extends HtmlElement {
     @Override
     public boolean isDisplayed() {
         final String src = getSrcAttribute();
-        if (hasFeature(HTMLIMAGE_INVISIBLE_NO_SRC)) {
-            if (ATTRIBUTE_NOT_DEFINED == src) {
-                return false;
-            }
-            if (hasFeature(HTMLIMAGE_BLANK_SRC_AS_EMPTY) && StringUtils.isBlank(src)) {
-                return false;
-            }
-            if (hasFeature(HTMLIMAGE_EMPTY_SRC_DISPLAY_FALSE) && StringUtils.isEmpty(src)) {
-                return false;
-            }
+        if (ATTRIBUTE_NOT_DEFINED == src) {
+            return false;
+        }
+        if (hasFeature(HTMLIMAGE_BLANK_SRC_AS_EMPTY) && StringUtils.isBlank(src)) {
+            return false;
+        }
+        if (hasFeature(HTMLIMAGE_EMPTY_SRC_DISPLAY_FALSE) && StringUtils.isEmptyOrNull(src)) {
+            return false;
         }
 
         return super.isDisplayed();
@@ -852,8 +908,7 @@ public class HtmlImage extends HtmlElement {
     /**
      * <span style="color:red">INTERNAL API - SUBJECT TO CHANGE AT ANY TIME - USE AT YOUR OWN RISK.</span><br>
      *
-     * Marks this frame as created by javascript. This is needed to handle
-     * some special IE behavior.
+     * Marks this frame as created by javascript.
      */
     public void markAsCreatedByJavascript() {
         createdByJavascript_ = true;
@@ -862,8 +917,7 @@ public class HtmlImage extends HtmlElement {
     /**
      * <span style="color:red">INTERNAL API - SUBJECT TO CHANGE AT ANY TIME - USE AT YOUR OWN RISK.</span><br>
      *
-     * Returns true if this frame was created by javascript. This is needed to handle
-     * some special IE behavior.
+     * Returns true if this frame was created by javascript.
      * @return true or false
      */
     public boolean wasCreatedByJavascript() {
@@ -896,14 +950,12 @@ public class HtmlImage extends HtmlElement {
      */
     @Override
     public ScriptResult fireEvent(final Event event) {
-        if (event instanceof MouseEvent) {
-            final MouseEvent mouseEvent = (MouseEvent) event;
-            final HTMLElement scriptableObject = getScriptableObject();
+        if (event instanceof MouseEvent mouseEvent) {
             if (lastClickX_ >= 0) {
-                mouseEvent.setClientX(scriptableObject.getPosX() + lastClickX_);
+                mouseEvent.setClientX(getPosX() + lastClickX_);
             }
             if (lastClickY_ >= 0) {
-                mouseEvent.setClientY(scriptableObject.getPosX() + lastClickY_);
+                mouseEvent.setClientY(getPosY() + lastClickY_);
             }
         }
 

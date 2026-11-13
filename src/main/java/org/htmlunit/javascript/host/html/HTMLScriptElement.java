@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,6 @@
 package org.htmlunit.javascript.host.html;
 
 import static org.htmlunit.html.DomElement.ATTRIBUTE_NOT_DEFINED;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -29,11 +25,13 @@ import org.htmlunit.html.DomText;
 import org.htmlunit.html.HtmlElement;
 import org.htmlunit.html.HtmlPage;
 import org.htmlunit.html.HtmlScript;
+import org.htmlunit.html.ScriptElement;
 import org.htmlunit.html.ScriptElementSupport;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.configuration.JsxSetter;
+import org.htmlunit.javascript.host.dom.Node;
 
 /**
  * The JavaScript object that represents an {@code HTMLScriptElement}.
@@ -43,15 +41,19 @@ import org.htmlunit.javascript.configuration.JsxSetter;
  * @author Ahmed Ashour
  * @author Ronald Brill
  * @author Frank Danek
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLScriptElement">MDN Documentation</a>
  */
 @JsxClass(domClass = HtmlScript.class)
 public class HTMLScriptElement extends HTMLElement {
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public HTMLScriptElement() {
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
@@ -69,7 +71,7 @@ public class HTMLScriptElement extends HTMLElement {
             final URL expandedSrc = ((HtmlPage) tmpScript.getPage()).getFullyQualifiedUrl(src);
             src = expandedSrc.toString();
         }
-        catch (final MalformedURLException e) {
+        catch (final MalformedURLException ignored) {
             // ignore
         }
         return src;
@@ -77,7 +79,7 @@ public class HTMLScriptElement extends HTMLElement {
 
     /**
      * Sets the {@code src} property.
-     * @param src the {@code src} property
+     * @param src the {@code src} property value
      */
     @JsxSetter
     public void setSrc(final String src) {
@@ -92,8 +94,7 @@ public class HTMLScriptElement extends HTMLElement {
     public String getText() {
         final StringBuilder scriptCode = new StringBuilder();
         for (final DomNode node : getDomNodeOrDie().getChildren()) {
-            if (node instanceof DomText) {
-                final DomText domText = (DomText) node;
+            if (node instanceof DomText domText) {
                 scriptCode.append(domText.getData());
             }
         }
@@ -102,7 +103,7 @@ public class HTMLScriptElement extends HTMLElement {
 
     /**
      * Sets the {@code text} property.
-     * @param text the {@code text} property
+     * @param text the {@code text} property value
      */
     @JsxSetter
     public void setText(final String text) {
@@ -111,7 +112,7 @@ public class HTMLScriptElement extends HTMLElement {
         final DomNode textChild = new DomText(htmlElement.getPage(), text);
         htmlElement.appendChild(textChild);
 
-        ScriptElementSupport.executeScriptIfNeeded(htmlElement, false, false);
+        ScriptElementSupport.executeScriptIfNeeded((ScriptElement) htmlElement, false, false);
     }
 
     /**
@@ -120,34 +121,34 @@ public class HTMLScriptElement extends HTMLElement {
      */
     @JsxGetter
     public String getType() {
-        return getDomNodeOrDie().getAttributeDirect("type");
+        return getDomNodeOrDie().getAttributeDirect(DomElement.TYPE_ATTRIBUTE);
     }
 
     /**
      * Sets the {@code type} property.
-     * @param type the {@code type} property
+     * @param type the {@code type} property value
      */
     @JsxSetter
     public void setType(final String type) {
-        getDomNodeOrDie().setAttribute("type", type);
+        getDomNodeOrDie().setAttribute(DomElement.TYPE_ATTRIBUTE, type);
     }
 
     /**
-     * Overwritten for special IE handling.
+     * Overwritten for special handling.
      *
      * @param childObject the node to add to this node
      * @return the newly added child node
      */
     @Override
-    public Object appendChild(final Object childObject) {
+    public Node appendChild(final Object childObject) {
         final HtmlElement tmpScript = getDomNodeOrDie();
         final boolean wasEmpty = tmpScript.getFirstChild() == null;
-        final Object result = super.appendChild(childObject);
+        final Node node = super.appendChild(childObject);
 
         if (wasEmpty) {
-            ScriptElementSupport.executeScriptIfNeeded(tmpScript, false, false);
+            ScriptElementSupport.executeScriptIfNeeded((ScriptElement) tmpScript, false, false);
         }
-        return result;
+        return node;
     }
 
     /**
@@ -161,7 +162,7 @@ public class HTMLScriptElement extends HTMLElement {
 
     /**
      * Sets the {@code async} property.
-     * @param async the {@code async} property
+     * @param async the {@code async} property value
      */
     @JsxSetter
     public void setAsync(final boolean async) {

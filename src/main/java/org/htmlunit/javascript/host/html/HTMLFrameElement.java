@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,6 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.BrowserVersionFeatures.JS_FRAME_CONTENT_DOCUMENT_ACCESS_DENIED_THROWS;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
-
 import org.htmlunit.html.BaseFrameElement;
 import org.htmlunit.html.FrameWindow;
 import org.htmlunit.html.FrameWindow.PageDenied;
@@ -32,8 +25,6 @@ import org.htmlunit.javascript.configuration.JsxSetter;
 import org.htmlunit.javascript.host.Window;
 import org.htmlunit.javascript.host.WindowProxy;
 
-import org.htmlunit.corejs.javascript.Context;
-
 /**
  * The JavaScript object {@code HTMLFrameElement}.
  *
@@ -42,19 +33,23 @@ import org.htmlunit.corejs.javascript.Context;
  * @author Ahmed Ashour
  * @author Frank Danek
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/frame">MDN Documentation</a>
  */
 @JsxClass(domClass = HtmlFrame.class)
 public class HTMLFrameElement extends HTMLElement {
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public HTMLFrameElement() {
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
-     * Returns the value of URL loaded in the frame.
+     * Returns the value of the URL loaded in the frame.
      * @return the value of this attribute
      */
     @JsxGetter
@@ -80,9 +75,6 @@ public class HTMLFrameElement extends HTMLElement {
     public DocumentProxy getContentDocument() {
         final FrameWindow frameWindow = getFrame().getEnclosedWindow();
         if (PageDenied.NONE != frameWindow.getPageDenied()) {
-            if (getBrowserVersion().hasFeature(JS_FRAME_CONTENT_DOCUMENT_ACCESS_DENIED_THROWS)) {
-                throw Context.reportRuntimeError("Error access denied");
-            }
             return null;
         }
         return ((Window) frameWindow.getScriptableObject()).getDocument_js();
@@ -92,7 +84,7 @@ public class HTMLFrameElement extends HTMLElement {
      * Returns the window the frame contains, if any.
      * @return the window
      * @see <a href="http://www.mozilla.org/docs/dom/domref/dom_frame_ref5.html">Gecko DOM Reference</a>
-     * @see <a href="http://msdn.microsoft.com/en-us/library/ms533692.aspx">MSDN documentation</a>
+     * @see <a href="https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/frame">MDN Documentation</a>
      */
     @JsxGetter
     public WindowProxy getContentWindow() {
@@ -121,24 +113,6 @@ public class HTMLFrameElement extends HTMLElement {
 
     private BaseFrameElement getFrame() {
         return (BaseFrameElement) getDomNodeOrDie();
-    }
-
-    /**
-     * Gets the {@code border} attribute.
-     * @return the {@code border} attribute
-     */
-    @JsxGetter(IE)
-    public String getBorder() {
-        return getDomNodeOrDie().getAttributeDirect("border");
-    }
-
-    /**
-     * Sets the {@code border} attribute.
-     * @param border the {@code border} attribute
-     */
-    @JsxSetter(IE)
-    public void setBorder(final String border) {
-        getDomNodeOrDie().setAttribute("border", border);
     }
 
     /**

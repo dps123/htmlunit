@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,8 @@
  */
 package org.htmlunit;
 
-import static org.htmlunit.junit.BrowserRunner.TestedBrowser.IE;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.Assert.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 import java.net.URL;
 import java.nio.charset.Charset;
@@ -27,19 +26,17 @@ import java.util.List;
 import java.util.zip.Deflater;
 
 import org.apache.commons.io.IOUtils;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.htmlunit.html.HtmlInlineFrame;
+import org.htmlunit.junit.annotation.Alerts;
+import org.htmlunit.junit.annotation.HtmlUnitNYI;
+import org.htmlunit.util.MimeType;
+import org.htmlunit.util.NameValuePair;
+import org.htmlunit.util.PrimitiveWebServer;
+import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.htmlunit.HtmlUnitDriver;
-
-import org.htmlunit.html.HtmlInlineFrame;
-import org.htmlunit.junit.BrowserRunner;
-import org.htmlunit.junit.BrowserRunner.Alerts;
-import org.htmlunit.junit.BrowserRunner.NotYetImplemented;
-import org.htmlunit.util.MimeType;
-import org.htmlunit.util.NameValuePair;
 
 /**
  * Tests for {@link WebClient} using WebDriverTestCase.
@@ -48,7 +45,6 @@ import org.htmlunit.util.NameValuePair;
  * @author Frank Danek
  * @author Ronald Brill
  */
-@RunWith(BrowserRunner.class)
 public class WebClient3Test extends WebDriverTestCase {
 
     static final SecureRandom RANDOM = new SecureRandom();
@@ -59,7 +55,8 @@ public class WebClient3Test extends WebDriverTestCase {
      */
     @Test
     public void bug3012067_npe() throws Exception {
-        final String html = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><body>\n"
             + "<form action='" + URL_FIRST + "#foo' method='post'></form>\n"
             + "<script>\n"
             + "function doWork() {\n"
@@ -81,7 +78,8 @@ public class WebClient3Test extends WebDriverTestCase {
      */
     @Test
     public void readStreamTwice() throws Exception {
-        final String html = "<html>\n"
+        final String html = DOCTYPE_HTML
+            + "<html>\n"
             + "<body>\n"
             + "<iframe src='binaryFile.bin'></iframe>\n"
             + "<iframe src='foo.html'></iframe>\n"
@@ -94,7 +92,7 @@ public class WebClient3Test extends WebDriverTestCase {
         }
         mockConnection.setDefaultResponse(binaryContent, 200, "OK", MimeType.APPLICATION_OCTET_STREAM);
         final URL urlFoo = new URL(URL_FIRST, "foo.html");
-        mockConnection.setResponse(urlFoo, "<html></html>");
+        mockConnection.setResponse(urlFoo, DOCTYPE_HTML + "<html></html>");
 
         final WebDriver driver = loadPage2(html);
         final WebElement iframe1 = driver.findElement(By.tagName("iframe"));
@@ -128,7 +126,11 @@ public class WebClient3Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @NotYetImplemented
+    @Alerts("0")
+    @HtmlUnitNYI(CHROME = "1",
+            EDGE = "1",
+            FF = "1",
+            FF_ESR = "1")
     public void escapeRequestQuery2a() throws Exception {
         getMockWebConnection().setDefaultResponse("");
 
@@ -137,7 +139,7 @@ public class WebClient3Test extends WebDriverTestCase {
 
         // real browsers do not send this request
         // 'Unable to parse URI query'
-        assertEquals(0, getMockWebConnection().getRequestCount());
+        assertEquals(Integer.parseInt(getExpectedAlerts()[0]), getMockWebConnection().getRequestCount());
     }
 
     /**
@@ -162,10 +164,11 @@ public class WebClient3Test extends WebDriverTestCase {
      */
     @Test
     public void clickReturnsWhenThePageHasBeenCompleteLoaded() throws Exception {
-        final String firstContent = "<html><head>\n"
+        final String firstContent = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script>window.setInterval(\'',1);</script></head>\n"
             + "<body><a href='" + URL_SECOND + "'>to second</a></body></html>";
-        final String secondContent = "<html><body></body></html>";
+        final String secondContent = DOCTYPE_HTML + "<html><body></body></html>";
 
         final MockWebConnection webConnection = getMockWebConnection();
         webConnection.setResponse(URL_SECOND, secondContent);
@@ -186,10 +189,8 @@ public class WebClient3Test extends WebDriverTestCase {
     @Test
     @Alerts({"open", "first", "second"})
     public void windowOpenedByAnchorTargetIsAttachedToJavascriptEventLoop() throws Exception {
-        // TODO [IE]SINGLE-VS-BULK test runs when executed as single but breaks as bulk
-        shutDownRealIE();
-
-        final String firstContent = "<html>\n"
+        final String firstContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script type='text/javascript'>\n"
             + "  function info(msg) {\n"
@@ -200,7 +201,8 @@ public class WebClient3Test extends WebDriverTestCase {
             + "<body>\n"
             + "  <a id='testAnchor' href='" + URL_SECOND + "' target='_blank' onclick='info(\"open\")'>to second</a>\n"
             + "</body></html>";
-        final String secondContent = "<html><head>\n"
+        final String secondContent = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script type='text/javascript'>\n"
             + "  function first() {\n"
             + "    window.opener.info('first');\n"
@@ -220,6 +222,8 @@ public class WebClient3Test extends WebDriverTestCase {
         final WebDriver driver = loadPage2(firstContent);
         driver.findElement(By.id("testAnchor")).click();
 
+        sleepRealBrowser(400);
+
         verifyAlerts(driver, getExpectedAlerts());
     }
 
@@ -232,10 +236,8 @@ public class WebClient3Test extends WebDriverTestCase {
     @Test
     @Alerts({"open", "first", "second"})
     public void windowOpenedByFormTargetIsAttachedToJavascriptEventLoop() throws Exception {
-        // TODO [IE]SINGLE-VS-BULK test runs when executed as single but breaks as bulk
-        shutDownRealIE();
-
-        final String firstContent = "<html>\n"
+        final String firstContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script type='text/javascript'>\n"
             + "  function info(msg) {\n"
@@ -248,7 +250,8 @@ public class WebClient3Test extends WebDriverTestCase {
             + "  <input id='testSubmit' type='submit' value='Submit' onclick='info(\"open\")'>\n"
             + "</form>\n"
             + "</body></html>";
-        final String secondContent = "<html><head>\n"
+        final String secondContent = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script type='text/javascript'>\n"
             + "  function first() {\n"
             + "    window.opener.info('first');\n"
@@ -268,6 +271,8 @@ public class WebClient3Test extends WebDriverTestCase {
         final WebDriver driver = loadPage2(firstContent);
         driver.findElement(By.id("testSubmit")).click();
 
+        sleepRealBrowser(400);
+
         verifyAlerts(driver, getExpectedAlerts());
     }
 
@@ -280,7 +285,8 @@ public class WebClient3Test extends WebDriverTestCase {
     @Test
     @Alerts({"open", "first", "second"})
     public void windowOpenedByJavascriptIsAttachedToJavascriptEventLoop() throws Exception {
-        final String firstContent = "<html>\n"
+        final String firstContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script type='text/javascript'>\n"
             + "  function info(msg) {\n"
@@ -292,7 +298,8 @@ public class WebClient3Test extends WebDriverTestCase {
             + "  <a id='testAnchor' href='#'"
             + "    onclick='info(\"open\");window.open(\"" + URL_SECOND + "\", \"Popup\", \"\");'>open window</a>\n"
             + "</body></html>";
-        final String secondContent = "<html><head>\n"
+        final String secondContent = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script type='text/javascript'>\n"
             + "  function first() {\n"
             + "    window.opener.info('first');\n"
@@ -324,7 +331,8 @@ public class WebClient3Test extends WebDriverTestCase {
     @Test
     @Alerts({"open", "first", "second"})
     public void windowOpenedByJavascriptFilledByFormTargetIsAttachedToJavascriptEventLoop() throws Exception {
-        final String firstContent = "<html>\n"
+        final String firstContent = DOCTYPE_HTML
+            + "<html>\n"
             + "<head>\n"
             + "<script type='text/javascript'>\n"
             + "  function info(msg) {\n"
@@ -341,7 +349,8 @@ public class WebClient3Test extends WebDriverTestCase {
             + "  >\n"
             + "</form>\n"
             + "</body></html>";
-        final String secondContent = "<html><head>\n"
+        final String secondContent = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<script type='text/javascript'>\n"
             + "  function first() {\n"
             + "    window.opener.info('first');\n"
@@ -369,9 +378,9 @@ public class WebClient3Test extends WebDriverTestCase {
      */
     @Test
     @Alerts({"Executed", "later"})
-    // TODO [IE]ERRORPAGE real IE displays own error page if response is to small
     public void execJavascriptOnErrorPages() throws Exception {
-        final String errorHtml = "<html>\n"
+        final String errorHtml = DOCTYPE_HTML
+                + "<html>\n"
                 + "<head>\n"
                 + "</head>\n"
                 + "<body>\n"
@@ -383,7 +392,7 @@ public class WebClient3Test extends WebDriverTestCase {
                 + "</body></html>\n";
 
         final MockWebConnection conn = getMockWebConnection();
-        conn.setResponse(URL_FIRST, errorHtml, 404, "Not Found", MimeType.TEXT_HTML, new ArrayList<NameValuePair>());
+        conn.setResponse(URL_FIRST, errorHtml, 404, "Not Found", MimeType.TEXT_HTML, new ArrayList<>());
 
         loadPage2(URL_FIRST, StandardCharsets.UTF_8);
         verifyTitle2(DEFAULT_WAIT_TIME, getWebDriver(), getExpectedAlerts());
@@ -397,7 +406,8 @@ public class WebClient3Test extends WebDriverTestCase {
     @Test
     @Alerts("hello")
     public void urlEncodingPercent20() throws Exception {
-        final String html = "<html><body>\n"
+        final String html = DOCTYPE_HTML
+                + "<html><body>\n"
                 + "<script src='a%20b.js'></script>\n"
                 + "</body></html>";
 
@@ -414,9 +424,6 @@ public class WebClient3Test extends WebDriverTestCase {
     @Test
     @Alerts("modified")
     public void deflateCompressionGZipCompatible() throws Exception {
-        // TODO [IE]SINGLE-VS-BULK test runs when executed as single but breaks as bulk
-        shutDownRealIE();
-
         doTestDeflateCompression(true);
     }
 
@@ -425,9 +432,7 @@ public class WebClient3Test extends WebDriverTestCase {
      * @throws Exception if the test fails
      */
     @Test
-    @Alerts(DEFAULT = "modified",
-            IE = "Hello world")
-    @NotYetImplemented(IE)
+    @Alerts("modified")
     // IE does not support deflate compression anymore but I couldn't find a way to disable it in HttpClient
     public void deflateCompressionNonGZipCompatible() throws Exception {
         doTestDeflateCompression(false);
@@ -452,7 +457,8 @@ public class WebClient3Test extends WebDriverTestCase {
         final MockWebConnection conn = getMockWebConnection();
         conn.setResponse(URL_SECOND, content, 200, "OK", "text/javascript", headers);
 
-        final String html = "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<title>Hello world</title>\n"
             + "<script src='" + URL_SECOND + "'></script>\n"
             + "</head><body><script>alert(document.title)</script></body></html>";
@@ -474,9 +480,7 @@ public class WebClient3Test extends WebDriverTestCase {
      * @throws Exception if something goes wrong
      */
     @Test
-    @Alerts(DEFAULT = "executed",
-             IE = "")
-    @NotYetImplemented(IE)
+    @Alerts("executed")
     public void javascriptContentDetectorWithoutContentType500() throws Exception {
         final MockWebConnection conn = getMockWebConnection();
         conn.setDefaultResponse("<script>alert('executed')</script>", 500, "OK", null);
@@ -540,10 +544,14 @@ public class WebClient3Test extends WebDriverTestCase {
      * @throws Exception if something goes wrong
      */
     @Test
-    @NotYetImplemented
+    @Alerts({})
+    @HtmlUnitNYI(CHROME = "executed",
+            EDGE = "executed",
+            FF = "executed",
+            FF_ESR = "executed")
     public void javascriptContentDetectorContentTypeApplicationJavascript() throws Exception {
         final MockWebConnection conn = getMockWebConnection();
-        conn.setDefaultResponse("<script>alert('executed')</script>", 200, "OK", MimeType.APPLICATION_JAVASCRIPT);
+        conn.setDefaultResponse("<script>alert('executed')</script>", 200, "OK", MimeType.TEXT_JAVASCRIPT);
         loadPageWithAlerts2(URL_FIRST);
     }
 
@@ -573,8 +581,8 @@ public class WebClient3Test extends WebDriverTestCase {
 
     private void encodingCharset(final String title,
             final String metaCharset, final String responseCharset) throws Exception {
-        final String html =
-            "<html><head>\n"
+        final String html = DOCTYPE_HTML
+            + "<html><head>\n"
             + "<meta http-equiv='Content-Type' content='text/html; charset=" + metaCharset + "'>\n"
             + "<title>" + title + "</title>\n"
             + "</head>\n"
@@ -595,6 +603,70 @@ public class WebClient3Test extends WebDriverTestCase {
 
             driver.get(url);
             assertEquals(title, driver.getTitle());
+        }
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts(DEFAULT = {"en-US", "en-US"},
+            FF = {"en-US", "en-US,en"},
+            FF_ESR = {"en-US", "en-US,en"})
+    @HtmlUnitNYI(CHROME = {"en-US", "en-US,en"},
+            EDGE = {"en-US", "en-US,en"})
+    public void language() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  log(navigator.language);\n"
+            + "  log(navigator.languages);\n"
+            + "}\n"
+            + "</script></head><body onload='test()'>\n"
+            + "</body></html>";
+
+        shutDownAll();
+        try {
+            loadPageVerifyTitle2(html);
+        }
+        finally {
+            shutDownAll();
+        }
+    }
+
+    /**
+     * @throws Exception if the test fails
+     */
+    @Test
+    @Alerts(DEFAULT = {"de-DE", "de-DE"},
+            FF = {"de-DE", "de-DE,de"},
+            FF_ESR = {"de-DE", "de-DE,de"})
+    @HtmlUnitNYI(CHROME = {"de-DE", "de-DE,de"},
+            EDGE = {"de-DE", "de-DE,de"})
+    public void languageDE() throws Exception {
+        final String html = DOCTYPE_HTML
+            + "<html><head><script>\n"
+            + LOG_TITLE_FUNCTION
+            + "function test() {\n"
+            + "  log(navigator.language);\n"
+            + "  log(navigator.languages);\n"
+            + "}\n"
+            + "</script></head><body onload='test()'>\n"
+            + "</body></html>";
+
+        shutDownAll();
+        try {
+            final BrowserVersion.BrowserVersionBuilder builder
+                = new BrowserVersion.BrowserVersionBuilder(getBrowserVersion());
+            builder.setBrowserLanguage("de-DE");
+            builder.setAcceptLanguageHeader("de-DE,de");
+            setBrowserVersion(builder.build());
+
+            loadPageVerifyTitle2(html);
+        }
+        finally {
+            shutDownAll();
         }
     }
 }

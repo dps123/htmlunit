@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,39 +14,38 @@
  */
 package org.htmlunit.javascript.host.performance;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
+import org.htmlunit.corejs.javascript.Scriptable;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxFunction;
 import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.host.event.EventTarget;
 
-import org.htmlunit.corejs.javascript.Context;
-import org.htmlunit.corejs.javascript.Scriptable;
-
 /**
- * A JavaScript object for {@code Performance}.
+ * JavaScript host object for {@code Performance}.
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/Performance">MDN Documentation</a>
  */
 @JsxClass
 public class Performance extends EventTarget {
     private PerformanceTiming timing_;
 
     /**
-     * Creates an instance.
+     * Creates an instance of this object.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public Performance() {
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
      * Returns the {@code navigation} property.
+     *
      * @return the {@code navigation} property
      */
     @JsxGetter
@@ -59,6 +58,7 @@ public class Performance extends EventTarget {
 
     /**
      * Returns the {@code timing} property.
+     *
      * @return the {@code timing} property
      */
     @JsxGetter
@@ -74,7 +74,9 @@ public class Performance extends EventTarget {
     }
 
     /**
-     * @return a timestamp
+     * Returns a high-resolution timestamp representing the time elapsed since the time origin.
+     *
+     * @return a timestamp in milliseconds
      */
     @JsxFunction
     public double now() {
@@ -82,36 +84,42 @@ public class Performance extends EventTarget {
     }
 
     /**
-     * @return a list of all PerformanceEntry objects for the page.
-     * The list's members (entries) can be created by making performance marks
-     * or measures (for example by calling the mark() method) at explicit points in time.
+     * Returns a list of all {@link PerformanceEntry} objects for the page.
+     * The entries can be created by making performance marks or measures (for example
+     * by calling the {@code mark()} method) at explicit points in time.
      * If you are only interested in performance entries of certain types or that have
-     * certain names, see getEntriesByType() and getEntriesByName().
+     * certain names, see {@code getEntriesByType()} and {@code getEntriesByName()}.
+     *
+     * @return a list of all {@link PerformanceEntry} objects
      */
     @JsxFunction
     public Scriptable getEntries() {
-        return Context.getCurrentContext().newArray(this, 0);
+        return JavaScriptEngine.newArray(getParentScope(), 0);
     }
 
     /**
-     * @return a list of all PerformanceEntry objects for the page.
-     * The list's members (entries) can be created by making performance marks
-     * or measures (for example by calling the mark() method) at explicit points in time.
-     * If you are only interested in performance entries of certain types or that have
-     * certain names, see getEntriesByType() and getEntriesByName().
+     * Returns a list of all {@link PerformanceEntry} objects for the page with the given name.
+     * The entries can be created by making performance marks or measures (for example
+     * by calling the {@code mark()} method) at explicit points in time.
+     * If you are only interested in performance entries of certain types, see
+     * {@code getEntriesByType()}.
+     *
+     * @return a list of {@link PerformanceEntry} objects matching the given name
      */
     @JsxFunction
     public Scriptable getEntriesByName() {
-        return Context.getCurrentContext().newArray(this, 0);
+        return JavaScriptEngine.newArray(getParentScope(), 0);
     }
 
     /**
-     * @return a list of PerformanceEntry objects for a given type. The list's
-     * members (entries) can be created by making performance marks or measures
-     * (for example by calling the mark() method) at explicit points in time.
+     * Returns a list of {@link PerformanceEntry} objects of the given type.
+     * The entries can be created by making performance marks or measures
+     * (for example by calling the {@code mark()} method) at explicit points in time.
+     *
+     * @return a list of {@link PerformanceEntry} objects of the given type
      */
     @JsxFunction
     public Scriptable getEntriesByType() {
-        return Context.getCurrentContext().newArray(this, 0);
+        return JavaScriptEngine.newArray(getParentScope(), 0);
     }
 }

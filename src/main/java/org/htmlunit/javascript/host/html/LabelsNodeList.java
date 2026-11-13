@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ import org.htmlunit.javascript.host.dom.NodeList;
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
- *
  */
 class LabelsNodeList extends NodeList {
 
@@ -43,8 +42,8 @@ class LabelsNodeList extends NodeList {
     }
 
     /**
-     * This is overridden instead of {@link #computeElements()} in order to prevent caching at all.
-     * <p>
+     * This is overridden in order to prevent caching at all.
+     *
      * {@inheritDoc}
      */
     @Override

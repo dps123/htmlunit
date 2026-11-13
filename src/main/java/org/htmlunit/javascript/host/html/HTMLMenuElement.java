@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,23 +14,15 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.BrowserVersionFeatures.JS_MENU_TYPE_EMPTY;
 import static org.htmlunit.BrowserVersionFeatures.JS_MENU_TYPE_PASS;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.IE;
 
-import org.apache.commons.lang3.StringUtils;
-
+import org.htmlunit.html.DomElement;
 import org.htmlunit.html.HtmlMenu;
+import org.htmlunit.javascript.JavaScriptEngine;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
 import org.htmlunit.javascript.configuration.JsxGetter;
 import org.htmlunit.javascript.configuration.JsxSetter;
-
-import org.htmlunit.corejs.javascript.Context;
 
 /**
  * The JavaScript object {@code HTMLMenuElement}.
@@ -38,28 +30,26 @@ import org.htmlunit.corejs.javascript.Context;
  * @author Ahmed Ashour
  * @author Frank Danek
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLMenuElement">MDN Documentation</a>
  */
 @JsxClass(domClass = HtmlMenu.class)
-public class HTMLMenuElement extends HTMLListElement {
+public class HTMLMenuElement extends HTMLElement {
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
-    @JsxConstructor({CHROME, EDGE, FF, FF_ESR})
-    public HTMLMenuElement() {
+    @Override
+    @JsxConstructor
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
      * Returns the value of the {@code type} property.
      * @return the value of the {@code type} property
      */
-    @Override
-    @JsxGetter(IE)
-    public String getType() {
-        if (getBrowserVersion().hasFeature(JS_MENU_TYPE_EMPTY)) {
-            return "";
-        }
-
+    protected String getType() {
         final String type = getDomNodeOrDie().getAttributeDirect("type");
         if (getBrowserVersion().hasFeature(JS_MENU_TYPE_PASS)) {
             return type;
@@ -79,30 +69,44 @@ public class HTMLMenuElement extends HTMLListElement {
      * Sets the value of the {@code type} property.
      * @param type the value of the {@code type} property
      */
-    @Override
-    @JsxSetter(IE)
-    public void setType(final String type) {
-        if (getBrowserVersion().hasFeature(JS_MENU_TYPE_EMPTY)) {
-            if (StringUtils.isEmpty(type)) {
-                return;
-            }
-            throw Context.reportRuntimeError("Cannot set the type property to invalid value: '" + type + "'");
-        }
-
+    protected void setType(final String type) {
         if (getBrowserVersion().hasFeature(JS_MENU_TYPE_PASS)) {
-            getDomNodeOrDie().setAttribute("type", type);
+            getDomNodeOrDie().setAttribute(DomElement.TYPE_ATTRIBUTE, type);
             return;
         }
 
         if ("context".equalsIgnoreCase(type)) {
-            getDomNodeOrDie().setAttribute("type", "context");
+            getDomNodeOrDie().setAttribute(DomElement.TYPE_ATTRIBUTE, "context");
             return;
         }
         if ("toolbar".equalsIgnoreCase(type)) {
-            getDomNodeOrDie().setAttribute("type", "toolbar");
+            getDomNodeOrDie().setAttribute(DomElement.TYPE_ATTRIBUTE, "toolbar");
             return;
         }
 
-        getDomNodeOrDie().setAttribute("type", "list");
+        getDomNodeOrDie().setAttribute(DomElement.TYPE_ATTRIBUTE, "list");
+    }
+
+    /**
+     * Returns the value of the {@code compact} attribute.
+     * @return the value of the {@code compact} attribute
+     */
+    @JsxGetter
+    public boolean isCompact() {
+        return getDomNodeOrDie().hasAttribute("compact");
+    }
+
+    /**
+     * Sets the value of the {@code compact} attribute.
+     * @param compact the value of the {@code compact} attribute
+     */
+    @JsxSetter
+    public void setCompact(final Object compact) {
+        if (JavaScriptEngine.toBoolean(compact)) {
+            getDomNodeOrDie().setAttribute("compact", "");
+        }
+        else {
+            getDomNodeOrDie().removeAttribute("compact");
+        }
     }
 }

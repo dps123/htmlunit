@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002-2023 Gargoyle Software Inc.
+ * Copyright (c) 2002-2026 Gargoyle Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,7 @@
  */
 package org.htmlunit.javascript.host.html;
 
-import static org.htmlunit.javascript.configuration.SupportedBrowser.CHROME;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.EDGE;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF;
-import static org.htmlunit.javascript.configuration.SupportedBrowser.FF_ESR;
-
+import org.htmlunit.html.DomElement;
 import org.htmlunit.html.HtmlData;
 import org.htmlunit.javascript.configuration.JsxClass;
 import org.htmlunit.javascript.configuration.JsxConstructor;
@@ -30,15 +26,19 @@ import org.htmlunit.javascript.configuration.JsxSetter;
  *
  * @author Ahmed Ashour
  * @author Ronald Brill
+ *
+ * @see <a href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLDataElement">MDN Documentation</a>
  */
-@JsxClass(domClass = HtmlData.class, value = {CHROME, EDGE, FF, FF_ESR})
+@JsxClass(domClass = HtmlData.class)
 public class HTMLDataElement extends HTMLElement {
 
     /**
-     * Creates an instance.
+     * JavaScript constructor.
      */
+    @Override
     @JsxConstructor
-    public HTMLDataElement() {
+    public void jsConstructor() {
+        super.jsConstructor();
     }
 
     /**
@@ -47,7 +47,7 @@ public class HTMLDataElement extends HTMLElement {
      */
     @JsxSetter
     public void setValue(final String newValue) {
-        getDomNodeOrDie().setAttribute("value", newValue);
+        getDomNodeOrDie().setAttribute(DomElement.VALUE_ATTRIBUTE, newValue);
     }
 
     /**
@@ -57,6 +57,6 @@ public class HTMLDataElement extends HTMLElement {
     @JsxGetter
     @Override
     public String getValue() {
-        return getDomNodeOrDie().getAttributeDirect("value");
+        return getDomNodeOrDie().getAttributeDirect(DomElement.VALUE_ATTRIBUTE);
     }
 }
